@@ -1,0 +1,239 @@
+[
+  {
+    "request": {
+      "filter": {
+        "childFilter": [
+          {
+            "childFilter": [
+              {
+                "lhs": {
+                  "columnIdentifier": {
+                    "columnName": "API_TRACE.startTime"
+                  }
+                },
+                "operator": "GE",
+                "rhs": {
+                  "literal": {
+                    "value": {
+                      "string": "1574702933196"
+                    }
+                  }
+                }
+              },
+              {
+                "lhs": {
+                  "columnIdentifier": {
+                    "columnName": "API_TRACE.startTime"
+                  }
+                },
+                "operator": "LT",
+                "rhs": {
+                  "literal": {
+                    "value": {
+                      "string": "1574703533196"
+                    }
+                  }
+                }
+              }
+            ]
+          },
+          {
+            "childFilter": [
+              {
+                "lhs": {
+                  "columnIdentifier": {
+                    "columnName": "API_TRACE.apiBoundaryType"
+                  }
+                },
+                "operator": "EQ",
+                "rhs": {
+                  "literal": {
+                    "value": {
+                      "string": "ENTRY"
+                    }
+                  }
+                }
+              }
+            ]
+          }
+        ]
+      },
+      "selection": [
+        {
+          "columnIdentifier": {
+            "columnName": "API_TRACE.duration"
+          }
+        },
+        {
+          "columnIdentifier": {
+            "columnName": "API_TRACE.serviceName"
+          }
+        },
+        {
+          "columnIdentifier": {
+            "columnName": "API_TRACE.apiName"
+          }
+        }
+      ],
+      "orderBy": [
+        {
+          "expression": {
+            "columnIdentifier": {
+              "columnName": "API_TRACE.serviceName"
+            }
+          },
+          "order": "DESC"
+        }
+      ],
+      "limit": 10
+    },
+    "response": {
+      "isLastChunk": true,
+      "resultSetMetadata": {
+        "columnMetadata": [
+          {
+            "columnName": "API_TRACE.apiName"
+          },
+          {
+            "columnName": "API_TRACE.serviceName"
+          },
+          {
+            "columnName": "API_TRACE.duration"
+          }
+        ]
+      },
+      "row": [
+        {
+          "column": [
+            {
+              "string": "null"
+            },
+            {
+              "string": "userservice"
+            },
+            {
+              "string": "0"
+            }
+          ]
+        },
+        {
+          "column": [
+            {
+              "string": "null"
+            },
+            {
+              "string": "userservice"
+            },
+            {
+              "string": "0"
+            }
+          ]
+        },
+        {
+          "column": [
+            {
+              "string": "null"
+            },
+            {
+              "string": "userservice"
+            },
+            {
+              "string": "0"
+            }
+          ]
+        },
+        {
+          "column": [
+            {
+              "string": "PUT /user/8a8c82536e8b3a71016e8b3c0e420009"
+            },
+            {
+              "string": "userservice"
+            },
+            {
+              "string": "4"
+            }
+          ]
+        },
+        {
+          "column": [
+            {
+              "string": "PUT /user/8a8c82536e8b3a71016e8b3c0f4d000c"
+            },
+            {
+              "string": "userservice"
+            },
+            {
+              "string": "4"
+            }
+          ]
+        },
+        {
+          "column": [
+            {
+              "string": "null"
+            },
+            {
+              "string": "userservice"
+            },
+            {
+              "string": "0"
+            }
+          ]
+        },
+        {
+          "column": [
+            {
+              "string": "PUT /user/8a8c82536e8b3a71016e8b3c02270000"
+            },
+            {
+              "string": "userservice"
+            },
+            {
+              "string": "4"
+            }
+          ]
+        },
+        {
+          "column": [
+            {
+              "string": "PUT /user/8a8c82536e8b3a71016e8b3c02270000"
+            },
+            {
+              "string": "userservice"
+            },
+            {
+              "string": "4"
+            }
+          ]
+        },
+        {
+          "column": [
+            {
+              "string": "null"
+            },
+            {
+              "string": "userservice"
+            },
+            {
+              "string": "0"
+            }
+          ]
+        },
+        {
+          "column": [
+            {
+              "string": "PUT /user/8a8c82536e8b3a71016e8b3c02270000"
+            },
+            {
+              "string": "userservice"
+            },
+            {
+              "string": "5"
+            }
+          ]
+        }
+      ]
+    }
+  }
+]

@@ -1,0 +1,35 @@
+{
+  "context": "API_TRACE",
+  "startTimeMillis": "1574702933196",
+  "endTimeMillis": "1574703533196",
+  "filter": {
+  },
+  "selection": [
+    {
+      "columnIdentifier": {
+        "columnName": "API_TRACE.duration"
+      }
+    },
+    {
+      "columnIdentifier": {
+        "columnName": "API_TRACE.serviceName"
+      }
+    },
+    {
+      "columnIdentifier": {
+        "columnName": "API_TRACE.apiName"
+      }
+    }
+  ],
+  "orderBy": [
+    {
+      "expression": {
+        "columnIdentifier": {
+          "columnName": "API_TRACE.serviceName"
+        }
+      },
+      "order": "DESC"
+    }
+  ],
+  "limit": 10
+}

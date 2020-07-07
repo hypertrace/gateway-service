@@ -1,0 +1,262 @@
+[
+  {
+    "request": {
+      "filter": {
+        "childFilter": [
+          {
+            "childFilter": [
+              {
+                "lhs": {
+                  "columnIdentifier": {
+                    "columnName": "API_TRACE.startTime"
+                  }
+                },
+                "operator": "GE",
+                "rhs": {
+                  "literal": {
+                    "value": {
+                      "string": "1575307740000"
+                    }
+                  }
+                }
+              },
+              {
+                "lhs": {
+                  "columnIdentifier": {
+                    "columnName": "API_TRACE.startTime"
+                  }
+                },
+                "operator": "LT",
+                "rhs": {
+                  "literal": {
+                    "value": {
+                      "string": "1575308280000"
+                    }
+                  }
+                }
+              }
+            ]
+          },
+          {
+            "childFilter": [
+              {
+                "lhs": {
+                  "columnIdentifier": {
+                    "columnName": "API_TRACE.apiBoundaryType"
+                  }
+                },
+                "operator": "EQ",
+                "rhs": {
+                  "literal": {
+                    "value": {
+                      "string": "ENTRY"
+                    }
+                  }
+                }
+              }
+            ]
+          }
+        ]
+      },
+      "selection": [
+        {
+          "function": {
+            "functionName": "AVG",
+            "arguments": [
+              {
+                "columnIdentifier": {
+                  "columnName": "API_TRACE.duration"
+                }
+              }
+            ],
+            "alias": "AVG#results/avgLatency:API_TRACE|duration"
+          }
+        },
+        {
+          "function": {
+            "functionName": "COUNT",
+            "arguments": [
+              {
+                "columnIdentifier": {
+                  "columnName": "API_TRACE.traceId"
+                }
+              }
+            ],
+            "alias": "COUNT#results/countTraces:API_TRACE|traceId"
+          }
+        }
+      ],
+      "groupBy": [
+        {
+          "function": {
+            "functionName": "dateTimeConvert",
+            "arguments": [
+              {
+                "columnIdentifier": {
+                  "columnName": "API_TRACE.startTime"
+                }
+              },
+              {
+                "literal": {
+                  "value": {
+                    "string": "1:MILLISECONDS:EPOCH"
+                  }
+                }
+              },
+              {
+                "literal": {
+                  "value": {
+                    "string": "1:MILLISECONDS:EPOCH"
+                  }
+                }
+              },
+              {
+                "literal": {
+                  "value": {
+                    "string": "60:SECONDS"
+                  }
+                }
+              }
+            ]
+          }
+        }
+      ],
+      "limit": 100000
+    },
+    "response": {
+      "isLastChunk": true,
+      "resultSetMetadata": {
+        "columnMetadata": [
+          {
+            "columnName": "dateTimeConvert"
+          },
+          {
+            "columnName": "AVG#results/avgLatency:API_TRACE|duration"
+          },
+          {
+            "columnName": "COUNT#results/countTraces:API_TRACE|traceId"
+          }
+        ]
+      },
+      "row": [
+        {
+          "column": [
+            {
+              "string": "1575308040000"
+            },
+            {
+              "string": "376.31333"
+            },
+            {
+              "string": "900"
+            }
+          ]
+        },
+        {
+          "column": [
+            {
+              "string": "1575307860000"
+            },
+            {
+              "string": "29.40891"
+            },
+            {
+              "string": "1526"
+            }
+          ]
+        },
+        {
+          "column": [
+            {
+              "string": "1575307980000"
+            },
+            {
+              "string": "26.25162"
+            },
+            {
+              "string": "1546"
+            }
+          ]
+        },
+        {
+          "column": [
+            {
+              "string": "1575308220000"
+            },
+            {
+              "string": "25.01376"
+            },
+            {
+              "string": "1599"
+            }
+          ]
+        },
+        {
+          "column": [
+            {
+              "string": "1575308160000"
+            },
+            {
+              "string": "14.57841"
+            },
+            {
+              "string": "491"
+            }
+          ]
+        },
+        {
+          "column": [
+            {
+              "string": "1575308100000"
+            },
+            {
+              "string": "13.99868"
+            },
+            {
+              "string": "759"
+            }
+          ]
+        },
+        {
+          "column": [
+            {
+              "string": "1575307740000"
+            },
+            {
+              "string": "9.30238"
+            },
+            {
+              "string": "926"
+            }
+          ]
+        },
+        {
+          "column": [
+            {
+              "string": "1575307920000"
+            },
+            {
+              "string": "8.49306"
+            },
+            {
+              "string": "720"
+            }
+          ]
+        },
+        {
+          "column": [
+            {
+              "string": "1575307800000"
+            },
+            {
+              "string": "8.02764"
+            },
+            {
+              "string": "832"
+            }
+          ]
+        }
+      ]
+    }
+  }
+]

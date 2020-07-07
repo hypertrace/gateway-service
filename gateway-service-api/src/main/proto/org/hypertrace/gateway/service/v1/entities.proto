@@ -1,0 +1,91 @@
+syntax = "proto3";
+
+option java_multiple_files = true;
+option java_package = "org.hypertrace.gateway.service.v1.entity";
+
+
+package org.hypertrace.gateway.service.v1.entity;
+
+import "org/hypertrace/gateway/service/v1/gateway_query.proto";
+
+// Entity + metric data
+message Entity {
+  string entity_type = 2;
+  map<string, org.hypertrace.gateway.service.v1.common.Value> attribute = 4;
+  map<string, org.hypertrace.gateway.service.v1.common.AggregatedMetricValue> metric = 5;
+  map<string, org.hypertrace.gateway.service.v1.common.MetricSeries> metric_series = 6;
+  repeated EntityInteraction incoming_interaction = 7;
+  repeated EntityInteraction outgoing_interaction = 8;
+}
+
+// EntityInteraction + metrics
+message EntityInteraction {
+  map<string, org.hypertrace.gateway.service.v1.common.Value> attribute = 7;
+  map<string, org.hypertrace.gateway.service.v1.common.AggregatedMetricValue> metrics = 8;
+}
+
+message EntitiesRequest {
+  // The type of entities the request is asking for
+  string entity_type = 1;
+  sfixed64 start_time_millis = 2;
+  sfixed64 end_time_millis = 3;
+
+  // Filters using which the entities need to be filtered.
+  org.hypertrace.gateway.service.v1.common.Filter filter = 4;
+
+  // Selections
+  repeated org.hypertrace.gateway.service.v1.common.Expression selection = 5;
+  repeated org.hypertrace.gateway.service.v1.common.TimeAggregation time_aggregation = 6;
+  // Interaction requests
+  InteractionsRequest incoming_interactions = 7;
+  InteractionsRequest outgoing_interactions = 8;
+
+  repeated org.hypertrace.gateway.service.v1.common.OrderByExpression order_by = 15;
+
+  int32 limit = 20;
+  int32 offset = 21;
+}
+
+message EntitiesResponse {
+  repeated Entity entity = 1;
+
+  // Leaving some gap in the field numbers, in case we need to add more things in the future.
+  int32 total = 10;
+}
+
+message InteractionsRequest {
+  // Filters
+  org.hypertrace.gateway.service.v1.common.Filter filter = 1;
+
+  // Selections
+  repeated org.hypertrace.gateway.service.v1.common.Expression selection = 2;
+
+  int32 limit = 10;
+}
+
+message UpdateEntityRequest {
+  // ID of entity that needs to be updated
+  string entity_id = 1;
+  string entity_type = 2;
+  UpdateEntityOperation operation = 3;
+
+  // Selections to return after update is performed
+  repeated org.hypertrace.gateway.service.v1.common.Expression selection = 4;
+}
+
+message UpdateEntityOperation {
+  oneof operation {
+    SetAttribute setAttribute = 1;
+    // more update operations in the future
+  }
+}
+
+message UpdateEntityResponse {
+  // The updated entity containing requested selections
+  Entity entity = 1;
+}
+
+message SetAttribute {
+  org.hypertrace.gateway.service.v1.common.ColumnIdentifier attribute = 1;
+  org.hypertrace.gateway.service.v1.common.LiteralConstant value = 2;
+}

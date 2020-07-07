@@ -1,0 +1,1341 @@
+[
+  {
+    "fqn": "Trace.id",
+    "valueKind": "TYPE_STRING",
+    "key": "id",
+    "displayName": "Trace ID",
+    "scope": "TRACE",
+    "type": "ATTRIBUTE",
+    "sources": [
+      "QS"
+    ]
+  },
+  {
+    "fqn": "Trace.name",
+    "valueKind": "TYPE_STRING",
+    "key": "name",
+    "displayName": "Trace Name",
+    "scope": "TRACE",
+    "type": "ATTRIBUTE",
+    "sources": [
+      "QS"
+    ]
+  },
+  {
+    "fqn": "Trace.start_time_millis",
+    "valueKind": "TYPE_INT64",
+    "key": "startTime",
+    "displayName": "Trace Start Time",
+    "scope": "TRACE",
+    "unit": "ms",
+    "type": "ATTRIBUTE",
+    "sources": [
+      "QS"
+    ]
+  },
+  {
+    "fqn": "Trace.end_time_millis",
+    "valueKind": "TYPE_INT64",
+    "key": "endTime",
+    "displayName": "Trace End Time",
+    "scope": "TRACE",
+    "unit": "ms",
+    "type": "ATTRIBUTE",
+    "sources": [
+      "QS"
+    ]
+  },
+  {
+    "fqn": "Trace.attributes.services",
+    "valueKind": "TYPE_STRING",
+    "key": "services",
+    "displayName": "Service Name",
+    "scope": "TRACE",
+    "type": "ATTRIBUTE",
+    "sources": [
+      "QS"
+    ]
+  },
+  {
+    "fqn": "Trace.metrics.duration_millis",
+    "valueKind": "TYPE_INT64",
+    "key": "duration",
+    "displayName": "Trace Duration",
+    "scope": "TRACE",
+    "unit": "ms",
+    "type": "METRIC",
+    "sources": [
+      "QS"
+    ]
+  },
+  {
+    "fqn": "Trace.metrics.num_services",
+    "valueKind": "TYPE_INT64",
+    "key": "numServices",
+    "displayName": "Trace Service Count",
+    "scope": "TRACE",
+    "unit": "ms",
+    "type": "METRIC",
+    "sources": [
+      "QS"
+    ]
+  },
+  {
+    "fqn": "Trace.metrics.num_spans",
+    "valueKind": "TYPE_INT64",
+    "key": "numSpans",
+    "displayName": "Trace Span Count",
+    "scope": "TRACE",
+    "unit": "ms",
+    "type": "METRIC",
+    "sources": [
+      "QS"
+    ]
+  },
+  {
+    "fqn": "Span.id",
+    "valueKind": "TYPE_STRING",
+    "key": "id",
+    "displayName": "Span ID",
+    "scope": "EVENT",
+    "type": "ATTRIBUTE",
+    "sources": [
+      "QS"
+    ]
+  },
+  {
+    "fqn": "Service.id",
+    "valueKind": "TYPE_STRING",
+    "key": "serviceId",
+    "displayName": "Span Service Id",
+    "scope": "EVENT",
+    "type": "ATTRIBUTE",
+    "sources": [
+      "QS"
+    ]
+  },
+  {
+    "fqn": "Service.name",
+    "valueKind": "TYPE_STRING",
+    "key": "serviceName",
+    "displayName": "Span Service Name",
+    "scope": "EVENT",
+    "type": "ATTRIBUTE",
+    "sources": [
+      "QS"
+    ]
+  },
+  {
+    "fqn": "API.id",
+    "valueKind": "TYPE_STRING",
+    "key": "apiId",
+    "displayName": "Span API Id",
+    "scope": "EVENT",
+    "type": "ATTRIBUTE",
+    "sources": [
+      "QS"
+    ]
+  },
+  {
+    "fqn": "API.name",
+    "valueKind": "TYPE_STRING",
+    "key": "apiName",
+    "displayName": "Span API Name",
+    "scope": "EVENT",
+    "type": "ATTRIBUTE",
+    "sources": [
+      "QS"
+    ]
+  },
+  {
+    "fqn": "Span.start_time_millis",
+    "valueKind": "TYPE_INT64",
+    "key": "startTime",
+    "displayName": "Span Start Time",
+    "scope": "EVENT",
+    "unit": "ms",
+    "type": "ATTRIBUTE",
+    "sources": [
+      "QS"
+    ]
+  },
+  {
+    "fqn": "Span.end_time_millis",
+    "valueKind": "TYPE_INT64",
+    "key": "endTime",
+    "displayName": "Span End Time",
+    "scope": "EVENT",
+    "unit": "ms",
+    "type": "ATTRIBUTE",
+    "sources": [
+      "QS"
+    ]
+  },
+  {
+    "fqn": "Span.attributes.span_kind",
+    "valueKind": "TYPE_STRING",
+    "key": "type",
+    "displayName": "Span Type",
+    "scope": "EVENT",
+    "type": "ATTRIBUTE",
+    "sources": [
+      "QS"
+    ]
+  },
+  {
+    "fqn": "Span.attributes.trace_id",
+    "valueKind": "TYPE_STRING",
+    "key": "traceId",
+    "displayName": "Span Trace ID",
+    "scope": "EVENT",
+    "type": "ATTRIBUTE",
+    "sources": [
+      "QS"
+    ]
+  },
+  {
+    "fqn": "Span.attributes.span_kind",
+    "valueKind": "TYPE_STRING",
+    "key": "spanKind",
+    "displayName": "Span Type",
+    "scope": "EVENT",
+    "type": "ATTRIBUTE",
+    "sources": [
+      "QS"
+    ]
+  },
+  {
+    "fqn": "Span.attributes.upstream_service",
+    "valueKind": "TYPE_STRING",
+    "key": "upstreamService",
+    "displayName": "Span Upstream Service",
+    "scope": "EVENT",
+    "type": "ATTRIBUTE",
+    "sources": [
+      "QS"
+    ]
+  },
+  {
+    "fqn": "Span.attributes.downstream_services",
+    "valueKind": "TYPE_STRING",
+    "key": "downstreamServices",
+    "displayName": "Span Downstream Services",
+    "scope": "EVENT",
+    "type": "ATTRIBUTE",
+    "sources": [
+      "QS"
+    ]
+  },
+  {
+    "fqn": "Span.metrics.duration_millis",
+    "valueKind": "TYPE_INT64",
+    "key": "duration",
+    "displayName": "Span Duration",
+    "scope": "EVENT",
+    "unit": "ms",
+    "type": "METRIC",
+    "sources": [
+      "QS"
+    ]
+  },
+  {
+    "fqn": "Span.metrics.bytes_received",
+    "valueKind": "TYPE_INT64",
+    "key": "bytesReceived",
+    "displayName": "Span Bytes Received",
+    "scope": "EVENT",
+    "type": "METRIC",
+    "sources": [
+      "QS"
+    ]
+  },
+  {
+    "fqn": "Span.metrics.bytes_sent",
+    "valueKind": "TYPE_INT64",
+    "key": "bytesSent",
+    "displayName": "Span Bytes Sent",
+    "scope": "EVENT",
+    "type": "METRIC",
+    "sources": [
+      "QS"
+    ]
+  },
+  {
+    "fqn": "Span.metrics.error_count",
+    "valueKind": "TYPE_INT64",
+    "key": "errorCount",
+    "displayName": "Span Error Count",
+    "scope": "EVENT",
+    "type": "METRIC",
+    "sources": [
+      "QS"
+    ]
+  },
+  {
+    "fqn": "Span.metrics.exception_count",
+    "valueKind": "TYPE_INT64",
+    "key": "exceptionCount",
+    "displayName": "Span Exception Count",
+    "scope": "EVENT",
+    "type": "METRIC",
+    "sources": [
+      "QS"
+    ]
+  },
+  {
+    "fqn": "Span.attributes.parent_span_id",
+    "valueKind": "TYPE_STRING",
+    "key": "parentSpanId",
+    "displayName": "Parent Span Id",
+    "scope": "EVENT",
+    "type": "ATTRIBUTE",
+    "sources": [
+      "QS"
+    ]
+  },
+  {
+    "fqn": "Span.attributes.tags",
+    "valueKind": "TYPE_STRING_MAP",
+    "key": "spanTags",
+    "displayName": "Span Tags",
+    "scope": "EVENT",
+    "type": "ATTRIBUTE",
+    "sources": [
+      "QS"
+    ]
+  },
+  {
+    "fqn": "Span.attributes.request_headers",
+    "valueKind": "TYPE_STRING_MAP",
+    "key": "spanRequestHeaders",
+    "displayName": "Span Request Headers",
+    "scope": "EVENT",
+    "type": "ATTRIBUTE",
+    "sources": [
+      "QS"
+    ]
+  },
+  {
+    "fqn": "Span.attributes.request_params",
+    "valueKind": "TYPE_STRING_MAP",
+    "key": "spanRequestParams",
+    "displayName": "Span Request Params",
+    "scope": "EVENT",
+    "type": "ATTRIBUTE",
+    "sources": [
+      "QS"
+    ]
+  },
+  {
+    "fqn": "Span.attributes.response_headers",
+    "valueKind": "TYPE_STRING_MAP",
+    "key": "spanResponseHeaders",
+    "displayName": "Span Response Headers",
+    "scope": "EVENT",
+    "type": "ATTRIBUTE",
+    "sources": [
+      "QS"
+    ]
+  },
+  {
+    "fqn": "Span.attributes.request_body",
+    "valueKind": "TYPE_STRING",
+    "key": "spanRequestBody",
+    "displayName": "Span Request Body",
+    "scope": "EVENT",
+    "type": "ATTRIBUTE",
+    "sources": [
+      "QS"
+    ]
+  },
+  {
+    "fqn": "Span.attributes.response_body",
+    "valueKind": "TYPE_STRING",
+    "key": "spanResponseBody",
+    "displayName": "Span Response Body",
+    "scope": "EVENT",
+    "type": "ATTRIBUTE",
+    "sources": [
+      "QS"
+    ]
+  },
+  {
+    "fqn": "Span.attributes.request_method",
+    "valueKind": "TYPE_STRING",
+    "key": "spanRequestMethod",
+    "displayName": "Span Request Method",
+    "scope": "EVENT",
+    "type": "ATTRIBUTE",
+    "sources": [
+      "QS"
+    ]
+  },
+  {
+    "fqn": "Span.attributes.protocol_name",
+    "valueKind": "TYPE_STRING",
+    "key": "protocolName",
+    "displayName": "Span Protocol",
+    "scope": "EVENT",
+    "type": "ATTRIBUTE",
+    "sources": [
+      "QS"
+    ]
+  },
+  {
+    "fqn": "Span.attributes.status_code",
+    "valueKind": "TYPE_STRING",
+    "key": "statusCode",
+    "displayName": "Span Status Code",
+    "scope": "EVENT",
+    "type": "ATTRIBUTE",
+    "sources": [
+      "QS"
+    ]
+  },
+  {
+    "fqn": "Span.attributes.entry_api_id",
+    "valueKind": "TYPE_STRING",
+    "key": "entryApiId",
+    "displayName": "Span Entry API Id",
+    "scope": "EVENT",
+    "type": "ATTRIBUTE",
+    "sources": [
+      "QS"
+    ]
+  },
+  {
+    "fqn": "Api.Trace.id",
+    "valueKind": "TYPE_STRING",
+    "key": "apiTraceId",
+    "displayName": "Span Id",
+    "scope": "EVENT",
+    "type": "ATTRIBUTE",
+    "sources": [
+      "QS"
+    ]
+  },
+  {
+    "fqn": "Api.Trace.id",
+    "valueKind": "TYPE_STRING",
+    "key": "apiTraceId",
+    "displayName": "Span Id",
+    "scope": "API_TRACE",
+    "type": "ATTRIBUTE",
+    "sources": [
+      "QS"
+    ]
+  },
+  {
+    "fqn": "Api.Trace.attributes.span_kind",
+    "valueKind": "TYPE_STRING",
+    "key": "type",
+    "displayName": "Span Type",
+    "scope": "API_TRACE",
+    "type": "ATTRIBUTE",
+    "sources": [
+      "QS"
+    ]
+  },
+  {
+    "fqn": "Api.Trace.start_time_millis",
+    "valueKind": "TYPE_INT64",
+    "key": "startTime",
+    "displayName": "API Trace Start Time",
+    "scope": "API_TRACE",
+    "unit": "ms",
+    "type": "ATTRIBUTE",
+    "sources": [
+      "QS"
+    ]
+  },
+  {
+    "fqn": "Api.Trace.end_time_millis",
+    "valueKind": "TYPE_INT64",
+    "key": "endTime",
+    "displayName": "API Trace End Time",
+    "scope": "API_TRACE",
+    "unit": "ms",
+    "type": "ATTRIBUTE",
+    "sources": [
+      "QS"
+    ]
+  },
+  {
+    "fqn": "Api.Trace.attributes.trace_id",
+    "valueKind": "TYPE_STRING",
+    "key": "traceId",
+    "displayName": "API Trace Transacation Trace ID",
+    "scope": "API_TRACE",
+    "type": "ATTRIBUTE",
+    "sources": [
+      "QS"
+    ]
+  },
+  {
+    "fqn": "Service.name",
+    "valueKind": "TYPE_STRING",
+    "key": "serviceName",
+    "displayName": "API Trace Service Name",
+    "scope": "API_TRACE",
+    "type": "ATTRIBUTE",
+    "sources": [
+      "QS"
+    ]
+  },
+  {
+    "fqn": "Service.id",
+    "valueKind": "TYPE_STRING",
+    "key": "serviceId",
+    "displayName": "API Trace Service Id",
+    "scope": "API_TRACE",
+    "type": "ATTRIBUTE",
+    "sources": [
+      "QS"
+    ]
+  },
+  {
+    "fqn": "API.name",
+    "valueKind": "TYPE_STRING",
+    "key": "apiName",
+    "displayName": "API Trace API Name",
+    "scope": "API_TRACE",
+    "type": "ATTRIBUTE",
+    "sources": [
+      "QS"
+    ]
+  },
+  {
+    "fqn": "API.id",
+    "valueKind": "TYPE_STRING",
+    "key": "apiId",
+    "displayName": "API Trace API Id",
+    "scope": "API_TRACE",
+    "type": "ATTRIBUTE",
+    "sources": [
+      "QS"
+    ]
+  },
+  {
+    "fqn": "Api.Trace.metrics.duration_millis",
+    "valueKind": "TYPE_INT64",
+    "key": "duration",
+    "id": "API_TRACE.duration",
+    "displayName": "API Trace Duration",
+    "scope": "API_TRACE",
+    "unit": "ms",
+    "type": "ATTRIBUTE",
+    "sources": [
+      "QS"
+    ]
+  },
+  {
+    "fqn": "Api.Trace.attributes.protocol",
+    "valueKind": "TYPE_STRING",
+    "key": "protocol",
+    "displayName": "API Trace Protocol",
+    "scope": "API_TRACE",
+    "type": "ATTRIBUTE",
+    "sources": [
+      "QS"
+    ]
+  },
+  {
+    "fqn": "Api.Trace.attributes.status_code",
+    "valueKind": "TYPE_STRING",
+    "key": "statusCode",
+    "displayName": "API Trace Status Code",
+    "scope": "API_TRACE",
+    "type": "ATTRIBUTE",
+    "sources": [
+      "QS"
+    ]
+  },
+  {
+    "fqn": "Api.Trace.api_boundary_type",
+    "valueKind": "TYPE_STRING",
+    "key": "apiBoundaryType",
+    "displayName": "API Trace  API Boundary Type",
+    "scope": "API_TRACE",
+    "type": "ATTRIBUTE",
+    "sources": [
+      "QS"
+    ]
+  },
+  {
+    "fqn": "API.id",
+    "valueKind": "TYPE_STRING",
+    "key": "id",
+    "displayName": "API ID",
+    "scope": "API",
+    "type": "ATTRIBUTE",
+    "sources": [
+      "QS"
+    ]
+  },
+  {
+    "fqn": "API.type",
+    "valueKind": "TYPE_STRING",
+    "key": "type",
+    "displayName": "Entity Type",
+    "scope": "API",
+    "type": "ATTRIBUTE",
+    "sources": [
+      "EDS"
+    ]
+  },
+  {
+    "fqn": "API.name",
+    "valueKind": "TYPE_STRING",
+    "key": "name",
+    "displayName": "API Name",
+    "scope": "API",
+    "type": "ATTRIBUTE",
+    "sources": [
+      "QS"
+    ]
+  },
+  {
+    "fqn": "API.apiType",
+    "valueKind": "TYPE_STRING",
+    "key": "apiType",
+    "displayName": "API Type",
+    "scope": "API",
+    "type": "ATTRIBUTE",
+    "sources": [
+      "EDS"
+    ]
+  },
+  {
+    "fqn": "API.start_time_millis",
+    "valueKind": "TYPE_INT64",
+    "key": "startTime",
+    "displayName": "API Start Time",
+    "scope": "API",
+    "unit": "ms",
+    "type": "ATTRIBUTE",
+    "sources": [
+      "QS"
+    ]
+  },
+  {
+    "fqn": "API.end_time_millis",
+    "valueKind": "TYPE_INT64",
+    "key": "endTime",
+    "displayName": "API End Time",
+    "scope": "API",
+    "unit": "ms",
+    "type": "ATTRIBUTE",
+    "sources": [
+      "QS"
+    ]
+  },
+  {
+    "fqn": "Service.name",
+    "valueKind": "TYPE_STRING",
+    "key": "serviceName",
+    "displayName": "Service Name",
+    "scope": "API",
+    "type": "ATTRIBUTE",
+    "sources": [
+      "QS"
+    ]
+  },
+  {
+    "fqn": "Service.id",
+    "valueKind": "TYPE_STRING",
+    "key": "serviceId",
+    "displayName": "Service Id",
+    "scope": "API",
+    "type": "ATTRIBUTE",
+    "sources": [
+      "QS"
+    ]
+  },
+  {
+    "fqn": "API.attributes.namespace",
+    "valueKind": "TYPE_STRING",
+    "key": "namespace",
+    "displayName": "Namespace",
+    "scope": "API",
+    "type": "ATTRIBUTE",
+    "sources": [
+      "QS"
+    ]
+  },
+  {
+    "fqn": "API.metrics.duration_millis",
+    "valueKind": "TYPE_INT64",
+    "key": "duration",
+    "displayName": "API Duration",
+    "scope": "API",
+    "unit": "ms",
+    "type": "METRIC",
+    "sources": [
+      "QS"
+    ]
+  },
+  {
+    "fqn": "API.metrics.total_duration_millis",
+    "valueKind": "TYPE_INT64",
+    "key": "totalDuration",
+    "displayName": "Total Duration",
+    "scope": "API",
+    "type": "METRIC",
+    "sources": [
+      "QS"
+    ]
+  },
+  {
+    "fqn": "API.metrics.bytes_sent",
+    "valueKind": "TYPE_INT64",
+    "key": "bytesSent",
+    "displayName": "Server Bytes Sent",
+    "scope": "API",
+    "type": "METRIC",
+    "sources": [
+      "QS"
+    ]
+  },
+  {
+    "fqn": "API.metrics.bytes_received",
+    "valueKind": "TYPE_INT64",
+    "key": "bytesReceived",
+    "displayName": "Server Bytes Received",
+    "scope": "API",
+    "type": "METRIC",
+    "sources": [
+      "QS"
+    ]
+  },
+  {
+    "fqn": "API.metrics.client_bytes_sent",
+    "valueKind": "TYPE_INT64",
+    "key": "clientBytesSent",
+    "displayName": "Client Bytes Sent",
+    "scope": "API",
+    "type": "METRIC",
+    "sources": [
+      "QS"
+    ]
+  },
+  {
+    "fqn": "API.metrics.client_bytes_received",
+    "valueKind": "TYPE_INT64",
+    "key": "clientBytesReceived",
+    "displayName": "Client Bytes Received",
+    "scope": "API",
+    "type": "METRIC",
+    "sources": [
+      "QS"
+    ]
+  },
+  {
+    "fqn": "API.metrics.error_count",
+    "valueKind": "TYPE_INT64",
+    "key": "errorCount",
+    "displayName": "Error Count",
+    "scope": "API",
+    "type": "METRIC",
+    "sources": [
+      "QS"
+    ]
+  },
+  {
+    "fqn": "API.metrics.exception_count",
+    "valueKind": "TYPE_INT64",
+    "key": "exceptionCount",
+    "displayName": "Exception Count",
+    "scope": "API",
+    "type": "METRIC",
+    "sources": [
+      "QS"
+    ]
+  },
+  {
+    "fqn": "API.metrics.num_calls",
+    "valueKind": "TYPE_INT64",
+    "key": "numCalls",
+    "displayName": "Calls",
+    "scope": "API",
+    "type": "METRIC",
+    "sources": [
+      "QS"
+    ]
+  },
+  {
+    "fqn": "API.path_params_schema",
+    "valueKind": "TYPE_STRING_MAP",
+    "key": "pathParamsSchema",
+    "displayName": "Path Params Schema",
+    "scope": "API",
+    "type": "ATTRIBUTE",
+    "sources": [
+      "EDS"
+    ]
+  },
+  {
+    "fqn": "API.http.path_params_type",
+    "valueKind": "TYPE_STRING_MAP",
+    "key": "pathParamsType",
+    "displayName": "Path Params Type",
+    "scope": "API",
+    "type": "ATTRIBUTE",
+    "sources": [
+      "EDS"
+    ]
+  },
+  {
+    "fqn": "API.query_params_schema",
+    "valueKind": "TYPE_STRING_MAP",
+    "key": "queryParamsSchema",
+    "displayName": "Query Params Schema",
+    "scope": "API",
+    "type": "ATTRIBUTE",
+    "sources": [
+      "EDS"
+    ]
+  },
+  {
+    "fqn": "API.http.query_params_type",
+    "valueKind": "TYPE_STRING_MAP",
+    "key": "queryParamsType",
+    "displayName": "Query Params Type",
+    "scope": "API",
+    "type": "ATTRIBUTE",
+    "sources": [
+      "EDS"
+    ]
+  },
+  {
+    "fqn": "API.request_headers",
+    "valueKind": "TYPE_STRING_MAP",
+    "key": "requestHeaders",
+    "displayName": "Request Headers",
+    "scope": "API",
+    "type": "ATTRIBUTE",
+    "sources": [
+      "EDS"
+    ]
+  },
+  {
+    "fqn": "API.response_headers",
+    "valueKind": "TYPE_STRING_MAP",
+    "key": "responseHeaders",
+    "displayName": "Response Headers",
+    "scope": "API",
+    "type": "ATTRIBUTE",
+    "sources": [
+      "EDS"
+    ]
+  },
+  {
+    "fqn": "API.http.response_headers_type",
+    "valueKind": "TYPE_STRING_MAP",
+    "key": "responseHeadersType",
+    "displayName": "Response Headers Type",
+    "scope": "API",
+    "type": "ATTRIBUTE",
+    "sources": [
+      "EDS"
+    ]
+  },
+  {
+    "fqn": "API.http.request_headers_type",
+    "valueKind": "TYPE_STRING_MAP",
+    "key": "requestHeadersType",
+    "displayName": "Request Headers Type",
+    "scope": "API",
+    "type": "ATTRIBUTE",
+    "sources": [
+      "EDS"
+    ]
+  },
+  {
+    "fqn": "API.request_body_schema",
+    "valueKind": "TYPE_STRING",
+    "key": "requestBodySchema",
+    "displayName": "Request Body Schema",
+    "scope": "API",
+    "type": "ATTRIBUTE",
+    "sources": [
+      "EDS"
+    ]
+  },
+  {
+    "fqn": "API.response_body_schema",
+    "valueKind": "TYPE_STRING",
+    "key": "responseBodySchema",
+    "displayName": "Response Body Schema",
+    "scope": "API",
+    "type": "ATTRIBUTE",
+    "sources": [
+      "EDS"
+    ]
+  },
+  {
+    "fqn": "API.http.method",
+    "valueKind": "TYPE_STRING",
+    "key": "httpMethod",
+    "displayName": "HTTP Method",
+    "scope": "API",
+    "type": "ATTRIBUTE",
+    "sources": [
+      "EDS"
+    ]
+  },
+  {
+    "fqn": "API.http.url",
+    "valueKind": "TYPE_STRING",
+    "key": "httpUrl",
+    "displayName": "URL",
+    "scope": "API",
+    "type": "ATTRIBUTE",
+    "sources": [
+      "EDS"
+    ]
+  },
+  {
+    "fqn": "Service.id",
+    "valueKind": "TYPE_STRING",
+    "key": "id",
+    "displayName": "Service ID",
+    "scope": "SERVICE",
+    "type": "ATTRIBUTE",
+    "sources": [
+      "QS"
+    ]
+  },
+  {
+    "fqn": "Service.type",
+    "valueKind": "TYPE_STRING",
+    "key": "type",
+    "displayName": "Entity Type",
+    "scope": "SERVICE",
+    "type": "ATTRIBUTE",
+    "sources": [
+      "EDS"
+    ]
+  },
+  {
+    "fqn": "Service.name",
+    "valueKind": "TYPE_STRING",
+    "key": "name",
+    "displayName": "Service Name",
+    "scope": "SERVICE",
+    "type": "ATTRIBUTE",
+    "sources": [
+      "QS"
+    ]
+  },
+  {
+    "fqn": "Service.start_time_millis",
+    "valueKind": "TYPE_INT64",
+    "key": "startTime",
+    "displayName": "Service Start Time",
+    "scope": "SERVICE",
+    "unit": "ms",
+    "type": "ATTRIBUTE",
+    "sources": [
+      "QS"
+    ]
+  },
+  {
+    "fqn": "Service.end_time_millis",
+    "valueKind": "TYPE_INT64",
+    "key": "endTime",
+    "displayName": "Service End Time",
+    "scope": "SERVICE",
+    "unit": "ms",
+    "type": "ATTRIBUTE",
+    "sources": [
+      "QS"
+    ]
+  },
+  {
+    "fqn": "Service.attributes.namespace",
+    "valueKind": "TYPE_STRING",
+    "key": "namespace",
+    "displayName": "Namespace",
+    "scope": "SERVICE",
+    "type": "ATTRIBUTE",
+    "sources": [
+      "QS"
+    ]
+  },
+  {
+    "fqn": "Service.metrics.duration_millis",
+    "valueKind": "TYPE_INT64",
+    "key": "duration",
+    "displayName": "Service Call Duration",
+    "scope": "SERVICE",
+    "unit": "ms",
+    "type": "METRIC",
+    "sources": [
+      "QS"
+    ]
+  },
+  {
+    "fqn": "Service.metrics.total_duration_millis",
+    "valueKind": "TYPE_INT64",
+    "key": "totalDuration",
+    "displayName": "Total Duration",
+    "scope": "SERVICE",
+    "type": "METRIC",
+    "sources": [
+      "QS"
+    ]
+  },
+  {
+    "fqn": "Service.metrics.bytes_sent",
+    "valueKind": "TYPE_INT64",
+    "key": "bytesSent",
+    "displayName": "Server Bytes Sent",
+    "scope": "SERVICE",
+    "type": "METRIC",
+    "sources": [
+      "QS"
+    ]
+  },
+  {
+    "fqn": "Service.metrics.bytes_received",
+    "valueKind": "TYPE_INT64",
+    "key": "bytesReceived",
+    "displayName": "Server Bytes Received",
+    "scope": "SERVICE",
+    "type": "METRIC",
+    "sources": [
+      "QS"
+    ]
+  },
+  {
+    "fqn": "Service.metrics.client_bytes_sent",
+    "valueKind": "TYPE_INT64",
+    "key": "clientBytesSent",
+    "displayName": "Client Bytes Sent",
+    "scope": "SERVICE",
+    "type": "METRIC",
+    "sources": [
+      "QS"
+    ]
+  },
+  {
+    "fqn": "Service.metrics.client_bytes_received",
+    "valueKind": "TYPE_INT64",
+    "key": "clientBytesReceived",
+    "displayName": "Client Bytes Received",
+    "scope": "SERVICE",
+    "type": "METRIC",
+    "sources": [
+      "QS"
+    ]
+  },
+  {
+    "fqn": "Service.metrics.error_count",
+    "valueKind": "TYPE_INT64",
+    "key": "errorCount",
+    "displayName": "Error Count",
+    "scope": "SERVICE",
+    "type": "METRIC",
+    "sources": [
+      "QS"
+    ]
+  },
+  {
+    "fqn": "Service.metrics.exception_count",
+    "valueKind": "TYPE_INT64",
+    "key": "exceptionCount",
+    "displayName": "Exception Count",
+    "scope": "SERVICE",
+    "type": "METRIC",
+    "sources": [
+      "QS"
+    ]
+  },
+  {
+    "fqn": "Service.metrics.num_calls",
+    "valueKind": "TYPE_INT64",
+    "key": "numCalls",
+    "displayName": "Number of Calls",
+    "scope": "SERVICE",
+    "type": "METRIC",
+    "sources": [
+      "QS"
+    ]
+  },
+  {
+    "fqn": "Interaction.start_time_millis",
+    "valueKind": "TYPE_INT64",
+    "key": "startTime",
+    "id": "INTERACTION.startTime",
+    "displayName": "Interaction Start Time",
+    "scope": "INTERACTION",
+    "unit": "ms",
+    "type": "ATTRIBUTE",
+    "sources": [
+      "QS"
+    ]
+  },
+  {
+    "fqn": "Interaction.end_time_millis",
+    "valueKind": "TYPE_INT64",
+    "key": "endTime",
+    "id": "INTERACTION.endTime",
+    "displayName": "Interaction End Time",
+    "scope": "INTERACTION",
+    "unit": "ms",
+    "type": "ATTRIBUTE",
+    "sources": [
+      "QS"
+    ]
+  },
+  {
+    "fqn": "Interaction.attributes.from_entity_type",
+    "valueKind": "TYPE_STRING",
+    "key": "fromEntityType",
+    "id": "INTERACTION.fromEntityType",
+    "displayName": "Caller EntityType",
+    "scope": "INTERACTION",
+    "type": "ATTRIBUTE",
+    "sources": [
+      "QS"
+    ]
+  },
+  {
+    "fqn": "Interaction.attributes.to_entity_type",
+    "valueKind": "TYPE_STRING",
+    "key": "toEntityType",
+    "id": "INTERACTION.toEntityType",
+    "displayName": "Callee EntityType",
+    "scope": "INTERACTION",
+    "type": "ATTRIBUTE",
+    "sources": [
+      "QS"
+    ]
+  },
+  {
+    "fqn": "Interaction.attributes.from_entity_id",
+    "valueKind": "TYPE_STRING",
+    "key": "fromEntityId",
+    "id": "INTERACTION.fromEntityId",
+    "displayName": "Interaction Callee Service",
+    "scope": "INTERACTION",
+    "type": "ATTRIBUTE",
+    "sources": [
+      "QS"
+    ]
+  },
+  {
+    "fqn": "Interaction.attributes.to_entity_id",
+    "valueKind": "TYPE_STRING",
+    "key": "toEntityId",
+    "id": "INTERACTION.toEntityId",
+    "displayName": "Interaction Callee API",
+    "scope": "INTERACTION",
+    "type": "ATTRIBUTE",
+    "sources": [
+      "QS"
+    ]
+  },
+  {
+    "fqn": "Interaction.metrics.duration_millis",
+    "valueKind": "TYPE_INT64",
+    "key": "duration",
+    "displayName": "Edge Duration",
+    "scope": "INTERACTION",
+    "unit": "ms",
+    "type": "METRIC",
+    "sources": [
+      "QS"
+    ]
+  },
+  {
+    "fqn": "Interaction.metrics.bytes_received",
+    "valueKind": "TYPE_INT64",
+    "key": "bytesReceived",
+    "displayName": "Interaction Bytes Received",
+    "scope": "INTERACTION",
+    "type": "METRIC",
+    "sources": [
+      "QS"
+    ]
+  },
+  {
+    "fqn": "Interaction.metrics.bytes_sent",
+    "valueKind": "TYPE_INT64",
+    "key": "bytesSent",
+    "displayName": "Interaction Bytes Sent",
+    "scope": "INTERACTION",
+    "type": "METRIC",
+    "sources": [
+      "QS"
+    ]
+  },
+  {
+    "fqn": "Interaction.metrics.num_calls",
+    "valueKind": "TYPE_INT64",
+    "key": "numCalls",
+    "displayName": "Calls",
+    "scope": "INTERACTION",
+    "type": "METRIC",
+    "sources": [
+      "QS"
+    ]
+  },
+  {
+    "fqn": "Backend.id",
+    "valueKind": "TYPE_STRING",
+    "key": "id",
+    "displayName": "Backend ID",
+    "scope": "BACKEND",
+    "type": "ATTRIBUTE",
+    "sources": [
+      "QS"
+    ]
+  },
+  {
+    "fqn": "Backend.start_time_millis",
+    "valueKind": "TYPE_INT64",
+    "key": "startTime",
+    "displayName": "Backend Start Time",
+    "scope": "BACKEND",
+    "unit": "ms",
+    "type": "ATTRIBUTE",
+    "sources": [
+      "QS"
+    ]
+  },
+  {
+    "fqn": "Backend.end_time_millis",
+    "valueKind": "TYPE_INT64",
+    "key": "endTime",
+    "displayName": "Backend End Time",
+    "scope": "BACKEND",
+    "unit": "ms",
+    "type": "ATTRIBUTE",
+    "sources": [
+      "QS"
+    ]
+  },
+  {
+    "fqn": "Backend.duration_millis",
+    "valueKind": "TYPE_INT64",
+    "key": "duration",
+    "displayName": "Backend Duration",
+    "scope": "BACKEND",
+    "unit": "ms",
+    "type": "ATTRIBUTE",
+    "sources": [
+      "QS"
+    ]
+  },
+  {
+    "fqn": "Backend.protocol",
+    "valueKind": "TYPE_STRING",
+    "key": "protocol",
+    "displayName": "Backend Protocol",
+    "scope": "BACKEND",
+    "type": "ATTRIBUTE",
+    "sources": [
+      "QS"
+    ]
+  },
+  {
+    "fqn": "Backend.host",
+    "valueKind": "TYPE_STRING",
+    "key": "host",
+    "displayName": "Backend Host",
+    "scope": "BACKEND",
+    "type": "ATTRIBUTE",
+    "sources": [
+      "QS"
+    ]
+  },
+  {
+    "fqn": "Backend.port",
+    "valueKind": "TYPE_STRING",
+    "key": "port",
+    "displayName": "Backend Port",
+    "scope": "BACKEND",
+    "type": "ATTRIBUTE",
+    "sources": [
+      "QS"
+    ]
+  },
+  {
+    "fqn": "Backend.path",
+    "valueKind": "TYPE_STRING",
+    "key": "path",
+    "displayName": "Backend Path",
+    "scope": "BACKEND",
+    "type": "ATTRIBUTE",
+    "sources": [
+      "QS"
+    ]
+  },
+  {
+    "fqn": "Backend.name",
+    "valueKind": "TYPE_STRING",
+    "key": "name",
+    "displayName": "Name",
+    "scope": "BACKEND",
+    "type": "ATTRIBUTE",
+    "sources": [
+      "QS"
+    ]
+  },
+  {
+    "fqn": "Backend.metrics.bytes_received",
+    "valueKind": "TYPE_INT64",
+    "key": "bytesReceived",
+    "displayName": "Backend Bytes Received",
+    "scope": "BACKEND",
+    "type": "METRIC",
+    "sources": [
+      "QS"
+    ]
+  },
+  {
+    "fqn": "Backend.metrics.bytes_sent",
+    "valueKind": "TYPE_INT64",
+    "key": "bytesSent",
+    "displayName": "Backend Bytes Sent",
+    "scope": "BACKEND",
+    "type": "METRIC",
+    "sources": [
+      "QS"
+    ]
+  },
+  {
+    "fqn": "Backend.metrics.error_count",
+    "valueKind": "TYPE_INT64",
+    "key": "errorCount",
+    "displayName": "Backend Error Count",
+    "scope": "BACKEND",
+    "type": "METRIC",
+    "sources": [
+      "QS"
+    ]
+  },
+  {
+    "fqn": "Backend.metrics.exception_count",
+    "valueKind": "TYPE_INT64",
+    "key": "exceptionCount",
+    "displayName": "Backend Exception Count",
+    "scope": "BACKEND",
+    "type": "METRIC",
+    "sources": [
+      "QS"
+    ]
+  },
+  {
+    "fqn": "Backend.metrics.num_calls",
+    "valueKind": "TYPE_INT64",
+    "key": "numCalls",
+    "displayName": "Calls",
+    "scope": "BACKEND",
+    "type": "METRIC",
+    "sources": [
+      "QS"
+    ]
+  }
+]

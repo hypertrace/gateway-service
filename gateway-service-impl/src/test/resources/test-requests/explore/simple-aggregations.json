@@ -1,0 +1,96 @@
+{
+  "context": "API_TRACE",
+  "startTimeMillis": "1574875733196",
+  "endTimeMillis": "1574879333196",
+  "filter": {
+  },
+  "selection": [
+    {
+      "function": {
+        "function": "AVG",
+        "arguments": [
+          {
+            "columnIdentifier": {
+              "columnName": "API_TRACE.duration"
+            }
+          }
+        ],
+        "alias": "AVG#results/avgLatency:Api.Trace|duration"
+      }
+    },
+    {
+      "function": {
+        "function": "PERCENTILE",
+        "arguments": [
+          {
+            "columnIdentifier": {
+              "columnName": "API_TRACE.duration"
+            }
+          },
+          {
+            "literal": {
+              "value": {
+                "valueType": "LONG",
+                "long": "95"
+              }
+            }
+          }
+        ],
+        "alias": "PERCENTILE#results/percentileLatency:Api.Trace|duration"
+      }
+    },
+    {
+      "function": {
+        "function": "COUNT",
+        "arguments": [
+          {
+            "columnIdentifier": {
+              "columnName": "API_TRACE.duration"
+            }
+          }
+        ],
+        "alias": "COUNT#results/countLatency:Api.Trace|duration"
+      }
+    },
+    {
+      "function": {
+        "function": "AVGRATE",
+        "arguments": [
+          {
+            "columnIdentifier": {
+              "columnName": "API_TRACE.duration"
+            }
+          },
+          {
+            "literal": {
+              "value": {
+                "valueType": "LONG",
+                "long": "2"
+              }
+            }
+          }
+        ],
+        "alias": "RATE#results/rateLatency:Api.Trace|duration"
+      }
+    }
+  ],
+  "orderBy": [
+    {
+      "expression": {
+        "function": {
+          "function": "AVG",
+          "arguments": [
+            {
+              "columnIdentifier": {
+                "columnName": "API_TRACE.duration"
+              }
+            }
+          ],
+          "alias": "AVG#AVG:Api.Trace|duration"
+        }
+      },
+      "order": "DESC"
+    }
+  ],
+  "limit": 10
+}

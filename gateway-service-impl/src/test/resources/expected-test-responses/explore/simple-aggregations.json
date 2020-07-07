@@ -1,0 +1,24 @@
+{
+  "row": [
+    {
+      "columns": {
+        "AVG#results/avgLatency:Api.Trace|duration": {
+          "valueType": "DOUBLE",
+          "double": 133.38772
+        },
+        "PERCENTILE#results/percentileLatency:Api.Trace|duration": {
+          "valueType": "DOUBLE",
+          "double": 40.0
+        },
+        "COUNT#results/countLatency:Api.Trace|duration": {
+          "valueType": "LONG",
+          "long": "64436"
+        },
+        "RATE#results/rateLatency:Api.Trace|duration": {
+          "valueType": "DOUBLE",
+          "double": 4774.983888888889
+        }
+      }
+    }
+  ]
+}

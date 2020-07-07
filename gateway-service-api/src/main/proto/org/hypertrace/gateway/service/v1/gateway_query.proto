@@ -1,0 +1,183 @@
+syntax = "proto3";
+
+option java_multiple_files = true;
+option java_package = "org.hypertrace.gateway.service.v1.common";
+
+package org.hypertrace.gateway.service.v1.common;
+
+enum DomainEntityType {
+  UNKNOWN = 0;
+  SERVICE = 1;
+  API = 2;
+  TRANSACTION = 3;
+  NAMESPACE = 4;
+  SESSION = 6;
+  BACKEND = 7;
+  DOMAIN = 8;
+}
+
+enum Operator {
+  UNDEFINED = 0;
+  AND = 1;
+  OR = 2;
+  NOT = 3;
+  EQ = 4;
+  NEQ = 5;
+  IN = 6;
+  NOT_IN = 7;
+  RANGE = 8;
+  GT = 9;
+  LT = 10;
+  GE = 11;
+  LE = 12;
+  STARTS_WITH = 13;
+  ENDS_WITH = 14;
+  LIKE = 15;
+  CONTAINS_KEY = 16;
+  CONTAINS_KEYVALUE = 17;
+}
+
+enum FunctionType {
+  NONE = 0;
+  SUM = 1;
+  AVG = 2;
+  MIN = 3;
+  MAX = 4;
+  LATEST = 5;
+  COUNT = 6;
+  // Average of (RATE (SUM # metric / period)
+  // AVGRATE function takes 2 arguments: metric name, period in second
+  // E.g: Average total bytes received / Minute
+  // AVGRATE(Service.metrics.bytes_received, 60)
+  AVGRATE = 7;
+  // Percentile functions take 2 arguments: metric name, nth percentile
+  // E.g: Percentile99 for Service.metrics.bytes_received would be
+  // PERCENTILE(Service.metrics.bytes_received, 99)
+  // We will use only PERCENTILEEST as PERCENTILE in Pinot is know to be slow. 
+  // Dont see reason to expose something which is slow. 
+  // Have thought of introducing a parameter for estimate later. 
+  PERCENTILE = 8;
+  DISTINCTCOUNT = 9;
+}
+
+enum ValueType {
+  UNSET = 0;
+  STRING = 1;
+  LONG = 2;
+  DOUBLE = 3;
+  BOOL = 4;
+  TIMESTAMP = 5;
+  STRING_ARRAY = 6;
+  LONG_ARRAY = 7;
+  DOUBLE_ARRAY = 8;
+  BOOLEAN_ARRAY = 9;
+  // we can assume map key is always string
+  STRING_MAP = 10;
+}
+
+enum Health {
+  NOT_COMPUTED = 0;
+  GREEN = 1;
+  YELLOW = 2;
+  RED = 3;
+}
+
+message Value {
+  ValueType valueType = 1;
+  string string = 2;
+  int64 long = 3;
+  double double = 4;
+  bool boolean = 5;
+  sfixed64 timestamp = 6;
+  repeated string string_array = 11;
+  repeated int64 long_array = 12;
+  repeated double double_array = 13;
+  repeated bool boolean_array = 14;
+  map<string, string> string_map = 15;
+}
+
+message Expression {
+  oneof value {
+    ColumnIdentifier columnIdentifier = 1;
+    LiteralConstant literal = 2;
+    FunctionExpression function = 3;
+    OrderByExpression orderBy = 4;
+    HealthExpression health = 5;
+  }
+}
+
+message HealthExpression {
+  // Currently this is empty since there is nothing additional to provide.
+  // Presence of this expression itself indicates that the health of metric is required.
+}
+
+message FunctionExpression {
+  FunctionType function = 1;
+  repeated Expression arguments = 2;
+  string alias = 3;
+}
+
+message LiteralConstant {
+  Value value = 1;
+}
+
+message ColumnIdentifier {
+  string columnName = 1;
+  string alias = 2;
+}
+
+message OrderByExpression {
+  Expression expression = 1;
+  SortOrder order = 2;
+}
+
+enum SortOrder {
+  ASC = 0;
+  DESC = 1;
+}
+
+message Filter {
+  Expression lhs = 1;
+  Operator operator = 2;
+  Expression rhs = 3;
+  repeated Filter childFilter = 4;
+}
+
+message Interval {
+  sfixed64 start_time_millis = 1;
+  sfixed64 end_time_millis = 2;
+  Value value = 3;
+  Health health = 4;
+}
+
+message Period {
+  int32 value = 1;
+  string unit = 2;
+}
+
+message AggregatedMetricValue {
+  FunctionType function = 1;
+  Value value = 2;
+  Health health = 3;
+}
+
+// A series of Intervals for a given metric, aggregation type and period.
+message MetricSeries {
+  repeated Interval value = 1;
+
+  // The aggregate function that was applied.
+  string aggregation = 2;
+
+  // The Period which was used to time aggregate these metrics.
+  Period period = 3;
+}
+
+message TimeAggregation {
+  Period period = 1;
+  Expression aggregation = 2;
+}
+
+message Row {
+  // key is column_name from metadata
+  map<string, Value> columns = 1;
+}

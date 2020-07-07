@@ -1,0 +1,159 @@
+{
+  "row": [
+    {
+      "columns": {
+        "API_TRACE.duration": {
+          "valueType": "LONG"
+        },
+        "API_TRACE.serviceName": {
+          "valueType": "STRING",
+          "string": "userservice"
+        },
+        "API_TRACE.apiName": {
+          "valueType": "STRING",
+          "string": "null"
+        }
+      }
+    },
+    {
+      "columns": {
+        "API_TRACE.duration": {
+          "valueType": "LONG"
+        },
+        "API_TRACE.serviceName": {
+          "valueType": "STRING",
+          "string": "userservice"
+        },
+        "API_TRACE.apiName": {
+          "valueType": "STRING",
+          "string": "null"
+        }
+      }
+    },
+    {
+      "columns": {
+        "API_TRACE.duration": {
+          "valueType": "LONG"
+        },
+        "API_TRACE.serviceName": {
+          "valueType": "STRING",
+          "string": "userservice"
+        },
+        "API_TRACE.apiName": {
+          "valueType": "STRING",
+          "string": "null"
+        }
+      }
+    },
+    {
+      "columns": {
+        "API_TRACE.duration": {
+          "valueType": "LONG",
+          "long": "4"
+        },
+        "API_TRACE.serviceName": {
+          "valueType": "STRING",
+          "string": "userservice"
+        },
+        "API_TRACE.apiName": {
+          "valueType": "STRING",
+          "string": "PUT /user/8a8c82536e8b3a71016e8b3c0e420009"
+        }
+      }
+    },
+    {
+      "columns": {
+        "API_TRACE.duration": {
+          "valueType": "LONG",
+          "long": "4"
+        },
+        "API_TRACE.serviceName": {
+          "valueType": "STRING",
+          "string": "userservice"
+        },
+        "API_TRACE.apiName": {
+          "valueType": "STRING",
+          "string": "PUT /user/8a8c82536e8b3a71016e8b3c0f4d000c"
+        }
+      }
+    },
+    {
+      "columns": {
+        "API_TRACE.duration": {
+          "valueType": "LONG"
+        },
+        "API_TRACE.serviceName": {
+          "valueType": "STRING",
+          "string": "userservice"
+        },
+        "API_TRACE.apiName": {
+          "valueType": "STRING",
+          "string": "null"
+        }
+      }
+    },
+    {
+      "columns": {
+        "API_TRACE.duration": {
+          "valueType": "LONG",
+          "long": "4"
+        },
+        "API_TRACE.serviceName": {
+          "valueType": "STRING",
+          "string": "userservice"
+        },
+        "API_TRACE.apiName": {
+          "valueType": "STRING",
+          "string": "PUT /user/8a8c82536e8b3a71016e8b3c02270000"
+        }
+      }
+    },
+    {
+      "columns": {
+        "API_TRACE.duration": {
+          "valueType": "LONG",
+          "long": "4"
+        },
+        "API_TRACE.serviceName": {
+          "valueType": "STRING",
+          "string": "userservice"
+        },
+        "API_TRACE.apiName": {
+          "valueType": "STRING",
+          "string": "PUT /user/8a8c82536e8b3a71016e8b3c02270000"
+        }
+      }
+    },
+    {
+      "columns": {
+        "API_TRACE.duration": {
+          "valueType": "LONG"
+        },
+        "API_TRACE.serviceName": {
+          "valueType": "STRING",
+          "string": "userservice"
+        },
+        "API_TRACE.apiName": {
+          "valueType": "STRING",
+          "string": "null"
+        }
+      }
+    },
+    {
+      "columns": {
+        "API_TRACE.duration": {
+          "valueType": "LONG",
+          "long": "5"
+        },
+        "API_TRACE.serviceName": {
+          "valueType": "STRING",
+          "string": "userservice"
+        },
+        "API_TRACE.apiName": {
+          "valueType": "STRING",
+          "string": "PUT /user/8a8c82536e8b3a71016e8b3c02270000"
+        }
+      }
+    }
+  ]
+}

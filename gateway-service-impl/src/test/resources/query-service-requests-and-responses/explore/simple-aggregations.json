@@ -1,0 +1,173 @@
+[
+  {
+    "request": {
+      "filter": {
+        "childFilter": [
+          {
+            "childFilter": [
+              {
+                "lhs": {
+                  "columnIdentifier": {
+                    "columnName": "API_TRACE.startTime"
+                  }
+                },
+                "operator": "GE",
+                "rhs": {
+                  "literal": {
+                    "value": {
+                      "string": "1574875733196"
+                    }
+                  }
+                }
+              },
+              {
+                "lhs": {
+                  "columnIdentifier": {
+                    "columnName": "API_TRACE.startTime"
+                  }
+                },
+                "operator": "LT",
+                "rhs": {
+                  "literal": {
+                    "value": {
+                      "string": "1574879333196"
+                    }
+                  }
+                }
+              }
+            ]
+          },
+          {
+            "childFilter": [
+              {
+                "lhs": {
+                  "columnIdentifier": {
+                    "columnName": "API_TRACE.apiBoundaryType"
+                  }
+                },
+                "operator": "EQ",
+                "rhs": {
+                  "literal": {
+                    "value": {
+                      "string": "ENTRY"
+                    }
+                  }
+                }
+              }
+            ]
+          }
+        ]
+      },
+      "selection": [
+        {
+          "function": {
+            "functionName": "AVG",
+            "arguments": [
+              {
+                "columnIdentifier": {
+                  "columnName": "API_TRACE.duration"
+                }
+              }
+            ],
+            "alias": "AVG#results/avgLatency:Api.Trace|duration"
+          }
+        },
+        {
+          "function": {
+            "functionName": "PERCENTILE95",
+            "arguments": [
+              {
+                "columnIdentifier": {
+                  "columnName": "API_TRACE.duration"
+                }
+              }
+            ],
+            "alias": "PERCENTILE#results/percentileLatency:Api.Trace|duration"
+          }
+        },
+        {
+          "function": {
+            "functionName": "COUNT",
+            "arguments": [
+              {
+                "columnIdentifier": {
+                  "columnName": "API_TRACE.duration"
+                }
+              }
+            ],
+            "alias": "COUNT#results/countLatency:Api.Trace|duration"
+          }
+        },
+        {
+          "function": {
+            "functionName": "SUM",
+            "arguments": [
+              {
+                "columnIdentifier": {
+                  "columnName": "API_TRACE.duration"
+                }
+              }
+            ],
+            "alias": "RATE#results/rateLatency:Api.Trace|duration"
+          }
+        }
+      ],
+      "orderBy": [
+        {
+          "expression": {
+            "function": {
+              "functionName": "AVG",
+              "arguments": [
+                {
+                  "columnIdentifier": {
+                    "columnName": "API_TRACE.duration"
+                  }
+                }
+              ],
+              "alias": "AVG#AVG:Api.Trace|duration"
+            }
+          },
+          "order": "DESC"
+        }
+      ],
+      "limit": 10
+    },
+    "response": {
+      "isLastChunk": true,
+      "resultSetMetadata": {
+        "columnMetadata": [
+          {
+            "columnName": "AVG#results/avgLatency:Api.Trace|duration"
+          },
+          {
+            "columnName": "PERCENTILE#results/percentileLatency:Api.Trace|duration"
+          },
+          {
+            "columnName": "COUNT#results/countLatency:Api.Trace|duration"
+          },
+          {
+            "columnName": "RATE#results/rateLatency:Api.Trace|duration"
+          }
+        ]
+      },
+      "row": [
+        {
+          "column": [
+            {
+              "string": "133.38772"
+            },
+            {
+              "string": "40.00000"
+            },
+            {
+              "string": "64436"
+            },
+            {
+              "string": "8594971.00000"
+            }
+          ]
+        }
+      ]
+    }
+  }
+]

@@ -1,0 +1,32 @@
+syntax = "proto3";
+
+option java_multiple_files = true;
+option java_package = "org.hypertrace.gateway.service.v1.span";
+
+package org.hypertrace.gateway.service.v1.span;
+
+import "org/hypertrace/gateway/service/v1/gateway_query.proto";
+
+message SpansRequest {
+  sfixed64 start_time_millis = 1;
+  sfixed64 end_time_millis = 2;
+
+  org.hypertrace.gateway.service.v1.common.Filter filter = 3;
+  repeated org.hypertrace.gateway.service.v1.common.Expression selection = 4;
+  repeated org.hypertrace.gateway.service.v1.common.OrderByExpression orderBy = 5;
+  int32 offset = 6;
+  int32 limit = 7;
+}
+
+// Span can be the entry / exit API point.
+// Entry Span is the span when an API is called
+// Exit Span is the span when the API is making an exit call to an API
+message SpanEvent {
+  // id, parentSpanId, trace_id would be in attribute if requested
+  map<string, org.hypertrace.gateway.service.v1.common.Value> attributes = 1;
+}
+
+message SpansResponse {
+  repeated SpanEvent spans = 1;
+  int32 total = 2;
+}

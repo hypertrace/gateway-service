@@ -1,0 +1,45 @@
+syntax = "proto3";
+
+option java_multiple_files = true;
+option java_package = "org.hypertrace.gateway.service.v1.explore";
+
+package org.hypertrace.gateway.service.v1.explore;
+
+import "org/hypertrace/gateway/service/v1/gateway_query.proto";
+
+message ExploreRequest {
+  // The context of this request eg. APIs, API Traces etc.
+  string context = 1;
+  sfixed64 start_time_millis = 2;
+  sfixed64 end_time_millis = 3;
+
+  // Filters for the WHERE clause
+  org.hypertrace.gateway.service.v1.common.Filter filter = 4;
+
+  // Selections
+  repeated org.hypertrace.gateway.service.v1.common.Expression selection = 5;
+  repeated org.hypertrace.gateway.service.v1.common.TimeAggregation time_aggregation = 6;
+
+  repeated org.hypertrace.gateway.service.v1.common.OrderByExpression order_by = 15;
+  repeated org.hypertrace.gateway.service.v1.common.Expression group_by = 16;
+  // Include results that did not fall into the top "limit" groups. If this is set,
+  // limit + 1 rows will be returned.
+  bool include_rest_group = 17;
+
+  // When the group_by is specified, it determines how many groups to return. The order is determined
+  // by the order by expression.
+  int32 limit = 20;
+  int32 offset = 21;
+}
+
+message ExploreResponse {
+  repeated org.hypertrace.gateway.service.v1.common.Row row = 2;
+}
+
+// Used to set column names that are not there in the ExploreRequest selections eg. interval start time. To maintain
+// a completely flat data format between server and client, we provide this "well known" column name in the API which
+// the client can use while parsing the response.
+enum ColumnName {
+  UNKNOWN = 0;
+  INTERVAL_START_TIME = 1;
+}
