@@ -6,10 +6,6 @@ plugins {
   id("org.hypertrace.publish-plugin")
 }
 
-hypertracePublish {
-  license.set(org.hypertrace.gradle.publishing.License.APACHE_2_0)
-}
-
 val generateLocalGoGrpcFiles = false
 
 protobuf {
