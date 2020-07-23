@@ -13,9 +13,9 @@ public class LogConfig {
     Config logConfig = appConfig.hasPath(LOG_CONFIG) ? appConfig.getConfig(LOG_CONFIG) :
         ConfigFactory.empty();
 
-      this.queryThresholdInMillis = logConfig.hasPath(MAX_QUERY_IN_MILLIS) ?
-          logConfig.getLong(MAX_QUERY_IN_MILLIS) :
-          DEFAULT_MAX_QUERY_IN_MILLIS;
+    this.queryThresholdInMillis = logConfig.hasPath(MAX_QUERY_IN_MILLIS) ?
+        logConfig.getLong(MAX_QUERY_IN_MILLIS) :
+        DEFAULT_MAX_QUERY_IN_MILLIS;
   }
 
   public long getQueryThresholdInMillis() {
