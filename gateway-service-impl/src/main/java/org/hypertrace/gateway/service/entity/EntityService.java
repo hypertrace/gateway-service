@@ -85,8 +85,8 @@ public class EntityService {
   private void initMetrics() {
     this.queryBuildTimer = new Timer();
     this.queryExecutionTimer = new Timer();
-    PlatformMetricsRegistry.register("gateway.query.build", queryBuildTimer);
-    PlatformMetricsRegistry.register("gateway.query.execution", queryExecutionTimer);
+    PlatformMetricsRegistry.register("entities.query.build", queryBuildTimer);
+    PlatformMetricsRegistry.register("entities.query.execution", queryExecutionTimer);
   }
 
   /**

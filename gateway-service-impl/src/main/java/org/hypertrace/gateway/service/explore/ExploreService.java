@@ -1,9 +1,12 @@
 package org.hypertrace.gateway.service.explore;
 
+import com.codahale.metrics.Timer;
+import com.codahale.metrics.Timer.Context;
 import java.util.Map;
 import org.hypertrace.core.attribute.service.v1.AttributeMetadata;
 import org.hypertrace.core.attribute.service.v1.AttributeScope;
 import org.hypertrace.core.query.service.client.QueryServiceClient;
+import org.hypertrace.core.serviceframework.metrics.PlatformMetricsRegistry;
 import org.hypertrace.gateway.service.common.AttributeMetadataProvider;
 import org.hypertrace.gateway.service.common.config.ScopeFilterConfigs;
 import org.hypertrace.gateway.service.v1.explore.ExploreRequest;
@@ -18,6 +21,8 @@ public class ExploreService {
   private final TimeAggregationsWithGroupByRequestHandler timeAggregationsWithGroupByRequestHandler;
   private final ScopeFilterConfigs scopeFilterConfigs;
 
+  private Timer queryExecutionTimer;
+
   public ExploreService(
       QueryServiceClient queryServiceClient,
       AttributeMetadataProvider attributeMetadataProvider,
@@ -30,36 +35,47 @@ public class ExploreService {
         new TimeAggregationsWithGroupByRequestHandler(
             queryServiceClient, attributeMetadataProvider);
     this.scopeFilterConfigs = scopeFiltersConfig;
+    initMetrics();
+  }
+
+  private void initMetrics() {
+    queryExecutionTimer = new Timer();
+    PlatformMetricsRegistry.register("explore.query.execution", queryExecutionTimer);
   }
 
   public ExploreResponse explore(
       String tenantId, ExploreRequest request, Map<String, String> requestHeaders) {
-    ExploreRequestContext exploreRequestContext =
-        new ExploreRequestContext(tenantId, request, requestHeaders);
-    AttributeScope requestScope = AttributeScope.valueOf(request.getContext());
+    final Context timerContext = queryExecutionTimer.time();
+    try {
+      ExploreRequestContext exploreRequestContext =
+          new ExploreRequestContext(tenantId, request, requestHeaders);
+      AttributeScope requestScope = AttributeScope.valueOf(request.getContext());
 
-    // Add extra filters based on the scope.
-    request =
-        ExploreRequest.newBuilder(request)
-            .setFilter(
-                scopeFilterConfigs.createScopeFilter(
-                    requestScope,
-                    request.getFilter(),
-                    attributeMetadataProvider,
-                    exploreRequestContext))
-            .build();
-    ExploreRequestContext newExploreRequestContext =
-        new ExploreRequestContext(tenantId, request, requestHeaders);
+      // Add extra filters based on the scope.
+      request =
+          ExploreRequest.newBuilder(request)
+              .setFilter(
+                  scopeFilterConfigs.createScopeFilter(
+                      requestScope,
+                      request.getFilter(),
+                      attributeMetadataProvider,
+                      exploreRequestContext))
+              .build();
+      ExploreRequestContext newExploreRequestContext =
+          new ExploreRequestContext(tenantId, request, requestHeaders);
 
-    Map<String, AttributeMetadata> attributeMetadataMap =
-        attributeMetadataProvider.getAttributesMetadata(newExploreRequestContext, requestScope);
-    exploreRequestValidator.validate(request, attributeMetadataMap);
+      Map<String, AttributeMetadata> attributeMetadataMap =
+          attributeMetadataProvider.getAttributesMetadata(newExploreRequestContext, requestScope);
+      exploreRequestValidator.validate(request, attributeMetadataMap);
 
-    IRequestHandler requestHandler = getRequestHandler(request);
+      IRequestHandler requestHandler = getRequestHandler(request);
 
-    ExploreResponse.Builder responseBuilder =
-        requestHandler.handleRequest(newExploreRequestContext, request);
-    return responseBuilder.build();
+      ExploreResponse.Builder responseBuilder =
+          requestHandler.handleRequest(newExploreRequestContext, request);
+      return responseBuilder.build();
+    } finally {
+      timerContext.stop();
+    }
   }
 
   private IRequestHandler getRequestHandler(ExploreRequest request) {
