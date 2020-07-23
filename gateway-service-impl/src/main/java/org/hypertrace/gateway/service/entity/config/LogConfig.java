@@ -1,6 +1,7 @@
 package org.hypertrace.gateway.service.entity.config;
 
 import com.typesafe.config.Config;
+import com.typesafe.config.ConfigFactory;
 
 public class LogConfig {
   private static final String LOG_CONFIG = "log.config";
@@ -9,14 +10,12 @@ public class LogConfig {
   private final long queryThresholdInMillis;
 
   public LogConfig(Config appConfig) {
-    Config logConfig = appConfig.getConfig(LOG_CONFIG);
-    if (logConfig == null) {
-      this.queryThresholdInMillis = DEFAULT_MAX_QUERY_IN_MILLIS;
-    } else {
+    Config logConfig = appConfig.hasPath(LOG_CONFIG) ? appConfig.getConfig(LOG_CONFIG) :
+        ConfigFactory.empty();
+
       this.queryThresholdInMillis = logConfig.hasPath(MAX_QUERY_IN_MILLIS) ?
           logConfig.getLong(MAX_QUERY_IN_MILLIS) :
           DEFAULT_MAX_QUERY_IN_MILLIS;
-    }
   }
 
   public long getQueryThresholdInMillis() {
