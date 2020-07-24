@@ -1,6 +1,7 @@
 package org.hypertrace.gateway.service.entity;
 
 import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.Mockito.when;
 
 import com.typesafe.config.Config;
 import com.typesafe.config.ConfigFactory;
@@ -25,6 +26,7 @@ import org.hypertrace.gateway.service.AbstractGatewayServiceTest;
 import org.hypertrace.gateway.service.common.AttributeMetadataProvider;
 import org.hypertrace.gateway.service.common.RequestContext;
 import org.hypertrace.gateway.service.entity.config.DomainObjectConfigs;
+import org.hypertrace.gateway.service.entity.config.LogConfig;
 import org.hypertrace.gateway.service.v1.common.ColumnIdentifier;
 import org.hypertrace.gateway.service.v1.common.Expression;
 import org.hypertrace.gateway.service.v1.entity.EntitiesRequest;
@@ -40,6 +42,7 @@ public class EntityServiceTest extends AbstractGatewayServiceTest {
   private QueryServiceClient queryServiceClient;
   private EntityQueryServiceClient entityQueryServiceClient;
   private AttributeMetadataProvider attributeMetadataProvider;
+  private LogConfig logConfig;
 
   @BeforeEach
   public void setup() {
@@ -49,6 +52,8 @@ public class EntityServiceTest extends AbstractGatewayServiceTest {
     entityQueryServiceClient = Mockito.mock(EntityQueryServiceClient.class);
     attributeMetadataProvider = Mockito.mock(AttributeMetadataProvider.class);
     mock(attributeMetadataProvider);
+    logConfig = Mockito.mock(LogConfig.class);
+    when(logConfig.getQueryThresholdInMillis()).thenReturn(1500L);
   }
 
   private void mockDomainObjectConfigs() {
@@ -72,7 +77,7 @@ public class EntityServiceTest extends AbstractGatewayServiceTest {
   }
 
   private void mock(AttributeMetadataProvider attributeMetadataProvider) {
-    Mockito.when(
+    when(
             attributeMetadataProvider.getAttributesMetadata(
                 any(RequestContext.class), Mockito.eq(AttributeScope.API)))
         .thenReturn(
@@ -105,7 +110,7 @@ public class EntityServiceTest extends AbstractGatewayServiceTest {
                     .addSources(AttributeSource.EDS)
                     .build()));
 
-    Mockito.when(
+    when(
             attributeMetadataProvider.getAttributeMetadata(
                 any(RequestContext.class), Mockito.eq(AttributeScope.API), Mockito.eq("apiId")))
         .thenReturn(
@@ -119,7 +124,7 @@ public class EntityServiceTest extends AbstractGatewayServiceTest {
                     .setType(AttributeType.ATTRIBUTE)
                     .addSources(AttributeSource.QS)
                     .build()));
-    Mockito.when(
+    when(
             attributeMetadataProvider.getAttributeMetadata(
                 any(RequestContext.class), Mockito.eq(AttributeScope.API), Mockito.eq("startTime")))
         .thenReturn(
@@ -136,7 +141,7 @@ public class EntityServiceTest extends AbstractGatewayServiceTest {
 
   @Test
   public void testGetEntitiesOnlySelectFromSingleSource() {
-    Mockito.when(queryServiceClient.executeQuery(any(), any(), Mockito.anyInt()))
+    when(queryServiceClient.executeQuery(any(), any(), Mockito.anyInt()))
         .thenReturn(
             List.of(
                     ResultSetChunk.newBuilder()
@@ -146,8 +151,10 @@ public class EntityServiceTest extends AbstractGatewayServiceTest {
                         .addRow(generateRowFor("apiId2", "/checkout"))
                         .build())
                 .iterator());
-    EntityService entityService =
-        new EntityService(queryServiceClient, entityQueryServiceClient, attributeMetadataProvider);
+    EntityService entityService = new EntityService(queryServiceClient,
+        entityQueryServiceClient,
+        attributeMetadataProvider,
+        logConfig);
     EntitiesRequest entitiesRequest =
         EntitiesRequest.newBuilder()
             .setEntityType("API")
@@ -167,7 +174,7 @@ public class EntityServiceTest extends AbstractGatewayServiceTest {
 
   @Test
   public void testGetEntitiesOnlySelectFromMultipleSources() {
-    Mockito.when(queryServiceClient.executeQuery(any(), any(), Mockito.anyInt()))
+    when(queryServiceClient.executeQuery(any(), any(), Mockito.anyInt()))
         .thenReturn(
             List.of(
                     ResultSetChunk.newBuilder()
@@ -177,7 +184,7 @@ public class EntityServiceTest extends AbstractGatewayServiceTest {
                         .addRow(generateRowFor("apiId2", "/checkout"))
                         .build())
                 .iterator());
-    Mockito.when(entityQueryServiceClient.execute(any(), any()))
+    when(entityQueryServiceClient.execute(any(), any()))
         .thenReturn(
             List.of(
                     org.hypertrace.entity.query.service.v1.ResultSetChunk.newBuilder()
@@ -188,8 +195,10 @@ public class EntityServiceTest extends AbstractGatewayServiceTest {
                         .addRow(generateEntityServiceRowFor("apiId2", "POST"))
                         .build())
                 .iterator());
-    EntityService entityService =
-        new EntityService(queryServiceClient, entityQueryServiceClient, attributeMetadataProvider);
+    EntityService entityService = new EntityService(queryServiceClient,
+            entityQueryServiceClient,
+            attributeMetadataProvider,
+            logConfig);
     EntitiesRequest entitiesRequest =
         EntitiesRequest.newBuilder()
             .setEntityType("API")

@@ -16,6 +16,7 @@ import org.hypertrace.gateway.service.common.AttributeMetadataProvider;
 import org.hypertrace.gateway.service.common.RequestContext;
 import org.hypertrace.gateway.service.common.config.ScopeFilterConfigs;
 import org.hypertrace.gateway.service.entity.EntityService;
+import org.hypertrace.gateway.service.entity.config.LogConfig;
 import org.hypertrace.gateway.service.explore.ExploreService;
 import org.hypertrace.gateway.service.span.SpanService;
 import org.hypertrace.gateway.service.trace.TracesService;
@@ -55,12 +56,12 @@ public class GatewayServiceImpl extends GatewayServiceGrpc.GatewayServiceImplBas
     EntityQueryServiceClient eqsClient =
         new EntityQueryServiceClient(EntityServiceClientConfig.from(appConfig));
     ScopeFilterConfigs scopeFilterConfigs = new ScopeFilterConfigs(appConfig);
-
+    LogConfig logConfig = new LogConfig(appConfig);
     this.traceService =
         new TracesService(queryServiceClient, attributeMetadataProvider, scopeFilterConfigs);
     this.spanService = new SpanService(queryServiceClient, attributeMetadataProvider);
     this.entityService =
-        new EntityService(queryServiceClient, eqsClient, attributeMetadataProvider);
+        new EntityService(queryServiceClient, eqsClient, attributeMetadataProvider, logConfig);
     this.exploreService =
         new ExploreService(queryServiceClient, attributeMetadataProvider, scopeFilterConfigs);
   }
