@@ -1,11 +1,14 @@
 package org.hypertrace.gateway.service.span;
 
+import com.codahale.metrics.Timer;
+import com.codahale.metrics.Timer.Context;
 import com.google.common.annotations.VisibleForTesting;
 import java.util.ArrayList;
 import java.util.Collection;
 import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
+import java.util.concurrent.TimeUnit;
 import org.hypertrace.core.attribute.service.v1.AttributeMetadata;
 import org.hypertrace.core.attribute.service.v1.AttributeScope;
 import org.hypertrace.core.query.service.api.ColumnMetadata;
@@ -15,6 +18,7 @@ import org.hypertrace.core.query.service.api.ResultSetChunk;
 import org.hypertrace.core.query.service.api.Row;
 import org.hypertrace.core.query.service.client.QueryServiceClient;
 import org.hypertrace.core.query.service.util.QueryRequestUtil;
+import org.hypertrace.core.serviceframework.metrics.PlatformMetricsRegistry;
 import org.hypertrace.gateway.service.common.AttributeMetadataProvider;
 import org.hypertrace.gateway.service.common.RequestContext;
 import org.hypertrace.gateway.service.common.converters.QueryAndGatewayDtoConverter;
@@ -30,32 +34,47 @@ import org.slf4j.LoggerFactory;
  * SpanRequest, and SpanResponse from spans.proto
  */
 public class SpanService {
+
   private static final Logger LOG = LoggerFactory.getLogger(SpanService.class);
   private static final String SPAN_TIMESTAMP_ATTRIBUTE_NAME_KEY = "startTime";
   private final QueryServiceClient queryServiceClient;
   private final AttributeMetadataProvider attributeMetadataProvider;
 
+  private Timer queryExecutionTimer;
+
   public SpanService(
       QueryServiceClient queryServiceClient, AttributeMetadataProvider attributeMetadataProvider) {
     this.queryServiceClient = queryServiceClient;
     this.attributeMetadataProvider = attributeMetadataProvider;
+    initMetrics();
+  }
+
+  private void initMetrics() {
+    queryExecutionTimer = new Timer();
+    PlatformMetricsRegistry.register("span.query.execution", queryExecutionTimer);
   }
 
   public SpansResponse getSpansByFilter(RequestContext context, SpansRequest request) {
-    Map<String, AttributeMetadata> attributeMap =
-        attributeMetadataProvider.getAttributesMetadata(context, AttributeScope.EVENT);
-    SpansResponse.Builder spanResponseBuilder = SpansResponse.newBuilder();
+    final Context timerContext = queryExecutionTimer.time();
+    try {
+      Map<String, AttributeMetadata> attributeMap =
+          attributeMetadataProvider.getAttributesMetadata(context, AttributeScope.EVENT);
+      SpansResponse.Builder spanResponseBuilder = SpansResponse.newBuilder();
 
-    Collection<SpanEvent> filteredSpanEvents = filterSpans(context, request, attributeMap);
-    spanResponseBuilder.addAllSpans(filteredSpanEvents);
-    spanResponseBuilder.setTotal(getTotalFilteredSpans(context, request));
+      Collection<SpanEvent> filteredSpanEvents = filterSpans(context, request, attributeMap);
 
-    SpansResponse response = spanResponseBuilder.build();
-    if (LOG.isDebugEnabled()) {
-      LOG.debug("Span Service Response: {}", response);
+      spanResponseBuilder.addAllSpans(filteredSpanEvents);
+      spanResponseBuilder.setTotal(getTotalFilteredSpans(context, request));
+
+      SpansResponse response = spanResponseBuilder.build();
+      if (LOG.isDebugEnabled()) {
+        LOG.debug("Span Service Response: {}", response);
+      }
+
+      return response;
+    } finally {
+      timerContext.stop();
     }
-
-    return response;
   }
 
   @VisibleForTesting

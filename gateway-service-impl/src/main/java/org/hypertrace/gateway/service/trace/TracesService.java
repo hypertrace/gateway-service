@@ -1,5 +1,7 @@
 package org.hypertrace.gateway.service.trace;
 
+import com.codahale.metrics.Timer;
+import com.codahale.metrics.Timer.Context;
 import com.google.common.annotations.VisibleForTesting;
 import java.util.ArrayList;
 import java.util.Collection;
@@ -16,6 +18,7 @@ import org.hypertrace.core.query.service.api.ResultSetChunk;
 import org.hypertrace.core.query.service.api.Row;
 import org.hypertrace.core.query.service.client.QueryServiceClient;
 import org.hypertrace.core.query.service.util.QueryRequestUtil;
+import org.hypertrace.core.serviceframework.metrics.PlatformMetricsRegistry;
 import org.hypertrace.gateway.service.common.AttributeMetadataProvider;
 import org.hypertrace.gateway.service.common.RequestContext;
 import org.hypertrace.gateway.service.common.config.ScopeFilterConfigs;
@@ -52,6 +55,8 @@ public class TracesService {
   private final ResponsePostProcessor responsePostProcessor;
   private final ScopeFilterConfigs scopeFilterConfigs;
 
+  private Timer queryExecutionTimer;
+
   public TracesService(
       QueryServiceClient queryServiceClient,
       AttributeMetadataProvider attributeMetadataProvider,
@@ -62,48 +67,59 @@ public class TracesService {
     this.requestPreProcessor = new RequestPreProcessor(attributeMetadataProvider);
     this.responsePostProcessor = new ResponsePostProcessor(attributeMetadataProvider);
     this.scopeFilterConfigs = scopeFilterConfigs;
+    initMetrics();
+  }
+
+  private void initMetrics() {
+    queryExecutionTimer = new Timer();
+    PlatformMetricsRegistry.register("traces.query.execution", queryExecutionTimer);
   }
 
   public TracesResponse getTracesByFilter(RequestContext context, TracesRequest request) {
-    TracesRequest preProcessedRequest = requestPreProcessor.transform(request, context);
+    final Context timerContext = queryExecutionTimer.time();
+    try {
+      TracesRequest preProcessedRequest = requestPreProcessor.transform(request, context);
 
-    requestValidator.validateScope(preProcessedRequest);
-    TraceScope scope = TraceScope.valueOf(preProcessedRequest.getScope());
+      requestValidator.validateScope(preProcessedRequest);
+      TraceScope scope = TraceScope.valueOf(preProcessedRequest.getScope());
 
-    AttributeScope attributeScope = TraceScopeConverter.toAttributeScope(scope);
-    Map<String, AttributeMetadata> attributeMap =
-        attributeMetadataProvider.getAttributesMetadata(context, attributeScope);
+      AttributeScope attributeScope = TraceScopeConverter.toAttributeScope(scope);
+      Map<String, AttributeMetadata> attributeMap =
+          attributeMetadataProvider.getAttributesMetadata(context, attributeScope);
 
-    requestValidator.validate(preProcessedRequest, attributeMap);
+      requestValidator.validate(preProcessedRequest, attributeMap);
 
-    // Add extra filters based on the scope
-    preProcessedRequest =
-        TracesRequest.newBuilder(preProcessedRequest)
-            .setFilter(
-                scopeFilterConfigs.createScopeFilter(
-                    attributeScope,
-                    preProcessedRequest.getFilter(),
-                    attributeMetadataProvider,
-                    context))
-            .build();
+      // Add extra filters based on the scope
+      preProcessedRequest =
+          TracesRequest.newBuilder(preProcessedRequest)
+              .setFilter(
+                  scopeFilterConfigs.createScopeFilter(
+                      attributeScope,
+                      preProcessedRequest.getFilter(),
+                      attributeMetadataProvider,
+                      context))
+              .build();
 
-    TracesResponse.Builder tracesResponseBuilder = TracesResponse.newBuilder();
-    // filter traces
+      TracesResponse.Builder tracesResponseBuilder = TracesResponse.newBuilder();
+      // filter traces
 
-    Collection<Trace> filteredTraces =
-        filterTraces(context, preProcessedRequest, attributeMap, scope);
-    tracesResponseBuilder.addAllTraces(filteredTraces);
-    // Get the total API Traces in a separate query because this will scale better
-    // for large data-set
-    tracesResponseBuilder.setTotal(getTotalFilteredTraces(context, preProcessedRequest, scope));
+      Collection<Trace> filteredTraces =
+          filterTraces(context, preProcessedRequest, attributeMap, scope);
+      tracesResponseBuilder.addAllTraces(filteredTraces);
+      // Get the total API Traces in a separate query because this will scale better
+      // for large data-set
+      tracesResponseBuilder.setTotal(getTotalFilteredTraces(context, preProcessedRequest, scope));
 
-    TracesResponse.Builder postProcessedResponse =
-        responsePostProcessor.transform(request, context, tracesResponseBuilder);
-    TracesResponse response = postProcessedResponse.build();
-    if (LOG.isDebugEnabled()) {
-      LOG.debug("Traces Service Response: {}", response);
+      TracesResponse.Builder postProcessedResponse =
+          responsePostProcessor.transform(request, context, tracesResponseBuilder);
+      TracesResponse response = postProcessedResponse.build();
+      if (LOG.isDebugEnabled()) {
+        LOG.debug("Traces Service Response: {}", response);
+      }
+      return response;
+    } finally {
+      timerContext.stop();
     }
-    return response;
   }
 
   @VisibleForTesting
