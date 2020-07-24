@@ -21,6 +21,7 @@ import org.hypertrace.gateway.service.common.datafetcher.EntityInteractionsFetch
 import org.hypertrace.gateway.service.common.datafetcher.QueryServiceEntityFetcher;
 import org.hypertrace.gateway.service.common.transformer.RequestPreProcessor;
 import org.hypertrace.gateway.service.common.transformer.ResponsePostProcessor;
+import org.hypertrace.gateway.service.entity.config.LogConfig;
 import org.hypertrace.gateway.service.entity.query.ExecutionContext;
 import org.hypertrace.gateway.service.entity.query.ExecutionTreeBuilder;
 import org.hypertrace.gateway.service.entity.query.QueryNode;
@@ -44,7 +45,6 @@ import org.slf4j.LoggerFactory;
 public class EntityService {
 
   private static final Logger LOG = LoggerFactory.getLogger(EntityService.class);
-  private static final int SLOW_REQUEST_THRESHOLD_MS = 2500; // A 2.5 seconds request is too slow
   private static final UpdateEntityRequestValidator updateEntityRequestValidator =
       new UpdateEntityRequestValidator();
   private final AttributeMetadataProvider metadataProvider;
@@ -53,6 +53,7 @@ public class EntityService {
   private final RequestPreProcessor requestPreProcessor;
   private final ResponsePostProcessor responsePostProcessor;
   private final EdsEntityUpdater edsEntityUpdater;
+  private final LogConfig logConfig;
   // Metrics
   private Timer queryBuildTimer;
   private Timer queryExecutionTimer;
@@ -60,12 +61,14 @@ public class EntityService {
   public EntityService(
       QueryServiceClient qsClient,
       EntityQueryServiceClient edsQueryServiceClient,
-      AttributeMetadataProvider metadataProvider) {
+      AttributeMetadataProvider metadataProvider,
+      LogConfig logConfig) {
     this.metadataProvider = metadataProvider;
     this.interactionsFetcher = new EntityInteractionsFetcher(qsClient, metadataProvider);
     requestPreProcessor = new RequestPreProcessor(metadataProvider);
     responsePostProcessor = new ResponsePostProcessor(metadataProvider);
     edsEntityUpdater = new EdsEntityUpdater(edsQueryServiceClient);
+    this.logConfig = logConfig;
 
     registerEntityFetchers(qsClient, edsQueryServiceClient);
     initMetrics();
@@ -134,7 +137,7 @@ public class EntityService {
         responsePostProcessor.transform(originalRequest, entitiesRequestContext, responseBuilder);
 
     long queryExecutionTime = System.currentTimeMillis() - startTime;
-    if (queryExecutionTime > SLOW_REQUEST_THRESHOLD_MS) {
+    if (queryExecutionTime > logConfig.getQueryThresholdInMillis()) {
       LOG.info(
           "Total query execution took: {}(ms) for request: {}",
           queryExecutionTime,
