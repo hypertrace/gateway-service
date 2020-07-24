@@ -7,9 +7,6 @@ metadata:
   {{- with .Values.deploymentLabels }}
     {{- toYaml . | nindent 4 }}
   {{- end }}
-  annotations:
-    prometheus.io/scrape: "true"
-    prometheus.io/port: "50072"
 spec:
   replicas: {{ .Values.replicaCount }}
   strategy:
@@ -22,6 +19,8 @@ spec:
   template:
     metadata:
       annotations:
+        prometheus.io/scrape: "true"
+        prometheus.io/port: "{{ .Values.containerAdminPort }}"
         checksum/config: {{ include (print $.Template.BasePath "/configmap.yaml") . | sha256sum }}
       labels:
         release: {{ .Release.Name }}
