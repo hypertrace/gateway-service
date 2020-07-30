@@ -165,7 +165,7 @@ class TheRestGroupRequestHandler {
     List<String> groupByColumns = groupByColumnList(originalRequest);
 
     originalResponse.getRowBuilderList().forEach(
-        rowBuilder -> filterBuilder.addChildFilter(createGroupValuesAndFilter(groupByColumns, rowBuilder))
+        rowBuilder -> filterBuilder.addChildFilter(createGroupValuesOrFilter(groupByColumns, rowBuilder))
     );
 
     return filterBuilder;
@@ -179,7 +179,7 @@ class TheRestGroupRequestHandler {
         .collect(Collectors.toUnmodifiableList());
   }
 
-  private Filter.Builder createGroupValuesAndFilter(List<String> groupByColumns, Row.Builder rowBuilder) {
+  private Filter.Builder createGroupValuesOrFilter(List<String> groupByColumns, Row.Builder rowBuilder) {
     Filter.Builder filterBuilder = Filter.newBuilder();
     filterBuilder.setOperator(Operator.OR);
     rowBuilder.getColumnsMap().forEach((columnName, columnValue) ->{
