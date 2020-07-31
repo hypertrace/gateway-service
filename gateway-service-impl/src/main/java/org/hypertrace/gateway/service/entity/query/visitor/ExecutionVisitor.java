@@ -332,7 +332,6 @@ public class ExecutionVisitor implements Visitor<EntityFetcherResponse> {
   @VisibleForTesting
   boolean isSingleSourceAndSame(Set<String> firstSource, Set<String> secondSource) {
     return firstSource.size() == 1 &&
-        secondSource.size() == 1 &&
-        firstSource.containsAll(secondSource);
+        firstSource.equals(secondSource);
   }
 }
