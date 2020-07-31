@@ -1,0 +1,66 @@
+{
+  "context": "API_TRACE",
+  "startTimeMillis": "1575300533196",
+  "endTimeMillis": "1575304133196",
+  "filter": {
+  },
+  "selection": [
+    {
+      "function": {
+        "function": "AVG",
+        "arguments": [
+          {
+            "columnIdentifier": {
+              "columnName": "API_TRACE.duration"
+            }
+          }
+        ],
+        "alias": "AVG#results/avgLatency:Api.Trace|duration"
+      }
+    },
+    {
+      "function": {
+        "function": "COUNT",
+        "arguments": [
+          {
+            "columnIdentifier": {
+              "columnName": "API_TRACE.apiTraceId"
+            }
+          }
+        ],
+        "alias": "COUNT#results/countTraces:Api.Trace|apiTraceId"
+      }
+    }
+  ],
+  "orderBy": [
+    {
+      "expression": {
+        "function": {
+          "function": "COUNT",
+          "arguments": [
+            {
+              "columnIdentifier": {
+                "columnName": "API_TRACE.apiTraceId"
+              }
+            }
+          ],
+          "alias": "COUNT#COUNT:Api.Trace|apiTraceId"
+        }
+      }
+    }
+  ],
+  "groupBy": [
+    {
+      "columnIdentifier": {
+        "columnName": "API_TRACE.serviceName"
+      }
+    },
+    {
+      "columnIdentifier": {
+        "columnName": "API_TRACE.apiName"
+      }
+    }
+  ],
+  "includeRestGroup": "true",
+  "limit": 10
+}
