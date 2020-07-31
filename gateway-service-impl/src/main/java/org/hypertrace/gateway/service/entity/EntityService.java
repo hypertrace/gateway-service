@@ -120,8 +120,12 @@ public class EntityService {
     QueryNode executionTree = executionTreeBuilder.build();
     queryBuildTimer.update(System.currentTimeMillis() - startTime, TimeUnit.MILLISECONDS);
 
+    /*
+    * EntityQueryHandlerRegistry.get() returns Singleton object, so, it's guaranteed that
+    * it won't create new object for each request.
+    */
     EntityFetcherResponse response =
-        executionTree.acceptVisitor(new ExecutionVisitor(executionContext));
+        executionTree.acceptVisitor(new ExecutionVisitor(executionContext, EntityQueryHandlerRegistry.get()));
     List<Builder> results = new ArrayList<>(response.getEntityKeyBuilderMap().values());
 
     // Add interactions.

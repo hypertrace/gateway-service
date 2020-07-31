@@ -45,12 +45,14 @@ import org.slf4j.LoggerFactory;
  */
 public class ExecutionVisitor implements Visitor<EntityFetcherResponse> {
 
-  private final EntityQueryHandlerRegistry queryHandlerRegistry = EntityQueryHandlerRegistry.get();
+  private final EntityQueryHandlerRegistry queryHandlerRegistry;
   private final ExecutionContext executionContext;
   private Logger LOG = LoggerFactory.getLogger(ExecutionVisitor.class);
 
-  public ExecutionVisitor(ExecutionContext executionContext) {
+  public ExecutionVisitor(ExecutionContext executionContext,
+      EntityQueryHandlerRegistry queryHandlerRegistry) {
     this.executionContext = executionContext;
+    this.queryHandlerRegistry = queryHandlerRegistry;
   }
 
   @VisibleForTesting
