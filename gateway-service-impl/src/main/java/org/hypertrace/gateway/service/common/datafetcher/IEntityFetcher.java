@@ -8,7 +8,9 @@ import org.hypertrace.gateway.service.v1.common.Interval;
 import org.hypertrace.gateway.service.v1.common.MetricSeries;
 import org.hypertrace.gateway.service.v1.entity.EntitiesRequest;
 
-/** Interface spec for fetching entities, aggregated metrics and time series data */
+/**
+ * Interface spec for fetching entities, aggregated metrics and time series data
+ */
 public interface IEntityFetcher {
 
   /**
@@ -30,6 +32,16 @@ public interface IEntityFetcher {
    * @return Map of the Entity Builders keyed by the EntityId
    */
   EntityFetcherResponse getAggregatedMetrics(
+      EntitiesRequestContext requestContext, EntitiesRequest entitiesRequest);
+
+  /**
+   * Gets entities with aggregatedMetrics at the same time
+   *
+   * @param requestContext Additional context for the incoming request
+   * @param entitiesRequest encapsulates the aggregated metrics query (selection, filter, order)
+   * @return Map of the Entity Builders keyed by the EntityId
+   */
+  EntityFetcherResponse getEntitiesAndAggregatedMetrics(
       EntitiesRequestContext requestContext, EntitiesRequest entitiesRequest);
 
   /**

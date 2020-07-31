@@ -26,6 +26,7 @@ import org.hypertrace.core.query.service.api.Row;
 import org.hypertrace.core.query.service.client.QueryServiceClient;
 import org.hypertrace.core.query.service.util.QueryRequestUtil;
 import org.hypertrace.gateway.service.common.AttributeMetadataProvider;
+import org.hypertrace.gateway.service.common.QueryRequestContext;
 import org.hypertrace.gateway.service.common.converters.QueryAndGatewayDtoConverter;
 import org.hypertrace.gateway.service.common.util.ArithmeticValueUtil;
 import org.hypertrace.gateway.service.common.util.AttributeMetadataUtil;
@@ -73,48 +74,20 @@ public class QueryServiceEntityFetcher implements IEntityFetcher {
   @Override
   public EntityFetcherResponse getEntities(
       EntitiesRequestContext requestContext, EntitiesRequest entitiesRequest) {
+    Map<String, AttributeMetadata> attributeMetadataMap =
+        attributeMetadataProvider.getAttributesMetadata(
+            requestContext, AttributeScope.valueOf(entitiesRequest.getEntityType()));
+    // Validate EntitiesRequest
+    entitiesRequestValidator.validate(entitiesRequest, attributeMetadataMap);
+
     List<String> entityIdAttributes =
         AttributeMetadataUtil.getIdAttributeIds(
             attributeMetadataProvider, requestContext, entitiesRequest.getEntityType());
-    List<Expression> idExpressions =
-        entityIdAttributes.stream()
-            .map(QueryRequestUtil::createColumnExpression)
-            .map(Expression.Builder::build)
-            .collect(Collectors.toList());
-
-    // Validate EntitiesRequest
-    entitiesRequestValidator.validate(
-        entitiesRequest,
-        attributeMetadataProvider.getAttributesMetadata(
-            requestContext, AttributeScope.valueOf(entitiesRequest.getEntityType())));
-
-    Filter.Builder filterBuilder =
-        constructQueryServiceFilter(entitiesRequest, requestContext, entityIdAttributes);
+    List<org.hypertrace.gateway.service.v1.common.Expression> aggregates =
+        ExpressionReader.getFunctionExpressions(entitiesRequest.getSelectionList().stream());
 
     QueryRequest.Builder builder =
-        QueryRequest.newBuilder()
-            .setFilter(filterBuilder)
-            // Add EntityID attributes as the first selection and group by
-            .addAllSelection(idExpressions)
-            .addAllGroupBy(idExpressions);
-
-    // Add all expressions in the select/group that are already not part of the EntityID attributes
-    entitiesRequest.getSelectionList().stream()
-        .filter(expression -> expression.getValueCase() == ValueCase.COLUMNIDENTIFIER)
-        .filter(
-            expression ->
-                !entityIdAttributes.contains(expression.getColumnIdentifier().getColumnName()))
-        .forEach(
-            expression -> {
-              Expression.Builder expBuilder = convertToQueryExpression(expression);
-              builder.addSelection(expBuilder);
-              builder.addGroupBy(expBuilder);
-            });
-
-    // Pinot's GroupBy queries need at least one aggregate operation in the selection
-    // so we add count(*) as a dummy placeholder.
-    builder.addSelection(
-        QueryRequestUtil.createCountByColumnSelection(entityIdAttributes.toArray(new String[]{})));
+        constructSelectionQuery(requestContext, entitiesRequest, entityIdAttributes, aggregates);
 
     // Pinot truncates the GroupBy results to 10 when there is no limit explicitly but
     // here we neither want the results to be truncated nor apply the limit coming from client.
@@ -169,20 +142,12 @@ public class QueryServiceEntityFetcher implements IEntityFetcher {
             i < chunk.getResultSetMetadata().getColumnMetadataCount();
             i++) {
           ColumnMetadata metadata = chunk.getResultSetMetadata().getColumnMetadata(i);
-
-          // Ignore the count column since we introduced that ourselves into the query.
-          if (StringUtils.equals(COUNT_COLUMN_NAME, metadata.getColumnName())) {
-            continue;
-          }
-
-          String attributeName = metadata.getColumnName();
-          entityBuilder.putAttribute(
-              attributeName,
-              QueryAndGatewayDtoConverter.convertToGatewayValue(
-                  attributeName,
-                  row.getColumn(i),
-                  attributeMetadataProvider.getAttributesMetadata(
-                      requestContext, AttributeScope.valueOf(entitiesRequest.getEntityType()))));
+          org.hypertrace.core.query.service.api.Value columnValue = row.getColumn(i);
+          addEntityAttribute(entityBuilder,
+              metadata,
+              columnValue,
+              attributeMetadataMap,
+              aggregates.isEmpty());
         }
       }
     }
@@ -208,24 +173,10 @@ public class QueryServiceEntityFetcher implements IEntityFetcher {
     List<String> entityIdAttributes =
         AttributeMetadataUtil.getIdAttributeIds(
             attributeMetadataProvider, requestContext, entitiesRequest.getEntityType());
-    List<Expression> idExpressions =
-        entityIdAttributes.stream()
-            .map(QueryRequestUtil::createColumnExpression)
-            .map(Expression.Builder::build)
-            .collect(Collectors.toList());
 
-    QueryRequest.Builder builder = QueryRequest.newBuilder();
+    QueryRequest.Builder builder =
+        constructSelectionQuery(requestContext, entitiesRequest, entityIdAttributes, aggregates);
 
-    for (org.hypertrace.gateway.service.v1.common.Expression aggregate : aggregates) {
-      requestContext.mapAliasToFunctionExpression(
-          aggregate.getFunction().getAlias(), aggregate.getFunction());
-      builder.addSelection(QueryAndGatewayDtoConverter.convertToQueryExpression(aggregate));
-    }
-
-    Filter.Builder filterBuilder =
-        constructQueryServiceFilter(entitiesRequest, requestContext, entityIdAttributes);
-    builder.setFilter(filterBuilder);
-    builder.addAllGroupBy(idExpressions);
 
     // Pinot truncates the GroupBy results to 10 when there is no limit explicitly but
     // here we neither want the results to be truncated nor apply the limit coming from client.
@@ -286,51 +237,231 @@ public class QueryServiceEntityFetcher implements IEntityFetcher {
             i < chunk.getResultSetMetadata().getColumnMetadataCount();
             i++) {
           ColumnMetadata metadata = chunk.getResultSetMetadata().getColumnMetadata(i);
-          org.hypertrace.gateway.service.v1.common.FunctionExpression function =
-              requestContext.getFunctionExpressionByAlias(metadata.getColumnName());
-          List<org.hypertrace.gateway.service.v1.common.Expression> healthExpressions =
-              function.getArgumentsList().stream()
-                  .filter(org.hypertrace.gateway.service.v1.common.Expression::hasHealth)
-                  .collect(Collectors.toList());
-          Preconditions.checkArgument(healthExpressions.size() <= 1);
-          Health health = Health.NOT_COMPUTED;
-
-          if (FunctionType.AVGRATE == function.getFunction()) {
-            Value avgRateValue =
-                ArithmeticValueUtil.computeAvgRate(
-                    function,
-                    row.getColumn(i),
-                    entitiesRequest.getStartTimeMillis(),
-                    entitiesRequest.getEndTimeMillis());
-
-            entityBuilder.putMetric(
-                metadata.getColumnName(),
-                AggregatedMetricValue.newBuilder()
-                    .setValue(avgRateValue)
-                    .setFunction(function.getFunction())
-                    .setHealth(health)
-                    .build());
-          } else {
-            org.hypertrace.core.query.service.api.Value queryValue = row.getColumn(i);
-            Value gwValue =
-                QueryAndGatewayDtoConverter.convertToGatewayValueForMetricValue(
-                    MetricAggregationFunctionUtil.getValueTypeFromFunction(
-                        function, attributeMetadataMap),
-                    attributeMetadataMap,
-                    metadata,
-                    queryValue);
-            entityBuilder.putMetric(
-                metadata.getColumnName(),
-                AggregatedMetricValue.newBuilder()
-                    .setValue(gwValue)
-                    .setFunction(function.getFunction())
-                    .setHealth(health)
-                    .build());
-          }
+          org.hypertrace.core.query.service.api.Value columnValue = row.getColumn(i);
+          addAggregateMetric(entityBuilder,
+              requestContext,
+              entitiesRequest,
+              metadata,
+              columnValue,
+              attributeMetadataMap);
         }
       }
     }
     return new EntityFetcherResponse(entityMap);
+  }
+
+  @Override
+  public EntityFetcherResponse getEntitiesAndAggregatedMetrics(
+      EntitiesRequestContext requestContext, EntitiesRequest entitiesRequest) {
+    // Validate EntitiesRequest
+    Map<String, AttributeMetadata> attributeMetadataMap =
+        attributeMetadataProvider.getAttributesMetadata(
+            requestContext, AttributeScope.valueOf(entitiesRequest.getEntityType()));
+    entitiesRequestValidator.validate(entitiesRequest, attributeMetadataMap);
+    List<String> entityIdAttributes =
+        AttributeMetadataUtil.getIdAttributeIds(
+            attributeMetadataProvider, requestContext, entitiesRequest.getEntityType());
+
+    List<org.hypertrace.gateway.service.v1.common.Expression> aggregates =
+        ExpressionReader.getFunctionExpressions(entitiesRequest.getSelectionList().stream());
+
+    QueryRequest.Builder builder =
+        constructSelectionQuery(requestContext, entitiesRequest, entityIdAttributes, aggregates);
+
+    // TODO: fetch the limit from context request after fixing the ExecutionTreeBuilder
+    builder.setLimit(QueryServiceClient.DEFAULT_QUERY_SERVICE_GROUP_BY_LIMIT);
+
+    QueryRequest queryRequest = builder.build();
+
+    if (LOG.isDebugEnabled()) {
+      LOG.debug("Sending Query to Query Service ======== \n {}", queryRequest);
+    }
+
+    Iterator<ResultSetChunk> resultSetChunkIterator =
+        queryServiceClient.executeQuery(queryRequest, requestContext.getHeaders(), 5000);
+
+    // We want to retain the order as returned from the respective source. Hence using a
+    // LinkedHashMap
+    Map<EntityKey, Entity.Builder> entityBuilders = new LinkedHashMap<>();
+    while (resultSetChunkIterator.hasNext()) {
+      ResultSetChunk chunk = resultSetChunkIterator.next();
+      if (LOG.isDebugEnabled()) {
+        LOG.debug("Received chunk: " + chunk.toString());
+      }
+
+      if (chunk.getRowCount() < 1) {
+        break;
+      }
+
+      for (Row row : chunk.getRowList()) {
+        // Construct the entity id from the entityIdAttributes columns
+        EntityKey entityKey =
+            EntityKey.of(
+                IntStream.range(0, entityIdAttributes.size())
+                    .mapToObj(value -> row.getColumn(value).getString())
+                    .toArray(String[]::new));
+        Builder entityBuilder = entityBuilders.computeIfAbsent(entityKey, k -> Entity.newBuilder());
+        entityBuilder.setEntityType(entitiesRequest.getEntityType());
+
+        // Always include the id in entity since that's needed to make follow up queries in
+        // optimal fashion. If this wasn't really requested by the client, it should be removed
+        // as post processing.
+        for (int i = 0; i < entityIdAttributes.size(); i++) {
+          entityBuilder.putAttribute(
+              entityIdAttributes.get(i),
+              org.hypertrace.gateway.service.v1.common.Value.newBuilder()
+                  .setString(entityKey.getAttributes().get(i))
+                  .setValueType(org.hypertrace.gateway.service.v1.common.ValueType.STRING)
+                  .build());
+        }
+
+        for (int i = entityIdAttributes.size();
+            i < chunk.getResultSetMetadata().getColumnMetadataCount();
+            i++) {
+          ColumnMetadata metadata = chunk.getResultSetMetadata().getColumnMetadata(i);
+          org.hypertrace.core.query.service.api.Value columnValue = row.getColumn(i);
+          // add entity attributes from selections
+          addEntityAttribute(entityBuilder,
+              metadata,
+              columnValue,
+              attributeMetadataMap,
+              aggregates.isEmpty());
+
+          org.hypertrace.gateway.service.v1.common.FunctionExpression function =
+              requestContext.getFunctionExpressionByAlias(metadata.getColumnName());
+          /* this is aggregated metric column*/
+          if (function != null) {
+            addAggregateMetric(entityBuilder,
+                requestContext,
+                entitiesRequest,
+                metadata,
+                columnValue,
+                attributeMetadataMap);
+          }
+
+        }
+      }
+    }
+    return new EntityFetcherResponse(entityBuilders);
+  }
+
+  private QueryRequest.Builder constructSelectionQuery(EntitiesRequestContext requestContext,
+      EntitiesRequest entitiesRequest,
+      List<String> entityIdAttributes,
+      List<org.hypertrace.gateway.service.v1.common.Expression> aggregates) {
+    List<Expression> idExpressions =
+        entityIdAttributes.stream()
+            .map(QueryRequestUtil::createColumnExpression)
+            .map(Expression.Builder::build)
+            .collect(Collectors.toList());
+    Filter.Builder filterBuilder =
+        constructQueryServiceFilter(entitiesRequest, requestContext, entityIdAttributes);
+
+    QueryRequest.Builder builder =
+        QueryRequest.newBuilder()
+            .setFilter(filterBuilder)
+            // Add EntityID attributes as the first selection and group by
+            .addAllSelection(idExpressions)
+            .addAllGroupBy(idExpressions);
+
+    /* if there's aggregates, then add update request context alias <-> function expression map*/
+    for (org.hypertrace.gateway.service.v1.common.Expression aggregate : aggregates) {
+      requestContext.mapAliasToFunctionExpression(
+          aggregate.getFunction().getAlias(), aggregate.getFunction());
+      builder.addSelection(QueryAndGatewayDtoConverter.convertToQueryExpression(aggregate));
+    }
+
+    // Add all expressions in the select/group that are already not part of the EntityID attributes
+    entitiesRequest.getSelectionList().stream()
+        .filter(expression -> expression.getValueCase() == ValueCase.COLUMNIDENTIFIER)
+        .filter(
+            expression ->
+                !entityIdAttributes.contains(expression.getColumnIdentifier().getColumnName()))
+        .forEach(
+            expression -> {
+              Expression.Builder expBuilder = convertToQueryExpression(expression);
+              builder.addSelection(expBuilder);
+              builder.addGroupBy(expBuilder);
+            });
+
+    // Pinot's GroupBy queries need at least one aggregate operation in the selection
+    // so we add count(*) as a dummy placeholder.
+    if (aggregates.isEmpty()) {
+      builder.addSelection(
+          QueryRequestUtil
+              .createCountByColumnSelection(entityIdAttributes.toArray(new String[]{})));
+    }
+    return builder;
+  }
+
+  private void addEntityAttribute(Entity.Builder entityBuilder,
+      ColumnMetadata metadata,
+      org.hypertrace.core.query.service.api.Value columnValue,
+      Map<String, AttributeMetadata> attributeMetadataMap,
+      boolean isSkipCountColumn) {
+
+    // Ignore the count column since we introduced that ourselves into the query
+    if (isSkipCountColumn &&
+        StringUtils.equals(COUNT_COLUMN_NAME, metadata.getColumnName())) {
+      return;
+    }
+
+    String attributeName = metadata.getColumnName();
+    entityBuilder.putAttribute(
+        attributeName,
+        QueryAndGatewayDtoConverter.convertToGatewayValue(
+            attributeName,
+            columnValue,
+            attributeMetadataMap));
+  }
+
+  private void addAggregateMetric(Entity.Builder entityBuilder,
+      QueryRequestContext requestContext,
+      EntitiesRequest entitiesRequest,
+      ColumnMetadata metadata,
+      org.hypertrace.core.query.service.api.Value columnValue,
+      Map<String, AttributeMetadata> attributeMetadataMap) {
+
+    org.hypertrace.gateway.service.v1.common.FunctionExpression function =
+        requestContext.getFunctionExpressionByAlias(metadata.getColumnName());
+    List<org.hypertrace.gateway.service.v1.common.Expression> healthExpressions =
+        function.getArgumentsList().stream()
+            .filter(org.hypertrace.gateway.service.v1.common.Expression::hasHealth)
+            .collect(Collectors.toList());
+    Preconditions.checkArgument(healthExpressions.size() <= 1);
+    Health health = Health.NOT_COMPUTED;
+
+    if (FunctionType.AVGRATE == function.getFunction()) {
+      Value avgRateValue =
+          ArithmeticValueUtil.computeAvgRate(
+              function,
+              columnValue,
+              entitiesRequest.getStartTimeMillis(),
+              entitiesRequest.getEndTimeMillis());
+
+      entityBuilder.putMetric(
+          metadata.getColumnName(),
+          AggregatedMetricValue.newBuilder()
+              .setValue(avgRateValue)
+              .setFunction(function.getFunction())
+              .setHealth(health)
+              .build());
+    } else {
+      Value gwValue =
+          QueryAndGatewayDtoConverter.convertToGatewayValueForMetricValue(
+              MetricAggregationFunctionUtil.getValueTypeFromFunction(
+                  function, attributeMetadataMap),
+              attributeMetadataMap,
+              metadata,
+              columnValue);
+      entityBuilder.putMetric(
+          metadata.getColumnName(),
+          AggregatedMetricValue.newBuilder()
+              .setValue(gwValue)
+              .setFunction(function.getFunction())
+              .setHealth(health)
+              .build());
+    }
   }
 
   @Override

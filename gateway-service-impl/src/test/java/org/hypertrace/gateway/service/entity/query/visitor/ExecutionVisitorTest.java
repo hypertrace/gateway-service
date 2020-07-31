@@ -1,5 +1,7 @@
 package org.hypertrace.gateway.service.entity.query.visitor;
 
+import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.when;
 
@@ -73,7 +75,7 @@ public class ExecutionVisitorTest {
       Map<EntityKey, Builder> finalResult =
           ExecutionVisitor.intersect(Arrays.asList(result1, result2, result4))
               .getEntityKeyBuilderMap();
-      Assertions.assertTrue(finalResult.isEmpty());
+      assertTrue(finalResult.isEmpty());
     }
   }
 
@@ -83,7 +85,7 @@ public class ExecutionVisitorTest {
       Map<EntityKey, Builder> finalResult =
           ExecutionVisitor.union(Arrays.asList(result1, result4)).getEntityKeyBuilderMap();
       Assertions.assertEquals(4, finalResult.size());
-      Assertions.assertTrue(
+      assertTrue(
           finalResult
               .keySet()
               .containsAll(
@@ -186,8 +188,8 @@ public class ExecutionVisitorTest {
 
     Assertions.assertEquals(3, filter.getChildFilterCount());
     Assertions.assertEquals(Operator.OR, filter.getOperator());
-    Assertions.assertFalse(filter.hasLhs());
-    Assertions.assertFalse(filter.hasRhs());
+    assertFalse(filter.hasLhs());
+    assertFalse(filter.hasRhs());
     Assertions.assertEquals(
         Set.of(
             Filter.newBuilder()
@@ -272,6 +274,27 @@ public class ExecutionVisitorTest {
                                                 .setValueType(ValueType.STRING)))))
                 .build()),
         new HashSet<>(filter.getChildFilterList()));
+  }
+
+  @Test
+  public void test_isSingleSourceAndSame_singleSourceDifferent_returnFalse() {
+    ExecutionContext executionContext = mock(ExecutionContext.class);
+    ExecutionVisitor executionVisitor = new ExecutionVisitor(executionContext);
+    assertFalse(executionVisitor.isSingleSourceAndSame(Set.of("QS"), Set.of("EDS")));
+  }
+
+  @Test
+  public void test_isSingleSourceAndSame_singleSourceSame_returnTrue() {
+    ExecutionContext executionContext = mock(ExecutionContext.class);
+    ExecutionVisitor executionVisitor = new ExecutionVisitor(executionContext);
+    assertTrue(executionVisitor.isSingleSourceAndSame(Set.of("QS"), Set.of("QS")));
+  }
+
+  @Test
+  public void test_isSingleSourceAndSame_NotSingleSourceSame_returnFalse() {
+    ExecutionContext executionContext = mock(ExecutionContext.class);
+    ExecutionVisitor executionVisitor = new ExecutionVisitor(executionContext);
+    assertFalse(executionVisitor.isSingleSourceAndSame(Set.of("QS", "EDS"), Set.of("QS", "EDS")));
   }
 
   private Value getStringValue(String value) {
