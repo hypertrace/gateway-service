@@ -3,6 +3,7 @@ package org.hypertrace.gateway.service.entity.query.visitor;
 import com.google.common.annotations.VisibleForTesting;
 import com.google.common.collect.MapDifference;
 import com.google.common.collect.Maps;
+import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collections;
 import java.util.LinkedHashMap;
@@ -44,12 +45,14 @@ import org.slf4j.LoggerFactory;
  */
 public class ExecutionVisitor implements Visitor<EntityFetcherResponse> {
 
-  private final EntityQueryHandlerRegistry queryHandlerRegistry = EntityQueryHandlerRegistry.get();
+  private final EntityQueryHandlerRegistry queryHandlerRegistry;
   private final ExecutionContext executionContext;
   private Logger LOG = LoggerFactory.getLogger(ExecutionVisitor.class);
 
-  public ExecutionVisitor(ExecutionContext executionContext) {
+  public ExecutionVisitor(ExecutionContext executionContext,
+      EntityQueryHandlerRegistry queryHandlerRegistry) {
     this.executionContext = executionContext;
+    this.queryHandlerRegistry = queryHandlerRegistry;
   }
 
   @VisibleForTesting
@@ -141,53 +144,83 @@ public class ExecutionVisitor implements Visitor<EntityFetcherResponse> {
 
     // Construct the filter from the child nodes result
     Filter filter = constructFilterFromChildNodesResult(result);
-    // Select attributes, metric aggregations and timeseries data from corresponding sources
-    List<EntityFetcherResponse> resultMapList =
-        selectionNode.getAttrSelectionSources().parallelStream()
-            .map(
-                source -> {
-                  EntitiesRequest request =
-                      EntitiesRequest.newBuilder(executionContext.getEntitiesRequest())
-                          .clearSelection()
-                          .clearFilter()
-                          .addAllSelection(
-                              executionContext.getSourceToSelectionExpressionMap().get(source))
-                          .setFilter(filter)
-                          .build();
-                  IEntityFetcher entityFetcher = queryHandlerRegistry.getEntityFetcher(source);
-                  EntitiesRequestContext context =
-                      new EntitiesRequestContext(
-                          executionContext.getTenantId(),
-                          request.getStartTimeMillis(),
-                          request.getEndTimeMillis(),
-                          request.getEntityType(),
-                          executionContext.getRequestHeaders());
-                  return entityFetcher.getEntities(context, request);
-                })
-            .collect(Collectors.toList());
-    resultMapList.addAll(
-        selectionNode.getAggMetricSelectionSources().parallelStream()
-            .map(
-                source -> {
-                  EntitiesRequest request =
-                      EntitiesRequest.newBuilder(executionContext.getEntitiesRequest())
-                          .clearSelection()
-                          .clearFilter()
-                          .addAllSelection(
-                              executionContext.getSourceToMetricExpressionMap().get(source))
-                          .setFilter(filter)
-                          .build();
-                  IEntityFetcher entityFetcher = queryHandlerRegistry.getEntityFetcher(source);
-                  EntitiesRequestContext context =
-                      new EntitiesRequestContext(
-                          executionContext.getTenantId(),
-                          request.getStartTimeMillis(),
-                          request.getEndTimeMillis(),
-                          request.getEntityType(),
-                          executionContext.getRequestHeaders());
-                  return entityFetcher.getAggregatedMetrics(context, request);
-                })
-            .collect(Collectors.toList()));
+    // Select attributes, metric aggregations and time-series data from corresponding sources
+    List<EntityFetcherResponse> resultMapList = new ArrayList<>();
+    // if single-sourced and same source, then combine get Entities and aggregated Metrics
+    if (isSingleSourceAndSame(selectionNode.getAttrSelectionSources(), selectionNode.getAggMetricSelectionSources())) {
+      resultMapList.addAll(selectionNode.getAttrSelectionSources().parallelStream()
+          .map(
+              source -> {
+                EntitiesRequest request =
+                    EntitiesRequest.newBuilder(executionContext.getEntitiesRequest())
+                        .clearSelection()
+                        .clearFilter()
+                        .addAllSelection(
+                            executionContext.getSourceToSelectionExpressionMap().get(source))
+                        .addAllSelection(
+                            executionContext.getSourceToMetricExpressionMap().get(source))
+                        .setFilter(filter)
+                        .build();
+                IEntityFetcher entityFetcher = queryHandlerRegistry.getEntityFetcher(source);
+                EntitiesRequestContext context =
+                    new EntitiesRequestContext(
+                        executionContext.getTenantId(),
+                        request.getStartTimeMillis(),
+                        request.getEndTimeMillis(),
+                        request.getEntityType(),
+                        executionContext.getRequestHeaders());
+                return entityFetcher.getEntitiesAndAggregatedMetrics(context, request);
+              })
+          .collect(Collectors.toList()));
+    } else {
+      // if data are coming from multiple sources, then, get entities and aggregated metrics
+      // needs to be separated
+      resultMapList.addAll(selectionNode.getAttrSelectionSources().parallelStream()
+          .map(
+              source -> {
+                EntitiesRequest request =
+                    EntitiesRequest.newBuilder(executionContext.getEntitiesRequest())
+                        .clearSelection()
+                        .clearFilter()
+                        .addAllSelection(
+                            executionContext.getSourceToSelectionExpressionMap().get(source))
+                        .setFilter(filter)
+                        .build();
+                IEntityFetcher entityFetcher = queryHandlerRegistry.getEntityFetcher(source);
+                EntitiesRequestContext context =
+                    new EntitiesRequestContext(
+                        executionContext.getTenantId(),
+                        request.getStartTimeMillis(),
+                        request.getEndTimeMillis(),
+                        request.getEntityType(),
+                        executionContext.getRequestHeaders());
+                return entityFetcher.getEntities(context, request);
+              })
+          .collect(Collectors.toList()));
+      resultMapList.addAll(
+          selectionNode.getAggMetricSelectionSources().parallelStream()
+              .map(
+                  source -> {
+                    EntitiesRequest request =
+                        EntitiesRequest.newBuilder(executionContext.getEntitiesRequest())
+                            .clearSelection()
+                            .clearFilter()
+                            .addAllSelection(
+                                executionContext.getSourceToMetricExpressionMap().get(source))
+                            .setFilter(filter)
+                            .build();
+                    IEntityFetcher entityFetcher = queryHandlerRegistry.getEntityFetcher(source);
+                    EntitiesRequestContext context =
+                        new EntitiesRequestContext(
+                            executionContext.getTenantId(),
+                            request.getStartTimeMillis(),
+                            request.getEndTimeMillis(),
+                            request.getEntityType(),
+                            executionContext.getRequestHeaders());
+                    return entityFetcher.getAggregatedMetrics(context, request);
+                  })
+              .collect(Collectors.toList()));
+    }
     resultMapList.addAll(
         selectionNode.getTimeSeriesSelectionSources().parallelStream()
             .map(
@@ -294,5 +327,11 @@ public class ExecutionVisitor implements Visitor<EntityFetcherResponse> {
   @Override
   public EntityFetcherResponse visit(NoOpNode noOpNode) {
     return new EntityFetcherResponse();
+  }
+
+  @VisibleForTesting
+  boolean isSingleSourceAndSame(Set<String> firstSource, Set<String> secondSource) {
+    return firstSource.size() == 1 &&
+        firstSource.equals(secondSource);
   }
 }

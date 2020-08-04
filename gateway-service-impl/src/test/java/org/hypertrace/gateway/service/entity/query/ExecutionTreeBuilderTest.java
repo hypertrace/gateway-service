@@ -23,6 +23,9 @@ import org.hypertrace.gateway.service.entity.query.visitor.OptimizingVisitor;
 import org.hypertrace.gateway.service.v1.common.ColumnIdentifier;
 import org.hypertrace.gateway.service.v1.common.Expression;
 import org.hypertrace.gateway.service.v1.common.Filter;
+import org.hypertrace.gateway.service.v1.common.FunctionExpression;
+import org.hypertrace.gateway.service.v1.common.FunctionType;
+import org.hypertrace.gateway.service.v1.common.HealthExpression;
 import org.hypertrace.gateway.service.v1.common.LiteralConstant;
 import org.hypertrace.gateway.service.v1.common.Operator;
 import org.hypertrace.gateway.service.v1.common.OrderByExpression;
@@ -44,6 +47,8 @@ public class ExecutionTreeBuilderTest {
   private static final String API_PATTERN_ATTR = "API.urlPattern";
   private static final String API_START_TIME_ATTR = "API.start_time_millis";
   private static final String API_END_TIME_ATTR = "API.end_time_millis";
+  private static final String API_NUM_CALLS_ATTR =  "API.numCalls";
+  private static final String API_STATE_ATTR =  "API.state";
 
   private static final Map<String, AttributeMetadata> attributeSources =
       new HashMap<>() {
@@ -65,6 +70,12 @@ public class ExecutionTreeBuilderTest {
               buildAttributeMetadataForSources(Collections.singletonList(AttributeSource.QS)));
           put(
               API_END_TIME_ATTR,
+              buildAttributeMetadataForSources(Collections.singletonList(AttributeSource.QS)));
+          put(
+              API_NUM_CALLS_ATTR,
+              buildAttributeMetadataForSources(Collections.singletonList(AttributeSource.QS)));
+          put(
+              API_STATE_ATTR,
               buildAttributeMetadataForSources(Collections.singletonList(AttributeSource.QS)));
         }
       };
@@ -418,6 +429,76 @@ public class ExecutionTreeBuilderTest {
             .contains(AttributeSource.EDS.name()));
   }
 
+  @Test
+  public void test_build_selectAttributeAndAggregateMetricWithSameSource_shouldBeCombined() {
+    EntitiesRequest entitiesRequest =
+        EntitiesRequest.newBuilder()
+            .setEntityType(AttributeScope.API.name())
+            .addSelection(buildExpression(API_STATE_ATTR))
+            .addSelection(
+                buildAggregateExpression(API_NUM_CALLS_ATTR,
+                    FunctionType.SUM,
+                    "SUM_numCalls",
+                    Collections.emptyList()))
+            .setLimit(10)
+            .setOffset(0)
+            .build();
+    EntitiesRequestContext entitiesRequestContext =
+        new EntitiesRequestContext(TENANT_ID, 0L, 10L, "API", new HashMap<>());
+    ExecutionContext executionContext =
+        ExecutionContext.from(attributeMetadataProvider, entitiesRequest, entitiesRequestContext);
+    ExecutionTreeBuilder executionTreeBuilder = new ExecutionTreeBuilder(executionContext);
+    QueryNode executionTree = executionTreeBuilder.build();
+    assertNotNull(executionTree);
+    assertTrue(executionTree instanceof SortAndPaginateNode);
+    QueryNode firstChild = ((SortAndPaginateNode) executionTree).getChildNode();
+    assertTrue(firstChild instanceof SelectionNode);
+    assertTrue(
+        ((SelectionNode) firstChild)
+            .getAttrSelectionSources()
+            .contains(AttributeSource.QS.name()));
+    assertTrue(
+        ((SelectionNode) firstChild)
+            .getAggMetricSelectionSources()
+            .contains(AttributeSource.QS.name()));
+  }
+
+  @Test
+  public void test_build_selectAttributeAndAggregateMetricWithDifferentSource_shouldCreateDifferentNode() {
+    EntitiesRequest entitiesRequest =
+        EntitiesRequest.newBuilder()
+            .setEntityType(AttributeScope.API.name())
+            .addSelection(buildExpression(API_NAME_ATTR))
+            .addSelection(
+                buildAggregateExpression(API_NUM_CALLS_ATTR,
+                    FunctionType.SUM,
+                    "SUM_numCalls",
+                    Collections.emptyList()))
+            .setLimit(10)
+            .setOffset(0)
+            .build();
+    EntitiesRequestContext entitiesRequestContext =
+        new EntitiesRequestContext(TENANT_ID, 0L, 10L, "API", new HashMap<>());
+    ExecutionContext executionContext =
+        ExecutionContext.from(attributeMetadataProvider, entitiesRequest, entitiesRequestContext);
+    ExecutionTreeBuilder executionTreeBuilder = new ExecutionTreeBuilder(executionContext);
+    QueryNode executionTree = executionTreeBuilder.build();
+    assertNotNull(executionTree);
+    assertTrue(executionTree instanceof SelectionNode);
+    assertTrue(
+        ((SelectionNode) executionTree)
+            .getAggMetricSelectionSources()
+            .contains(AttributeSource.QS.name()));
+    QueryNode firstChild = ((SelectionNode) executionTree).getChildNode();
+    assertTrue(firstChild instanceof SortAndPaginateNode);
+    QueryNode secondChild = ((SortAndPaginateNode) firstChild).getChildNode();
+    assertTrue(secondChild instanceof SelectionNode);
+    assertTrue(
+        ((SelectionNode) secondChild)
+            .getAttrSelectionSources()
+            .contains(AttributeSource.EDS.name()));
+  }
+
   private Filter generateAndOrFilter(Operator operator, Filter... filters) {
     return Filter.newBuilder()
         .setOperator(operator)
@@ -455,5 +536,21 @@ public class ExecutionTreeBuilderTest {
     return Expression.newBuilder()
         .setColumnIdentifier(ColumnIdentifier.newBuilder().setColumnName(columnName).build())
         .build();
+  }
+
+  public Expression buildAggregateExpression(
+      String columnName,
+      FunctionType function,
+      String alias,
+      List<Expression> additionalArguments) {
+    FunctionExpression.Builder functionBuilder =
+        FunctionExpression.newBuilder()
+            .setFunction(function)
+            .setAlias(alias)
+            .addArguments(buildExpression(columnName));
+    if (!additionalArguments.isEmpty()) {
+      additionalArguments.forEach(functionBuilder::addArguments);
+    }
+    return Expression.newBuilder().setFunction(functionBuilder).build();
   }
 }

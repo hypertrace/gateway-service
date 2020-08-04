@@ -1,18 +1,33 @@
 package org.hypertrace.gateway.service.entity.query.visitor;
 
+import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertTrue;
+import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.mock;
+import static org.mockito.Mockito.spy;
+import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
 import java.util.Arrays;
+import java.util.Collections;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
+import org.hypertrace.entity.query.service.v1.EntityQueryRequest;
+import org.hypertrace.entity.v1.entitytype.EntityType;
+import org.hypertrace.gateway.service.common.datafetcher.EntityDataServiceEntityFetcher;
 import org.hypertrace.gateway.service.common.datafetcher.EntityFetcherResponse;
+import org.hypertrace.gateway.service.common.datafetcher.QueryServiceEntityFetcher;
 import org.hypertrace.gateway.service.entity.EntityKey;
+import org.hypertrace.gateway.service.entity.EntityQueryHandlerRegistry;
 import org.hypertrace.gateway.service.entity.query.ExecutionContext;
+import org.hypertrace.gateway.service.entity.query.NoOpNode;
+import org.hypertrace.gateway.service.entity.query.QueryNode;
+import org.hypertrace.gateway.service.entity.query.SelectionNode;
 import org.hypertrace.gateway.service.v1.common.ColumnIdentifier;
 import org.hypertrace.gateway.service.v1.common.Expression;
 import org.hypertrace.gateway.service.v1.common.Filter;
@@ -20,12 +35,20 @@ import org.hypertrace.gateway.service.v1.common.LiteralConstant;
 import org.hypertrace.gateway.service.v1.common.Operator;
 import org.hypertrace.gateway.service.v1.common.Value;
 import org.hypertrace.gateway.service.v1.common.ValueType;
+import org.hypertrace.gateway.service.v1.entity.EntitiesRequest;
 import org.hypertrace.gateway.service.v1.entity.Entity;
 import org.hypertrace.gateway.service.v1.entity.Entity.Builder;
 import org.junit.jupiter.api.Assertions;
+import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 
 public class ExecutionVisitorTest {
+  private static final String QS_SOURCE = "QS";
+  private static final String EDS_SOURCE = "EDS";
+  private static final String API_ID_ATTR = "API.id";
+  private static final long START_TIME = 10000L;
+  private static final long END_TIME = 90000L;
+  private static final String ENTITY_TYPE = EntityType.API.name();
 
   private EntityFetcherResponse result1 =
       new EntityFetcherResponse(
@@ -55,6 +78,28 @@ public class ExecutionVisitorTest {
           Map.of(
               EntityKey.of("id4"),
               Entity.newBuilder().putAttribute("key41", getStringValue("value41"))));
+  private static final EntitiesRequest ENTITIES_REQUEST = EntitiesRequest.newBuilder()
+      .setStartTimeMillis(START_TIME)
+      .setEndTimeMillis(END_TIME)
+      .setEntityType(ENTITY_TYPE)
+      .build();
+
+  private EntityQueryHandlerRegistry entityQueryHandlerRegistry;
+  private ExecutionContext executionContext;
+  private ExecutionVisitor executionVisitor;
+  private QueryServiceEntityFetcher queryServiceEntityFetcher;
+  private EntityDataServiceEntityFetcher entityDataServiceEntityFetcher;
+
+  @BeforeEach
+  public void setup() {
+    executionContext = mock(ExecutionContext.class);
+    entityQueryHandlerRegistry = mock(EntityQueryHandlerRegistry.class);
+    queryServiceEntityFetcher = mock(QueryServiceEntityFetcher.class);
+    entityDataServiceEntityFetcher = mock(EntityDataServiceEntityFetcher.class);
+    when(entityQueryHandlerRegistry.getEntityFetcher(QS_SOURCE)).thenReturn(queryServiceEntityFetcher);
+    when(entityQueryHandlerRegistry.getEntityFetcher(EDS_SOURCE)).thenReturn(entityDataServiceEntityFetcher);
+    executionVisitor = new ExecutionVisitor(executionContext, entityQueryHandlerRegistry);
+  }
 
   @Test
   public void testIntersect() {
@@ -73,7 +118,7 @@ public class ExecutionVisitorTest {
       Map<EntityKey, Builder> finalResult =
           ExecutionVisitor.intersect(Arrays.asList(result1, result2, result4))
               .getEntityKeyBuilderMap();
-      Assertions.assertTrue(finalResult.isEmpty());
+      assertTrue(finalResult.isEmpty());
     }
   }
 
@@ -83,7 +128,7 @@ public class ExecutionVisitorTest {
       Map<EntityKey, Builder> finalResult =
           ExecutionVisitor.union(Arrays.asList(result1, result4)).getEntityKeyBuilderMap();
       Assertions.assertEquals(4, finalResult.size());
-      Assertions.assertTrue(
+      assertTrue(
           finalResult
               .keySet()
               .containsAll(
@@ -109,7 +154,6 @@ public class ExecutionVisitorTest {
   public void testConstructFilterFromChildNodesResultEmptyResults() {
     // Empty results.
     EntityFetcherResponse result = new EntityFetcherResponse();
-    ExecutionContext executionContext = mock(ExecutionContext.class);
     when(executionContext.getEntityIdExpressions())
         .thenReturn(
             List.of(
@@ -121,7 +165,6 @@ public class ExecutionVisitorTest {
                             .build())
                     .build()));
 
-    ExecutionVisitor executionVisitor = new ExecutionVisitor(executionContext);
     Filter filter = executionVisitor.constructFilterFromChildNodesResult(result);
 
     Assertions.assertEquals(Filter.getDefaultInstance(), filter);
@@ -140,10 +183,8 @@ public class ExecutionVisitorTest {
             .setColumnIdentifier(
                 ColumnIdentifier.newBuilder().setColumnName("API.id").setAlias("entityId0").build())
             .build();
-    ExecutionContext executionContext = mock(ExecutionContext.class);
     when(executionContext.getEntityIdExpressions()).thenReturn(List.of(entityIdExpression));
 
-    ExecutionVisitor executionVisitor = new ExecutionVisitor(executionContext);
     Filter filter = executionVisitor.constructFilterFromChildNodesResult(result);
 
     Assertions.assertEquals(0, filter.getChildFilterCount());
@@ -177,17 +218,15 @@ public class ExecutionVisitorTest {
                     .setAlias("entityId1")
                     .build())
             .build();
-    ExecutionContext executionContext = mock(ExecutionContext.class);
     when(executionContext.getEntityIdExpressions())
         .thenReturn(List.of(entityIdExpression0, entityIdExpression1));
 
-    ExecutionVisitor executionVisitor = new ExecutionVisitor(executionContext);
     Filter filter = executionVisitor.constructFilterFromChildNodesResult(result);
 
     Assertions.assertEquals(3, filter.getChildFilterCount());
     Assertions.assertEquals(Operator.OR, filter.getOperator());
-    Assertions.assertFalse(filter.hasLhs());
-    Assertions.assertFalse(filter.hasRhs());
+    assertFalse(filter.hasLhs());
+    assertFalse(filter.hasRhs());
     Assertions.assertEquals(
         Set.of(
             Filter.newBuilder()
@@ -274,7 +313,87 @@ public class ExecutionVisitorTest {
         new HashSet<>(filter.getChildFilterList()));
   }
 
+  @Test
+  public void test_isSingleSourceAndSame_singleSourceDifferent_returnFalse() {
+    assertFalse(executionVisitor.isSingleSourceAndSame(
+        Set.of(QS_SOURCE), Set.of(EDS_SOURCE)));
+  }
+
+  @Test
+  public void test_isSingleSourceAndSame_singleSourceSame_returnTrue() {
+    assertTrue(executionVisitor.isSingleSourceAndSame(Set.of(QS_SOURCE), Set.of(QS_SOURCE)));
+  }
+
+  @Test
+  public void test_isSingleSourceAndSame_NotSingleSourceSame_returnFalse() {
+    assertFalse(executionVisitor.isSingleSourceAndSame(
+        Set.of(QS_SOURCE, EDS_SOURCE),
+        Set.of(QS_SOURCE, EDS_SOURCE)));
+  }
+
+  @Test
+  public void test_visitSelectionNode_singleSource_callCombinedData() {
+    ExecutionVisitor executionVisitor =
+        spy(new ExecutionVisitor(executionContext, entityQueryHandlerRegistry));
+    SelectionNode selectionNode = new SelectionNode.Builder(new NoOpNode())
+        .setAttrSelectionSources(Set.of(QS_SOURCE))
+        .setAggMetricSelectionSources(Set.of(QS_SOURCE))
+        .build();
+    mockExecutionContext(
+        Set.of(QS_SOURCE),
+        Set.of(QS_SOURCE),
+        Map.of(QS_SOURCE, Collections.emptyList()),
+        Map.of(QS_SOURCE, Collections.emptyList()));
+    when(queryServiceEntityFetcher.getEntitiesAndAggregatedMetrics(any(), any())).thenReturn(result4);
+    when(executionVisitor.visit(any(NoOpNode.class))).thenReturn(result4);
+    executionVisitor.visit(selectionNode);
+    verify(queryServiceEntityFetcher).getEntitiesAndAggregatedMetrics(any(), any());
+  }
+
+  @Test
+  public void test_visitSelectionNode_differentSource_callSeparatedCalls() {
+    ExecutionVisitor executionVisitor =
+        spy(new ExecutionVisitor(executionContext, entityQueryHandlerRegistry));
+    SelectionNode selectionNode = new SelectionNode.Builder(new NoOpNode())
+        .setAttrSelectionSources(Set.of(EDS_SOURCE))
+        .setAggMetricSelectionSources(Set.of(QS_SOURCE))
+        .build();
+    mockExecutionContext(
+        Set.of(EDS_SOURCE),
+        Set.of(QS_SOURCE),
+        Map.of(EDS_SOURCE, Collections.emptyList()),
+        Map.of(QS_SOURCE, Collections.emptyList()));
+    when(entityDataServiceEntityFetcher.getEntities(any(), any())).thenReturn(result4);
+    when(queryServiceEntityFetcher.getAggregatedMetrics(any(), any())).thenReturn(result4);
+    when(executionVisitor.visit(any(NoOpNode.class))).thenReturn(result4);
+    executionVisitor.visit(selectionNode);
+    verify(entityDataServiceEntityFetcher).getEntities(any(), any());
+    verify(queryServiceEntityFetcher).getAggregatedMetrics(any(), any());
+  }
+
   private Value getStringValue(String value) {
     return Value.newBuilder().setString(value).setValueType(ValueType.STRING).build();
   }
+
+  private ExecutionContext mockExecutionContext(
+      Set<String> selectionSource,
+      Set<String> aggregateSource,
+      Map<String, List<Expression>> sourceToSelectionMap,
+      Map<String, List<Expression>> sourceToAggregateMap) {
+    when(executionContext.getEntityIdExpressions()).thenReturn(Collections.singletonList(
+        Expression.newBuilder()
+            .setColumnIdentifier(ColumnIdentifier.newBuilder().setColumnName(API_ID_ATTR))
+            .build()
+    ));
+
+    when(executionContext.getTenantId()).thenReturn("tenantId");
+    when(executionContext.getRequestHeaders()).thenReturn(Collections.emptyMap());
+    when(executionContext.getEntitiesRequest()).thenReturn(ENTITIES_REQUEST);
+    when(executionContext.getPendingSelectionSources()).thenReturn(selectionSource);
+    when(executionContext.getPendingMetricAggregationSources()).thenReturn(aggregateSource);
+    when(executionContext.getSourceToSelectionExpressionMap()).thenReturn(sourceToSelectionMap);
+    when(executionContext.getSourceToMetricExpressionMap()).thenReturn(sourceToAggregateMap);
+    return executionContext;
+  }
+
 }

@@ -98,24 +98,33 @@ public class ExecutionTreeBuilder {
     // Try adding SortAndPaginateNode
     rootNode = checkAndAddSortAndPaginationNode(rootNode, executionContext);
 
-    // Fetch all other attributes, metric agg and time series data
-    if (!executionContext.getPendingSelectionSources().isEmpty()) {
+    if (isSingleSourceAndSame(executionContext.getPendingSelectionSources(), executionContext.getPendingMetricAggregationSources())) {
       rootNode =
           new SelectionNode.Builder(rootNode)
               .setAttrSelectionSources(executionContext.getPendingSelectionSources())
+              .setAggMetricSelectionSources(executionContext.getPendingMetricAggregationSources())
               .build();
       // Handle case where there is no order by but pagination still needs to be done
       rootNode = checkAndAddSortAndPaginationNode(rootNode, executionContext);
-    }
+    } else {
+      // Fetch all other attributes, metric agg and time series data
+      if (!executionContext.getPendingSelectionSources().isEmpty()) {
+        rootNode =
+            new SelectionNode.Builder(rootNode)
+                .setAttrSelectionSources(executionContext.getPendingSelectionSources())
+                .build();
+        // Handle case where there is no order by but pagination still needs to be done
+        rootNode = checkAndAddSortAndPaginationNode(rootNode, executionContext);
+      }
 
-    if (!executionContext.getPendingMetricAggregationSources().isEmpty()) {
-      rootNode =
-          new SelectionNode.Builder(rootNode)
-              .setAggMetricSelectionSources(executionContext.getPendingMetricAggregationSources())
-              .build();
-      rootNode = checkAndAddSortAndPaginationNode(rootNode, executionContext);
+      if (!executionContext.getPendingMetricAggregationSources().isEmpty()) {
+        rootNode =
+            new SelectionNode.Builder(rootNode)
+                .setAggMetricSelectionSources(executionContext.getPendingMetricAggregationSources())
+                .build();
+        rootNode = checkAndAddSortAndPaginationNode(rootNode, executionContext);
+      }
     }
-
     if (!executionContext.getPendingTimeAggregationSources().isEmpty()) {
       rootNode =
           new SelectionNode.Builder(rootNode)
@@ -168,5 +177,10 @@ public class ExecutionTreeBuilder {
         executionContext.getEntitiesRequest().getLimit(),
         executionContext.getEntitiesRequest().getOffset(),
         orderByExpressions);
+  }
+
+  boolean isSingleSourceAndSame(Set<String> firstSource, Set<String> secondSource) {
+    return firstSource.size() == 1 &&
+        firstSource.equals(secondSource);
   }
 }
