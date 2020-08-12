@@ -6,8 +6,8 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.mock;
 
+import java.time.temporal.ChronoUnit;
 import java.util.Arrays;
-import java.util.Collections;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
@@ -25,10 +25,11 @@ import org.hypertrace.gateway.service.v1.common.Expression;
 import org.hypertrace.gateway.service.v1.common.Filter;
 import org.hypertrace.gateway.service.v1.common.FunctionExpression;
 import org.hypertrace.gateway.service.v1.common.FunctionType;
-import org.hypertrace.gateway.service.v1.common.HealthExpression;
 import org.hypertrace.gateway.service.v1.common.LiteralConstant;
 import org.hypertrace.gateway.service.v1.common.Operator;
 import org.hypertrace.gateway.service.v1.common.OrderByExpression;
+import org.hypertrace.gateway.service.v1.common.Period;
+import org.hypertrace.gateway.service.v1.common.TimeAggregation;
 import org.hypertrace.gateway.service.v1.common.Value;
 import org.hypertrace.gateway.service.v1.common.ValueType;
 import org.hypertrace.gateway.service.v1.entity.EntitiesRequest;
@@ -47,36 +48,40 @@ public class ExecutionTreeBuilderTest {
   private static final String API_PATTERN_ATTR = "API.urlPattern";
   private static final String API_START_TIME_ATTR = "API.start_time_millis";
   private static final String API_END_TIME_ATTR = "API.end_time_millis";
-  private static final String API_NUM_CALLS_ATTR =  "API.numCalls";
-  private static final String API_STATE_ATTR =  "API.state";
+  private static final String API_NUM_CALLS_ATTR = "API.numCalls";
+  private static final String API_STATE_ATTR = "API.state";
+  private static final String API_DISCOVERY_STATE = "API.apiDiscoveryState";
 
   private static final Map<String, AttributeMetadata> attributeSources =
       new HashMap<>() {
         {
           put(
               API_ID_ATTR,
-              buildAttributeMetadataForSources(Collections.singletonList(AttributeSource.EDS)));
+              buildAttributeMetadataForSources(List.of(AttributeSource.EDS)));
           put(
               API_PATTERN_ATTR,
-              buildAttributeMetadataForSources(Collections.singletonList(AttributeSource.EDS)));
+              buildAttributeMetadataForSources(List.of(AttributeSource.EDS)));
           put(
               API_NAME_ATTR,
-              buildAttributeMetadataForSources(Collections.singletonList(AttributeSource.EDS)));
+              buildAttributeMetadataForSources(List.of(AttributeSource.EDS)));
           put(
               API_TYPE_ATTR,
-              buildAttributeMetadataForSources(Collections.singletonList(AttributeSource.EDS)));
+              buildAttributeMetadataForSources(List.of(AttributeSource.EDS)));
           put(
               API_START_TIME_ATTR,
-              buildAttributeMetadataForSources(Collections.singletonList(AttributeSource.QS)));
+              buildAttributeMetadataForSources(List.of(AttributeSource.QS)));
           put(
               API_END_TIME_ATTR,
-              buildAttributeMetadataForSources(Collections.singletonList(AttributeSource.QS)));
+              buildAttributeMetadataForSources(List.of(AttributeSource.QS)));
           put(
               API_NUM_CALLS_ATTR,
-              buildAttributeMetadataForSources(Collections.singletonList(AttributeSource.QS)));
+              buildAttributeMetadataForSources(List.of(AttributeSource.QS)));
           put(
               API_STATE_ATTR,
-              buildAttributeMetadataForSources(Collections.singletonList(AttributeSource.QS)));
+              buildAttributeMetadataForSources(List.of(AttributeSource.QS)));
+          put(
+              API_DISCOVERY_STATE,
+              buildAttributeMetadataForSources(List.of(AttributeSource.EDS, AttributeSource.QS)));
         }
       };
 
@@ -352,15 +357,16 @@ public class ExecutionTreeBuilderTest {
 
   @Test
   public void testExecutionTreeBuilderWithSelectFilterOrderPagination() {
+    OrderByExpression orderByExpression = buildOrderByExpression(API_ID_ATTR);
     {
       EntitiesRequest entitiesRequest =
           EntitiesRequest.newBuilder()
               .setEntityType(AttributeScope.API.name())
               .addSelection(buildExpression(API_NAME_ATTR))
               .setFilter(generateEQFilter(API_ID_ATTR, UUID.randomUUID().toString()))
-              .addOrderBy(buildOrderByExpression(API_ID_ATTR))
+              .addOrderBy(orderByExpression)
               .setLimit(10)
-              .setOffset(0)
+              .setOffset(20)
               .build();
       EntitiesRequestContext entitiesRequestContext =
           new EntitiesRequestContext(TENANT_ID, 0L, 10L, "API", new HashMap<>());
@@ -370,9 +376,15 @@ public class ExecutionTreeBuilderTest {
       QueryNode executionTree = executionTreeBuilder.build();
       assertNotNull(executionTree);
       assertTrue(executionTree instanceof SortAndPaginateNode);
-      QueryNode firstChild = ((SortAndPaginateNode) executionTree).getChildNode();
-      assertTrue(firstChild instanceof DataFetcherNode);
-      assertEquals(AttributeSource.EDS.name(), ((DataFetcherNode) firstChild).getSource());
+      assertEquals(10, ((SortAndPaginateNode)executionTree).getLimit());
+      assertEquals(20, ((SortAndPaginateNode)executionTree).getOffset());
+      assertEquals(List.of(orderByExpression), ((SortAndPaginateNode)executionTree).getOrderByExpressionList());
+
+      QueryNode selectionAndFilterNode = ((SortAndPaginateNode)executionTree).getChildNode();
+      assertTrue(selectionAndFilterNode instanceof SelectionAndFilterNode);
+      assertEquals(20, ((SelectionAndFilterNode)selectionAndFilterNode).getOffset());
+      assertEquals(10, ((SelectionAndFilterNode)selectionAndFilterNode).getLimit());
+      assertEquals(List.of(orderByExpression), ((SelectionAndFilterNode)selectionAndFilterNode).getOrderBys());
     }
 
     {
@@ -381,7 +393,7 @@ public class ExecutionTreeBuilderTest {
               .setEntityType(AttributeScope.API.name())
               .addSelection(buildExpression(API_START_TIME_ATTR))
               .setFilter(generateEQFilter(API_ID_ATTR, UUID.randomUUID().toString()))
-              .addOrderBy(buildOrderByExpression(API_ID_ATTR))
+              .addOrderBy(orderByExpression)
               .setLimit(10)
               .setOffset(0)
               .build();
@@ -411,7 +423,7 @@ public class ExecutionTreeBuilderTest {
             .setEntityType(AttributeScope.API.name())
             .addSelection(buildExpression(API_NAME_ATTR))
             .setLimit(10)
-            .setOffset(0)
+            .setOffset(20)
             .build();
     EntitiesRequestContext entitiesRequestContext =
         new EntitiesRequestContext(TENANT_ID, 0L, 10L, "API", new HashMap<>());
@@ -421,16 +433,19 @@ public class ExecutionTreeBuilderTest {
     QueryNode executionTree = executionTreeBuilder.build();
     assertNotNull(executionTree);
     assertTrue(executionTree instanceof SortAndPaginateNode);
-    QueryNode firstChild = ((SortAndPaginateNode) executionTree).getChildNode();
-    assertTrue(firstChild instanceof SelectionNode);
-    assertTrue(
-        ((SelectionNode) firstChild)
-            .getAttrSelectionSources()
-            .contains(AttributeSource.EDS.name()));
+    assertEquals(10, ((SortAndPaginateNode)executionTree).getLimit());
+    assertEquals(20, ((SortAndPaginateNode)executionTree).getOffset());
+    assertEquals(List.of(), ((SortAndPaginateNode)executionTree).getOrderByExpressionList());
+
+    QueryNode selectionAndFilterNode = ((SortAndPaginateNode)executionTree).getChildNode();
+    assertTrue(selectionAndFilterNode instanceof SelectionAndFilterNode);
+    assertEquals(10, ((SelectionAndFilterNode)selectionAndFilterNode).getLimit());
+    assertEquals(20, ((SelectionAndFilterNode)selectionAndFilterNode).getOffset());
+    assertEquals(List.of(), ((SelectionAndFilterNode)selectionAndFilterNode).getOrderBys());
   }
 
   @Test
-  public void test_build_selectAttributeAndAggregateMetricWithSameSource_shouldBeCombined() {
+  public void test_build_selectAttributeAndAggregateMetricWithSameSource_shouldCreateSelectionAndFilterNode() {
     EntitiesRequest entitiesRequest =
         EntitiesRequest.newBuilder()
             .setEntityType(AttributeScope.API.name())
@@ -439,7 +454,7 @@ public class ExecutionTreeBuilderTest {
                 buildAggregateExpression(API_NUM_CALLS_ATTR,
                     FunctionType.SUM,
                     "SUM_numCalls",
-                    Collections.emptyList()))
+                    List.of()))
             .setLimit(10)
             .setOffset(0)
             .build();
@@ -450,17 +465,168 @@ public class ExecutionTreeBuilderTest {
     ExecutionTreeBuilder executionTreeBuilder = new ExecutionTreeBuilder(executionContext);
     QueryNode executionTree = executionTreeBuilder.build();
     assertNotNull(executionTree);
-    assertTrue(executionTree instanceof SortAndPaginateNode);
-    QueryNode firstChild = ((SortAndPaginateNode) executionTree).getChildNode();
-    assertTrue(firstChild instanceof SelectionNode);
-    assertTrue(
-        ((SelectionNode) firstChild)
-            .getAttrSelectionSources()
-            .contains(AttributeSource.QS.name()));
-    assertTrue(
-        ((SelectionNode) firstChild)
-            .getAggMetricSelectionSources()
-            .contains(AttributeSource.QS.name()));
+    assertTrue(executionTree instanceof TotalFetcherNode);
+    assertEquals("QS", ((TotalFetcherNode)executionTree).getSource());
+
+    QueryNode selectionAndFilterNode = ((TotalFetcherNode)executionTree).getChildNode();
+    assertTrue(selectionAndFilterNode instanceof SelectionAndFilterNode);
+    assertEquals("QS", ((SelectionAndFilterNode)selectionAndFilterNode).getSource());
+    assertEquals(0, ((SelectionAndFilterNode)selectionAndFilterNode).getOffset());
+    assertEquals(10, ((SelectionAndFilterNode)selectionAndFilterNode).getLimit());
+    assertEquals(List.of(), ((SelectionAndFilterNode)selectionAndFilterNode).getOrderBys());
+  }
+
+  @Test
+  public void test_build_selectAttributesTimeAggregationAndFilterWithSameSource_shouldCreateSelectionAndFilterNode() {
+    EntitiesRequest entitiesRequest =
+        EntitiesRequest.newBuilder()
+            .setEntityType(AttributeScope.API.name())
+            .addSelection(buildExpression(API_STATE_ATTR))
+            .addSelection(
+                buildAggregateExpression(API_NUM_CALLS_ATTR,
+                    FunctionType.SUM,
+                    "SUM_numCalls",
+                    List.of()))
+            .addTimeAggregation(
+                buildTimeAggregation(
+                    30,
+                    API_NUM_CALLS_ATTR,
+                    FunctionType.AVG,
+                    "AVG_numCalls",
+                    List.of()
+                )
+            )
+            .setFilter(generateAndOrFilter(
+                Operator.AND,
+                generateEQFilter(API_STATE_ATTR, "state1"),
+                generateFilter(Operator.GE, API_NUM_CALLS_ATTR,
+                    Value.newBuilder().
+                        setDouble(60)
+                        .setValueType(ValueType.DOUBLE)
+                        .build()
+                )
+            ))
+            .setLimit(10)
+            .setOffset(0)
+            .build();
+    EntitiesRequestContext entitiesRequestContext =
+        new EntitiesRequestContext(TENANT_ID, 0L, 10L, "API", new HashMap<>());
+    ExecutionContext executionContext =
+        ExecutionContext.from(attributeMetadataProvider, entitiesRequest, entitiesRequestContext);
+    ExecutionTreeBuilder executionTreeBuilder = new ExecutionTreeBuilder(executionContext);
+    QueryNode executionTree = executionTreeBuilder.build();
+    assertNotNull(executionTree);
+    assertTrue(executionTree instanceof TotalFetcherNode);
+    assertEquals("QS", ((TotalFetcherNode)executionTree).getSource());
+
+    QueryNode selectionAndFilterNode = ((TotalFetcherNode)executionTree).getChildNode();
+    assertTrue(selectionAndFilterNode instanceof SelectionAndFilterNode);
+    assertEquals("QS", ((SelectionAndFilterNode)selectionAndFilterNode).getSource());
+    assertEquals(0, ((SelectionAndFilterNode)selectionAndFilterNode).getOffset());
+    assertEquals(10, ((SelectionAndFilterNode)selectionAndFilterNode).getLimit());
+    assertEquals(List.of(), ((SelectionAndFilterNode)selectionAndFilterNode).getOrderBys());
+  }
+
+  @Test
+  public void test_build_selectAttributesTimeAggregationFilterAndOrderByWithSameSource_shouldCreateSelectionAndFilterNode() {
+    OrderByExpression orderByExpression = buildOrderByExpression(API_STATE_ATTR);
+    EntitiesRequest entitiesRequest =
+        EntitiesRequest.newBuilder()
+            .setEntityType(AttributeScope.API.name())
+            .addSelection(buildExpression(API_STATE_ATTR))
+            .addSelection(
+                buildAggregateExpression(API_NUM_CALLS_ATTR,
+                    FunctionType.SUM,
+                    "SUM_numCalls",
+                    List.of()))
+            .addTimeAggregation(
+                buildTimeAggregation(
+                    30,
+                    API_NUM_CALLS_ATTR,
+                    FunctionType.AVG,
+                    "AVG_numCalls",
+                    List.of()
+                )
+            )
+            .setFilter(generateAndOrFilter(
+                Operator.AND,
+                generateEQFilter(API_STATE_ATTR, "state1"),
+                generateFilter(Operator.GE, API_NUM_CALLS_ATTR,
+                    Value.newBuilder().
+                        setDouble(60)
+                        .setValueType(ValueType.DOUBLE)
+                        .build()
+                )
+            ))
+            .addOrderBy(orderByExpression)
+            .setLimit(10)
+            .setOffset(0)
+            .build();
+    EntitiesRequestContext entitiesRequestContext =
+        new EntitiesRequestContext(TENANT_ID, 0L, 10L, "API", new HashMap<>());
+    ExecutionContext executionContext =
+        ExecutionContext.from(attributeMetadataProvider, entitiesRequest, entitiesRequestContext);
+    ExecutionTreeBuilder executionTreeBuilder = new ExecutionTreeBuilder(executionContext);
+    QueryNode executionTree = executionTreeBuilder.build();
+    assertNotNull(executionTree);
+    assertTrue(executionTree instanceof TotalFetcherNode);
+    assertEquals("QS", ((TotalFetcherNode)executionTree).getSource());
+
+    QueryNode selectionAndFilterNode = ((TotalFetcherNode)executionTree).getChildNode();
+    assertTrue(selectionAndFilterNode instanceof SelectionAndFilterNode);
+    assertEquals("QS", ((SelectionAndFilterNode)selectionAndFilterNode).getSource());
+    assertEquals(0, ((SelectionAndFilterNode)selectionAndFilterNode).getOffset());
+    assertEquals(10, ((SelectionAndFilterNode)selectionAndFilterNode).getLimit());
+    assertEquals(List.of(orderByExpression), ((SelectionAndFilterNode)selectionAndFilterNode).getOrderBys());
+  }
+
+  @Test
+  public void test_build_selectAttributesAndFilterWithSameSourceNonZeroOffset_shouldCreateSelectionAndFilterNodeAndPaginateOnlyNode() {
+    OrderByExpression orderByExpression = buildOrderByExpression(API_STATE_ATTR);
+    EntitiesRequest entitiesRequest =
+        EntitiesRequest.newBuilder()
+            .setEntityType(AttributeScope.API.name())
+            .addSelection(buildExpression(API_STATE_ATTR))
+            .addSelection(
+                buildAggregateExpression(API_NUM_CALLS_ATTR,
+                    FunctionType.SUM,
+                    "SUM_numCalls",
+                    List.of()))
+            .setFilter(generateAndOrFilter(
+                Operator.AND,
+                generateEQFilter(API_DISCOVERY_STATE, "DISCOVERED"),
+                generateFilter(Operator.GE, API_NUM_CALLS_ATTR,
+                    Value.newBuilder().
+                        setDouble(60)
+                        .setValueType(ValueType.DOUBLE)
+                        .build()
+                )
+            ))
+            .addOrderBy(orderByExpression)
+            .setLimit(10)
+            .setOffset(10)
+            .build();
+    EntitiesRequestContext entitiesRequestContext =
+        new EntitiesRequestContext(TENANT_ID, 0L, 10L, "API", new HashMap<>());
+    ExecutionContext executionContext =
+        ExecutionContext.from(attributeMetadataProvider, entitiesRequest, entitiesRequestContext);
+    ExecutionTreeBuilder executionTreeBuilder = new ExecutionTreeBuilder(executionContext);
+    QueryNode executionTree = executionTreeBuilder.build();
+    assertNotNull(executionTree);
+    assertTrue(executionTree instanceof TotalFetcherNode);
+    assertEquals("QS", ((TotalFetcherNode)executionTree).getSource());
+
+    QueryNode paginateOnlyNode = ((TotalFetcherNode)executionTree).getChildNode();
+    assertTrue(paginateOnlyNode instanceof PaginateOnlyNode);
+    assertEquals(10, ((PaginateOnlyNode)paginateOnlyNode).getOffset());
+    assertEquals(10, ((PaginateOnlyNode)paginateOnlyNode).getLimit());
+
+    QueryNode selectAndFilterNode = ((PaginateOnlyNode)paginateOnlyNode).getChildNode();
+    assertTrue(selectAndFilterNode instanceof SelectionAndFilterNode);
+    assertEquals("QS", ((SelectionAndFilterNode)selectAndFilterNode).getSource());
+    assertEquals(0, ((SelectionAndFilterNode)selectAndFilterNode).getOffset());
+    assertEquals(20, ((SelectionAndFilterNode)selectAndFilterNode).getLimit());
+    assertEquals(List.of(orderByExpression), ((SelectionAndFilterNode)selectAndFilterNode).getOrderBys());
   }
 
   @Test
@@ -473,7 +639,7 @@ public class ExecutionTreeBuilderTest {
                 buildAggregateExpression(API_NUM_CALLS_ATTR,
                     FunctionType.SUM,
                     "SUM_numCalls",
-                    Collections.emptyList()))
+                    List.of()))
             .setLimit(10)
             .setOffset(0)
             .build();
@@ -552,5 +718,19 @@ public class ExecutionTreeBuilderTest {
       additionalArguments.forEach(functionBuilder::addArguments);
     }
     return Expression.newBuilder().setFunction(functionBuilder).build();
+  }
+
+  public TimeAggregation buildTimeAggregation(int period,
+                                              String columnName,
+                                              FunctionType function,
+                                              String alias,
+                                              List<Expression> additionalArguments) {
+    return TimeAggregation.newBuilder()
+        .setPeriod(Period.newBuilder()
+            .setValue(period)
+            .setUnit(ChronoUnit.SECONDS.name())
+        )
+        .setAggregation(buildAggregateExpression(columnName, function, alias, additionalArguments))
+        .build();
   }
 }

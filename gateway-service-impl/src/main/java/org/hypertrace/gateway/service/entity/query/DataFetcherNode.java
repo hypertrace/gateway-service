@@ -9,8 +9,8 @@ import org.hypertrace.gateway.service.v1.common.Filter;
  */
 public class DataFetcherNode implements QueryNode {
 
-  private String source;
-  private Filter filter;
+  private final String source;
+  private final Filter filter;
 
   public DataFetcherNode(String source, Filter filter) {
     this.source = source;

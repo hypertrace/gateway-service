@@ -5,8 +5,11 @@ import org.hypertrace.gateway.service.entity.query.DataFetcherNode;
 import org.hypertrace.gateway.service.entity.query.ExecutionContext;
 import org.hypertrace.gateway.service.entity.query.NoOpNode;
 import org.hypertrace.gateway.service.entity.query.OrNode;
+import org.hypertrace.gateway.service.entity.query.PaginateOnlyNode;
+import org.hypertrace.gateway.service.entity.query.SelectionAndFilterNode;
 import org.hypertrace.gateway.service.entity.query.SelectionNode;
 import org.hypertrace.gateway.service.entity.query.SortAndPaginateNode;
+import org.hypertrace.gateway.service.entity.query.TotalFetcherNode;
 
 /**
  * Visitor for capturing the different sources corresponding to the expressions in the filter tree
@@ -50,6 +53,21 @@ public class ExecutionContextBuilderVisitor implements Visitor<Void> {
 
   @Override
   public Void visit(NoOpNode noOpNode) {
+    return null;
+  }
+
+  @Override
+  public Void visit(SelectionAndFilterNode selectionAndFilterNode) {
+    return null;
+  }
+
+  @Override
+  public Void visit(PaginateOnlyNode paginateOnlyNode) {
+    return null;
+  }
+
+  @Override
+  public Void visit(TotalFetcherNode totalFetcherNode) {
     return null;
   }
 }

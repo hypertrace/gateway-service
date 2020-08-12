@@ -6,6 +6,7 @@ import com.google.common.annotations.VisibleForTesting;
 import java.util.Collection;
 import java.util.List;
 import java.util.Map;
+import java.util.Optional;
 import java.util.Set;
 import java.util.stream.Collectors;
 import org.hypertrace.core.attribute.service.v1.AttributeMetadata;
@@ -49,6 +50,19 @@ public class ExecutionTreeBuilder {
    * @return the root node of the execution tree
    */
   public QueryNode build() {
+    // All expressions' attributes from the same source. Will only need one downstream query.
+    Optional<String> singleSourceForAllAttributes = ExecutionTreeUtils.getSingleSourceForAllAttributes(executionContext);
+
+    if (singleSourceForAllAttributes.isPresent()) {
+      String source = singleSourceForAllAttributes.get();
+      QueryNode selectionAndFilterNode = buildExecutionTreeForSameSourceFilterAndSelection(source);
+      if (LOG.isDebugEnabled()) {
+        LOG.debug("Execution Tree:{}", selectionAndFilterNode.acceptVisitor(new PrintVisitor()));
+      }
+
+      return selectionAndFilterNode;
+    }
+
     QueryNode filterTree = buildFilterTree(executionContext.getEntitiesRequest().getFilter());
     if (LOG.isDebugEnabled()) {
       LOG.debug("Filter Tree:{}", filterTree.acceptVisitor(new PrintVisitor()));
@@ -70,6 +84,56 @@ public class ExecutionTreeBuilder {
     }
 
     return executionTree;
+  }
+
+  private QueryNode buildExecutionTreeForSameSourceFilterAndSelection(String source) {
+    if (source.equals("QS")) {
+      return buildExecutionTreeForQsFilterAndSelection(source);
+    } else if(source.equals("EDS")) {
+      return buildExecutionTreeForEdsFilterAndSelection(source);
+    } else {
+      throw new UnsupportedOperationException("Unknown Entities data source. No fetcher for this source.");
+    }
+  }
+
+  private QueryNode buildExecutionTreeForQsFilterAndSelection(String source) {
+    int selectionLimit = executionContext.getEntitiesRequest().getLimit();
+    int selectionOffset = executionContext.getEntitiesRequest().getOffset();
+    List<OrderByExpression> orderBys = executionContext.getEntitiesRequest().getOrderByList();
+
+    // query-service/Pinot does not support offset when group by is specified. Since we will be
+    // grouping by at least the entity id, we will compute the non zero pagination ourselves. This
+    // means that we need to request for offset + limit rows so that we can paginate appropriately.
+    // Pinot will do the ordering for us.
+    if (selectionOffset > 0) {
+      selectionLimit = selectionOffset + selectionLimit;
+      selectionOffset = 0;
+    }
+
+    QueryNode rootNode = new SelectionAndFilterNode(source, selectionLimit, selectionOffset, orderBys);
+    if (executionContext.getEntitiesRequest().getOffset() > 0) {
+      rootNode = new PaginateOnlyNode(
+          rootNode,
+          executionContext.getEntitiesRequest().getLimit(),
+          executionContext.getEntitiesRequest().getOffset()
+      );
+    }
+
+    rootNode = new TotalFetcherNode(rootNode, source);
+
+    return rootNode;
+  }
+
+  private QueryNode buildExecutionTreeForEdsFilterAndSelection(String source) {
+    int selectionLimit = executionContext.getEntitiesRequest().getLimit();
+    int selectionOffset = executionContext.getEntitiesRequest().getOffset();
+    List<OrderByExpression> orderBys = executionContext.getEntitiesRequest().getOrderByList();
+
+    QueryNode rootNode = new SelectionAndFilterNode(source, selectionLimit, selectionOffset, orderBys);
+    // EDS does not seem to do orderby, limiting and offsetting. We will have to do it ourselves.
+    rootNode = new SortAndPaginateNode(rootNode, selectionLimit, selectionOffset, orderBys);
+
+    return rootNode;
   }
 
   @VisibleForTesting
@@ -98,33 +162,24 @@ public class ExecutionTreeBuilder {
     // Try adding SortAndPaginateNode
     rootNode = checkAndAddSortAndPaginationNode(rootNode, executionContext);
 
-    if (isSingleSourceAndSame(executionContext.getPendingSelectionSources(), executionContext.getPendingMetricAggregationSources())) {
+    // Fetch all other attributes, metric agg and time series data
+    if (!executionContext.getPendingSelectionSources().isEmpty()) {
       rootNode =
           new SelectionNode.Builder(rootNode)
               .setAttrSelectionSources(executionContext.getPendingSelectionSources())
-              .setAggMetricSelectionSources(executionContext.getPendingMetricAggregationSources())
               .build();
       // Handle case where there is no order by but pagination still needs to be done
       rootNode = checkAndAddSortAndPaginationNode(rootNode, executionContext);
-    } else {
-      // Fetch all other attributes, metric agg and time series data
-      if (!executionContext.getPendingSelectionSources().isEmpty()) {
-        rootNode =
-            new SelectionNode.Builder(rootNode)
-                .setAttrSelectionSources(executionContext.getPendingSelectionSources())
-                .build();
-        // Handle case where there is no order by but pagination still needs to be done
-        rootNode = checkAndAddSortAndPaginationNode(rootNode, executionContext);
-      }
-
-      if (!executionContext.getPendingMetricAggregationSources().isEmpty()) {
-        rootNode =
-            new SelectionNode.Builder(rootNode)
-                .setAggMetricSelectionSources(executionContext.getPendingMetricAggregationSources())
-                .build();
-        rootNode = checkAndAddSortAndPaginationNode(rootNode, executionContext);
-      }
     }
+
+    if (!executionContext.getPendingMetricAggregationSources().isEmpty()) {
+      rootNode =
+          new SelectionNode.Builder(rootNode)
+              .setAggMetricSelectionSources(executionContext.getPendingMetricAggregationSources())
+              .build();
+      rootNode = checkAndAddSortAndPaginationNode(rootNode, executionContext);
+    }
+
     if (!executionContext.getPendingTimeAggregationSources().isEmpty()) {
       rootNode =
           new SelectionNode.Builder(rootNode)
@@ -177,10 +232,5 @@ public class ExecutionTreeBuilder {
         executionContext.getEntitiesRequest().getLimit(),
         executionContext.getEntitiesRequest().getOffset(),
         orderByExpressions);
-  }
-
-  boolean isSingleSourceAndSame(Set<String> firstSource, Set<String> secondSource) {
-    return firstSource.size() == 1 &&
-        firstSource.equals(secondSource);
   }
 }

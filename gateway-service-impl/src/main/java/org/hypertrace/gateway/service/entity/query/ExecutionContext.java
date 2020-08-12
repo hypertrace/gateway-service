@@ -21,6 +21,7 @@ import org.hypertrace.gateway.service.entity.EntitiesRequestContext;
 import org.hypertrace.gateway.service.v1.common.ColumnIdentifier;
 import org.hypertrace.gateway.service.v1.common.Expression;
 import org.hypertrace.gateway.service.v1.common.Expression.ValueCase;
+import org.hypertrace.gateway.service.v1.common.Filter;
 import org.hypertrace.gateway.service.v1.common.OrderByExpression;
 import org.hypertrace.gateway.service.v1.common.TimeAggregation;
 import org.hypertrace.gateway.service.v1.entity.EntitiesRequest;
@@ -43,15 +44,18 @@ public class ExecutionContext {
   private ImmutableMap<String, List<Expression>> sourceToMetricExpressionMap;
   private ImmutableMap<String, List<TimeAggregation>> sourceToTimeAggregationMap;
   private ImmutableMap<String, List<OrderByExpression>> sourceToOrderByExpressionMap;
+  private ImmutableMap<String, List<Expression>> sourceToFilterExpressionMap;
 
   /** Following fields are mutable and updated during the ExecutionTree building phase * */
-  private Set<String> pendingSelectionSources = new HashSet<>();
+  private final Set<String> pendingSelectionSources = new HashSet<>();
 
-  private Set<String> pendingMetricAggregationSources = new HashSet<>();
-  private Set<String> pendingTimeAggregationSources = new HashSet<>();
-  private Set<String> pendingSelectionSourcesForOrderBy = new HashSet<>();
-  private Set<String> pendingMetricAggregationSourcesForOrderBy = new HashSet<>();
+  private final Set<String> pendingMetricAggregationSources = new HashSet<>();
+  private final Set<String> pendingTimeAggregationSources = new HashSet<>();
+  private final Set<String> pendingSelectionSourcesForOrderBy = new HashSet<>();
+  private final Set<String> pendingMetricAggregationSourcesForOrderBy = new HashSet<>();
   private boolean sortAndPaginationNodeAdded = false;
+
+  private final Map<String, Set<AttributeSource>> attributeToSourcesMap = new HashMap<>();
 
   /** Following fields set during the query execution phase * */
   // Total number of entities. Set during the execution before pagination
@@ -177,6 +181,14 @@ public class ExecutionContext {
     pendingSelectionSourcesForOrderBy.remove(source);
   }
 
+  public Map<String, List<Expression>> getSourceToFilterExpressionMap() {
+    return sourceToFilterExpressionMap;
+  }
+
+  public Map<String, Set<AttributeSource>> getAttributeToSourcesMap() {
+    return attributeToSourcesMap;
+  }
+
   private void buildSourceToExpressionMaps() {
     Map<ValueCase, List<Expression>> selectionExprTypeToExprMap =
         entitiesRequest.getSelectionList().stream()
@@ -188,6 +200,7 @@ public class ExecutionContext {
     sourceToTimeAggregationMap =
         getDataSourceToTimeAggregation(entitiesRequest.getTimeAggregationList());
     sourceToOrderByExpressionMap = getDataSourceToOrderByExpressionMap(entitiesRequest);
+    sourceToFilterExpressionMap = getSourceToFilterExpressionMap(entitiesRequest.getFilter());
     pendingSelectionSources.addAll(sourceToSelectionExpressionMap.keySet());
     pendingMetricAggregationSources.addAll(sourceToMetricExpressionMap.keySet());
     pendingTimeAggregationSources.addAll(sourceToTimeAggregationMap.keySet());
@@ -224,6 +237,13 @@ public class ExecutionContext {
     return ImmutableMap.<String, List<OrderByExpression>>builder().putAll(result).build();
   }
 
+  private ImmutableMap<String, List<Expression>> getSourceToFilterExpressionMap(Filter filter) {
+    Map<String, List<Expression>> sourceToExpressionMap = new HashMap<>();
+
+    getSourceToFilterExpressionMap(filter, sourceToExpressionMap);
+    return ImmutableMap.<String, List<Expression>>builder().putAll(sourceToExpressionMap).build();
+  }
+
   private ImmutableMap<String, List<TimeAggregation>> getDataSourceToTimeAggregation(
       List<TimeAggregation> timeAggregations) {
     Map<String, List<TimeAggregation>> result = new HashMap<>();
@@ -236,6 +256,25 @@ public class ExecutionContext {
           .add(timeAggregation);
     }
     return ImmutableMap.<String, List<TimeAggregation>>builder().putAll(result).build();
+  }
+
+  private void getSourceToFilterExpressionMap(Filter filter,
+                                              Map<String, List<Expression>> sourceToExpressionMap) {
+    if (Filter.getDefaultInstance().equals(filter)) {
+      return;
+    }
+
+    if (filter.hasLhs()) {
+      // Assuming RHS never has columnar expressions.
+      Expression lhs = filter.getLhs();
+      Map<String, List<Expression>> map = getDataSourceToExpressionMap(List.of(lhs));
+      sourceToExpressionMap.putAll(map);
+    }
+
+    if (filter.getChildFilterCount() > 0) {
+      filter.getChildFilterList().forEach((childFilter) ->
+          getSourceToFilterExpressionMap(childFilter, sourceToExpressionMap));
+    }
   }
 
   private ImmutableMap<String, List<Expression>> getDataSourceToExpressionMap(
@@ -253,7 +292,9 @@ public class ExecutionContext {
       Set<AttributeSource> sources =
           Arrays.stream(AttributeSource.values()).collect(Collectors.toSet());
       for (String columnName : columnNames) {
-        sources.retainAll(attrNameToMetadataMap.get(columnName).getSourcesList());
+        List<AttributeSource> sourcesList = attrNameToMetadataMap.get(columnName).getSourcesList();
+        sources.retainAll(sourcesList);
+        attributeToSourcesMap.computeIfAbsent(columnName, v -> new HashSet<>()).addAll(sourcesList);
       }
       if (sources.isEmpty()) {
         LOG.error("Skipping Expression: {}. No source found", expression);
