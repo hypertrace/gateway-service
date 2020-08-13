@@ -62,10 +62,10 @@ public class TimeAggregationsRequestHandler extends RequestHandler {
     // Scale the limit size based on the limit so that we have a better chance of capturing all the
     // results within the
     // time range. This is especially important when the actual Group By list is not empty.
-    builder.setLimit(
-        Math.min(request.getLimit(), 1000)
-            * QueryServiceClient.DEFAULT_QUERY_SERVICE_GROUP_BY_LIMIT);
+    long expectedTimeSeriesIntervals = getExpectedTimeSeriesIntervals(request);
+    builder.setLimit((int) (request.getLimit() * expectedTimeSeriesIntervals));
     requestContext.setOrderByExpressions(getRequestOrderByExpressions(request));
+    // TODO: Add order by as well
 
     return builder.build();
   }
@@ -167,6 +167,12 @@ public class TimeAggregationsRequestHandler extends RequestHandler {
     Period period = timeAggregations.stream().findFirst().orElseThrow().getPeriod();
     ChronoUnit unit = ChronoUnit.valueOf(period.getUnit());
     return Duration.of(period.getValue(), unit).getSeconds();
+  }
+
+  private long getExpectedTimeSeriesIntervals(ExploreRequest exploreRequest) {
+    long periodSecs = getPeriodSecsFromTimeAggregations(exploreRequest.getTimeAggregationList());
+
+    return (long) Math.ceil((exploreRequest.getEndTimeMillis() - exploreRequest.getStartTimeMillis()) * 1.0 / (1000 * periodSecs));
   }
 
   @Override

@@ -101,14 +101,15 @@ public class RequestHandler implements RequestHandlerWithSorting {
     // Otherwise, specify a large limit and track actual limit, offset and order by expression list
     // so we can compute
     // these once the we get the results.
-    if (requestContext
-        .hasGroupBy()) { // Will need to do the Ordering, Limit and Offset ourselves after we get
-                         // the Group By Results
-      builder.setLimit(QueryServiceClient.DEFAULT_QUERY_SERVICE_GROUP_BY_LIMIT);
-      requestContext.setOrderByExpressions(getRequestOrderByExpressions(request));
-    } else { // No Group By: Use Pinot's Order By, Limit and Offset
-      addSortLimitAndOffset(request, builder);
-    }
+//    if (requestContext
+//        .hasGroupBy()) { // Will need to do the Ordering, Limit and Offset ourselves after we get
+//                         // the Group By Results
+//      builder.setLimit(QueryServiceClient.DEFAULT_QUERY_SERVICE_GROUP_BY_LIMIT);
+//      requestContext.setOrderByExpressions(getRequestOrderByExpressions(request));
+//    } else { // No Group By: Use Pinot's Order By, Limit and Offset
+//      addSortLimitAndOffset(request, builder);
+//    }
+    addSortLimitAndOffset(request, builder);
 
     return builder.build();
   }
@@ -218,13 +219,13 @@ public class RequestHandler implements RequestHandlerWithSorting {
     }
 
     // If there's a Group By in the request, we need to do the sorting and pagination ourselves.
-    if (requestContext.hasGroupBy()) {
-      sortAndPaginatePostProcess(
-          builder,
-          requestContext.getOrderByExpressions(),
-          requestContext.getLimit(),
-          requestContext.getOffset());
-    }
+//    if (requestContext.hasGroupBy()) {
+//      sortAndPaginatePostProcess(
+//          builder,
+//          requestContext.getOrderByExpressions(),
+//          requestContext.getLimit(),
+//          requestContext.getOffset());
+//    }
 
     if (requestContext.hasGroupBy() && requestContext.getIncludeRestGroup()) {
       theRestGroupRequestHandler.getRowsForTheRestGroup(
