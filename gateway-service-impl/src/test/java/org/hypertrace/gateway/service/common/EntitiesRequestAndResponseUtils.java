@@ -19,6 +19,7 @@ import org.hypertrace.gateway.service.v1.common.LiteralConstant;
 import org.hypertrace.gateway.service.v1.common.Operator;
 import org.hypertrace.gateway.service.v1.common.OrderByExpression;
 import org.hypertrace.gateway.service.v1.common.Period;
+import org.hypertrace.gateway.service.v1.common.SortOrder;
 import org.hypertrace.gateway.service.v1.common.TimeAggregation;
 import org.hypertrace.gateway.service.v1.common.Value;
 import org.hypertrace.gateway.service.v1.common.ValueType;
@@ -57,6 +58,10 @@ public class EntitiesRequestAndResponseUtils {
 
   public static OrderByExpression buildOrderByExpression(String columnName) {
     return OrderByExpression.newBuilder().setExpression(buildExpression(columnName)).build();
+  }
+
+  public static OrderByExpression buildOrderByExpression(SortOrder sortOrder, Expression expression) {
+    return OrderByExpression.newBuilder().setExpression(expression).setOrder(sortOrder).build();
   }
 
   public static Expression buildExpression(String columnName) {
@@ -103,6 +108,19 @@ public class EntitiesRequestAndResponseUtils {
     return AggregatedMetricValue.newBuilder()
         .setFunction(functionType)
         .setValue(Value.newBuilder().setDouble(value).setValueType(ValueType.DOUBLE))
+        .build();
+  }
+
+  public static Expression getLiteralExpression(long value) {
+    return Expression.newBuilder()
+        .setLiteral(
+            LiteralConstant.newBuilder()
+                .setValue(
+                    Value.newBuilder()
+                        .setValueType(ValueType.LONG)
+                        .setLong(value)
+                )
+        )
         .build();
   }
 

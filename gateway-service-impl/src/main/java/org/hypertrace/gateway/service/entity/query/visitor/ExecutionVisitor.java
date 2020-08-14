@@ -11,6 +11,10 @@ import java.util.LinkedList;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
+import java.util.concurrent.ExecutionException;
+import java.util.concurrent.ExecutorService;
+import java.util.concurrent.Executors;
+import java.util.concurrent.Future;
 import java.util.stream.Collectors;
 import java.util.stream.IntStream;
 import org.hypertrace.gateway.service.common.datafetcher.EntityFetcherResponse;
@@ -48,9 +52,12 @@ import org.slf4j.LoggerFactory;
  */
 public class ExecutionVisitor implements Visitor<EntityFetcherResponse> {
 
+  private static final int THREAD_COUNT = 20;
+  private static final ExecutorService executorService = Executors.newFixedThreadPool(THREAD_COUNT);
+
   private final EntityQueryHandlerRegistry queryHandlerRegistry;
   private final ExecutionContext executionContext;
-  private Logger LOG = LoggerFactory.getLogger(ExecutionVisitor.class);
+  private static final Logger LOG = LoggerFactory.getLogger(ExecutionVisitor.class);
 
   public ExecutionVisitor(ExecutionContext executionContext,
       EntityQueryHandlerRegistry queryHandlerRegistry) {
@@ -358,12 +365,27 @@ public class ExecutionVisitor implements Visitor<EntityFetcherResponse> {
 
   @Override
   public EntityFetcherResponse visit(TotalFetcherNode totalFetcherNode) {
-    // TODO: Make parallel
-    EntityFetcherResponse result = totalFetcherNode.getChildNode().acceptVisitor(this);
+    Future<EntityFetcherResponse> resultFuture = executorService.submit(() -> totalFetcherNode.getChildNode().acceptVisitor(this));
+    IEntityFetcher totalEntitiesFetcher = queryHandlerRegistry.getEntityFetcher(totalFetcherNode.getSource());
 
-    IEntityFetcher entityFetcher = queryHandlerRegistry.getEntityFetcher(totalFetcherNode.getSource());
-    executionContext.setTotal(entityFetcher.getTotalEntities(executionContext.getEntitiesRequestContext(), executionContext.getEntitiesRequest()));
+    Future<Integer> totalFuture = executorService.submit(()->
+        totalEntitiesFetcher.getTotalEntities(
+            executionContext.getEntitiesRequestContext(),
+            executionContext.getEntitiesRequest()
+        )
+    );
+    executionContext.setTotal(futureGet(totalFuture));
 
-    return result;
+    return futureGet(resultFuture);
+  }
+
+  private <T> T futureGet(Future<T> future) {
+    try {
+      return future.get();
+    } catch (InterruptedException ex) {
+      throw new RuntimeException("An interruption while fetching total entities", ex);
+    } catch (ExecutionException ex) {
+      throw new RuntimeException("An error occurred while fetching total entities", ex);
+    }
   }
 }
