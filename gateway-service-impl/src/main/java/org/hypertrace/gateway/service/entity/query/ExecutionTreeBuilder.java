@@ -99,7 +99,6 @@ public class ExecutionTreeBuilder {
   private QueryNode buildExecutionTreeForQsFilterAndSelection(String source) {
     int selectionLimit = executionContext.getEntitiesRequest().getLimit();
     int selectionOffset = executionContext.getEntitiesRequest().getOffset();
-    List<OrderByExpression> orderBys = executionContext.getEntitiesRequest().getOrderByList();
 
     // query-service/Pinot does not support offset when group by is specified. Since we will be
     // grouping by at least the entity id, we will compute the non zero pagination ourselves. This
@@ -110,7 +109,7 @@ public class ExecutionTreeBuilder {
       selectionOffset = 0;
     }
 
-    QueryNode rootNode = new SelectionAndFilterNode(source, selectionLimit, selectionOffset, orderBys);
+    QueryNode rootNode = new SelectionAndFilterNode(source, selectionLimit, selectionOffset);
     if (executionContext.getEntitiesRequest().getOffset() > 0) {
       rootNode = new PaginateOnlyNode(
           rootNode,
@@ -129,7 +128,7 @@ public class ExecutionTreeBuilder {
     int selectionOffset = executionContext.getEntitiesRequest().getOffset();
     List<OrderByExpression> orderBys = executionContext.getEntitiesRequest().getOrderByList();
 
-    QueryNode rootNode = new SelectionAndFilterNode(source, selectionLimit, selectionOffset, orderBys);
+    QueryNode rootNode = new SelectionAndFilterNode(source, selectionLimit, selectionOffset);
     // EDS does not seem to do orderby, limiting and offsetting. We will have to do it ourselves.
     rootNode = new SortAndPaginateNode(rootNode, selectionLimit, selectionOffset, orderBys);
 

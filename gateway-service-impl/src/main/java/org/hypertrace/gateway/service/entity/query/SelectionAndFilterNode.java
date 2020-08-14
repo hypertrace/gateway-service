@@ -9,13 +9,11 @@ public class SelectionAndFilterNode implements QueryNode {
   private final String source;
   private final int limit;
   private final int offset;
-  private final List<OrderByExpression> orderBys;
 
-  public SelectionAndFilterNode(String source, int limit, int offset, List<OrderByExpression> orderBys) {
+  public SelectionAndFilterNode(String source, int limit, int offset) {
     this.source = source;
     this.limit = limit;
     this.offset = offset;
-    this.orderBys = orderBys;
   }
 
   @Override
@@ -35,10 +33,6 @@ public class SelectionAndFilterNode implements QueryNode {
     return offset;
   }
 
-  public List<OrderByExpression> getOrderBys() {
-    return orderBys;
-  }
-
   @Override
   public String toString() {
     return "SelectionAndFilterNode{"
@@ -46,8 +40,6 @@ public class SelectionAndFilterNode implements QueryNode {
         + limit
         + ", offset="
         + offset
-        + ", orderBys="
-        + orderBys
         + '}';
   }
 }

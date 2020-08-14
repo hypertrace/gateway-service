@@ -378,7 +378,7 @@ public class ExecutionVisitorTest {
     when(queryServiceEntityFetcher.getTimeAggregatedMetrics(eq(entitiesRequestContext), eq(entitiesRequest)))
         .thenReturn(new EntityFetcherResponse());
 
-    SelectionAndFilterNode selectionAndFilterNode = new SelectionAndFilterNode("QS", limit, offset, orderByExpressions);
+    SelectionAndFilterNode selectionAndFilterNode = new SelectionAndFilterNode("QS", limit, offset);
 
     compareEntityFetcherResponses(entityFetcherResponse, executionVisitor.visit(selectionAndFilterNode));
   }
@@ -422,7 +422,7 @@ public class ExecutionVisitorTest {
     when(entityDataServiceEntityFetcher.getEntities(eq(entitiesRequestContext), eq(entitiesRequest)))
         .thenReturn(entityFetcherResponse);
 
-    SelectionAndFilterNode selectionAndFilterNode = new SelectionAndFilterNode("EDS", limit, offset, orderByExpressions);
+    SelectionAndFilterNode selectionAndFilterNode = new SelectionAndFilterNode("EDS", limit, offset);
 
     assertEquals(entityFetcherResponse, executionVisitor.visit(selectionAndFilterNode));
   }
@@ -496,7 +496,7 @@ public class ExecutionVisitorTest {
     when(queryServiceEntityFetcher.getTimeAggregatedMetrics(eq(entitiesRequestContext), eq(entitiesRequest)))
         .thenReturn(new EntityFetcherResponse(entityKeyBuilderResponseMap2));
 
-    SelectionAndFilterNode selectionAndFilterNode = new SelectionAndFilterNode("QS", limit, offset, orderByExpressions);
+    SelectionAndFilterNode selectionAndFilterNode = new SelectionAndFilterNode("QS", limit, offset);
 
     compareEntityFetcherResponses(new EntityFetcherResponse(combinedEntityKeyBuilderResponseMap),
         executionVisitor.visit(selectionAndFilterNode));
@@ -589,7 +589,7 @@ public class ExecutionVisitorTest {
     when(queryServiceEntityFetcher.getTimeAggregatedMetrics(eq(entitiesRequestContext), eq(entitiesRequestForEntityFetcher)))
         .thenReturn(new EntityFetcherResponse(entityKeyBuilderResponseMap2));
 
-    SelectionAndFilterNode selectionAndFilterNode = new SelectionAndFilterNode("QS", limit + offset, 0, orderByExpressions);
+    SelectionAndFilterNode selectionAndFilterNode = new SelectionAndFilterNode("QS", limit + offset, 0);
     PaginateOnlyNode paginateOnlyNode = new PaginateOnlyNode(selectionAndFilterNode, limit, offset);
 
     compareEntityFetcherResponses(new EntityFetcherResponse(expectedEntityKeyBuilderResponseMap),
@@ -670,7 +670,7 @@ public class ExecutionVisitorTest {
     when(queryServiceEntityFetcher.getTotalEntities(eq(entitiesRequestContext), eq(entitiesRequest)))
         .thenReturn(12);
 
-    SelectionAndFilterNode selectionAndFilterNode = new SelectionAndFilterNode("QS", limit, offset, orderByExpressions);
+    SelectionAndFilterNode selectionAndFilterNode = new SelectionAndFilterNode("QS", limit, offset);
     TotalFetcherNode totalFetcherNode = new TotalFetcherNode(selectionAndFilterNode, "QS");
 
     compareEntityFetcherResponses(new EntityFetcherResponse(combinedEntityKeyBuilderResponseMap),

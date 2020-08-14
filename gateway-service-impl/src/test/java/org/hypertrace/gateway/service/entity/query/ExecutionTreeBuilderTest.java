@@ -384,7 +384,6 @@ public class ExecutionTreeBuilderTest {
       assertTrue(selectionAndFilterNode instanceof SelectionAndFilterNode);
       assertEquals(20, ((SelectionAndFilterNode)selectionAndFilterNode).getOffset());
       assertEquals(10, ((SelectionAndFilterNode)selectionAndFilterNode).getLimit());
-      assertEquals(List.of(orderByExpression), ((SelectionAndFilterNode)selectionAndFilterNode).getOrderBys());
     }
 
     {
@@ -441,7 +440,6 @@ public class ExecutionTreeBuilderTest {
     assertTrue(selectionAndFilterNode instanceof SelectionAndFilterNode);
     assertEquals(10, ((SelectionAndFilterNode)selectionAndFilterNode).getLimit());
     assertEquals(20, ((SelectionAndFilterNode)selectionAndFilterNode).getOffset());
-    assertEquals(List.of(), ((SelectionAndFilterNode)selectionAndFilterNode).getOrderBys());
   }
 
   @Test
@@ -473,7 +471,6 @@ public class ExecutionTreeBuilderTest {
     assertEquals("QS", ((SelectionAndFilterNode)selectionAndFilterNode).getSource());
     assertEquals(0, ((SelectionAndFilterNode)selectionAndFilterNode).getOffset());
     assertEquals(10, ((SelectionAndFilterNode)selectionAndFilterNode).getLimit());
-    assertEquals(List.of(), ((SelectionAndFilterNode)selectionAndFilterNode).getOrderBys());
   }
 
   @Test
@@ -524,7 +521,6 @@ public class ExecutionTreeBuilderTest {
     assertEquals("QS", ((SelectionAndFilterNode)selectionAndFilterNode).getSource());
     assertEquals(0, ((SelectionAndFilterNode)selectionAndFilterNode).getOffset());
     assertEquals(10, ((SelectionAndFilterNode)selectionAndFilterNode).getLimit());
-    assertEquals(List.of(), ((SelectionAndFilterNode)selectionAndFilterNode).getOrderBys());
   }
 
   @Test
@@ -577,7 +573,6 @@ public class ExecutionTreeBuilderTest {
     assertEquals("QS", ((SelectionAndFilterNode)selectionAndFilterNode).getSource());
     assertEquals(0, ((SelectionAndFilterNode)selectionAndFilterNode).getOffset());
     assertEquals(10, ((SelectionAndFilterNode)selectionAndFilterNode).getLimit());
-    assertEquals(List.of(orderByExpression), ((SelectionAndFilterNode)selectionAndFilterNode).getOrderBys());
   }
 
   @Test
@@ -626,7 +621,6 @@ public class ExecutionTreeBuilderTest {
     assertEquals("QS", ((SelectionAndFilterNode)selectAndFilterNode).getSource());
     assertEquals(0, ((SelectionAndFilterNode)selectAndFilterNode).getOffset());
     assertEquals(20, ((SelectionAndFilterNode)selectAndFilterNode).getLimit());
-    assertEquals(List.of(orderByExpression), ((SelectionAndFilterNode)selectAndFilterNode).getOrderBys());
   }
 
   @Test
