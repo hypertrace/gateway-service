@@ -19,4 +19,11 @@ public class GatewayExpressionCreator {
             LiteralConstant.newBuilder()
                 .setValue(Value.newBuilder().setBoolean(value).setValueType(ValueType.BOOL)));
   }
+
+  public static Expression.Builder createLiteralExpression(String value) {
+    return Expression.newBuilder()
+        .setLiteral(
+            LiteralConstant.newBuilder()
+                .setValue(Value.newBuilder().setString(value).setValueType(ValueType.STRING)));
+  }
 }
