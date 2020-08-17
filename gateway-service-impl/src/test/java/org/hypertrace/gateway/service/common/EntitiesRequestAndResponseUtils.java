@@ -27,7 +27,7 @@ import org.hypertrace.gateway.service.v1.entity.Entity;
 import org.hypertrace.gateway.service.v1.entity.Entity.Builder;
 
 public class EntitiesRequestAndResponseUtils {
-  public static Filter generateAndOrFilter(Operator operator, Filter... filters) {
+  public static Filter generateAndOrNotFilter(Operator operator, Filter... filters) {
     return Filter.newBuilder()
         .setOperator(operator)
         .addAllChildFilter(Arrays.asList(filters))
