@@ -20,6 +20,7 @@ import org.hypertrace.core.attribute.service.v1.AttributeMetadata;
 import org.hypertrace.core.attribute.service.v1.AttributeScope;
 import org.hypertrace.core.query.service.api.ColumnMetadata;
 import org.hypertrace.core.query.service.api.Filter;
+import org.hypertrace.core.query.service.api.LiteralConstant;
 import org.hypertrace.core.query.service.api.Operator;
 import org.hypertrace.core.query.service.api.QueryRequest;
 import org.hypertrace.core.query.service.api.ResultSetChunk;
@@ -293,21 +294,44 @@ public class EntityInteractionsFetcher {
         "Expected STRING value but received unhandled type: " + value.getValueType());
   }
 
-  @VisibleForTesting
-  public Filter.Builder createFilterForEntityKeys(
+  private Filter.Builder createFilterForEntityKeys(
       List<String> idColumns, Collection<EntityKey> entityKeys) {
-    return Filter.newBuilder()
-        .setOperator(Operator.OR)
-        .addAllChildFilter(
-            entityKeys.stream()
-                .map(
-                    entityKey ->
-                        QueryRequestUtil.createValueEQFilter(idColumns, entityKey.getAttributes()))
-                .collect(Collectors.toList()));
+    // if only 1 id column use an IN list
+    if (idColumns.size() == 1) {
+      return Filter.newBuilder()
+          .setOperator(Operator.IN)
+          .setLhs(
+              org.hypertrace.core.query.service.api.Expression.newBuilder()
+                  .setColumnIdentifier(
+                      org.hypertrace.core.query.service.api.ColumnIdentifier.newBuilder()
+                          .setColumnName(idColumns.get(0))
+                      )
+          )
+          .setRhs(
+              org.hypertrace.core.query.service.api.Expression.newBuilder()
+                  .setLiteral(
+                      LiteralConstant.newBuilder()
+                          .setValue(
+                              org.hypertrace.core.query.service.api.Value.newBuilder()
+                                  .setValueType(org.hypertrace.core.query.service.api.ValueType.STRING_ARRAY)
+                                  .addAllStringArray(entityKeys.stream().flatMap(entityKey -> entityKey.getAttributes().stream()).collect(Collectors.toList()))
+                          )
+                  )
+          );
+    } else { // otherwise use an OR chain of ANDed EQ filters.
+      return Filter.newBuilder()
+          .setOperator(Operator.OR)
+          .addAllChildFilter(
+              entityKeys.stream()
+                  .map(
+                      entityKey ->
+                          QueryRequestUtil.createValueEQFilter(idColumns, entityKey.getAttributes()))
+                  .collect(Collectors.toList()));
+    }
   }
 
   @VisibleForTesting
-  public Map<String, QueryRequest> buildQueryRequests(
+  Map<String, QueryRequest> buildQueryRequests(
       long startTime,
       long endTime,
       String entityType,
@@ -340,7 +364,7 @@ public class EntityInteractionsFetcher {
     List<String> idColumns =
         getEntityIdColumnsFromInteraction(DomainEntityType.valueOf(entityType), !incoming);
 
-    // Actual entity that we are looking for shouldn't be null.
+    // Add a filter on the entityIds
     filterBuilder.addChildFilter(createFilterForEntityKeys(idColumns, entityIds));
 
     // Group by the entity id column first, then the other end entity type for the interaction.
