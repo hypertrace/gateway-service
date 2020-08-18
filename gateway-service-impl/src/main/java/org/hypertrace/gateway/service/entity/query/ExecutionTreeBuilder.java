@@ -1,5 +1,6 @@
 package org.hypertrace.gateway.service.entity.query;
 
+import static org.hypertrace.core.attribute.service.v1.AttributeSource.EDS;
 import static org.hypertrace.core.attribute.service.v1.AttributeSource.QS;
 
 import com.google.common.annotations.VisibleForTesting;
@@ -26,7 +27,7 @@ import org.slf4j.LoggerFactory;
  */
 public class ExecutionTreeBuilder {
 
-  private static Logger LOG = LoggerFactory.getLogger(ExecutionTreeBuilder.class);
+  private static final Logger LOG = LoggerFactory.getLogger(ExecutionTreeBuilder.class);
 
   private final Map<String, AttributeMetadata> attributeMetadataMap;
   private final ExecutionContext executionContext;
@@ -87,9 +88,9 @@ public class ExecutionTreeBuilder {
   }
 
   private QueryNode buildExecutionTreeForSameSourceFilterAndSelection(String source) {
-    if (source.equals("QS")) {
+    if (source.equals(QS.name())) {
       return buildExecutionTreeForQsFilterAndSelection(source);
-    } else if(source.equals("EDS")) {
+    } else if (source.equals(EDS.name())) {
       return buildExecutionTreeForEdsFilterAndSelection(source);
     } else {
       throw new UnsupportedOperationException("Unknown Entities data source. No fetcher for this source.");

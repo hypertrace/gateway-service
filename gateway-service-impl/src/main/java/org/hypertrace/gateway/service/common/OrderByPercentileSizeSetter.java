@@ -14,7 +14,7 @@ import org.hypertrace.gateway.service.v1.entity.EntitiesRequest;
 /**
  * Set the size for percentiles in order by if it is not set. This is to give UI the time to fix
  * the bug which does not set the size when they have order by in the request.
- * Will delete this once the big has been fixed in the UI.
+ * Will delete this once the bug has been fixed in the UI.
  */
 public class OrderByPercentileSizeSetter {
   private static final long DEFAULT_PERCENTILE_SIZE = 99;
