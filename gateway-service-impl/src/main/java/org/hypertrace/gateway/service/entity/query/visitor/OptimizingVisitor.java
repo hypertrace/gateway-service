@@ -10,9 +10,12 @@ import org.hypertrace.gateway.service.entity.query.AndNode;
 import org.hypertrace.gateway.service.entity.query.DataFetcherNode;
 import org.hypertrace.gateway.service.entity.query.NoOpNode;
 import org.hypertrace.gateway.service.entity.query.OrNode;
+import org.hypertrace.gateway.service.entity.query.PaginateOnlyNode;
 import org.hypertrace.gateway.service.entity.query.QueryNode;
+import org.hypertrace.gateway.service.entity.query.SelectionAndFilterNode;
 import org.hypertrace.gateway.service.entity.query.SelectionNode;
 import org.hypertrace.gateway.service.entity.query.SortAndPaginateNode;
+import org.hypertrace.gateway.service.entity.query.TotalFetcherNode;
 import org.hypertrace.gateway.service.v1.common.Filter;
 import org.hypertrace.gateway.service.v1.common.Operator;
 
@@ -161,5 +164,20 @@ public class OptimizingVisitor implements Visitor<QueryNode> {
   @Override
   public QueryNode visit(NoOpNode noOpNode) {
     return noOpNode;
+  }
+
+  @Override
+  public QueryNode visit(SelectionAndFilterNode selectionAndFilterNode) {
+    return selectionAndFilterNode;
+  }
+
+  @Override
+  public QueryNode visit(PaginateOnlyNode paginateOnlyNode) {
+    return paginateOnlyNode;
+  }
+
+  @Override
+  public QueryNode visit(TotalFetcherNode totalFetcherNode) {
+    return totalFetcherNode;
   }
 }

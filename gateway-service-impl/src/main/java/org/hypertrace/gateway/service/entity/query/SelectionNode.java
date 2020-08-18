@@ -12,11 +12,11 @@ import org.hypertrace.gateway.service.entity.query.visitor.Visitor;
  */
 public class SelectionNode implements QueryNode {
 
-  private Set<String> attrSelectionSources;
-  private Set<String> aggMetricSelectionSources;
-  private Set<String> timeSeriesSelectionSources;
+  private final Set<String> attrSelectionSources;
+  private final Set<String> aggMetricSelectionSources;
+  private final Set<String> timeSeriesSelectionSources;
 
-  private QueryNode childNode;
+  private final QueryNode childNode;
 
   private SelectionNode(
       QueryNode childNode,

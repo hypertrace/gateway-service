@@ -15,13 +15,18 @@ public class DataCollectionUtil {
       sorted = unsortedStream.sorted(comparator);
     }
 
+    return paginateAndLimit(sorted, limit, offset);
+  }
+
+  public static <E, C extends Comparator<E>> List<E> paginateAndLimit(
+      Stream<E> sortedStream, int limit, int offset) {
     if (offset > 0) {
-      sorted = sorted.skip(offset);
+      sortedStream = sortedStream.skip(offset);
     }
 
     if (limit > 0) {
-      sorted = sorted.limit(limit);
+      sortedStream = sortedStream.limit(limit);
     }
-    return sorted.collect(Collectors.toList());
+    return sortedStream.collect(Collectors.toList());
   }
 }

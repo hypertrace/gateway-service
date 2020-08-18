@@ -8,11 +8,10 @@ import org.hypertrace.gateway.service.v1.common.OrderByExpression;
  * Node that takes care of ordering the result set (if applicable) and also paginating the results
  */
 public class SortAndPaginateNode implements QueryNode {
-
-  private int limit;
-  private int offset;
-  private List<OrderByExpression> orderByExpressionList;
-  private QueryNode childNode;
+  private final int limit;
+  private final int offset;
+  private final List<OrderByExpression> orderByExpressionList;
+  private final QueryNode childNode;
 
   public SortAndPaginateNode(
       QueryNode childNode, int limit, int offset, List<OrderByExpression> orderByExpressionList) {

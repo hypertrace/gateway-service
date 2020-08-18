@@ -1,16 +1,27 @@
 package org.hypertrace.gateway.service.entity.query;
 
+import static org.hypertrace.gateway.service.common.EntitiesRequestAndResponseUtils.buildAggregateExpression;
+import static org.hypertrace.gateway.service.common.EntitiesRequestAndResponseUtils.buildExpression;
+import static org.hypertrace.gateway.service.common.EntitiesRequestAndResponseUtils.buildOrderByExpression;
+import static org.hypertrace.gateway.service.common.EntitiesRequestAndResponseUtils.buildTimeAggregation;
+import static org.hypertrace.gateway.service.common.EntitiesRequestAndResponseUtils.generateAndOrNotFilter;
+import static org.hypertrace.gateway.service.common.EntitiesRequestAndResponseUtils.generateEQFilter;
+import static org.hypertrace.gateway.service.common.EntitiesRequestAndResponseUtils.generateFilter;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.mock;
+import static org.mockito.Mockito.when;
 
+import com.typesafe.config.Config;
+import com.typesafe.config.ConfigFactory;
 import java.util.Arrays;
-import java.util.Collections;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.Optional;
 import java.util.UUID;
 import java.util.stream.Collectors;
 import org.hypertrace.core.attribute.service.v1.AttributeMetadata;
@@ -19,14 +30,10 @@ import org.hypertrace.core.attribute.service.v1.AttributeSource;
 import org.hypertrace.gateway.service.common.AttributeMetadataProvider;
 import org.hypertrace.gateway.service.common.RequestContext;
 import org.hypertrace.gateway.service.entity.EntitiesRequestContext;
+import org.hypertrace.gateway.service.entity.config.DomainObjectConfigs;
 import org.hypertrace.gateway.service.entity.query.visitor.OptimizingVisitor;
-import org.hypertrace.gateway.service.v1.common.ColumnIdentifier;
-import org.hypertrace.gateway.service.v1.common.Expression;
 import org.hypertrace.gateway.service.v1.common.Filter;
-import org.hypertrace.gateway.service.v1.common.FunctionExpression;
 import org.hypertrace.gateway.service.v1.common.FunctionType;
-import org.hypertrace.gateway.service.v1.common.HealthExpression;
-import org.hypertrace.gateway.service.v1.common.LiteralConstant;
 import org.hypertrace.gateway.service.v1.common.Operator;
 import org.hypertrace.gateway.service.v1.common.OrderByExpression;
 import org.hypertrace.gateway.service.v1.common.Value;
@@ -35,64 +42,87 @@ import org.hypertrace.gateway.service.v1.entity.EntitiesRequest;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.mockito.Mock;
-import org.mockito.Mockito;
 
 public class ExecutionTreeBuilderTest {
 
   private static final String TENANT_ID = "tenant1";
 
-  private static final String API_ID_ATTR = "API.apiId";
+  private static final String API_API_ID_ATTR = "API.apiId";
   private static final String API_NAME_ATTR = "API.name";
   private static final String API_TYPE_ATTR = "API.apiType";
   private static final String API_PATTERN_ATTR = "API.urlPattern";
   private static final String API_START_TIME_ATTR = "API.start_time_millis";
   private static final String API_END_TIME_ATTR = "API.end_time_millis";
-  private static final String API_NUM_CALLS_ATTR =  "API.numCalls";
-  private static final String API_STATE_ATTR =  "API.state";
+  private static final String API_NUM_CALLS_ATTR = "API.numCalls";
+  private static final String API_STATE_ATTR = "API.state";
+  private static final String API_DISCOVERY_STATE = "API.apiDiscoveryState";
+  private static final String API_ID_ATTR = "API.id";
 
   private static final Map<String, AttributeMetadata> attributeSources =
       new HashMap<>() {
         {
           put(
-              API_ID_ATTR,
-              buildAttributeMetadataForSources(Collections.singletonList(AttributeSource.EDS)));
+              API_API_ID_ATTR,
+              buildAttributeMetadataForSources(API_API_ID_ATTR, AttributeScope.API, "apiId", List.of(AttributeSource.EDS)));
           put(
               API_PATTERN_ATTR,
-              buildAttributeMetadataForSources(Collections.singletonList(AttributeSource.EDS)));
+              buildAttributeMetadataForSources(API_PATTERN_ATTR, AttributeScope.API, "urlPattern", List.of(AttributeSource.EDS)));
           put(
               API_NAME_ATTR,
-              buildAttributeMetadataForSources(Collections.singletonList(AttributeSource.EDS)));
+              buildAttributeMetadataForSources(API_NAME_ATTR, AttributeScope.API, "name", List.of(AttributeSource.EDS)));
           put(
               API_TYPE_ATTR,
-              buildAttributeMetadataForSources(Collections.singletonList(AttributeSource.EDS)));
+              buildAttributeMetadataForSources(API_TYPE_ATTR, AttributeScope.API, "apiType", List.of(AttributeSource.EDS)));
           put(
               API_START_TIME_ATTR,
-              buildAttributeMetadataForSources(Collections.singletonList(AttributeSource.QS)));
+              buildAttributeMetadataForSources(API_START_TIME_ATTR, AttributeScope.API, "start_time_millis", List.of(AttributeSource.QS)));
           put(
               API_END_TIME_ATTR,
-              buildAttributeMetadataForSources(Collections.singletonList(AttributeSource.QS)));
+              buildAttributeMetadataForSources(API_END_TIME_ATTR, AttributeScope.API, "end_time_millis", List.of(AttributeSource.QS)));
           put(
               API_NUM_CALLS_ATTR,
-              buildAttributeMetadataForSources(Collections.singletonList(AttributeSource.QS)));
+              buildAttributeMetadataForSources(API_NUM_CALLS_ATTR, AttributeScope.API, "numCalls", List.of(AttributeSource.QS)));
           put(
               API_STATE_ATTR,
-              buildAttributeMetadataForSources(Collections.singletonList(AttributeSource.QS)));
+              buildAttributeMetadataForSources(API_STATE_ATTR, AttributeScope.API, "state", List.of(AttributeSource.QS)));
+          put(
+              API_DISCOVERY_STATE,
+              buildAttributeMetadataForSources(API_DISCOVERY_STATE, AttributeScope.API, "apiDiscoveryState", List.of(AttributeSource.EDS, AttributeSource.QS)));
+          put(
+              API_ID_ATTR,
+              buildAttributeMetadataForSources(API_ID_ATTR, AttributeScope.API, "id", List.of(AttributeSource.EDS, AttributeSource.QS)));
         }
       };
 
   @Mock private AttributeMetadataProvider attributeMetadataProvider;
 
-  private static AttributeMetadata buildAttributeMetadataForSources(List<AttributeSource> sources) {
-    return AttributeMetadata.newBuilder().addAllSources(sources).build();
+  private static AttributeMetadata buildAttributeMetadataForSources(String attributeId,
+                                                                    AttributeScope scope,
+                                                                    String key,
+                                                                    List<AttributeSource> sources) {
+    return AttributeMetadata.newBuilder()
+        .setId(attributeId)
+        .setScope(scope)
+        .setKey(key)
+        .addAllSources(sources)
+        .build();
   }
 
   @BeforeEach
   public void setup() {
     attributeMetadataProvider = mock(AttributeMetadataProvider.class);
-    Mockito.when(
-            attributeMetadataProvider.getAttributesMetadata(
-                any(RequestContext.class), Mockito.eq(AttributeScope.API)))
-        .thenReturn(attributeSources);
+    when(attributeMetadataProvider.getAttributesMetadata(
+        any(RequestContext.class),
+        eq(AttributeScope.API))
+    ).thenReturn(attributeSources);
+
+    attributeSources.forEach((attributeId, attribute) -> {
+      when(attributeMetadataProvider.getAttributeMetadata(
+          any(RequestContext.class),
+          eq(attribute.getScope()),
+          eq(attribute.getKey()))
+      ).thenReturn(Optional.of(attribute));
+    });
   }
 
   private ExecutionTreeBuilder getExecutionTreeBuilderForOptimizedFilterTests() {
@@ -108,7 +138,7 @@ public class ExecutionTreeBuilderTest {
   @Test
   public void testOptimizedFilterTreeBuilderSimpleFilter() {
     ExecutionTreeBuilder executionTreeBuilder = getExecutionTreeBuilderForOptimizedFilterTests();
-    Filter filter = generateEQFilter(API_ID_ATTR, UUID.randomUUID().toString());
+    Filter filter = generateEQFilter(API_API_ID_ATTR, UUID.randomUUID().toString());
     QueryNode queryNode = executionTreeBuilder.buildFilterTree(filter);
     QueryNode optimizedQueryNode = queryNode.acceptVisitor(new OptimizingVisitor());
     assertNotNull(optimizedQueryNode);
@@ -121,9 +151,9 @@ public class ExecutionTreeBuilderTest {
     ExecutionTreeBuilder executionTreeBuilder = getExecutionTreeBuilderForOptimizedFilterTests();
     {
       Filter filter =
-          generateAndOrFilter(
+          generateAndOrNotFilter(
               Operator.AND,
-              generateEQFilter(API_ID_ATTR, UUID.randomUUID().toString()),
+              generateEQFilter(API_API_ID_ATTR, UUID.randomUUID().toString()),
               generateEQFilter(API_NAME_ATTR, "/login"),
               generateEQFilter(API_TYPE_ATTR, "http"));
       QueryNode queryNode = executionTreeBuilder.buildFilterTree(filter);
@@ -137,9 +167,9 @@ public class ExecutionTreeBuilderTest {
 
     {
       Filter filter =
-          generateAndOrFilter(
+          generateAndOrNotFilter(
               Operator.OR,
-              generateEQFilter(API_ID_ATTR, UUID.randomUUID().toString()),
+              generateEQFilter(API_API_ID_ATTR, UUID.randomUUID().toString()),
               generateEQFilter(API_NAME_ATTR, "/login"),
               generateEQFilter(API_TYPE_ATTR, "http"));
       QueryNode queryNode = executionTreeBuilder.buildFilterTree(filter);
@@ -155,7 +185,7 @@ public class ExecutionTreeBuilderTest {
   @Test
   public void testOptimizedFilterTreeBuilderAndOrFilterMultiDataSource() {
     ExecutionTreeBuilder executionTreeBuilder = getExecutionTreeBuilderForOptimizedFilterTests();
-    Filter apiIdFilter = generateEQFilter(API_ID_ATTR, UUID.randomUUID().toString());
+    Filter apiIdFilter = generateEQFilter(API_API_ID_ATTR, UUID.randomUUID().toString());
     Filter apiNameFilter = generateEQFilter(API_NAME_ATTR, "/login");
     Filter startTimeFilter =
         generateFilter(
@@ -167,7 +197,7 @@ public class ExecutionTreeBuilderTest {
                 .build());
     {
       Filter filter =
-          generateAndOrFilter(Operator.AND, apiIdFilter, apiNameFilter, startTimeFilter);
+          generateAndOrNotFilter(Operator.AND, apiIdFilter, apiNameFilter, startTimeFilter);
       QueryNode queryNode = executionTreeBuilder.buildFilterTree(filter);
       assertNotNull(queryNode);
       assertTrue(queryNode instanceof AndNode);
@@ -184,11 +214,11 @@ public class ExecutionTreeBuilderTest {
       assertTrue(
           filterList.containsAll(
               Arrays.asList(
-                  generateAndOrFilter(Operator.AND, apiIdFilter, apiNameFilter), startTimeFilter)));
+                  generateAndOrNotFilter(Operator.AND, apiIdFilter, apiNameFilter), startTimeFilter)));
     }
 
     {
-      Filter filter = generateAndOrFilter(Operator.OR, apiIdFilter, apiNameFilter, startTimeFilter);
+      Filter filter = generateAndOrNotFilter(Operator.OR, apiIdFilter, apiNameFilter, startTimeFilter);
       QueryNode queryNode = executionTreeBuilder.buildFilterTree(filter);
       assertNotNull(queryNode);
       assertTrue(queryNode instanceof OrNode);
@@ -205,14 +235,14 @@ public class ExecutionTreeBuilderTest {
       assertTrue(
           filterList.containsAll(
               Arrays.asList(
-                  generateAndOrFilter(Operator.OR, apiIdFilter, apiNameFilter), startTimeFilter)));
+                  generateAndOrNotFilter(Operator.OR, apiIdFilter, apiNameFilter), startTimeFilter)));
     }
   }
 
   @Test
   public void testOptimizedFilterTreeBuilderNestedAndFilter() {
     ExecutionTreeBuilder executionTreeBuilder = getExecutionTreeBuilderForOptimizedFilterTests();
-    Filter apiIdFilter = generateEQFilter(API_ID_ATTR, UUID.randomUUID().toString());
+    Filter apiIdFilter = generateEQFilter(API_API_ID_ATTR, UUID.randomUUID().toString());
     Filter apiNameFilter = generateEQFilter(API_NAME_ATTR, "/login");
     Filter apiPatternFilter = generateEQFilter(API_PATTERN_ATTR, "/login");
     Filter startTimeFilter =
@@ -233,8 +263,8 @@ public class ExecutionTreeBuilderTest {
                 .build());
 
     {
-      Filter level2Filter = generateAndOrFilter(Operator.AND, apiIdFilter, startTimeFilter);
-      Filter filter = generateAndOrFilter(Operator.AND, level2Filter, apiNameFilter);
+      Filter level2Filter = generateAndOrNotFilter(Operator.AND, apiIdFilter, startTimeFilter);
+      Filter filter = generateAndOrNotFilter(Operator.AND, level2Filter, apiNameFilter);
       QueryNode queryNode = executionTreeBuilder.buildFilterTree(filter);
       assertNotNull(queryNode);
       QueryNode optimizedNode = queryNode.acceptVisitor(new OptimizingVisitor());
@@ -250,12 +280,12 @@ public class ExecutionTreeBuilderTest {
       assertTrue(
           filterList.containsAll(
               Arrays.asList(
-                  generateAndOrFilter(Operator.AND, apiNameFilter, apiIdFilter), startTimeFilter)));
+                  generateAndOrNotFilter(Operator.AND, apiNameFilter, apiIdFilter), startTimeFilter)));
     }
 
     {
-      Filter level2Filter = generateAndOrFilter(Operator.AND, apiIdFilter, apiNameFilter);
-      Filter filter = generateAndOrFilter(Operator.AND, level2Filter, startTimeFilter);
+      Filter level2Filter = generateAndOrNotFilter(Operator.AND, apiIdFilter, apiNameFilter);
+      Filter filter = generateAndOrNotFilter(Operator.AND, level2Filter, startTimeFilter);
       QueryNode queryNode = executionTreeBuilder.buildFilterTree(filter);
       assertNotNull(queryNode);
       QueryNode optimizedNode = queryNode.acceptVisitor(new OptimizingVisitor());
@@ -271,14 +301,14 @@ public class ExecutionTreeBuilderTest {
       assertTrue(
           filterList.containsAll(
               Arrays.asList(
-                  generateAndOrFilter(Operator.AND, apiIdFilter, apiNameFilter), startTimeFilter)));
+                  generateAndOrNotFilter(Operator.AND, apiIdFilter, apiNameFilter), startTimeFilter)));
     }
 
     {
-      Filter level3Filter = generateAndOrFilter(Operator.AND, endTimeFilter, apiPatternFilter);
+      Filter level3Filter = generateAndOrNotFilter(Operator.AND, endTimeFilter, apiPatternFilter);
       Filter level2Filter =
-          generateAndOrFilter(Operator.AND, apiIdFilter, startTimeFilter, level3Filter);
-      Filter filter = generateAndOrFilter(Operator.AND, level2Filter, apiNameFilter);
+          generateAndOrNotFilter(Operator.AND, apiIdFilter, startTimeFilter, level3Filter);
+      Filter filter = generateAndOrNotFilter(Operator.AND, level2Filter, apiNameFilter);
       QueryNode queryNode = executionTreeBuilder.buildFilterTree(filter);
       assertNotNull(queryNode);
       QueryNode optimizedNode = queryNode.acceptVisitor(new OptimizingVisitor());
@@ -293,7 +323,7 @@ public class ExecutionTreeBuilderTest {
   @Test
   public void testOptimizedFilterTreeBuilderNestedAndOrFilter() {
     ExecutionTreeBuilder executionTreeBuilder = getExecutionTreeBuilderForOptimizedFilterTests();
-    Filter apiIdFilter = generateEQFilter(API_ID_ATTR, UUID.randomUUID().toString());
+    Filter apiIdFilter = generateEQFilter(API_API_ID_ATTR, UUID.randomUUID().toString());
     Filter apiNameFilter = generateEQFilter(API_NAME_ATTR, "/login");
     Filter startTimeFilter =
         generateFilter(
@@ -305,8 +335,8 @@ public class ExecutionTreeBuilderTest {
                 .build());
 
     {
-      Filter level2Filter = generateAndOrFilter(Operator.AND, apiIdFilter, apiNameFilter);
-      Filter filter = generateAndOrFilter(Operator.OR, level2Filter, startTimeFilter);
+      Filter level2Filter = generateAndOrNotFilter(Operator.AND, apiIdFilter, apiNameFilter);
+      Filter filter = generateAndOrNotFilter(Operator.OR, level2Filter, startTimeFilter);
       QueryNode queryNode = executionTreeBuilder.buildFilterTree(filter);
       assertNotNull(queryNode);
       QueryNode optimizedNode = queryNode.acceptVisitor(new OptimizingVisitor());
@@ -322,12 +352,12 @@ public class ExecutionTreeBuilderTest {
       assertTrue(
           filterList.containsAll(
               Arrays.asList(
-                  generateAndOrFilter(Operator.AND, apiIdFilter, apiNameFilter), startTimeFilter)));
+                  generateAndOrNotFilter(Operator.AND, apiIdFilter, apiNameFilter), startTimeFilter)));
     }
 
     {
-      Filter level2Filter = generateAndOrFilter(Operator.AND, apiIdFilter, startTimeFilter);
-      Filter filter = generateAndOrFilter(Operator.OR, level2Filter, apiNameFilter);
+      Filter level2Filter = generateAndOrNotFilter(Operator.AND, apiIdFilter, startTimeFilter);
+      Filter filter = generateAndOrNotFilter(Operator.OR, level2Filter, apiNameFilter);
       QueryNode queryNode = executionTreeBuilder.buildFilterTree(filter);
       assertNotNull(queryNode);
       QueryNode optimizedNode = queryNode.acceptVisitor(new OptimizingVisitor());
@@ -352,15 +382,16 @@ public class ExecutionTreeBuilderTest {
 
   @Test
   public void testExecutionTreeBuilderWithSelectFilterOrderPagination() {
+    OrderByExpression orderByExpression = buildOrderByExpression(API_API_ID_ATTR);
     {
       EntitiesRequest entitiesRequest =
           EntitiesRequest.newBuilder()
               .setEntityType(AttributeScope.API.name())
               .addSelection(buildExpression(API_NAME_ATTR))
-              .setFilter(generateEQFilter(API_ID_ATTR, UUID.randomUUID().toString()))
-              .addOrderBy(buildOrderByExpression(API_ID_ATTR))
+              .setFilter(generateEQFilter(API_API_ID_ATTR, UUID.randomUUID().toString()))
+              .addOrderBy(orderByExpression)
               .setLimit(10)
-              .setOffset(0)
+              .setOffset(20)
               .build();
       EntitiesRequestContext entitiesRequestContext =
           new EntitiesRequestContext(TENANT_ID, 0L, 10L, "API", new HashMap<>());
@@ -370,9 +401,14 @@ public class ExecutionTreeBuilderTest {
       QueryNode executionTree = executionTreeBuilder.build();
       assertNotNull(executionTree);
       assertTrue(executionTree instanceof SortAndPaginateNode);
-      QueryNode firstChild = ((SortAndPaginateNode) executionTree).getChildNode();
-      assertTrue(firstChild instanceof DataFetcherNode);
-      assertEquals(AttributeSource.EDS.name(), ((DataFetcherNode) firstChild).getSource());
+      assertEquals(10, ((SortAndPaginateNode)executionTree).getLimit());
+      assertEquals(20, ((SortAndPaginateNode)executionTree).getOffset());
+      assertEquals(List.of(orderByExpression), ((SortAndPaginateNode)executionTree).getOrderByExpressionList());
+
+      QueryNode selectionAndFilterNode = ((SortAndPaginateNode)executionTree).getChildNode();
+      assertTrue(selectionAndFilterNode instanceof SelectionAndFilterNode);
+      assertEquals(20, ((SelectionAndFilterNode)selectionAndFilterNode).getOffset());
+      assertEquals(10, ((SelectionAndFilterNode)selectionAndFilterNode).getLimit());
     }
 
     {
@@ -380,8 +416,8 @@ public class ExecutionTreeBuilderTest {
           EntitiesRequest.newBuilder()
               .setEntityType(AttributeScope.API.name())
               .addSelection(buildExpression(API_START_TIME_ATTR))
-              .setFilter(generateEQFilter(API_ID_ATTR, UUID.randomUUID().toString()))
-              .addOrderBy(buildOrderByExpression(API_ID_ATTR))
+              .setFilter(generateEQFilter(API_API_ID_ATTR, UUID.randomUUID().toString()))
+              .addOrderBy(orderByExpression)
               .setLimit(10)
               .setOffset(0)
               .build();
@@ -411,7 +447,7 @@ public class ExecutionTreeBuilderTest {
             .setEntityType(AttributeScope.API.name())
             .addSelection(buildExpression(API_NAME_ATTR))
             .setLimit(10)
-            .setOffset(0)
+            .setOffset(20)
             .build();
     EntitiesRequestContext entitiesRequestContext =
         new EntitiesRequestContext(TENANT_ID, 0L, 10L, "API", new HashMap<>());
@@ -421,16 +457,18 @@ public class ExecutionTreeBuilderTest {
     QueryNode executionTree = executionTreeBuilder.build();
     assertNotNull(executionTree);
     assertTrue(executionTree instanceof SortAndPaginateNode);
-    QueryNode firstChild = ((SortAndPaginateNode) executionTree).getChildNode();
-    assertTrue(firstChild instanceof SelectionNode);
-    assertTrue(
-        ((SelectionNode) firstChild)
-            .getAttrSelectionSources()
-            .contains(AttributeSource.EDS.name()));
+    assertEquals(10, ((SortAndPaginateNode)executionTree).getLimit());
+    assertEquals(20, ((SortAndPaginateNode)executionTree).getOffset());
+    assertEquals(List.of(), ((SortAndPaginateNode)executionTree).getOrderByExpressionList());
+
+    QueryNode selectionAndFilterNode = ((SortAndPaginateNode)executionTree).getChildNode();
+    assertTrue(selectionAndFilterNode instanceof SelectionAndFilterNode);
+    assertEquals(10, ((SelectionAndFilterNode)selectionAndFilterNode).getLimit());
+    assertEquals(20, ((SelectionAndFilterNode)selectionAndFilterNode).getOffset());
   }
 
   @Test
-  public void test_build_selectAttributeAndAggregateMetricWithSameSource_shouldBeCombined() {
+  public void test_build_selectAttributeAndAggregateMetricWithSameSource_shouldCreateSelectionAndFilterNode() {
     EntitiesRequest entitiesRequest =
         EntitiesRequest.newBuilder()
             .setEntityType(AttributeScope.API.name())
@@ -439,7 +477,7 @@ public class ExecutionTreeBuilderTest {
                 buildAggregateExpression(API_NUM_CALLS_ATTR,
                     FunctionType.SUM,
                     "SUM_numCalls",
-                    Collections.emptyList()))
+                    List.of()))
             .setLimit(10)
             .setOffset(0)
             .build();
@@ -450,17 +488,220 @@ public class ExecutionTreeBuilderTest {
     ExecutionTreeBuilder executionTreeBuilder = new ExecutionTreeBuilder(executionContext);
     QueryNode executionTree = executionTreeBuilder.build();
     assertNotNull(executionTree);
-    assertTrue(executionTree instanceof SortAndPaginateNode);
-    QueryNode firstChild = ((SortAndPaginateNode) executionTree).getChildNode();
-    assertTrue(firstChild instanceof SelectionNode);
-    assertTrue(
-        ((SelectionNode) firstChild)
-            .getAttrSelectionSources()
-            .contains(AttributeSource.QS.name()));
-    assertTrue(
-        ((SelectionNode) firstChild)
-            .getAggMetricSelectionSources()
-            .contains(AttributeSource.QS.name()));
+    assertTrue(executionTree instanceof TotalFetcherNode);
+    assertEquals("QS", ((TotalFetcherNode)executionTree).getSource());
+
+    QueryNode selectionAndFilterNode = ((TotalFetcherNode)executionTree).getChildNode();
+    assertTrue(selectionAndFilterNode instanceof SelectionAndFilterNode);
+    assertEquals("QS", ((SelectionAndFilterNode)selectionAndFilterNode).getSource());
+    assertEquals(0, ((SelectionAndFilterNode)selectionAndFilterNode).getOffset());
+    assertEquals(10, ((SelectionAndFilterNode)selectionAndFilterNode).getLimit());
+  }
+
+  @Test
+  public void test_build_selectAttributesTimeAggregationAndFilterWithSameSource_shouldCreateSelectionAndFilterNode() {
+    EntitiesRequest entitiesRequest =
+        EntitiesRequest.newBuilder()
+            .setEntityType(AttributeScope.API.name())
+            .addSelection(buildExpression(API_STATE_ATTR))
+            .addSelection(
+                buildAggregateExpression(API_NUM_CALLS_ATTR,
+                    FunctionType.SUM,
+                    "SUM_numCalls",
+                    List.of()))
+            .addTimeAggregation(
+                buildTimeAggregation(
+                    30,
+                    API_NUM_CALLS_ATTR,
+                    FunctionType.AVG,
+                    "AVG_numCalls",
+                    List.of()
+                )
+            )
+            .setFilter(generateAndOrNotFilter(
+                Operator.AND,
+                generateEQFilter(API_STATE_ATTR, "state1"),
+                generateFilter(Operator.GE, API_NUM_CALLS_ATTR,
+                    Value.newBuilder().
+                        setDouble(60)
+                        .setValueType(ValueType.DOUBLE)
+                        .build()
+                )
+            ))
+            .setLimit(10)
+            .setOffset(0)
+            .build();
+    EntitiesRequestContext entitiesRequestContext =
+        new EntitiesRequestContext(TENANT_ID, 0L, 10L, "API", new HashMap<>());
+    ExecutionContext executionContext =
+        ExecutionContext.from(attributeMetadataProvider, entitiesRequest, entitiesRequestContext);
+    ExecutionTreeBuilder executionTreeBuilder = new ExecutionTreeBuilder(executionContext);
+    QueryNode executionTree = executionTreeBuilder.build();
+    assertNotNull(executionTree);
+    assertTrue(executionTree instanceof TotalFetcherNode);
+    assertEquals("QS", ((TotalFetcherNode)executionTree).getSource());
+
+    QueryNode selectionAndFilterNode = ((TotalFetcherNode)executionTree).getChildNode();
+    assertTrue(selectionAndFilterNode instanceof SelectionAndFilterNode);
+    assertEquals("QS", ((SelectionAndFilterNode)selectionAndFilterNode).getSource());
+    assertEquals(0, ((SelectionAndFilterNode)selectionAndFilterNode).getOffset());
+    assertEquals(10, ((SelectionAndFilterNode)selectionAndFilterNode).getLimit());
+  }
+
+  @Test
+  public void test_build_selectAttributesWithEntityIdEqFilter_shouldNotCreateTotalNode() {
+    mockDomainObjectConfigs();
+    EntitiesRequest entitiesRequest =
+        EntitiesRequest.newBuilder()
+            .setEntityType(AttributeScope.API.name())
+            .addSelection(buildExpression(API_STATE_ATTR))
+            .addSelection(buildExpression(API_ID_ATTR))
+            .addSelection(
+                buildAggregateExpression(API_NUM_CALLS_ATTR,
+                    FunctionType.SUM,
+                    "SUM_numCalls",
+                    List.of()))
+            .addTimeAggregation(
+                buildTimeAggregation(
+                    30,
+                    API_NUM_CALLS_ATTR,
+                    FunctionType.AVG,
+                    "AVG_numCalls",
+                    List.of()
+                )
+            )
+            .setFilter(generateAndOrNotFilter(
+                Operator.AND,
+                generateEQFilter(API_ID_ATTR, "apiId1"),
+                generateEQFilter(API_STATE_ATTR, "state1"),
+                generateFilter(Operator.GE, API_NUM_CALLS_ATTR,
+                    Value.newBuilder().
+                        setDouble(60)
+                        .setValueType(ValueType.DOUBLE)
+                        .build()
+                )
+            ))
+            .setLimit(10)
+            .setOffset(0)
+            .build();
+    EntitiesRequestContext entitiesRequestContext =
+        new EntitiesRequestContext(TENANT_ID, 0L, 10L, "API", new HashMap<>());
+    ExecutionContext executionContext =
+        ExecutionContext.from(attributeMetadataProvider, entitiesRequest, entitiesRequestContext);
+    ExecutionTreeBuilder executionTreeBuilder = new ExecutionTreeBuilder(executionContext);
+    QueryNode executionTree = executionTreeBuilder.build();
+    assertNotNull(executionTree);
+
+    assertTrue(executionTree instanceof SelectionAndFilterNode);
+    assertEquals("QS", ((SelectionAndFilterNode)executionTree).getSource());
+    assertEquals(0, ((SelectionAndFilterNode)executionTree).getOffset());
+    assertEquals(10, ((SelectionAndFilterNode)executionTree).getLimit());
+
+    // Assert that total is set to 1
+    assertEquals(1, executionContext.getTotal());
+
+    // Clear domain object configs
+    DomainObjectConfigs.clearDomainObjectConfigs();
+  }
+
+  @Test
+  public void test_build_selectAttributesTimeAggregationFilterAndOrderByWithSameSource_shouldCreateSelectionAndFilterNode() {
+    OrderByExpression orderByExpression = buildOrderByExpression(API_STATE_ATTR);
+    EntitiesRequest entitiesRequest =
+        EntitiesRequest.newBuilder()
+            .setEntityType(AttributeScope.API.name())
+            .addSelection(buildExpression(API_STATE_ATTR))
+            .addSelection(
+                buildAggregateExpression(API_NUM_CALLS_ATTR,
+                    FunctionType.SUM,
+                    "SUM_numCalls",
+                    List.of()))
+            .addTimeAggregation(
+                buildTimeAggregation(
+                    30,
+                    API_NUM_CALLS_ATTR,
+                    FunctionType.AVG,
+                    "AVG_numCalls",
+                    List.of()
+                )
+            )
+            .setFilter(generateAndOrNotFilter(
+                Operator.AND,
+                generateEQFilter(API_STATE_ATTR, "state1"),
+                generateFilter(Operator.GE, API_NUM_CALLS_ATTR,
+                    Value.newBuilder().
+                        setDouble(60)
+                        .setValueType(ValueType.DOUBLE)
+                        .build()
+                )
+            ))
+            .addOrderBy(orderByExpression)
+            .setLimit(10)
+            .setOffset(0)
+            .build();
+    EntitiesRequestContext entitiesRequestContext =
+        new EntitiesRequestContext(TENANT_ID, 0L, 10L, "API", new HashMap<>());
+    ExecutionContext executionContext =
+        ExecutionContext.from(attributeMetadataProvider, entitiesRequest, entitiesRequestContext);
+    ExecutionTreeBuilder executionTreeBuilder = new ExecutionTreeBuilder(executionContext);
+    QueryNode executionTree = executionTreeBuilder.build();
+    assertNotNull(executionTree);
+    assertTrue(executionTree instanceof TotalFetcherNode);
+    assertEquals("QS", ((TotalFetcherNode)executionTree).getSource());
+
+    QueryNode selectionAndFilterNode = ((TotalFetcherNode)executionTree).getChildNode();
+    assertTrue(selectionAndFilterNode instanceof SelectionAndFilterNode);
+    assertEquals("QS", ((SelectionAndFilterNode)selectionAndFilterNode).getSource());
+    assertEquals(0, ((SelectionAndFilterNode)selectionAndFilterNode).getOffset());
+    assertEquals(10, ((SelectionAndFilterNode)selectionAndFilterNode).getLimit());
+  }
+
+  @Test
+  public void test_build_selectAttributesAndFilterWithSameSourceNonZeroOffset_shouldCreateSelectionAndFilterNodeAndPaginateOnlyNode() {
+    OrderByExpression orderByExpression = buildOrderByExpression(API_STATE_ATTR);
+    EntitiesRequest entitiesRequest =
+        EntitiesRequest.newBuilder()
+            .setEntityType(AttributeScope.API.name())
+            .addSelection(buildExpression(API_STATE_ATTR))
+            .addSelection(
+                buildAggregateExpression(API_NUM_CALLS_ATTR,
+                    FunctionType.SUM,
+                    "SUM_numCalls",
+                    List.of()))
+            .setFilter(generateAndOrNotFilter(
+                Operator.AND,
+                generateEQFilter(API_DISCOVERY_STATE, "DISCOVERED"),
+                generateFilter(Operator.GE, API_NUM_CALLS_ATTR,
+                    Value.newBuilder().
+                        setDouble(60)
+                        .setValueType(ValueType.DOUBLE)
+                        .build()
+                )
+            ))
+            .addOrderBy(orderByExpression)
+            .setLimit(10)
+            .setOffset(10)
+            .build();
+    EntitiesRequestContext entitiesRequestContext =
+        new EntitiesRequestContext(TENANT_ID, 0L, 10L, "API", new HashMap<>());
+    ExecutionContext executionContext =
+        ExecutionContext.from(attributeMetadataProvider, entitiesRequest, entitiesRequestContext);
+    ExecutionTreeBuilder executionTreeBuilder = new ExecutionTreeBuilder(executionContext);
+    QueryNode executionTree = executionTreeBuilder.build();
+    assertNotNull(executionTree);
+    assertTrue(executionTree instanceof TotalFetcherNode);
+    assertEquals("QS", ((TotalFetcherNode)executionTree).getSource());
+
+    QueryNode paginateOnlyNode = ((TotalFetcherNode)executionTree).getChildNode();
+    assertTrue(paginateOnlyNode instanceof PaginateOnlyNode);
+    assertEquals(10, ((PaginateOnlyNode)paginateOnlyNode).getOffset());
+    assertEquals(10, ((PaginateOnlyNode)paginateOnlyNode).getLimit());
+
+    QueryNode selectAndFilterNode = ((PaginateOnlyNode)paginateOnlyNode).getChildNode();
+    assertTrue(selectAndFilterNode instanceof SelectionAndFilterNode);
+    assertEquals("QS", ((SelectionAndFilterNode)selectAndFilterNode).getSource());
+    assertEquals(0, ((SelectionAndFilterNode)selectAndFilterNode).getOffset());
+    assertEquals(20, ((SelectionAndFilterNode)selectAndFilterNode).getLimit());
   }
 
   @Test
@@ -473,7 +714,7 @@ public class ExecutionTreeBuilderTest {
                 buildAggregateExpression(API_NUM_CALLS_ATTR,
                     FunctionType.SUM,
                     "SUM_numCalls",
-                    Collections.emptyList()))
+                    List.of()))
             .setLimit(10)
             .setOffset(0)
             .build();
@@ -499,58 +740,23 @@ public class ExecutionTreeBuilderTest {
             .contains(AttributeSource.EDS.name()));
   }
 
-  private Filter generateAndOrFilter(Operator operator, Filter... filters) {
-    return Filter.newBuilder()
-        .setOperator(operator)
-        .addAllChildFilter(Arrays.asList(filters))
-        .build();
-  }
+  private void mockDomainObjectConfigs() {
+    String domainObjectConfig =
+        "domainobject.config = [\n"
+            + "  {\n"
+            + "    scope = API\n"
+            + "    key = id\n"
+            + "    primaryKey = true\n"
+            + "    mapping = [\n"
+            + "      {\n"
+            + "        scope = API\n"
+            + "        key = id\n"
+            + "      }"
+            + "    ]\n"
+            + "  }\n"
+            + "]";
 
-  private Filter generateFilter(Operator operator, String columnName, Value columnValue) {
-    return Filter.newBuilder()
-        .setOperator(operator)
-        .setLhs(
-            Expression.newBuilder()
-                .setColumnIdentifier(
-                    ColumnIdentifier.newBuilder().setColumnName(columnName).build())
-                .build())
-        .setRhs(
-            Expression.newBuilder()
-                .setLiteral(LiteralConstant.newBuilder().setValue(columnValue).build())
-                .build())
-        .build();
-  }
-
-  private Filter generateEQFilter(String columnName, String columnValue) {
-    return generateFilter(
-        Operator.EQ,
-        columnName,
-        Value.newBuilder().setString(columnValue).setValueType(ValueType.STRING).build());
-  }
-
-  private OrderByExpression buildOrderByExpression(String columnName) {
-    return OrderByExpression.newBuilder().setExpression(buildExpression(columnName)).build();
-  }
-
-  private Expression buildExpression(String columnName) {
-    return Expression.newBuilder()
-        .setColumnIdentifier(ColumnIdentifier.newBuilder().setColumnName(columnName).build())
-        .build();
-  }
-
-  public Expression buildAggregateExpression(
-      String columnName,
-      FunctionType function,
-      String alias,
-      List<Expression> additionalArguments) {
-    FunctionExpression.Builder functionBuilder =
-        FunctionExpression.newBuilder()
-            .setFunction(function)
-            .setAlias(alias)
-            .addArguments(buildExpression(columnName));
-    if (!additionalArguments.isEmpty()) {
-      additionalArguments.forEach(functionBuilder::addArguments);
-    }
-    return Expression.newBuilder().setFunction(functionBuilder).build();
+    Config config = ConfigFactory.parseString(domainObjectConfig);
+    DomainObjectConfigs.init(config);
   }
 }

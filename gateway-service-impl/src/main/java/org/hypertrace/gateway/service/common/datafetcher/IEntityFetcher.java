@@ -54,6 +54,8 @@ public interface IEntityFetcher {
   EntityFetcherResponse getTimeAggregatedMetrics(
       EntitiesRequestContext requestContext, EntitiesRequest entitiesRequest);
 
+  int getTotalEntities(EntitiesRequestContext requestContext, EntitiesRequest entitiesRequest);
+
   default MetricSeries getSortedMetricSeries(MetricSeries.Builder builder) {
     List<Interval> sortedIntervals = new ArrayList<>(builder.getValueList());
     sortedIntervals.sort(Comparator.comparingLong(Interval::getStartTimeMillis));

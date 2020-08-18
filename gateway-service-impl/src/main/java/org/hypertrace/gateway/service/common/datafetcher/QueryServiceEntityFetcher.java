@@ -37,7 +37,9 @@ import org.hypertrace.gateway.service.entity.EntitiesRequestContext;
 import org.hypertrace.gateway.service.entity.EntitiesRequestValidator;
 import org.hypertrace.gateway.service.entity.EntityKey;
 import org.hypertrace.gateway.service.v1.common.AggregatedMetricValue;
+import org.hypertrace.gateway.service.v1.common.ColumnIdentifier;
 import org.hypertrace.gateway.service.v1.common.Expression.ValueCase;
+import org.hypertrace.gateway.service.v1.common.FunctionExpression;
 import org.hypertrace.gateway.service.v1.common.FunctionType;
 import org.hypertrace.gateway.service.v1.common.Health;
 import org.hypertrace.gateway.service.v1.common.Interval;
@@ -268,8 +270,11 @@ public class QueryServiceEntityFetcher implements IEntityFetcher {
     QueryRequest.Builder builder =
         constructSelectionQuery(requestContext, entitiesRequest, entityIdAttributes, aggregates);
 
-    // TODO: fetch the limit from context request after fixing the ExecutionTreeBuilder
-    builder.setLimit(QueryServiceClient.DEFAULT_QUERY_SERVICE_GROUP_BY_LIMIT);
+    // Order by, limit and offset from the request.
+    builder.setLimit(entitiesRequest.getLimit());
+    builder.setOffset(entitiesRequest.getOffset());
+    builder.addAllOrderBy(
+            QueryAndGatewayDtoConverter.convertToQueryOrderByExpressions(entitiesRequest.getOrderByList()));
 
     QueryRequest queryRequest = builder.build();
 
@@ -321,11 +326,6 @@ public class QueryServiceEntityFetcher implements IEntityFetcher {
           ColumnMetadata metadata = chunk.getResultSetMetadata().getColumnMetadata(i);
           org.hypertrace.core.query.service.api.Value columnValue = row.getColumn(i);
           // add entity attributes from selections
-          addEntityAttribute(entityBuilder,
-              metadata,
-              columnValue,
-              attributeMetadataMap,
-              aggregates.isEmpty());
 
           org.hypertrace.gateway.service.v1.common.FunctionExpression function =
               requestContext.getFunctionExpressionByAlias(metadata.getColumnName());
@@ -337,6 +337,12 @@ public class QueryServiceEntityFetcher implements IEntityFetcher {
                 metadata,
                 columnValue,
                 attributeMetadataMap);
+          } else { // A simple column selection
+            addEntityAttribute(entityBuilder,
+                metadata,
+                columnValue,
+                attributeMetadataMap,
+                aggregates.isEmpty());
           }
 
         }
@@ -467,6 +473,10 @@ public class QueryServiceEntityFetcher implements IEntityFetcher {
   @Override
   public EntityFetcherResponse getTimeAggregatedMetrics(
       EntitiesRequestContext requestContext, EntitiesRequest entitiesRequest) {
+    // No need to make execute the rest of this if there are no TimeAggregations in the request.
+    if (entitiesRequest.getTimeAggregationCount() == 0) {
+      return new EntityFetcherResponse();
+    }
     // Only supported filter is entityIds IN ["id1", "id2", "id3"]
     List<String> idColumns =
         AttributeMetadataUtil.getIdAttributeIds(
@@ -621,6 +631,126 @@ public class QueryServiceEntityFetcher implements IEntityFetcher {
     return new EntityFetcherResponse(resultMap);
   }
 
+  @Override
+  public int getTotalEntities(EntitiesRequestContext requestContext, EntitiesRequest entitiesRequest) {
+    Map<String, AttributeMetadata> attributeMetadataMap =
+        attributeMetadataProvider.getAttributesMetadata(
+            requestContext, AttributeScope.valueOf(entitiesRequest.getEntityType()));
+    // Validate EntitiesRequest
+    entitiesRequestValidator.validate(entitiesRequest, attributeMetadataMap);
+
+    List<String> entityIdAttributes =
+        AttributeMetadataUtil.getIdAttributeIds(
+            attributeMetadataProvider, requestContext, entitiesRequest.getEntityType());
+
+    if (entityIdAttributes.size() == 1) {
+      return getTotalEntitiesForSingleEntityId(entityIdAttributes.get(0), requestContext, entitiesRequest, attributeMetadataMap);
+    } else {
+      return getTotalEntitiesForMultipleEntityId(entityIdAttributes, requestContext, entitiesRequest);
+    }
+  }
+
+  private int getTotalEntitiesForSingleEntityId(String entityIdAttribute,
+                                                EntitiesRequestContext requestContext,
+                                                EntitiesRequest entitiesRequest,
+                                                Map<String, AttributeMetadata> attributeMetadataMap) {
+    Filter.Builder filterBuilder =
+        constructQueryServiceFilter(entitiesRequest, requestContext, List.of(entityIdAttribute));
+
+    String alias = FunctionType.DISTINCTCOUNT + "_entityId_forTotal";
+    org.hypertrace.gateway.service.v1.common.Expression distinctCountExpression = org.hypertrace.gateway.service.v1.common.Expression.newBuilder()
+        .setFunction(
+            FunctionExpression.newBuilder()
+                .setFunction(FunctionType.DISTINCTCOUNT)
+                .addArguments(
+                    org.hypertrace.gateway.service.v1.common.Expression.newBuilder()
+                        .setColumnIdentifier(
+                            ColumnIdentifier.newBuilder()
+                                .setColumnName(entityIdAttribute)
+                                .build()
+                        )
+                        .build()
+                )
+                .setAlias(alias)
+                .build()
+        )
+        .build();
+    requestContext.mapAliasToFunctionExpression(alias, distinctCountExpression.getFunction());
+
+    QueryRequest.Builder builder =
+        QueryRequest.newBuilder()
+            .setFilter(filterBuilder)
+            .addAggregation(QueryAndGatewayDtoConverter.convertToQueryExpression(distinctCountExpression))
+            .setOffset(0)
+            .setLimit(1);
+
+    QueryRequest queryRequest = builder.build();
+
+    if (LOG.isDebugEnabled()) {
+      LOG.debug("Sending Query to Query Service ======== \n {}", queryRequest);
+    }
+
+    Iterator<ResultSetChunk> resultSetChunkIterator =
+        queryServiceClient.executeQuery(queryRequest, requestContext.getHeaders(), 5000);
+
+    while (resultSetChunkIterator.hasNext()) {
+      ResultSetChunk chunk = resultSetChunkIterator.next();
+      if (LOG.isDebugEnabled()) {
+        LOG.debug("Received chunk: " + chunk.toString());
+      }
+
+      if (chunk.getRowCount() < 1) {
+        LOG.warn("Empty row count for entities total.");
+        break;
+      }
+
+      if (!chunk.hasResultSetMetadata()) {
+        LOG.warn("Chunk doesn't have result metadata so couldn't process the response.");
+        break;
+      }
+
+      for (Row row : chunk.getRowList()) {
+        if (row.getColumnCount() != 1) {
+          LOG.warn("Queried for one column DISTINCTCOUNT but got multiple values");
+          return 0;
+        }
+
+        ColumnMetadata metadata = chunk.getResultSetMetadata().getColumnMetadata(0);
+        org.hypertrace.core.query.service.api.Value columnValue = row.getColumn(0);
+        Value gwValue =
+            QueryAndGatewayDtoConverter.convertToGatewayValueForMetricValue(
+                MetricAggregationFunctionUtil.getValueTypeFromFunction(
+                    distinctCountExpression.getFunction(), attributeMetadataMap),
+                attributeMetadataMap,
+                metadata,
+                columnValue);
+
+        if (gwValue.getValueType() == ValueType.LONG) {
+          return (int)gwValue.getLong();
+        }
+
+        LOG.warn("Non long value for DISTINCTCOUNT");
+      }
+    }
+    return 0;
+  }
+
+  private int getTotalEntitiesForMultipleEntityId(List<String> entityIdAttributes,
+                                                  EntitiesRequestContext requestContext,
+                                                  EntitiesRequest entitiesRequest) {
+    EntityFetcherResponse entityFetcherResponse = getEntities(
+        requestContext,
+        EntitiesRequest.newBuilder(entitiesRequest)
+            .clearSelection()
+            .clearTimeAggregation()
+            .clearOrderBy()
+            .setOffset(0)
+            .setLimit(QueryServiceClient.DEFAULT_QUERY_SERVICE_GROUP_BY_LIMIT)
+            .build()
+        );
+    return entityFetcherResponse.size();
+  }
+
   private QueryRequest buildTimeSeriesQueryRequest(
       EntitiesRequest entitiesRequest,
       EntitiesRequestContext entitiesRequestContext,
@@ -673,6 +803,8 @@ public class QueryServiceEntityFetcher implements IEntityFetcher {
     // Pinot truncates the GroupBy results to 10 when there is no limit explicitly but
     // here we neither want the results to be truncated nor apply the limit coming from client.
     // We would like to get all entities based on filters so we set the limit to a high value.
+    // TODO: Figure out a reasonable computed limit instead of this hardcoded one. Probably
+    //  requested limit * expected max number of time series buckets
     builder.setLimit(QueryServiceClient.DEFAULT_QUERY_SERVICE_GROUP_BY_LIMIT);
 
     return builder.build();
