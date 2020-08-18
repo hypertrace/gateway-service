@@ -6,6 +6,7 @@ import static org.mockito.Mockito.when;
 import com.typesafe.config.Config;
 import com.typesafe.config.ConfigFactory;
 import java.io.File;
+import java.util.List;
 import java.util.Map;
 import java.util.Optional;
 import org.hypertrace.core.attribute.service.v1.AttributeKind;
@@ -16,10 +17,14 @@ import org.hypertrace.gateway.service.common.util.QueryExpressionUtil;
 import org.hypertrace.gateway.service.entity.EntitiesRequestContext;
 import org.hypertrace.gateway.service.entity.config.DomainObjectConfigs;
 import org.hypertrace.gateway.service.testutils.GatewayExpressionCreator;
+import org.hypertrace.gateway.service.v1.common.Expression;
 import org.hypertrace.gateway.service.v1.common.Filter;
 import org.hypertrace.gateway.service.v1.common.FunctionType;
+import org.hypertrace.gateway.service.v1.common.LiteralConstant;
 import org.hypertrace.gateway.service.v1.common.Operator;
 import org.hypertrace.gateway.service.v1.common.SortOrder;
+import org.hypertrace.gateway.service.v1.common.Value;
+import org.hypertrace.gateway.service.v1.common.ValueType;
 import org.hypertrace.gateway.service.v1.entity.EntitiesRequest;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.Assertions;
@@ -267,6 +272,208 @@ public class RequestPreProcessorTest {
         transformedRequest);
   }
 
+  @Test
+  public void testDomainEntitiesRequestWithServiceIdFilterIsNotTransformed() {
+    initializeDomainObjectConfigs("configs/request-preprocessor-test/domains-config.conf");
+    EntitiesRequestContext entitiesRequestContext =
+        new EntitiesRequestContext(TEST_TENANT_ID, 0L, 1L, "SERVICE", Map.of());
+    // Mock calls into attributeMetadataProvider
+    mockAttributeMetadataForDomainAndMappings(entitiesRequestContext);
+
+    EntitiesRequest entitiesRequest =
+        EntitiesRequest.newBuilder()
+            .setEntityType("SERVICE")
+            .setStartTimeMillis(0L)
+            .setEndTimeMillis(1L)
+            .setFilter(
+                Filter.newBuilder()
+                    .setOperator(Operator.AND)
+                    .addChildFilter(
+                        GatewayExpressionCreator.createFilter(
+                            QueryExpressionUtil.getColumnExpression("SERVICE.id"),
+                            Operator.IN,
+                            createStringArrayLiteralExpressionBuilder(List.of("service1-id", "service2-id"))
+                        )
+                    )
+            )
+            .addSelection(QueryExpressionUtil.getColumnExpression("SERVICE.id"))
+            .build();
+
+    EntitiesRequest transformedRequest =
+        requestPreProcessor.transform(entitiesRequest, entitiesRequestContext);
+
+    // There should be no transformation
+    Assertions.assertEquals(entitiesRequest, transformedRequest);
+  }
+
+  @Test
+  public void testDomainEntitiesRequestWithInFilterIsTransformed() {
+    initializeDomainObjectConfigs("configs/request-preprocessor-test/domains-config.conf");
+    EntitiesRequestContext entitiesRequestContext =
+        new EntitiesRequestContext(TEST_TENANT_ID, 0L, 1L, "EVENT", Map.of());
+    // Mock calls into attributeMetadataProvider
+    mockAttributeMetadataForDomainAndMappings(entitiesRequestContext);
+
+    EntitiesRequest entitiesRequest =
+        EntitiesRequest.newBuilder()
+            .setEntityType("SERVICE")
+            .setStartTimeMillis(0L)
+            .setEndTimeMillis(1L)
+            .setFilter(
+                Filter.newBuilder()
+                    .setOperator(Operator.AND)
+                    .addChildFilter(
+                        GatewayExpressionCreator.createFilter(
+                            QueryExpressionUtil.getColumnExpression("SERVICE.mappedAttr1"),
+                            Operator.IN,
+                            createStringArrayLiteralExpressionBuilder(List.of("attr1_val100:::attr2_val200", "attr1_val101:::attr2_val201")))))
+            .addSelection(QueryExpressionUtil.getColumnExpression("SERVICE.mappedAttr1"))
+            .addSelection(QueryExpressionUtil.getColumnExpression("SERVICE.id"))
+            .build();
+
+    EntitiesRequest transformedRequest =
+        requestPreProcessor.transform(entitiesRequest, entitiesRequestContext);
+
+    // RequestPreProcessor should transform SERVICE.mappedAttr1.
+    Assertions.assertEquals(
+        EntitiesRequest.newBuilder()
+            .setEntityType("SERVICE")
+            .setStartTimeMillis(0L)
+            .setEndTimeMillis(1L)
+            .setFilter(
+                Filter.newBuilder()
+                    .setOperator(Operator.AND)
+                    .addChildFilter(
+                        Filter.newBuilder()
+                            .setOperator(Operator.OR)
+                            .addChildFilter(
+                                Filter.newBuilder()
+                                    .setOperator(Operator.AND)
+                                    .addChildFilter(
+                                        GatewayExpressionCreator.createFilter(
+                                            QueryExpressionUtil.getColumnExpression(
+                                                "SERVICE.attr1"),
+                                            Operator.EQ,
+                                            QueryExpressionUtil.getLiteralExpression("attr1_val100")
+                                        )
+                                    )
+                                    .addChildFilter(
+                                        GatewayExpressionCreator.createFilter(
+                                            QueryExpressionUtil.getColumnExpression(
+                                                "SERVICE.attr2"),
+                                            Operator.EQ,
+                                            QueryExpressionUtil.getLiteralExpression("attr2_val200")
+                                        )
+                                    )
+                            )
+                            .addChildFilter(
+                                Filter.newBuilder()
+                                    .setOperator(Operator.AND)
+                                    .addChildFilter(
+                                        GatewayExpressionCreator.createFilter(
+                                            QueryExpressionUtil.getColumnExpression(
+                                                "SERVICE.attr1"),
+                                            Operator.EQ,
+                                            QueryExpressionUtil.getLiteralExpression("attr1_val101")
+                                        )
+                                    )
+                                    .addChildFilter(
+                                        GatewayExpressionCreator.createFilter(
+                                            QueryExpressionUtil.getColumnExpression(
+                                                "SERVICE.attr2"),
+                                            Operator.EQ,
+                                            QueryExpressionUtil.getLiteralExpression("attr2_val201")
+                                        )
+                                    )
+                            )
+                    )
+            )
+            .addSelection(QueryExpressionUtil.getColumnExpression("SERVICE.attr1"))
+            .addSelection(QueryExpressionUtil.getColumnExpression("SERVICE.attr2"))
+            .addSelection(QueryExpressionUtil.getColumnExpression("SERVICE.id"))
+            .build(),
+        transformedRequest);
+  }
+
+  @Test
+  public void testDomainEntitiesRequestWithEqFilterIsTransformed() {
+    initializeDomainObjectConfigs("configs/request-preprocessor-test/domains-config.conf");
+    EntitiesRequestContext entitiesRequestContext =
+        new EntitiesRequestContext(TEST_TENANT_ID, 0L, 1L, "EVENT", Map.of());
+    // Mock calls into attributeMetadataProvider
+    mockAttributeMetadataForDomainAndMappings(entitiesRequestContext);
+
+    EntitiesRequest entitiesRequest =
+        EntitiesRequest.newBuilder()
+            .setEntityType("SERVICE")
+            .setStartTimeMillis(0L)
+            .setEndTimeMillis(1L)
+            .setFilter(
+                Filter.newBuilder()
+                    .setOperator(Operator.AND)
+                    .addChildFilter(
+                        GatewayExpressionCreator.createFilter(
+                            QueryExpressionUtil.getColumnExpression("SERVICE.mappedAttr2"),
+                            Operator.EQ,
+                            GatewayExpressionCreator.createLiteralExpression("attr10_val20")
+                        )
+                    )
+            )
+            .addSelection(QueryExpressionUtil.getColumnExpression("SERVICE.mappedAttr2"))
+            .addSelection(QueryExpressionUtil.getColumnExpression("SERVICE.id"))
+            .build();
+
+    EntitiesRequest transformedRequest =
+        requestPreProcessor.transform(entitiesRequest, entitiesRequestContext);
+
+    // RequestPreProcessor should transform SERVICE.mappedAttr2.
+    Assertions.assertEquals(
+        EntitiesRequest.newBuilder()
+            .setEntityType("SERVICE")
+            .setStartTimeMillis(0L)
+            .setEndTimeMillis(1L)
+            .setFilter(
+                Filter.newBuilder()
+                    .setOperator(Operator.AND)
+                    .addChildFilter(
+                        GatewayExpressionCreator.createFilter(
+                            QueryExpressionUtil.getColumnExpression("SERVICE.mappedAttr2"),
+                            Operator.EQ,
+                            GatewayExpressionCreator.createLiteralExpression("attr10_val")
+                        )
+                    )
+                    .addChildFilter(
+                        Filter.newBuilder()
+                            .setOperator(Operator.AND)
+                            .addChildFilter(
+                                Filter.newBuilder()
+                                    .setOperator(Operator.AND)
+                                    .addChildFilter(
+                                        GatewayExpressionCreator.createFilter(
+                                            QueryExpressionUtil.getColumnExpression("SERVICE.mappedAttr2"),
+                                            Operator.EQ,
+                                            GatewayExpressionCreator.createLiteralExpression("attr10_val20")
+                                        )
+                                    )
+                            )
+                    )
+            )
+            .addSelection(QueryExpressionUtil.getColumnExpression("SERVICE.mappedAttr2"))
+            .addSelection(QueryExpressionUtil.getColumnExpression("SERVICE.id"))
+            .build(),
+        transformedRequest);
+  }
+
+  private Expression.Builder createStringArrayLiteralExpressionBuilder(List<String> values) {
+    return Expression.newBuilder().setLiteral(
+        LiteralConstant.newBuilder().setValue(
+            Value.newBuilder()
+                .setValueType(ValueType.STRING_ARRAY)
+                .addAllStringArray(values)
+        )
+    );
+  }
+
   private void mockAttributeMetadataForDomainAndMappings(
       EntitiesRequestContext entitiesRequestContext) {
     mockAttributeMetadata(entitiesRequestContext, AttributeScope.EVENT, "name");
@@ -278,6 +485,13 @@ public class RequestPreProcessorTest {
         entitiesRequestContext, AttributeScope.API, "isExternal", AttributeKind.TYPE_BOOL);
     mockAttributeMetadata(entitiesRequestContext, AttributeScope.SERVICE, "duration");
     mockAttributeMetadata(entitiesRequestContext, AttributeScope.SERVICE, "errorCount");
+    mockAttributeMetadata(entitiesRequestContext, AttributeScope.SERVICE, "id");
+    mockAttributeMetadata(entitiesRequestContext, AttributeScope.SERVICE, "mappedAttr1");
+    mockAttributeMetadata(entitiesRequestContext, AttributeScope.SERVICE, "attr1");
+    mockAttributeMetadata(entitiesRequestContext, AttributeScope.SERVICE, "attr2");
+    mockAttributeMetadata(entitiesRequestContext, AttributeScope.SERVICE, "mappedAttr2",
+        AttributeKind.TYPE_STRING);
+    mockAttributeMetadata(entitiesRequestContext, AttributeScope.SERVICE, "attr10");
   }
 
   private void mockAttributeMetadata(

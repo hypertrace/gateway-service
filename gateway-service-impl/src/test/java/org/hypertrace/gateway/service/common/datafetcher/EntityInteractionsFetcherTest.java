@@ -11,6 +11,7 @@ import com.google.common.collect.ImmutableSet;
 import java.util.Collection;
 import java.util.Collections;
 import java.util.HashMap;
+import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
@@ -343,8 +344,12 @@ public class EntityInteractionsFetcherTest extends AbstractGatewayServiceTest {
             .setOperator(org.hypertrace.core.query.service.api.Operator.AND)
             .addChildFilter(timeFilter(request.getStartTimeMillis(), request.getEndTimeMillis()))
             .addChildFilter(
-                aggregator.createFilterForEntityKeys(
-                    List.of("INTERACTION.fromServiceId"), Set.of(EntityKey.from("test_id1"))))
+                createStringArrayFilter(
+                    org.hypertrace.core.query.service.api.Operator.IN,
+                    "INTERACTION.fromServiceId",
+                    List.of("test_id1")
+                    )
+            )
             .addChildFilter(
                 org.hypertrace.core.query.service.api.Filter.newBuilder()
                     .setOperator(org.hypertrace.core.query.service.api.Operator.AND)
@@ -356,14 +361,19 @@ public class EntityInteractionsFetcherTest extends AbstractGatewayServiceTest {
             .build();
     assertEquals(expectedFilter, filter);
 
+    // The other request should query for Service -> Backend edges.
     filter = queryRequests.get("BACKEND").getFilter();
     expectedFilter =
         org.hypertrace.core.query.service.api.Filter.newBuilder()
             .setOperator(org.hypertrace.core.query.service.api.Operator.AND)
             .addChildFilter(timeFilter(request.getStartTimeMillis(), request.getEndTimeMillis()))
             .addChildFilter(
-                aggregator.createFilterForEntityKeys(
-                    List.of("INTERACTION.fromServiceId"), Set.of(EntityKey.from("test_id1"))))
+                createStringArrayFilter(
+                    org.hypertrace.core.query.service.api.Operator.IN,
+                    "INTERACTION.fromServiceId",
+                    List.of("test_id1")
+                )
+            )
             .addChildFilter(
                 org.hypertrace.core.query.service.api.Filter.newBuilder()
                     .setOperator(org.hypertrace.core.query.service.api.Operator.AND)
@@ -374,6 +384,129 @@ public class EntityInteractionsFetcherTest extends AbstractGatewayServiceTest {
                             "null")))
             .build();
     assertEquals(expectedFilter, filter);
+  }
+
+  @Test
+  public void testEntityWithInteractionMappingToMultipleAttributes() {
+    Set<String> entityTypes = ImmutableSet.of("SERVICE");
+    List<String> entityIdInteractionMappings = List.of("INTERACTION.fromNamespaceName", "INTERACTION.fromNamespaceType");
+
+    Filter.Builder entityTypeFilter =
+        Filter.newBuilder()
+            .setLhs(
+                Expression.newBuilder()
+                    .setColumnIdentifier(
+                        ColumnIdentifier.newBuilder().setColumnName("INTERACTION.toEntityType")))
+            .setOperator(Operator.IN)
+            .setRhs(
+                Expression.newBuilder()
+                    .setLiteral(
+                        LiteralConstant.newBuilder()
+                            .setValue(
+                                Value.newBuilder()
+                                    .setValueType(ValueType.STRING_ARRAY)
+                                    .addAllStringArray(entityTypes))));
+    InteractionsRequest toInteraction =
+        InteractionsRequest.newBuilder()
+            .setFilter(entityTypeFilter)
+            .addSelection(
+                getAggregateFunctionExpression(
+                    "INTERACTION.bytesReceived", FunctionType.SUM, "SUM_bytes_received"))
+            .build();
+    EntitiesRequest request =
+        EntitiesRequest.newBuilder()
+            .setEntityType(DomainEntityType.NAMESPACE.name())
+            .setStartTimeMillis(System.currentTimeMillis() - TimeUnit.DAYS.toMillis(30))
+            .setEndTimeMillis(System.currentTimeMillis())
+            .setOutgoingInteractions(toInteraction)
+            .build();
+
+    attributeMetadataProvider = mock(AttributeMetadataProvider.class);
+    Mockito.when(
+        attributeMetadataProvider.getAttributeMetadata(
+            any(), Mockito.eq(AttributeScope.INTERACTION), Mockito.eq("startTime")))
+        .thenReturn(
+            Optional.of(AttributeMetadata.newBuilder().setId("INTERACTION.startTime").build()));
+
+    EntityInteractionsFetcher aggregator =
+        new EntityInteractionsFetcher(null, attributeMetadataProvider);
+    LinkedHashSet<EntityKey> entityKeys = new LinkedHashSet<>();
+    entityKeys.add(EntityKey.of("test_name1", "test_type1"));
+    entityKeys.add(EntityKey.of("test_name2", "test_type2"));
+    Map<String, QueryRequest> queryRequests =
+        aggregator.buildQueryRequests(
+            request.getStartTimeMillis(),
+            request.getEndTimeMillis(),
+            request.getEntityType(),
+            request.getOutgoingInteractions(),
+            entityKeys,
+            false,
+            null);
+    assertEquals(entityTypes.size(), queryRequests.size());
+
+    // Should select and group on INTERACTION.toServiceId, INTERACTION.fromNamespaceName, INTERACTION.fromNamespaceType
+    for (QueryRequest queryRequest : queryRequests.values()) {
+      assertNotNull(queryRequest);
+      assertEquals(3, queryRequest.getGroupByCount());
+      assertEquals(toInteraction.getSelectionCount() + 3, queryRequest.getSelectionCount());
+      System.out.println(queryRequest);
+    }
+
+    // Fully assert the QueryService requests.
+
+    // The one request should query for Namespace -> Service edges.
+    org.hypertrace.core.query.service.api.Filter filter = queryRequests.get("SERVICE").getFilter();
+    org.hypertrace.core.query.service.api.Filter expectedFilter =
+        org.hypertrace.core.query.service.api.Filter.newBuilder()
+            .setOperator(org.hypertrace.core.query.service.api.Operator.AND)
+            .addChildFilter(timeFilter(request.getStartTimeMillis(), request.getEndTimeMillis()))
+            .addChildFilter(
+                org.hypertrace.core.query.service.api.Filter.newBuilder()
+                    .setOperator(org.hypertrace.core.query.service.api.Operator.OR)
+                    .addChildFilter(
+                        QueryRequestUtil.createValueEQFilter(entityIdInteractionMappings, List.of("test_name1", "test_type1"))
+                    )
+                    .addChildFilter(
+                        QueryRequestUtil.createValueEQFilter(entityIdInteractionMappings, List.of("test_name2", "test_type2"))
+                    )
+            )
+            .addChildFilter(
+                org.hypertrace.core.query.service.api.Filter.newBuilder()
+                    .setOperator(org.hypertrace.core.query.service.api.Operator.AND)
+                    .addChildFilter(
+                        QueryRequestUtil.createColumnValueFilter(
+                            "INTERACTION.toServiceId",
+                            org.hypertrace.core.query.service.api.Operator.NEQ,
+                            "null")))
+            .build();
+    assertEquals(expectedFilter, filter);
+  }
+
+  private org.hypertrace.core.query.service.api.Filter createStringArrayFilter(
+      org.hypertrace.core.query.service.api.Operator operator,
+      String columnName,
+      List<String> valueList
+      ) {
+    return org.hypertrace.core.query.service.api.Filter.newBuilder()
+        .setOperator(operator)
+        .setLhs(
+            org.hypertrace.core.query.service.api.Expression.newBuilder()
+                .setColumnIdentifier(
+                    org.hypertrace.core.query.service.api.ColumnIdentifier.newBuilder()
+                        .setColumnName(columnName)
+                )
+        )
+        .setRhs(
+            org.hypertrace.core.query.service.api.Expression.newBuilder()
+                .setLiteral(
+                    org.hypertrace.core.query.service.api.LiteralConstant.newBuilder()
+                        .setValue(
+                            org.hypertrace.core.query.service.api.Value.newBuilder()
+                                .addAllStringArray(valueList)
+                                .setValueType(org.hypertrace.core.query.service.api.ValueType.STRING_ARRAY)
+                        )
+                )
+        ).build();
   }
 
   private org.hypertrace.core.query.service.api.Filter timeFilter(long start, long end) {
