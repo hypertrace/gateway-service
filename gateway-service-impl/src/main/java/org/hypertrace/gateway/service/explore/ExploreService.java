@@ -9,6 +9,8 @@ import org.hypertrace.core.query.service.client.QueryServiceClient;
 import org.hypertrace.core.serviceframework.metrics.PlatformMetricsRegistry;
 import org.hypertrace.gateway.service.common.AttributeMetadataProvider;
 import org.hypertrace.gateway.service.common.config.ScopeFilterConfigs;
+import org.hypertrace.gateway.service.common.transformer.RequestPreProcessor;
+import org.hypertrace.gateway.service.common.transformer.ResponsePostProcessor;
 import org.hypertrace.gateway.service.v1.explore.ExploreRequest;
 import org.hypertrace.gateway.service.v1.explore.ExploreResponse;
 
@@ -20,6 +22,9 @@ public class ExploreService {
   private final TimeAggregationsRequestHandler timeAggregationsRequestHandler;
   private final TimeAggregationsWithGroupByRequestHandler timeAggregationsWithGroupByRequestHandler;
   private final ScopeFilterConfigs scopeFilterConfigs;
+  // Request/Response transformers
+  private final RequestPreProcessor requestPreProcessor;
+  private final ResponsePostProcessor responsePostProcessor;
 
   private Timer queryExecutionTimer;
 
@@ -35,6 +40,8 @@ public class ExploreService {
         new TimeAggregationsWithGroupByRequestHandler(
             queryServiceClient, attributeMetadataProvider);
     this.scopeFilterConfigs = scopeFiltersConfig;
+    this.requestPreProcessor = new RequestPreProcessor(attributeMetadataProvider);
+    this.responsePostProcessor = new ResponsePostProcessor(attributeMetadataProvider);
     initMetrics();
   }
 
@@ -49,29 +56,34 @@ public class ExploreService {
     try {
       ExploreRequestContext exploreRequestContext =
           new ExploreRequestContext(tenantId, request, requestHeaders);
-      AttributeScope requestScope = AttributeScope.valueOf(request.getContext());
+      ExploreRequest preProcessedRequest = requestPreProcessor.transform(request, exploreRequestContext);
+      ExploreRequestContext preProcessedRequestContext = new ExploreRequestContext(tenantId, preProcessedRequest, requestHeaders);
+
+      AttributeScope requestScope = AttributeScope.valueOf(preProcessedRequest.getContext());
 
       // Add extra filters based on the scope.
-      request =
-          ExploreRequest.newBuilder(request)
+      preProcessedRequest =
+          ExploreRequest.newBuilder(preProcessedRequest)
               .setFilter(
                   scopeFilterConfigs.createScopeFilter(
                       requestScope,
-                      request.getFilter(),
+                      preProcessedRequest.getFilter(),
                       attributeMetadataProvider,
-                      exploreRequestContext))
+                      preProcessedRequestContext))
               .build();
       ExploreRequestContext newExploreRequestContext =
-          new ExploreRequestContext(tenantId, request, requestHeaders);
+          new ExploreRequestContext(tenantId, preProcessedRequest, requestHeaders);
 
       Map<String, AttributeMetadata> attributeMetadataMap =
           attributeMetadataProvider.getAttributesMetadata(newExploreRequestContext, requestScope);
-      exploreRequestValidator.validate(request, attributeMetadataMap);
+      exploreRequestValidator.validate(preProcessedRequest, attributeMetadataMap);
 
-      IRequestHandler requestHandler = getRequestHandler(request);
+      IRequestHandler requestHandler = getRequestHandler(preProcessedRequest);
 
       ExploreResponse.Builder responseBuilder =
           requestHandler.handleRequest(newExploreRequestContext, request);
+
+      responseBuilder = responsePostProcessor.transform(request, exploreRequestContext, responseBuilder);
       return responseBuilder.build();
     } finally {
       timerContext.stop();

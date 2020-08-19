@@ -39,6 +39,7 @@ import org.hypertrace.gateway.service.v1.common.TimeAggregation;
 import org.hypertrace.gateway.service.v1.common.Value;
 import org.hypertrace.gateway.service.v1.common.ValueType;
 import org.hypertrace.gateway.service.v1.entity.EntitiesRequest;
+import org.hypertrace.gateway.service.v1.explore.ExploreRequest;
 import org.hypertrace.gateway.service.v1.trace.TracesRequest;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -148,6 +149,39 @@ public class RequestPreProcessor {
     return tracesRequestBuilder.build();
   }
 
+  public ExploreRequest transform(ExploreRequest exploreRequest, RequestContext requestContext) {
+    Map<String, List<DomainObjectMapping>> attributeIdMappings =
+        AttributeMetadataUtil.getAttributeIdMappings(
+            attributeMetadataProvider, requestContext, exploreRequest.getContext());
+    if (attributeIdMappings.isEmpty()) {
+      return exploreRequest;
+    }
+
+    ExploreRequest.Builder exploreRequestBuilder = ExploreRequest.newBuilder(exploreRequest);
+    // Transform selections
+    exploreRequestBuilder.clearSelection();
+    exploreRequestBuilder.addAllSelection(transformSelection(attributeIdMappings,
+        exploreRequest.getSelectionList(), requestContext));
+    // Transform time aggregations
+    exploreRequestBuilder.clearTimeAggregation();
+    exploreRequestBuilder.addAllTimeAggregation(transformTimeAggregation(attributeIdMappings,
+        exploreRequest.getTimeAggregationList(), requestContext));
+    // Transform order bys
+    exploreRequestBuilder.clearOrderBy();
+    exploreRequestBuilder.addAllOrderBy(transformOrderBy(attributeIdMappings,
+        exploreRequest.getOrderByList(), requestContext));
+    // Transform group bys
+    exploreRequestBuilder.clearGroupBy();
+    exploreRequestBuilder.addAllGroupBy(transformSelection(attributeIdMappings,
+        exploreRequestBuilder.getGroupByList(), requestContext));
+    // Transform filter
+    Filter transformedFilter =
+        transformFilter(attributeIdMappings, exploreRequest.getFilter(), requestContext);
+    exploreRequestBuilder.setFilter(transformedFilter);
+
+    return exploreRequestBuilder.build();
+  }
+
   private boolean doesExpressionNeedRemapping(
       Map<String, List<DomainObjectMapping>> attributeIdMappings, Expression expression) {
     return expression.getValueCase() == ValueCase.COLUMNIDENTIFIER
@@ -163,7 +197,7 @@ public class RequestPreProcessor {
     for (Expression expression : expressions) {
       if (expression.getValueCase() == ValueCase.COLUMNIDENTIFIER) {
         transformedExpressions.addAll(
-            transformExpression(attributeIdMappings, expression, requestContext));
+            transformColumnExpression(attributeIdMappings, expression, requestContext));
       } else if (expression.getValueCase() == ValueCase.FUNCTION) {
         transformedExpressions.add(
             transformFunction(attributeIdMappings, expression, requestContext));
@@ -205,7 +239,7 @@ public class RequestPreProcessor {
 
     for (Expression argument : expressions) {
       List<Expression> transformedExpressions =
-          transformExpression(attributeIdMappings, argument, requestContext);
+          transformColumnExpression(attributeIdMappings, argument, requestContext);
       if (transformedExpressions.size() == 1) {
         builder.addArguments(transformedExpressions.get(0));
       } else {
@@ -237,7 +271,7 @@ public class RequestPreProcessor {
     return transformedAggregations;
   }
 
-  private List<Expression> transformExpression(
+  private List<Expression> transformColumnExpression(
       Map<String, List<DomainObjectMapping>> attributeIdMappings,
       Expression expression,
       RequestContext requestContext) {
@@ -267,7 +301,7 @@ public class RequestPreProcessor {
       Expression expression = orderByExpression.getExpression();
       if (expression.getValueCase() == ValueCase.COLUMNIDENTIFIER) {
         transformedExpressions.addAll(
-            transformExpression(attributeIdMappings, expression, requestContext).stream()
+            transformColumnExpression(attributeIdMappings, expression, requestContext).stream()
                 .map(
                     col ->
                         OrderByExpression.newBuilder(orderByExpression).setExpression(col).build())

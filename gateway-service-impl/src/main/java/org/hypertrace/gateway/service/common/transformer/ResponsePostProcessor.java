@@ -1,6 +1,7 @@
 package org.hypertrace.gateway.service.common.transformer;
 
 import com.google.common.collect.Sets;
+import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
@@ -14,11 +15,14 @@ import org.hypertrace.gateway.service.entity.EntityKey;
 import org.hypertrace.gateway.service.entity.config.DomainObjectMapping;
 import org.hypertrace.gateway.service.v1.common.Expression;
 import org.hypertrace.gateway.service.v1.common.Expression.ValueCase;
+import org.hypertrace.gateway.service.v1.common.Row;
 import org.hypertrace.gateway.service.v1.common.Value;
 import org.hypertrace.gateway.service.v1.common.ValueType;
 import org.hypertrace.gateway.service.v1.entity.EntitiesRequest;
 import org.hypertrace.gateway.service.v1.entity.EntitiesResponse;
 import org.hypertrace.gateway.service.v1.entity.Entity.Builder;
+import org.hypertrace.gateway.service.v1.explore.ExploreRequest;
+import org.hypertrace.gateway.service.v1.explore.ExploreResponse;
 import org.hypertrace.gateway.service.v1.trace.Trace;
 import org.hypertrace.gateway.service.v1.trace.TracesRequest;
 import org.hypertrace.gateway.service.v1.trace.TracesResponse;
@@ -126,6 +130,46 @@ public class ResponsePostProcessor {
     tracesBuilders.forEach(trace -> attributesToRemove.forEach(trace::removeAttributes));
 
     return responseBuilder;
+  }
+
+  public ExploreResponse.Builder transform(
+      ExploreRequest exploreRequest,
+      RequestContext requestContext,
+      ExploreResponse.Builder exploreResponseBuilder) {
+    Map<String, List<DomainObjectMapping>> attributeIdMappings =
+        AttributeMetadataUtil.getAttributeIdMappings(
+            attributeMetadataProvider, requestContext, exploreRequest.getContext());
+    if (attributeIdMappings.isEmpty()) {
+      return exploreResponseBuilder;
+    }
+
+    // Contains both columns in selection and group by
+    Set<String> selectedColumns = new HashSet<>();
+    selectedColumns.addAll(getSelectedColumns(exploreRequest.getSelectionList()));
+    selectedColumns.addAll(getSelectedColumns(exploreRequest.getGroupByList()));
+
+    Set<String> transformedColumns =
+        Sets.intersection(selectedColumns, attributeIdMappings.keySet());
+    List<Row.Builder> rowBuilders = exploreResponseBuilder.getRowBuilderList();
+
+    for (String column : transformedColumns) {
+      rowBuilders.forEach(
+          row ->
+              row.putColumns(
+                  column,
+                  buildEntityKeyValueForTransformedColumn(
+                      attributeIdMappings, column, row.getColumnsMap(), requestContext)));
+    }
+
+    // Remove any other attribute columns that were not part of the selection, but are present in
+    // the
+    // response because they were added by the PreProcessor
+    Set<String> transformedColumnSelections =
+        getTransformedColumns(attributeIdMappings, transformedColumns, requestContext);
+    Set<String> attributesToRemove = Sets.difference(transformedColumnSelections, selectedColumns);
+    rowBuilders.forEach(trace -> attributesToRemove.forEach(trace::removeColumns));
+
+    return exploreResponseBuilder;
   }
 
   private Set<String> getSelectedColumns(List<Expression> selections) {
