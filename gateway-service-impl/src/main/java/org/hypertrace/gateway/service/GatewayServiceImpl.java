@@ -40,30 +40,47 @@ public class GatewayServiceImpl extends GatewayServiceGrpc.GatewayServiceImplBas
 
   private static final Logger LOG = LoggerFactory.getLogger(GatewayServiceImpl.class);
 
+  private static final String QUERY_SERVICE_CONFIG_KEY = "query.service.config";
+  private static final String REQUEST_TIMEOUT_CONFIG_KEY = "request.timeout";
+  private static final int DEFAULT_REQUEST_TIMEOUT_MILLIS = 10000;
+
   private final TracesService traceService;
   private final SpanService spanService;
   private final EntityService entityService;
   private final ExploreService exploreService;
 
-  public GatewayServiceImpl(Config appConfig, Config qsConfig) {
+  public GatewayServiceImpl(Config appConfig) {
     AttributeServiceClientConfig asConfig = AttributeServiceClientConfig.from(appConfig);
     AttributeServiceClient asClient =
         new AttributeServiceClient(asConfig.getHost(), asConfig.getPort());
     AttributeMetadataProvider attributeMetadataProvider = new AttributeMetadataProvider(asClient);
 
-    QueryServiceClient queryServiceClient =
-        new QueryServiceClient(new QueryServiceConfig(qsConfig));
+    Config qsConfig = appConfig.getConfig(QUERY_SERVICE_CONFIG_KEY);
+    QueryServiceClient queryServiceClient = new QueryServiceClient(new QueryServiceConfig(qsConfig));
+    int qsRequestTimeout = getDefaultRequestTimeoutMillis(qsConfig);
+
     EntityQueryServiceClient eqsClient =
         new EntityQueryServiceClient(EntityServiceClientConfig.from(appConfig));
+
     ScopeFilterConfigs scopeFilterConfigs = new ScopeFilterConfigs(appConfig);
     LogConfig logConfig = new LogConfig(appConfig);
-    this.traceService =
-        new TracesService(queryServiceClient, attributeMetadataProvider, scopeFilterConfigs);
-    this.spanService = new SpanService(queryServiceClient, attributeMetadataProvider);
+    this.traceService = new TracesService(queryServiceClient, qsRequestTimeout,
+        attributeMetadataProvider, scopeFilterConfigs);
+    this.spanService = new SpanService(queryServiceClient, qsRequestTimeout,
+        attributeMetadataProvider);
     this.entityService =
-        new EntityService(queryServiceClient, eqsClient, attributeMetadataProvider, logConfig);
+        new EntityService(queryServiceClient, qsRequestTimeout,
+            eqsClient, attributeMetadataProvider, logConfig);
     this.exploreService =
-        new ExploreService(queryServiceClient, attributeMetadataProvider, scopeFilterConfigs);
+        new ExploreService(queryServiceClient, qsRequestTimeout,
+            attributeMetadataProvider, scopeFilterConfigs);
+  }
+
+  private static int getDefaultRequestTimeoutMillis(Config config) {
+    if (config.hasPath(REQUEST_TIMEOUT_CONFIG_KEY)) {
+      return config.getInt(REQUEST_TIMEOUT_CONFIG_KEY);
+    }
+    return DEFAULT_REQUEST_TIMEOUT_MILLIS;
   }
 
   @Override

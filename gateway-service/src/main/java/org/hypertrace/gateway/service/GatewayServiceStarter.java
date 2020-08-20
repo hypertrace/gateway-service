@@ -17,7 +17,6 @@ public class GatewayServiceStarter extends PlatformService {
   private static final Logger LOG = LoggerFactory.getLogger(GatewayServiceStarter.class);
   private static final String SERVICE_NAME_CONFIG = "service.name";
   private static final String SERVICE_PORT_CONFIG = "service.port";
-  private static final String QUERY_SERVICE_CONFIG = "query.service.config";
   private static final int DEFAULT_PORT = 50071;
 
   private String serviceName;
@@ -39,8 +38,7 @@ public class GatewayServiceStarter extends PlatformService {
     InteractionConfigs.init(getAppConfig());
     TimestampConfigs.init(getAppConfig());
 
-    GatewayServiceImpl ht =
-        new GatewayServiceImpl(getAppConfig(), getAppConfig().getConfig(QUERY_SERVICE_CONFIG));
+    GatewayServiceImpl ht = new GatewayServiceImpl(getAppConfig());
 
     server = ServerBuilder.forPort(port).addService(InterceptorUtil.wrapInterceptors(ht)).build();
   }

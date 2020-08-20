@@ -76,11 +76,13 @@ public class EntityInteractionsFetcher {
   private static final String COUNT_COLUMN_NAME = "Count";
 
   private final QueryServiceClient queryServiceClient;
+  private final int queryServiceRequestTimeout;
   private final AttributeMetadataProvider metadataProvider;
 
-  public EntityInteractionsFetcher(
-      QueryServiceClient queryServiceClient, AttributeMetadataProvider metadataProvider) {
+  public EntityInteractionsFetcher(QueryServiceClient queryServiceClient, int qsRequestTimeout,
+      AttributeMetadataProvider metadataProvider) {
     this.queryServiceClient = queryServiceClient;
+    this.queryServiceRequestTimeout = qsRequestTimeout;
     this.metadataProvider = metadataProvider;
   }
 
@@ -168,7 +170,8 @@ public class EntityInteractionsFetcher {
             interactionsRequest.getSelectionList());
     for (Map.Entry<String, QueryRequest> entry : requests.entrySet()) {
       Iterator<ResultSetChunk> resultSet =
-          queryServiceClient.executeQuery(entry.getValue(), context.getHeaders(), 5000);
+          queryServiceClient.executeQuery(entry.getValue(), context.getHeaders(),
+              queryServiceRequestTimeout);
       parseResultSet(
           request.getEntityType(),
           entry.getKey(),

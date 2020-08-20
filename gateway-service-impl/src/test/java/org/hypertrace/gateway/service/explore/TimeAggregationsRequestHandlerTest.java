@@ -62,7 +62,7 @@ public class TimeAggregationsRequestHandlerTest {
 
     TimeAggregationsRequestHandler requestHandler =
         new TimeAggregationsRequestHandler(
-            mock(QueryServiceClient.class), mock(AttributeMetadataProvider.class));
+            mock(QueryServiceClient.class), 500, mock(AttributeMetadataProvider.class));
 
     List<Row.Builder> sortedRows =
         requestHandler.sortAndPaginateRowBuilders(rowBuilders, orderByExpressions, 2, 0);
@@ -165,7 +165,7 @@ public class TimeAggregationsRequestHandlerTest {
 
     TimeAggregationsRequestHandler requestHandler =
         new TimeAggregationsRequestHandler(
-            mock(QueryServiceClient.class), mock(AttributeMetadataProvider.class));
+            mock(QueryServiceClient.class), 500, mock(AttributeMetadataProvider.class));
     List<OrderByExpression> orderByExpressions =
         requestHandler.getRequestOrderByExpressions(exploreRequest);
 

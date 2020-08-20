@@ -44,8 +44,8 @@ import org.slf4j.LoggerFactory;
  * <p>If there is any specific implementation for a specific Entity Type, this can be extended
  */
 public class EntityService {
-
   private static final Logger LOG = LoggerFactory.getLogger(EntityService.class);
+
   private static final UpdateEntityRequestValidator updateEntityRequestValidator =
       new UpdateEntityRequestValidator();
   private final AttributeMetadataProvider metadataProvider;
@@ -61,26 +61,27 @@ public class EntityService {
 
   public EntityService(
       QueryServiceClient qsClient,
-      EntityQueryServiceClient edsQueryServiceClient,
+      int qsRequestTimeout, EntityQueryServiceClient edsQueryServiceClient,
       AttributeMetadataProvider metadataProvider,
       LogConfig logConfig) {
     this.metadataProvider = metadataProvider;
-    this.interactionsFetcher = new EntityInteractionsFetcher(qsClient, metadataProvider);
+    this.interactionsFetcher = new EntityInteractionsFetcher(qsClient, qsRequestTimeout, metadataProvider);
     requestPreProcessor = new RequestPreProcessor(metadataProvider);
     responsePostProcessor = new ResponsePostProcessor(metadataProvider);
     edsEntityUpdater = new EdsEntityUpdater(edsQueryServiceClient);
     this.logConfig = logConfig;
 
-    registerEntityFetchers(qsClient, edsQueryServiceClient);
+    registerEntityFetchers(qsClient, qsRequestTimeout, edsQueryServiceClient);
     initMetrics();
   }
 
   private void registerEntityFetchers(
-      QueryServiceClient queryServiceClient, EntityQueryServiceClient edsQueryServiceClient) {
+      QueryServiceClient queryServiceClient, int qsRequestTimeout,
+      EntityQueryServiceClient edsQueryServiceClient) {
     EntityQueryHandlerRegistry registry = EntityQueryHandlerRegistry.get();
     registry.registerEntityFetcher(
         AttributeSource.QS.name(),
-        new QueryServiceEntityFetcher(queryServiceClient, metadataProvider));
+        new QueryServiceEntityFetcher(queryServiceClient, qsRequestTimeout, metadataProvider));
     registry.registerEntityFetcher(
         AttributeSource.EDS.name(),
         new EntityDataServiceEntityFetcher(edsQueryServiceClient, metadataProvider));

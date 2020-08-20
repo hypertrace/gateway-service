@@ -204,10 +204,8 @@ public class EntityServiceTest extends AbstractGatewayServiceTest {
             ).iterator()
         );
 
-    EntityService entityService = new EntityService(queryServiceClient,
-        entityQueryServiceClient,
-        attributeMetadataProvider,
-        logConfig);
+    EntityService entityService = new EntityService(queryServiceClient, 500,
+        entityQueryServiceClient, attributeMetadataProvider, logConfig);
     EntitiesResponse response = entityService.getEntities(TENANT_ID, entitiesRequest, Map.of());
     Assertions.assertNotNull(response);
     Assertions.assertEquals(mockTotal, response.getTotal());
@@ -242,10 +240,8 @@ public class EntityServiceTest extends AbstractGatewayServiceTest {
                         .addRow(generateEntityServiceRowFor("apiId2", "POST"))
                         .build())
                 .iterator());
-    EntityService entityService = new EntityService(queryServiceClient,
-            entityQueryServiceClient,
-            attributeMetadataProvider,
-            logConfig);
+    EntityService entityService = new EntityService(queryServiceClient, 500,
+        entityQueryServiceClient, attributeMetadataProvider, logConfig);
     EntitiesRequest entitiesRequest =
         EntitiesRequest.newBuilder()
             .setEntityType("API")
