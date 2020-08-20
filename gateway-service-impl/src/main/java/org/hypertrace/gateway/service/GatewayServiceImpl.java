@@ -57,7 +57,7 @@ public class GatewayServiceImpl extends GatewayServiceGrpc.GatewayServiceImplBas
 
     Config qsConfig = appConfig.getConfig(QUERY_SERVICE_CONFIG_KEY);
     QueryServiceClient queryServiceClient = new QueryServiceClient(new QueryServiceConfig(qsConfig));
-    int qsRequestTimeout = getDefaultRequestTimeoutMillis(qsConfig);
+    int qsRequestTimeout = getRequestTimeoutMillis(qsConfig);
 
     EntityQueryServiceClient eqsClient =
         new EntityQueryServiceClient(EntityServiceClientConfig.from(appConfig));
@@ -76,7 +76,7 @@ public class GatewayServiceImpl extends GatewayServiceGrpc.GatewayServiceImplBas
             attributeMetadataProvider, scopeFilterConfigs);
   }
 
-  private static int getDefaultRequestTimeoutMillis(Config config) {
+  private static int getRequestTimeoutMillis(Config config) {
     if (config.hasPath(REQUEST_TIMEOUT_CONFIG_KEY)) {
       return config.getInt(REQUEST_TIMEOUT_CONFIG_KEY);
     }

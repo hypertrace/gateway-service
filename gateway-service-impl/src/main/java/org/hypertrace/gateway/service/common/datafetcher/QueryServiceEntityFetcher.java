@@ -65,14 +65,14 @@ public class QueryServiceEntityFetcher implements IEntityFetcher {
 
   private final EntitiesRequestValidator entitiesRequestValidator = new EntitiesRequestValidator();
   private final QueryServiceClient queryServiceClient;
-  private final int queryServiceRequestTimeout;
+  private final int requestTimeout;
   private final AttributeMetadataProvider attributeMetadataProvider;
 
   public QueryServiceEntityFetcher(
       QueryServiceClient queryServiceClient, int qsRequestTimeout,
       AttributeMetadataProvider attributeMetadataProvider) {
     this.queryServiceClient = queryServiceClient;
-    this.queryServiceRequestTimeout = qsRequestTimeout;
+    this.requestTimeout = qsRequestTimeout;
     this.attributeMetadataProvider = attributeMetadataProvider;
   }
 
@@ -107,7 +107,7 @@ public class QueryServiceEntityFetcher implements IEntityFetcher {
 
     Iterator<ResultSetChunk> resultSetChunkIterator =
         queryServiceClient.executeQuery(queryRequest, requestContext.getHeaders(),
-            queryServiceRequestTimeout);
+            requestTimeout);
 
     // We want to retain the order as returned from the respective source. Hence using a
     // LinkedHashMap
@@ -197,7 +197,7 @@ public class QueryServiceEntityFetcher implements IEntityFetcher {
 
     Iterator<ResultSetChunk> resultSetChunkIterator =
         queryServiceClient.executeQuery(request, requestContext.getHeaders(),
-            queryServiceRequestTimeout);
+            requestTimeout);
 
     // We want to retain the order as returned from the respective source. Hence using a
     // LinkedHashMap
@@ -288,7 +288,7 @@ public class QueryServiceEntityFetcher implements IEntityFetcher {
     }
 
     Iterator<ResultSetChunk> resultSetChunkIterator =
-        queryServiceClient.executeQuery(queryRequest, requestContext.getHeaders(), queryServiceRequestTimeout);
+        queryServiceClient.executeQuery(queryRequest, requestContext.getHeaders(), requestTimeout);
 
     // We want to retain the order as returned from the respective source. Hence using a
     // LinkedHashMap
@@ -529,7 +529,7 @@ public class QueryServiceEntityFetcher implements IEntityFetcher {
       }
 
       Iterator<ResultSetChunk> resultSetChunkIterator =
-          queryServiceClient.executeQuery(request, requestContext.getHeaders(), queryServiceRequestTimeout);
+          queryServiceClient.executeQuery(request, requestContext.getHeaders(), requestTimeout);
 
       while (resultSetChunkIterator.hasNext()) {
         ResultSetChunk chunk = resultSetChunkIterator.next();
@@ -696,7 +696,7 @@ public class QueryServiceEntityFetcher implements IEntityFetcher {
     }
 
     Iterator<ResultSetChunk> resultSetChunkIterator =
-        queryServiceClient.executeQuery(queryRequest, requestContext.getHeaders(), queryServiceRequestTimeout);
+        queryServiceClient.executeQuery(queryRequest, requestContext.getHeaders(), requestTimeout);
 
     while (resultSetChunkIterator.hasNext()) {
       ResultSetChunk chunk = resultSetChunkIterator.next();
