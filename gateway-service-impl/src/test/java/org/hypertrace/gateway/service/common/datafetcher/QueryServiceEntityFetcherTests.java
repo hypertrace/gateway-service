@@ -69,7 +69,8 @@ public class QueryServiceEntityFetcherTests {
     attributeMetadataProvider = mock(AttributeMetadataProvider.class);
     mockAttributeMetadataProvider(AttributeScope.API);
     mockDomainObjectConfigs();
-    queryServiceEntityFetcher = new QueryServiceEntityFetcher(queryServiceClient, attributeMetadataProvider);
+    queryServiceEntityFetcher = new QueryServiceEntityFetcher(queryServiceClient, 500,
+        attributeMetadataProvider);
   }
 
   @AfterEach
@@ -168,7 +169,7 @@ public class QueryServiceEntityFetcherTests {
     );
     EntityFetcherResponse expectedEntityFetcherResponse = new EntityFetcherResponse(expectedEntityKeyBuilderResponseMap);
 
-    when(queryServiceClient.executeQuery(eq(expectedQueryRequest), eq(requestHeaders), eq(5000)))
+    when(queryServiceClient.executeQuery(eq(expectedQueryRequest), eq(requestHeaders), eq(500)))
         .thenReturn(resultSetChunks.iterator());
 
     compareEntityFetcherResponses(expectedEntityFetcherResponse,
@@ -230,7 +231,7 @@ public class QueryServiceEntityFetcherTests {
         getResultSetChunk(List.of("DISTINCTCOUNT_entityId_forTotal"), new String[][]{{Integer.toString(total)}})
     );
 
-    when(queryServiceClient.executeQuery(eq(expectedQueryRequest), eq(requestHeaders), eq(5000)))
+    when(queryServiceClient.executeQuery(eq(expectedQueryRequest), eq(requestHeaders), eq(500)))
         .thenReturn(resultSetChunks.iterator());
 
     assertEquals(total, queryServiceEntityFetcher.getTotalEntities(entitiesRequestContext, entitiesRequest));

@@ -35,14 +35,16 @@ import org.slf4j.LoggerFactory;
 
 public class RequestHandler implements RequestHandlerWithSorting {
   private static final Logger LOG = LoggerFactory.getLogger(RequestHandler.class);
-  private static final int QUERY_REQUEST_TIMEOUT = 10000;
   private final QueryServiceClient queryServiceClient;
+  private final int requestTimeout;
   private final AttributeMetadataProvider attributeMetadataProvider;
   private final TheRestGroupRequestHandler theRestGroupRequestHandler;
 
   RequestHandler(
-      QueryServiceClient queryServiceClient, AttributeMetadataProvider attributeMetadataProvider) {
+      QueryServiceClient queryServiceClient, int qsRequestTimeout,
+      AttributeMetadataProvider attributeMetadataProvider) {
     this.queryServiceClient = queryServiceClient;
+    this.requestTimeout = qsRequestTimeout;
     this.attributeMetadataProvider = attributeMetadataProvider;
     this.theRestGroupRequestHandler = new TheRestGroupRequestHandler(this);
   }
@@ -129,8 +131,7 @@ public class RequestHandler implements RequestHandlerWithSorting {
       }
     }
 
-    return queryServiceClient.executeQuery(
-        queryRequest, context.getHeaders(), QUERY_REQUEST_TIMEOUT);
+    return queryServiceClient.executeQuery(queryRequest, context.getHeaders(), requestTimeout);
   }
 
   Filter.Builder constructQueryServiceFilter(

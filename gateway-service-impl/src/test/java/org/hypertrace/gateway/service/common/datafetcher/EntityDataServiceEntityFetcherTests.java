@@ -21,8 +21,8 @@ public class EntityDataServiceEntityFetcherTests {
   public void setup() {
     entityQueryServiceClient = mock(EntityQueryServiceClient.class);
     attributeMetadataProvider = mock(AttributeMetadataProvider.class);
-    entityDataServiceEntityFetcher = new EntityDataServiceEntityFetcher(entityQueryServiceClient
-        , attributeMetadataProvider);
+    entityDataServiceEntityFetcher =
+        new EntityDataServiceEntityFetcher(entityQueryServiceClient, attributeMetadataProvider);
   }
 
   @Test

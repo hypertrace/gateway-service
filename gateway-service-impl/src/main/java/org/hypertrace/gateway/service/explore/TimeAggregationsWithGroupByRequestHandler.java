@@ -20,10 +20,12 @@ public class TimeAggregationsWithGroupByRequestHandler implements IRequestHandle
   private final TimeAggregationsRequestHandler timeAggregationsRequestHandler;
 
   TimeAggregationsWithGroupByRequestHandler(
-      QueryServiceClient queryServiceClient, AttributeMetadataProvider attributeMetadataProvider) {
-    this.normalRequestHandler = new RequestHandler(queryServiceClient, attributeMetadataProvider);
-    this.timeAggregationsRequestHandler =
-        new TimeAggregationsRequestHandler(queryServiceClient, attributeMetadataProvider);
+      QueryServiceClient queryServiceClient, int requestTimeout,
+      AttributeMetadataProvider attributeMetadataProvider) {
+    this.normalRequestHandler =
+        new RequestHandler(queryServiceClient, requestTimeout, attributeMetadataProvider);
+    this.timeAggregationsRequestHandler = new TimeAggregationsRequestHandler(
+        queryServiceClient, requestTimeout, attributeMetadataProvider);
   }
 
   @Override

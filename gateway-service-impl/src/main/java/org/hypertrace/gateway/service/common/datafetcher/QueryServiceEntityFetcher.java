@@ -65,11 +65,14 @@ public class QueryServiceEntityFetcher implements IEntityFetcher {
 
   private final EntitiesRequestValidator entitiesRequestValidator = new EntitiesRequestValidator();
   private final QueryServiceClient queryServiceClient;
+  private final int requestTimeout;
   private final AttributeMetadataProvider attributeMetadataProvider;
 
   public QueryServiceEntityFetcher(
-      QueryServiceClient queryServiceClient, AttributeMetadataProvider attributeMetadataProvider) {
+      QueryServiceClient queryServiceClient, int qsRequestTimeout,
+      AttributeMetadataProvider attributeMetadataProvider) {
     this.queryServiceClient = queryServiceClient;
+    this.requestTimeout = qsRequestTimeout;
     this.attributeMetadataProvider = attributeMetadataProvider;
   }
 
@@ -103,7 +106,8 @@ public class QueryServiceEntityFetcher implements IEntityFetcher {
     }
 
     Iterator<ResultSetChunk> resultSetChunkIterator =
-        queryServiceClient.executeQuery(queryRequest, requestContext.getHeaders(), 5000);
+        queryServiceClient.executeQuery(queryRequest, requestContext.getHeaders(),
+            requestTimeout);
 
     // We want to retain the order as returned from the respective source. Hence using a
     // LinkedHashMap
@@ -192,7 +196,8 @@ public class QueryServiceEntityFetcher implements IEntityFetcher {
     }
 
     Iterator<ResultSetChunk> resultSetChunkIterator =
-        queryServiceClient.executeQuery(request, requestContext.getHeaders(), 5000);
+        queryServiceClient.executeQuery(request, requestContext.getHeaders(),
+            requestTimeout);
 
     // We want to retain the order as returned from the respective source. Hence using a
     // LinkedHashMap
@@ -283,7 +288,7 @@ public class QueryServiceEntityFetcher implements IEntityFetcher {
     }
 
     Iterator<ResultSetChunk> resultSetChunkIterator =
-        queryServiceClient.executeQuery(queryRequest, requestContext.getHeaders(), 5000);
+        queryServiceClient.executeQuery(queryRequest, requestContext.getHeaders(), requestTimeout);
 
     // We want to retain the order as returned from the respective source. Hence using a
     // LinkedHashMap
@@ -524,7 +529,7 @@ public class QueryServiceEntityFetcher implements IEntityFetcher {
       }
 
       Iterator<ResultSetChunk> resultSetChunkIterator =
-          queryServiceClient.executeQuery(request, requestContext.getHeaders(), 5000);
+          queryServiceClient.executeQuery(request, requestContext.getHeaders(), requestTimeout);
 
       while (resultSetChunkIterator.hasNext()) {
         ResultSetChunk chunk = resultSetChunkIterator.next();
@@ -646,7 +651,7 @@ public class QueryServiceEntityFetcher implements IEntityFetcher {
     if (entityIdAttributes.size() == 1) {
       return getTotalEntitiesForSingleEntityId(entityIdAttributes.get(0), requestContext, entitiesRequest, attributeMetadataMap);
     } else {
-      return getTotalEntitiesForMultipleEntityId(entityIdAttributes, requestContext, entitiesRequest);
+      return getTotalEntitiesForMultipleEntityId(requestContext, entitiesRequest);
     }
   }
 
@@ -691,7 +696,7 @@ public class QueryServiceEntityFetcher implements IEntityFetcher {
     }
 
     Iterator<ResultSetChunk> resultSetChunkIterator =
-        queryServiceClient.executeQuery(queryRequest, requestContext.getHeaders(), 5000);
+        queryServiceClient.executeQuery(queryRequest, requestContext.getHeaders(), requestTimeout);
 
     while (resultSetChunkIterator.hasNext()) {
       ResultSetChunk chunk = resultSetChunkIterator.next();
@@ -735,9 +740,8 @@ public class QueryServiceEntityFetcher implements IEntityFetcher {
     return 0;
   }
 
-  private int getTotalEntitiesForMultipleEntityId(List<String> entityIdAttributes,
-                                                  EntitiesRequestContext requestContext,
-                                                  EntitiesRequest entitiesRequest) {
+  private int getTotalEntitiesForMultipleEntityId(EntitiesRequestContext requestContext,
+      EntitiesRequest entitiesRequest) {
     EntityFetcherResponse entityFetcherResponse = getEntities(
         requestContext,
         EntitiesRequest.newBuilder(entitiesRequest)

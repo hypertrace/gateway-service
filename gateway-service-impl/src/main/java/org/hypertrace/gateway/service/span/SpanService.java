@@ -8,7 +8,6 @@ import java.util.Collection;
 import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
-import java.util.concurrent.TimeUnit;
 import org.hypertrace.core.attribute.service.v1.AttributeMetadata;
 import org.hypertrace.core.attribute.service.v1.AttributeScope;
 import org.hypertrace.core.query.service.api.ColumnMetadata;
@@ -38,13 +37,16 @@ public class SpanService {
   private static final Logger LOG = LoggerFactory.getLogger(SpanService.class);
   private static final String SPAN_TIMESTAMP_ATTRIBUTE_NAME_KEY = "startTime";
   private final QueryServiceClient queryServiceClient;
+  private final int requestTimeout;
   private final AttributeMetadataProvider attributeMetadataProvider;
 
   private Timer queryExecutionTimer;
 
   public SpanService(
-      QueryServiceClient queryServiceClient, AttributeMetadataProvider attributeMetadataProvider) {
+      QueryServiceClient queryServiceClient, int requestTimeout,
+      AttributeMetadataProvider attributeMetadataProvider) {
     this.queryServiceClient = queryServiceClient;
+    this.requestTimeout = requestTimeout;
     this.attributeMetadataProvider = attributeMetadataProvider;
     initMetrics();
   }
@@ -108,7 +110,7 @@ public class SpanService {
     QueryRequest queryRequest = queryBuilder.build();
 
     Iterator<ResultSetChunk> resultSetChunkIterator =
-        queryServiceClient.executeQuery(queryRequest, context.getHeaders(), 5000);
+        queryServiceClient.executeQuery(queryRequest, context.getHeaders(), requestTimeout);
 
     while (resultSetChunkIterator.hasNext()) {
       ResultSetChunk chunk = resultSetChunkIterator.next();
@@ -188,7 +190,7 @@ public class SpanService {
     QueryRequest queryRequest = queryBuilder.build();
 
     Iterator<ResultSetChunk> resultSetChunkIterator =
-        queryServiceClient.executeQuery(queryRequest, context.getHeaders(), 5000);
+        queryServiceClient.executeQuery(queryRequest, context.getHeaders(), requestTimeout);
     while (resultSetChunkIterator.hasNext()) {
       ResultSetChunk chunk = resultSetChunkIterator.next();
       if (LOG.isDebugEnabled()) {
