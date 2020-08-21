@@ -54,7 +54,6 @@ public class TracesService {
   private final TracesRequestValidator requestValidator;
   private final RequestPreProcessor requestPreProcessor;
   private final ResponsePostProcessor responsePostProcessor;
-  private final ScopeFilterConfigs scopeFilterConfigs;
 
   private Timer queryExecutionTimer;
 
@@ -66,9 +65,9 @@ public class TracesService {
     this.queryServiceReqTimeout = qsRequestTimeout;
     this.attributeMetadataProvider = attributeMetadataProvider;
     this.requestValidator = new TracesRequestValidator();
-    this.requestPreProcessor = new RequestPreProcessor(attributeMetadataProvider);
+    this.requestPreProcessor = new RequestPreProcessor(attributeMetadataProvider,
+        scopeFilterConfigs);
     this.responsePostProcessor = new ResponsePostProcessor(attributeMetadataProvider);
-    this.scopeFilterConfigs = scopeFilterConfigs;
     initMetrics();
   }
 
@@ -80,27 +79,16 @@ public class TracesService {
   public TracesResponse getTracesByFilter(RequestContext context, TracesRequest request) {
     final Context timerContext = queryExecutionTimer.time();
     try {
+      requestValidator.validateScope(request);
+
       TracesRequest preProcessedRequest = requestPreProcessor.transform(request, context);
 
-      requestValidator.validateScope(preProcessedRequest);
       TraceScope scope = TraceScope.valueOf(preProcessedRequest.getScope());
-
       AttributeScope attributeScope = TraceScopeConverter.toAttributeScope(scope);
       Map<String, AttributeMetadata> attributeMap =
           attributeMetadataProvider.getAttributesMetadata(context, attributeScope);
 
       requestValidator.validate(preProcessedRequest, attributeMap);
-
-      // Add extra filters based on the scope
-      preProcessedRequest =
-          TracesRequest.newBuilder(preProcessedRequest)
-              .setFilter(
-                  scopeFilterConfigs.createScopeFilter(
-                      attributeScope,
-                      preProcessedRequest.getFilter(),
-                      attributeMetadataProvider,
-                      context))
-              .build();
 
       TracesResponse.Builder tracesResponseBuilder = TracesResponse.newBuilder();
       // filter traces
@@ -214,8 +202,7 @@ public class TracesService {
         try {
           total = Integer.parseInt(totalStr);
         } catch (NumberFormatException nfe) {
-          LOG.error(
-              "Unable to convert Total to a number. Received value: {} from Query Service",
+          LOG.error("Unable to convert Total to a number. Received value: {} from Query Service",
               totalStr);
         }
       }

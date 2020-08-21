@@ -70,7 +70,7 @@ public class GatewayServiceImpl extends GatewayServiceGrpc.GatewayServiceImplBas
         attributeMetadataProvider);
     this.entityService =
         new EntityService(queryServiceClient, qsRequestTimeout,
-            eqsClient, attributeMetadataProvider, logConfig);
+            eqsClient, attributeMetadataProvider, scopeFilterConfigs, logConfig);
     this.exploreService =
         new ExploreService(queryServiceClient, qsRequestTimeout,
             attributeMetadataProvider, scopeFilterConfigs);

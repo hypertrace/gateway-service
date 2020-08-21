@@ -16,6 +16,7 @@ import org.hypertrace.entity.query.service.client.EntityQueryServiceClient;
 import org.hypertrace.gateway.service.common.AttributeMetadataProvider;
 import org.hypertrace.gateway.service.common.OrderByPercentileSizeSetter;
 import org.hypertrace.gateway.service.common.RequestContext;
+import org.hypertrace.gateway.service.common.config.ScopeFilterConfigs;
 import org.hypertrace.gateway.service.common.datafetcher.EntityDataServiceEntityFetcher;
 import org.hypertrace.gateway.service.common.datafetcher.EntityFetcherResponse;
 import org.hypertrace.gateway.service.common.datafetcher.EntityInteractionsFetcher;
@@ -63,12 +64,13 @@ public class EntityService {
       QueryServiceClient qsClient,
       int qsRequestTimeout, EntityQueryServiceClient edsQueryServiceClient,
       AttributeMetadataProvider metadataProvider,
+      ScopeFilterConfigs scopeFilterConfigs,
       LogConfig logConfig) {
     this.metadataProvider = metadataProvider;
     this.interactionsFetcher = new EntityInteractionsFetcher(qsClient, qsRequestTimeout, metadataProvider);
-    requestPreProcessor = new RequestPreProcessor(metadataProvider);
-    responsePostProcessor = new ResponsePostProcessor(metadataProvider);
-    edsEntityUpdater = new EdsEntityUpdater(edsQueryServiceClient);
+    this.requestPreProcessor = new RequestPreProcessor(metadataProvider, scopeFilterConfigs);
+    this.responsePostProcessor = new ResponsePostProcessor(metadataProvider);
+    this.edsEntityUpdater = new EdsEntityUpdater(edsQueryServiceClient);
     this.logConfig = logConfig;
 
     registerEntityFetchers(qsClient, qsRequestTimeout, edsQueryServiceClient);

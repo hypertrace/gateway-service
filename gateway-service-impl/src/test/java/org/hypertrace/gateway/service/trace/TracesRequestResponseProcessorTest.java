@@ -17,6 +17,7 @@ import org.hypertrace.core.attribute.service.v1.AttributeSource;
 import org.hypertrace.core.attribute.service.v1.AttributeType;
 import org.hypertrace.gateway.service.common.AttributeMetadataProvider;
 import org.hypertrace.gateway.service.common.RequestContext;
+import org.hypertrace.gateway.service.common.config.ScopeFilterConfigs;
 import org.hypertrace.gateway.service.common.transformer.RequestPreProcessor;
 import org.hypertrace.gateway.service.common.transformer.ResponsePostProcessor;
 import org.hypertrace.gateway.service.common.util.QueryExpressionUtil;
@@ -54,7 +55,8 @@ public class TracesRequestResponseProcessorTest {
   public void setup() {
     mockAttributeMetadataProvider();
     mockDomainObjectConfigs();
-    requestPreProcessor = new RequestPreProcessor(attributeMetadataProvider);
+    requestPreProcessor = new RequestPreProcessor(attributeMetadataProvider,
+        new ScopeFilterConfigs(getScopeFiltersConfig()));
     responsePostProcessor = new ResponsePostProcessor(attributeMetadataProvider);
   }
 
@@ -89,11 +91,17 @@ public class TracesRequestResponseProcessorTest {
     Filter filter = transformedRequest.getFilter();
     Assertions.assertEquals(Operator.AND, filter.getOperator());
     Assertions.assertEquals(2, filter.getChildFilterCount());
-    List<Filter> childFilters =
-        List.of(
-            QueryExpressionUtil.getSimpleFilter("SERVICE.id", "name1").build(),
-            QueryExpressionUtil.getSimpleFilter("API.isExternal", "true").build());
-    Assertions.assertTrue(filter.getChildFilterList().containsAll(childFilters));
+    Filter childFilter1 = Filter.newBuilder().setOperator(Operator.AND)
+        .addChildFilter(QueryExpressionUtil.getSimpleFilter("SERVICE.id", "name1").build())
+        .addChildFilter(QueryExpressionUtil.getSimpleFilter("API.isExternal", "true").build())
+        .build();
+    Filter childFilter2 = Filter.newBuilder().setOperator(Operator.AND)
+        .addChildFilter(QueryExpressionUtil.getSimpleFilter("API_TRACE.apiBoundaryType", "ENTRY").build())
+        .addChildFilter(QueryExpressionUtil.getSimpleNeqFilter("API_TRACE.apiId", "null").build())
+        .build();
+    Filter expectedFilter = Filter.newBuilder().setOperator(Operator.AND)
+        .addChildFilter(childFilter1).addChildFilter(childFilter2).build();
+    Assertions.assertEquals(expectedFilter, filter);
   }
 
   @Test
@@ -165,6 +173,32 @@ public class TracesRequestResponseProcessorTest {
                     .setType(AttributeType.ATTRIBUTE)
                     .addSources(AttributeSource.QS)
                     .build()));
+    when(attributeMetadataProvider.getAttributeMetadata(
+        any(RequestContext.class), eq(AttributeScope.API_TRACE), eq("apiBoundaryType")))
+        .thenReturn(
+            Optional.of(
+                AttributeMetadata.newBuilder()
+                    .setScope(AttributeScope.API_TRACE)
+                    .setKey("apiBoundaryType")
+                    .setFqn("API_TRACE.apiBoundaryType")
+                    .setId("API_TRACE.apiBoundaryType")
+                    .setValueKind(AttributeKind.TYPE_STRING)
+                    .setType(AttributeType.ATTRIBUTE)
+                    .addSources(AttributeSource.QS)
+                    .build()));
+    when(attributeMetadataProvider.getAttributeMetadata(
+        any(RequestContext.class), eq(AttributeScope.API_TRACE), eq("apiId")))
+        .thenReturn(
+            Optional.of(
+                AttributeMetadata.newBuilder()
+                    .setScope(AttributeScope.API_TRACE)
+                    .setKey("apiId")
+                    .setFqn("API_TRACE.apiId")
+                    .setId("API_TRACE.apiId")
+                    .setValueKind(AttributeKind.TYPE_STRING)
+                    .setType(AttributeType.ATTRIBUTE)
+                    .addSources(AttributeSource.QS)
+                    .build()));
   }
 
   private void mockDomainObjectConfigs() {
@@ -188,5 +222,26 @@ public class TracesRequestResponseProcessorTest {
 
     Config config = ConfigFactory.parseString(domainObjectConfig);
     DomainObjectConfigs.init(config);
+  }
+
+  private Config getScopeFiltersConfig() {
+    String config = "{ scopeFiltersConfig = [\n"
+        + "  {\n"
+        + "    scope = API_TRACE\n"
+        + "    filters = [\n"
+        + "      {\n"
+        + "        key = apiBoundaryType\n"
+        + "        op = EQ\n"
+        + "        value = ENTRY\n"
+        + "      },\n"
+        + "      {\n"
+        + "        key = apiId\n"
+        + "        op = NEQ\n"
+        + "        value = \"null\"\n"
+        + "      }\n"
+        + "    ]\n"
+        + "  }\n"
+        + "]}\n";
+    return ConfigFactory.parseString(config);
   }
 }

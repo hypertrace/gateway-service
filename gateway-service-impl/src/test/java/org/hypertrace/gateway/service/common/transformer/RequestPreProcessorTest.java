@@ -13,6 +13,7 @@ import org.hypertrace.core.attribute.service.v1.AttributeKind;
 import org.hypertrace.core.attribute.service.v1.AttributeMetadata;
 import org.hypertrace.core.attribute.service.v1.AttributeScope;
 import org.hypertrace.gateway.service.common.AttributeMetadataProvider;
+import org.hypertrace.gateway.service.common.config.ScopeFilterConfigs;
 import org.hypertrace.gateway.service.common.util.QueryExpressionUtil;
 import org.hypertrace.gateway.service.entity.EntitiesRequestContext;
 import org.hypertrace.gateway.service.entity.config.DomainObjectConfigs;
@@ -41,7 +42,8 @@ public class RequestPreProcessorTest {
   @BeforeEach
   public void setup() {
     attributeMetadataProvider = mock(AttributeMetadataProvider.class);
-    requestPreProcessor = new RequestPreProcessor(attributeMetadataProvider);
+    requestPreProcessor = new RequestPreProcessor(attributeMetadataProvider,
+        new ScopeFilterConfigs(ConfigFactory.empty()));
   }
 
   @AfterEach
