@@ -72,6 +72,7 @@ public class ScopeFilterConfigs {
               .map(
                   (filterConfig) ->
                       new ScopeFilter<>(
+                          filterConfig.getString(SCOPE_CONFIG),
                           filterConfig.getString(FILTER_KEY_CONFIG),
                           Operator.valueOf(filterConfig.getString(FILTER_OPERATOR_CONFIG)),
                           filterConfig.getString(FILTER_VALUE_CONFIG)))
@@ -119,7 +120,6 @@ public class ScopeFilterConfigs {
             (scopeFilter ->
                 filterBuilder.addChildFilter(
                     createScopeChildFilter(
-                        scopeFilterConfig.getScope(),
                         scopeFilter,
                         attributeMetadataProvider,
                         requestContext))));
@@ -128,13 +128,12 @@ public class ScopeFilterConfigs {
   }
 
   private Filter.Builder createScopeChildFilter(
-      AttributeScope scope,
       ScopeFilter scopeFilter,
       AttributeMetadataProvider attributeMetadataProvider,
       RequestContext requestContext) {
     AttributeMetadata attributeMetadata =
-        attributeMetadataProvider
-            .getAttributeMetadata(requestContext, scope, scopeFilter.getKey())
+        attributeMetadataProvider.getAttributeMetadata(
+            requestContext, AttributeScope.valueOf(scopeFilter.getScope()), scopeFilter.getKey())
             .orElseThrow();
     return Filter.newBuilder()
         .setLhs(

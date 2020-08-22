@@ -32,6 +32,7 @@ import org.hypertrace.entity.query.service.client.EntityQueryServiceClient;
 import org.hypertrace.gateway.service.AbstractGatewayServiceTest;
 import org.hypertrace.gateway.service.common.AttributeMetadataProvider;
 import org.hypertrace.gateway.service.common.RequestContext;
+import org.hypertrace.gateway.service.common.config.ScopeFilterConfigs;
 import org.hypertrace.gateway.service.entity.config.DomainObjectConfigs;
 import org.hypertrace.gateway.service.entity.config.LogConfig;
 import org.hypertrace.gateway.service.v1.common.ColumnIdentifier;
@@ -205,8 +206,9 @@ public class EntityServiceTest extends AbstractGatewayServiceTest {
         .thenReturn(List.of(
             getResultSetChunk(List.of("API.apiId"), new String[][]{ {"apiId1"}, {"apiId2"}})).iterator());
 
+    ScopeFilterConfigs scopeFilterConfigs = new ScopeFilterConfigs(ConfigFactory.empty());
     EntityService entityService = new EntityService(queryServiceClient, 500,
-        entityQueryServiceClient, attributeMetadataProvider, logConfig);
+        entityQueryServiceClient, attributeMetadataProvider, scopeFilterConfigs, logConfig);
     EntitiesResponse response = entityService.getEntities(TENANT_ID, entitiesRequest, Map.of());
     Assertions.assertNotNull(response);
     Assertions.assertEquals(2, response.getTotal());
@@ -241,8 +243,9 @@ public class EntityServiceTest extends AbstractGatewayServiceTest {
                         .addRow(generateEntityServiceRowFor("apiId2", "POST"))
                         .build())
                 .iterator());
+    ScopeFilterConfigs scopeFilterConfigs = new ScopeFilterConfigs(ConfigFactory.empty());
     EntityService entityService = new EntityService(queryServiceClient, 500,
-        entityQueryServiceClient, attributeMetadataProvider, logConfig);
+        entityQueryServiceClient, attributeMetadataProvider, scopeFilterConfigs, logConfig);
     EntitiesRequest entitiesRequest =
         EntitiesRequest.newBuilder()
             .setEntityType("API")

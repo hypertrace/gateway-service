@@ -5,6 +5,7 @@ import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.when;
 
+import com.typesafe.config.ConfigFactory;
 import java.util.List;
 import java.util.Optional;
 import java.util.stream.Collectors;
@@ -14,6 +15,7 @@ import org.hypertrace.core.attribute.service.v1.AttributeScope;
 import org.hypertrace.core.attribute.service.v1.AttributeSource;
 import org.hypertrace.core.attribute.service.v1.AttributeType;
 import org.hypertrace.gateway.service.common.AttributeMetadataProvider;
+import org.hypertrace.gateway.service.common.config.ScopeFilterConfigs;
 import org.hypertrace.gateway.service.common.transformer.RequestPreProcessor;
 import org.hypertrace.gateway.service.common.transformer.ResponsePostProcessor;
 import org.hypertrace.gateway.service.common.util.QueryExpressionUtil;
@@ -56,7 +58,8 @@ public class EntitiesRequestResponseProcessorTest {
   @BeforeEach
   public void setup() {
     mockAttributeMetadataProvider();
-    requestPreProcessor = new RequestPreProcessor(attributeMetadataProvider);
+    requestPreProcessor = new RequestPreProcessor(attributeMetadataProvider,
+        new ScopeFilterConfigs(ConfigFactory.empty()));
     responsePostProcessor = new ResponsePostProcessor(attributeMetadataProvider);
   }
 
