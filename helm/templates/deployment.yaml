@@ -22,6 +22,9 @@ spec:
         prometheus.io/scrape: "true"
         prometheus.io/port: "{{ .Values.containerAdminPort }}"
         checksum/config: {{ include (print $.Template.BasePath "/configmap.yaml") . | sha256sum }}
+      {{- with .Values.podAnnotations }}
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
       labels:
         release: {{ .Release.Name }}
       {{- with .Values.podLabels }}
