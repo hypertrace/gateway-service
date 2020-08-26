@@ -46,6 +46,8 @@ deploymentLabels:
 podLabels:
   app: gateway-service
 
+podAnnotations: {}
+
 deploymentSelectorMatchLabels:
   app: gateway-service
 
