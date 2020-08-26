@@ -49,24 +49,25 @@ public class TracesService {
   private static final String START_TIMESTAMP_KEY_NAME = "startTime";
 
   private final QueryServiceClient queryServiceClient;
+  private final int queryServiceReqTimeout;
   private final AttributeMetadataProvider attributeMetadataProvider;
   private final TracesRequestValidator requestValidator;
   private final RequestPreProcessor requestPreProcessor;
   private final ResponsePostProcessor responsePostProcessor;
-  private final ScopeFilterConfigs scopeFilterConfigs;
 
   private Timer queryExecutionTimer;
 
   public TracesService(
       QueryServiceClient queryServiceClient,
-      AttributeMetadataProvider attributeMetadataProvider,
+      int qsRequestTimeout, AttributeMetadataProvider attributeMetadataProvider,
       ScopeFilterConfigs scopeFilterConfigs) {
     this.queryServiceClient = queryServiceClient;
+    this.queryServiceReqTimeout = qsRequestTimeout;
     this.attributeMetadataProvider = attributeMetadataProvider;
     this.requestValidator = new TracesRequestValidator();
-    this.requestPreProcessor = new RequestPreProcessor(attributeMetadataProvider);
+    this.requestPreProcessor = new RequestPreProcessor(attributeMetadataProvider,
+        scopeFilterConfigs);
     this.responsePostProcessor = new ResponsePostProcessor(attributeMetadataProvider);
-    this.scopeFilterConfigs = scopeFilterConfigs;
     initMetrics();
   }
 
@@ -78,27 +79,16 @@ public class TracesService {
   public TracesResponse getTracesByFilter(RequestContext context, TracesRequest request) {
     final Context timerContext = queryExecutionTimer.time();
     try {
+      requestValidator.validateScope(request);
+
       TracesRequest preProcessedRequest = requestPreProcessor.transform(request, context);
 
-      requestValidator.validateScope(preProcessedRequest);
       TraceScope scope = TraceScope.valueOf(preProcessedRequest.getScope());
-
       AttributeScope attributeScope = TraceScopeConverter.toAttributeScope(scope);
       Map<String, AttributeMetadata> attributeMap =
           attributeMetadataProvider.getAttributesMetadata(context, attributeScope);
 
       requestValidator.validate(preProcessedRequest, attributeMap);
-
-      // Add extra filters based on the scope
-      preProcessedRequest =
-          TracesRequest.newBuilder(preProcessedRequest)
-              .setFilter(
-                  scopeFilterConfigs.createScopeFilter(
-                      attributeScope,
-                      preProcessedRequest.getFilter(),
-                      attributeMetadataProvider,
-                      context))
-              .build();
 
       TracesResponse.Builder tracesResponseBuilder = TracesResponse.newBuilder();
       // filter traces
@@ -145,7 +135,7 @@ public class TracesService {
     List<Trace> tracesResult = new ArrayList<>();
     QueryRequest queryRequest = builder.build();
     Iterator<ResultSetChunk> resultSetChunkIterator =
-        queryServiceClient.executeQuery(queryRequest, context.getHeaders(), 5000);
+        queryServiceClient.executeQuery(queryRequest, context.getHeaders(), queryServiceReqTimeout);
 
     // form the result
     while (resultSetChunkIterator.hasNext()) {
@@ -187,7 +177,7 @@ public class TracesService {
     queryBuilder.addSelection(QueryRequestUtil.createCountByColumnSelection(columnName));
     QueryRequest queryRequest = queryBuilder.build();
     Iterator<ResultSetChunk> resultSetChunkIterator =
-        queryServiceClient.executeQuery(queryRequest, context.getHeaders(), 5000);
+        queryServiceClient.executeQuery(queryRequest, context.getHeaders(), queryServiceReqTimeout);
     while (resultSetChunkIterator.hasNext()) {
       ResultSetChunk chunk = resultSetChunkIterator.next();
       if (LOG.isDebugEnabled()) {
@@ -212,8 +202,7 @@ public class TracesService {
         try {
           total = Integer.parseInt(totalStr);
         } catch (NumberFormatException nfe) {
-          LOG.error(
-              "Unable to convert Total to a number. Received value: {} from Query Service",
+          LOG.error("Unable to convert Total to a number. Received value: {} from Query Service",
               totalStr);
         }
       }

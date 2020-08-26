@@ -22,12 +22,15 @@ import org.hypertrace.core.attribute.service.v1.AttributeMetadata;
 import org.hypertrace.core.attribute.service.v1.AttributeScope;
 import org.hypertrace.gateway.service.common.AttributeMetadataProvider;
 import org.hypertrace.gateway.service.common.RequestContext;
+import org.hypertrace.gateway.service.common.config.ScopeFilterConfigs;
 import org.hypertrace.gateway.service.common.util.AttributeMetadataUtil;
 import org.hypertrace.gateway.service.common.util.QueryExpressionUtil;
 import org.hypertrace.gateway.service.entity.EntitiesRequestContext;
 import org.hypertrace.gateway.service.entity.EntityKey;
 import org.hypertrace.gateway.service.entity.config.DomainObjectFilter;
 import org.hypertrace.gateway.service.entity.config.DomainObjectMapping;
+import org.hypertrace.gateway.service.trace.TraceScope;
+import org.hypertrace.gateway.service.trace.TraceScopeConverter;
 import org.hypertrace.gateway.service.v1.common.Expression;
 import org.hypertrace.gateway.service.v1.common.Expression.ValueCase;
 import org.hypertrace.gateway.service.v1.common.Filter;
@@ -54,9 +57,12 @@ public class RequestPreProcessor {
 
   private static final Logger LOGGER = LoggerFactory.getLogger(RequestPreProcessor.class);
   private final AttributeMetadataProvider attributeMetadataProvider;
+  private final ScopeFilterConfigs scopeFilterConfigs;
 
-  public RequestPreProcessor(AttributeMetadataProvider attributeMetadataProvider) {
+  public RequestPreProcessor(AttributeMetadataProvider attributeMetadataProvider,
+      ScopeFilterConfigs scopeFilterConfigs) {
     this.attributeMetadataProvider = attributeMetadataProvider;
+    this.scopeFilterConfigs = scopeFilterConfigs;
   }
 
   /**
@@ -103,7 +109,16 @@ public class RequestPreProcessor {
         injectIdFilter(attributeIdMappings, originalRequest.getSelectionList(), context);
     Filter transformedFilter =
         transformFilter(attributeIdMappings, originalRequest.getFilter(), context);
-    entitiesRequestBuilder.setFilter(mergeFilters(filterToInject, transformedFilter));
+    Filter filter = mergeFilters(filterToInject, transformedFilter);
+
+    // Apply the scope filter at the end.
+    filter = scopeFilterConfigs.createScopeFilter(
+            AttributeScope.valueOf(originalRequest.getEntityType()),
+            filter,
+            attributeMetadataProvider,
+            context);
+
+    entitiesRequestBuilder.setFilter(filter);
 
     return entitiesRequestBuilder.build();
   }
@@ -143,7 +158,15 @@ public class RequestPreProcessor {
         injectIdFilter(attributeIdMappings, originalRequest.getSelectionList(), requestContext);
     Filter transformedFilter =
         transformFilter(attributeIdMappings, originalRequest.getFilter(), requestContext);
-    tracesRequestBuilder.setFilter(mergeFilters(filterToInject, transformedFilter));
+    Filter filter = mergeFilters(filterToInject, transformedFilter);
+
+    TraceScope scope = TraceScope.valueOf(originalRequest.getScope());
+    filter = scopeFilterConfigs.createScopeFilter(
+            TraceScopeConverter.toAttributeScope(scope),
+            filter,
+            attributeMetadataProvider,
+            requestContext);
+    tracesRequestBuilder.setFilter(filter);
 
     return tracesRequestBuilder.build();
   }

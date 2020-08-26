@@ -30,8 +30,9 @@ public class TimeAggregationsRequestHandler extends RequestHandler {
   private static final Logger LOG = LoggerFactory.getLogger(TimeAggregationsRequestHandler.class);
 
   TimeAggregationsRequestHandler(
-      QueryServiceClient queryServiceClient, AttributeMetadataProvider attributeMetadataProvider) {
-    super(queryServiceClient, attributeMetadataProvider);
+      QueryServiceClient queryServiceClient, int qsRequestTimeout,
+      AttributeMetadataProvider attributeMetadataProvider) {
+    super(queryServiceClient, qsRequestTimeout, attributeMetadataProvider);
   }
 
   @Override

@@ -37,9 +37,7 @@ import org.hypertrace.gateway.service.entity.EntitiesRequestContext;
 import org.hypertrace.gateway.service.entity.EntitiesRequestValidator;
 import org.hypertrace.gateway.service.entity.EntityKey;
 import org.hypertrace.gateway.service.v1.common.AggregatedMetricValue;
-import org.hypertrace.gateway.service.v1.common.ColumnIdentifier;
 import org.hypertrace.gateway.service.v1.common.Expression.ValueCase;
-import org.hypertrace.gateway.service.v1.common.FunctionExpression;
 import org.hypertrace.gateway.service.v1.common.FunctionType;
 import org.hypertrace.gateway.service.v1.common.Health;
 import org.hypertrace.gateway.service.v1.common.Interval;
@@ -65,11 +63,14 @@ public class QueryServiceEntityFetcher implements IEntityFetcher {
 
   private final EntitiesRequestValidator entitiesRequestValidator = new EntitiesRequestValidator();
   private final QueryServiceClient queryServiceClient;
+  private final int requestTimeout;
   private final AttributeMetadataProvider attributeMetadataProvider;
 
   public QueryServiceEntityFetcher(
-      QueryServiceClient queryServiceClient, AttributeMetadataProvider attributeMetadataProvider) {
+      QueryServiceClient queryServiceClient, int qsRequestTimeout,
+      AttributeMetadataProvider attributeMetadataProvider) {
     this.queryServiceClient = queryServiceClient;
+    this.requestTimeout = qsRequestTimeout;
     this.attributeMetadataProvider = attributeMetadataProvider;
   }
 
@@ -103,7 +104,8 @@ public class QueryServiceEntityFetcher implements IEntityFetcher {
     }
 
     Iterator<ResultSetChunk> resultSetChunkIterator =
-        queryServiceClient.executeQuery(queryRequest, requestContext.getHeaders(), 5000);
+        queryServiceClient.executeQuery(queryRequest, requestContext.getHeaders(),
+            requestTimeout);
 
     // We want to retain the order as returned from the respective source. Hence using a
     // LinkedHashMap
@@ -192,7 +194,8 @@ public class QueryServiceEntityFetcher implements IEntityFetcher {
     }
 
     Iterator<ResultSetChunk> resultSetChunkIterator =
-        queryServiceClient.executeQuery(request, requestContext.getHeaders(), 5000);
+        queryServiceClient.executeQuery(request, requestContext.getHeaders(),
+            requestTimeout);
 
     // We want to retain the order as returned from the respective source. Hence using a
     // LinkedHashMap
@@ -283,7 +286,7 @@ public class QueryServiceEntityFetcher implements IEntityFetcher {
     }
 
     Iterator<ResultSetChunk> resultSetChunkIterator =
-        queryServiceClient.executeQuery(queryRequest, requestContext.getHeaders(), 5000);
+        queryServiceClient.executeQuery(queryRequest, requestContext.getHeaders(), requestTimeout);
 
     // We want to retain the order as returned from the respective source. Hence using a
     // LinkedHashMap
@@ -524,7 +527,7 @@ public class QueryServiceEntityFetcher implements IEntityFetcher {
       }
 
       Iterator<ResultSetChunk> resultSetChunkIterator =
-          queryServiceClient.executeQuery(request, requestContext.getHeaders(), 5000);
+          queryServiceClient.executeQuery(request, requestContext.getHeaders(), requestTimeout);
 
       while (resultSetChunkIterator.hasNext()) {
         ResultSetChunk chunk = resultSetChunkIterator.next();
@@ -638,106 +641,11 @@ public class QueryServiceEntityFetcher implements IEntityFetcher {
             requestContext, AttributeScope.valueOf(entitiesRequest.getEntityType()));
     // Validate EntitiesRequest
     entitiesRequestValidator.validate(entitiesRequest, attributeMetadataMap);
-
-    List<String> entityIdAttributes =
-        AttributeMetadataUtil.getIdAttributeIds(
-            attributeMetadataProvider, requestContext, entitiesRequest.getEntityType());
-
-    if (entityIdAttributes.size() == 1) {
-      return getTotalEntitiesForSingleEntityId(entityIdAttributes.get(0), requestContext, entitiesRequest, attributeMetadataMap);
-    } else {
-      return getTotalEntitiesForMultipleEntityId(entityIdAttributes, requestContext, entitiesRequest);
-    }
+    return getTotalEntitiesForMultipleEntityId(requestContext, entitiesRequest);
   }
 
-  private int getTotalEntitiesForSingleEntityId(String entityIdAttribute,
-                                                EntitiesRequestContext requestContext,
-                                                EntitiesRequest entitiesRequest,
-                                                Map<String, AttributeMetadata> attributeMetadataMap) {
-    Filter.Builder filterBuilder =
-        constructQueryServiceFilter(entitiesRequest, requestContext, List.of(entityIdAttribute));
-
-    String alias = FunctionType.DISTINCTCOUNT + "_entityId_forTotal";
-    org.hypertrace.gateway.service.v1.common.Expression distinctCountExpression = org.hypertrace.gateway.service.v1.common.Expression.newBuilder()
-        .setFunction(
-            FunctionExpression.newBuilder()
-                .setFunction(FunctionType.DISTINCTCOUNT)
-                .addArguments(
-                    org.hypertrace.gateway.service.v1.common.Expression.newBuilder()
-                        .setColumnIdentifier(
-                            ColumnIdentifier.newBuilder()
-                                .setColumnName(entityIdAttribute)
-                                .build()
-                        )
-                        .build()
-                )
-                .setAlias(alias)
-                .build()
-        )
-        .build();
-    requestContext.mapAliasToFunctionExpression(alias, distinctCountExpression.getFunction());
-
-    QueryRequest.Builder builder =
-        QueryRequest.newBuilder()
-            .setFilter(filterBuilder)
-            .addAggregation(QueryAndGatewayDtoConverter.convertToQueryExpression(distinctCountExpression))
-            .setOffset(0)
-            .setLimit(1);
-
-    QueryRequest queryRequest = builder.build();
-
-    if (LOG.isDebugEnabled()) {
-      LOG.debug("Sending Query to Query Service ======== \n {}", queryRequest);
-    }
-
-    Iterator<ResultSetChunk> resultSetChunkIterator =
-        queryServiceClient.executeQuery(queryRequest, requestContext.getHeaders(), 5000);
-
-    while (resultSetChunkIterator.hasNext()) {
-      ResultSetChunk chunk = resultSetChunkIterator.next();
-      if (LOG.isDebugEnabled()) {
-        LOG.debug("Received chunk: " + chunk.toString());
-      }
-
-      if (chunk.getRowCount() < 1) {
-        LOG.warn("Empty row count for entities total.");
-        break;
-      }
-
-      if (!chunk.hasResultSetMetadata()) {
-        LOG.warn("Chunk doesn't have result metadata so couldn't process the response.");
-        break;
-      }
-
-      for (Row row : chunk.getRowList()) {
-        if (row.getColumnCount() != 1) {
-          LOG.warn("Queried for one column DISTINCTCOUNT but got multiple values");
-          return 0;
-        }
-
-        ColumnMetadata metadata = chunk.getResultSetMetadata().getColumnMetadata(0);
-        org.hypertrace.core.query.service.api.Value columnValue = row.getColumn(0);
-        Value gwValue =
-            QueryAndGatewayDtoConverter.convertToGatewayValueForMetricValue(
-                MetricAggregationFunctionUtil.getValueTypeFromFunction(
-                    distinctCountExpression.getFunction(), attributeMetadataMap),
-                attributeMetadataMap,
-                metadata,
-                columnValue);
-
-        if (gwValue.getValueType() == ValueType.LONG) {
-          return (int)gwValue.getLong();
-        }
-
-        LOG.warn("Non long value for DISTINCTCOUNT");
-      }
-    }
-    return 0;
-  }
-
-  private int getTotalEntitiesForMultipleEntityId(List<String> entityIdAttributes,
-                                                  EntitiesRequestContext requestContext,
-                                                  EntitiesRequest entitiesRequest) {
+  private int getTotalEntitiesForMultipleEntityId(EntitiesRequestContext requestContext,
+      EntitiesRequest entitiesRequest) {
     EntityFetcherResponse entityFetcherResponse = getEntities(
         requestContext,
         EntitiesRequest.newBuilder(entitiesRequest)

@@ -69,7 +69,8 @@ public class QueryServiceEntityFetcherTests {
     attributeMetadataProvider = mock(AttributeMetadataProvider.class);
     mockAttributeMetadataProvider(AttributeScope.API);
     mockDomainObjectConfigs();
-    queryServiceEntityFetcher = new QueryServiceEntityFetcher(queryServiceClient, attributeMetadataProvider);
+    queryServiceEntityFetcher = new QueryServiceEntityFetcher(queryServiceClient, 500,
+        attributeMetadataProvider);
   }
 
   @AfterEach
@@ -168,7 +169,7 @@ public class QueryServiceEntityFetcherTests {
     );
     EntityFetcherResponse expectedEntityFetcherResponse = new EntityFetcherResponse(expectedEntityKeyBuilderResponseMap);
 
-    when(queryServiceClient.executeQuery(eq(expectedQueryRequest), eq(requestHeaders), eq(5000)))
+    when(queryServiceClient.executeQuery(eq(expectedQueryRequest), eq(requestHeaders), eq(500)))
         .thenReturn(resultSetChunks.iterator());
 
     compareEntityFetcherResponses(expectedEntityFetcherResponse,
@@ -205,9 +206,9 @@ public class QueryServiceEntityFetcherTests {
         entityType.name(),
         requestHeaders);
 
-    int total = 5;
     QueryRequest expectedQueryRequest = QueryRequest.newBuilder()
-        .addAggregation(createQsAggregationExpression("DISTINCTCOUNT", "API.id", "DISTINCTCOUNT_entityId_forTotal"))
+        .addSelection(createQsColumnExpression(API_ID_ATTR))
+        .addSelection(createQsAggregationExpression("Count", API_ID_ATTR))
         .setFilter(
             createQsRequestFilter(
                 API_START_TIME_ATTR,
@@ -221,19 +222,17 @@ public class QueryServiceEntityFetcherTests {
                 )
             )
         )
-        .setOffset(0)
-        .setLimit(1)
+        .addGroupBy(createQsColumnExpression(API_ID_ATTR))
+        .setLimit(QueryServiceClient.DEFAULT_QUERY_SERVICE_GROUP_BY_LIMIT)
         .build();
 
+    List<ResultSetChunk> resultSetChunks =
+        List.of(getResultSetChunk(List.of("API.apiId"), new String[][]{ {"apiId1"}, {"apiId2"}}));
 
-    List<ResultSetChunk> resultSetChunks = List.of(
-        getResultSetChunk(List.of("DISTINCTCOUNT_entityId_forTotal"), new String[][]{{Integer.toString(total)}})
-    );
-
-    when(queryServiceClient.executeQuery(eq(expectedQueryRequest), eq(requestHeaders), eq(5000)))
+    when(queryServiceClient.executeQuery(eq(expectedQueryRequest), eq(requestHeaders), eq(500)))
         .thenReturn(resultSetChunks.iterator());
 
-    assertEquals(total, queryServiceEntityFetcher.getTotalEntities(entitiesRequestContext, entitiesRequest));
+    assertEquals(2, queryServiceEntityFetcher.getTotalEntities(entitiesRequestContext, entitiesRequest));
   }
 
   private void mockAttributeMetadataProvider(AttributeScope attributeScope) {

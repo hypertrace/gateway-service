@@ -74,7 +74,7 @@ public class RequestHandlerTest {
             .build();
 
     RequestHandler requestHandler =
-        new RequestHandler(mock(QueryServiceClient.class), mock(AttributeMetadataProvider.class));
+        new RequestHandler(mock(QueryServiceClient.class), 500, mock(AttributeMetadataProvider.class));
     List<OrderByExpression> orderByExpressions =
         requestHandler.getRequestOrderByExpressions(exploreRequest);
 
@@ -150,7 +150,7 @@ public class RequestHandlerTest {
             .build();
 
     RequestHandler requestHandler =
-        new RequestHandler(mock(QueryServiceClient.class), mock(AttributeMetadataProvider.class));
+        new RequestHandler(mock(QueryServiceClient.class), 500, mock(AttributeMetadataProvider.class));
     List<OrderByExpression> orderByExpressions =
         requestHandler.getRequestOrderByExpressions(exploreRequest);
 
@@ -226,7 +226,7 @@ public class RequestHandlerTest {
             .build();
 
     RequestHandler requestHandler =
-        new RequestHandler(mock(QueryServiceClient.class), mock(AttributeMetadataProvider.class));
+        new RequestHandler(mock(QueryServiceClient.class), 500, mock(AttributeMetadataProvider.class));
     List<OrderByExpression> orderByExpressions =
         requestHandler.getRequestOrderByExpressions(exploreRequest);
 
@@ -297,7 +297,7 @@ public class RequestHandlerTest {
             .build();
 
     RequestHandler requestHandler =
-        new RequestHandler(mock(QueryServiceClient.class), mock(AttributeMetadataProvider.class));
+        new RequestHandler(mock(QueryServiceClient.class), 500, mock(AttributeMetadataProvider.class));
     List<OrderByExpression> orderByExpressions =
         requestHandler.getRequestOrderByExpressions(exploreRequest);
 

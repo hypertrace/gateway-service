@@ -137,7 +137,7 @@ public class EntityInteractionsFetcherTest extends AbstractGatewayServiceTest {
         .thenReturn(Optional.of(AttributeMetadata.newBuilder().setId("dummy").build()));
 
     EntityInteractionsFetcher aggregator =
-        new EntityInteractionsFetcher(null, attributeMetadataProvider);
+        new EntityInteractionsFetcher(null, 500, attributeMetadataProvider);
     Map<String, QueryRequest> queryRequests =
         aggregator.buildQueryRequests(
             request.getStartTimeMillis(),
@@ -250,7 +250,7 @@ public class EntityInteractionsFetcherTest extends AbstractGatewayServiceTest {
         .thenReturn(Optional.of(AttributeMetadata.newBuilder().setId("dummy").build()));
 
     EntityInteractionsFetcher aggregator =
-        new EntityInteractionsFetcher(null, attributeMetadataProvider);
+        new EntityInteractionsFetcher(null, 500, attributeMetadataProvider);
     Map<String, QueryRequest> queryRequests =
         aggregator.buildQueryRequests(
             request.getStartTimeMillis(),
@@ -316,7 +316,7 @@ public class EntityInteractionsFetcherTest extends AbstractGatewayServiceTest {
             Optional.of(AttributeMetadata.newBuilder().setId("INTERACTION.startTime").build()));
 
     EntityInteractionsFetcher aggregator =
-        new EntityInteractionsFetcher(null, attributeMetadataProvider);
+        new EntityInteractionsFetcher(null, 500, attributeMetadataProvider);
     Map<String, QueryRequest> queryRequests =
         aggregator.buildQueryRequests(
             request.getStartTimeMillis(),
@@ -429,7 +429,7 @@ public class EntityInteractionsFetcherTest extends AbstractGatewayServiceTest {
             Optional.of(AttributeMetadata.newBuilder().setId("INTERACTION.startTime").build()));
 
     EntityInteractionsFetcher aggregator =
-        new EntityInteractionsFetcher(null, attributeMetadataProvider);
+        new EntityInteractionsFetcher(null, 500, attributeMetadataProvider);
     LinkedHashSet<EntityKey> entityKeys = new LinkedHashSet<>();
     entityKeys.add(EntityKey.of("test_name1", "test_type1"));
     entityKeys.add(EntityKey.of("test_name2", "test_type2"));
@@ -483,10 +483,7 @@ public class EntityInteractionsFetcherTest extends AbstractGatewayServiceTest {
   }
 
   private org.hypertrace.core.query.service.api.Filter createStringArrayFilter(
-      org.hypertrace.core.query.service.api.Operator operator,
-      String columnName,
-      List<String> valueList
-      ) {
+      org.hypertrace.core.query.service.api.Operator operator, String columnName, List<String> valueList) {
     return org.hypertrace.core.query.service.api.Filter.newBuilder()
         .setOperator(operator)
         .setLhs(
@@ -554,7 +551,7 @@ public class EntityInteractionsFetcherTest extends AbstractGatewayServiceTest {
         .thenReturn(Optional.of(AttributeMetadata.newBuilder().setId("dummy").build()));
 
     EntityInteractionsFetcher aggregator =
-        new EntityInteractionsFetcher(null, attributeMetadataProvider);
+        new EntityInteractionsFetcher(null, 500, attributeMetadataProvider);
     Map<String, QueryRequest> queryRequests =
         aggregator.buildQueryRequests(
             request.getStartTimeMillis(),
@@ -627,7 +624,7 @@ public class EntityInteractionsFetcherTest extends AbstractGatewayServiceTest {
                 Mockito.eq("startTime")))
         .thenReturn(Optional.of(AttributeMetadata.newBuilder().setFqn("dummy").build()));
     EntityInteractionsFetcher aggregator =
-        new EntityInteractionsFetcher(null, attributeMetadataProvider);
+        new EntityInteractionsFetcher(null, 500, attributeMetadataProvider);
 
     for (EntitiesRequest request : getInvalidRequests()) {
       try {

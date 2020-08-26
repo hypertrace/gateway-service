@@ -66,6 +66,7 @@ public abstract class AbstractServiceTest<
             + "    scope = API_TRACE\n"
             + "    filters = ["
             + "      {\n"
+            + "         scope = API_TRACE\n"
             + "         key = apiBoundaryType\n"
             + "         op = EQ\n"
             + "         value = ENTRY\n"
