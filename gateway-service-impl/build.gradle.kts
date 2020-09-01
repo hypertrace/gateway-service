@@ -11,12 +11,11 @@ tasks.test {
 dependencies {
   api(project(":gateway-service-api"))
 
-  implementation("org.hypertrace.core.query.service:query-service-client:0.1.0")
-  implementation("org.hypertrace.core.attribute.service:attribute-service-client:0.1.0")
-  implementation("org.hypertrace.entity.service:entity-service-client:0.1.0")
-  implementation("org.hypertrace.entity.service:entity-service-api:0.1.0")
-  implementation("org.hypertrace.core.grpcutils:grpc-context-utils:0.1.3")
-  implementation("org.hypertrace.core.documentstore:document-store:0.1.0")
+  implementation("org.hypertrace.core.query.service:query-service-client:0.1.14")
+  implementation("org.hypertrace.core.attribute.service:attribute-service-client:0.3.0")
+  implementation("org.hypertrace.entity.service:entity-service-client:0.1.17")
+  implementation("org.hypertrace.entity.service:entity-service-api:0.1.17")
+  implementation("org.hypertrace.core.grpcutils:grpc-context-utils:0.2.0")
   implementation("org.hypertrace.core.serviceframework:platform-metrics:0.1.2")
 
   // Config
