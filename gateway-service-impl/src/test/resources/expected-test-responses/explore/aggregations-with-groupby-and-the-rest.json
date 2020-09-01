@@ -132,22 +132,6 @@
       "columns": {
         "API_TRACE.serviceName": {
           "valueType": "STRING",
-          "string": "__Other"
-        },
-        "AVG#results/avgLatency:Api.Trace|duration": {
-          "valueType": "DOUBLE",
-          "double": 133.38772
-        },
-        "COUNT#results/countTraces:Api.Trace|apiTraceId": {
-          "valueType": "LONG",
-          "long": "400"
-        }
-      }
-    },
-    {
-      "columns": {
-        "API_TRACE.serviceName": {
-          "valueType": "STRING",
           "string": "userservice"
         },
         "AVG#results/avgLatency:Api.Trace|duration": {
@@ -173,6 +157,22 @@
         "COUNT#results/countTraces:Api.Trace|apiTraceId": {
           "valueType": "LONG",
           "long": "755"
+        }
+      }
+    },
+    {
+      "columns": {
+        "API_TRACE.serviceName": {
+          "valueType": "STRING",
+          "string": "__Other"
+        },
+        "AVG#results/avgLatency:Api.Trace|duration": {
+          "valueType": "DOUBLE",
+          "double": 133.38772
+        },
+        "COUNT#results/countTraces:Api.Trace|apiTraceId": {
+          "valueType": "LONG",
+          "long": "400"
         }
       }
     }

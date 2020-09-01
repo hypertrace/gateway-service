@@ -164,26 +164,6 @@
       "columns": {
         "API_TRACE.serviceName": {
           "valueType": "STRING",
-          "string": "__Other"
-        },
-        "API_TRACE.apiName": {
-          "valueType": "STRING",
-          "string": "__Other"
-        },
-        "AVG#results/avgLatency:Api.Trace|duration": {
-          "valueType": "DOUBLE",
-          "double": 133.38772
-        },
-        "COUNT#results/countTraces:Api.Trace|apiTraceId": {
-          "valueType": "LONG",
-          "long": "400"
-        }
-      }
-    },
-    {
-      "columns": {
-        "API_TRACE.serviceName": {
-          "valueType": "STRING",
           "string": "dataservice"
         },
         "API_TRACE.apiName": {
@@ -217,6 +197,26 @@
         "COUNT#results/countTraces:Api.Trace|apiTraceId": {
           "valueType": "LONG",
           "long": "755"
+        }
+      }
+    },
+    {
+      "columns": {
+        "API_TRACE.serviceName": {
+          "valueType": "STRING",
+          "string": "__Other"
+        },
+        "API_TRACE.apiName": {
+          "valueType": "STRING",
+          "string": "__Other"
+        },
+        "AVG#results/avgLatency:Api.Trace|duration": {
+          "valueType": "DOUBLE",
+          "double": 133.38772
+        },
+        "COUNT#results/countTraces:Api.Trace|apiTraceId": {
+          "valueType": "LONG",
+          "long": "400"
         }
       }
     }

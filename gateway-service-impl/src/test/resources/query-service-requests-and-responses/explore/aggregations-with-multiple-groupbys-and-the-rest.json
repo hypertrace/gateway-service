@@ -930,23 +930,6 @@
           }
         }
       ],
-      "orderBy": [
-        {
-          "expression": {
-            "function": {
-              "functionName": "COUNT",
-              "arguments": [
-                {
-                  "columnIdentifier": {
-                    "columnName": "API_TRACE.apiTraceId"
-                  }
-                }
-              ],
-              "alias": "COUNT#COUNT:Api.Trace|apiTraceId"
-            }
-          }
-        }
-      ],
       "limit": 1
     },
     "response": {
