@@ -80,7 +80,7 @@ class TheRestGroupRequestHandler {
    */
   private ExploreRequest createRequest(
       ExploreRequest originalRequest, ExploreResponse.Builder originalResponse) {
-    // Create a new request copied from the originalRequest but without any group by and set
+    // Create a new request copied from the originalRequest but without any group by, order by and set
     // includeRestGroup set to
     // false. This way we create a query with the same conditions as the original request.
     ExploreRequest.Builder requestBuilder =
@@ -88,6 +88,7 @@ class TheRestGroupRequestHandler {
             .clearGroupBy() // Remove groupBy
             .setIncludeRestGroup(false) // Set includeRestGroup to false.
             .setLimit(1) // Only one row
+            .clearOrderBy() // Remove orderBy
             .setOffset(0); // No offset
 
     // Create a filter to exclude the values in the the groups found in the original request.
