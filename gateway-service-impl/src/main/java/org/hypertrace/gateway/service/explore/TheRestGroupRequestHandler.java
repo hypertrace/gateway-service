@@ -86,9 +86,9 @@ class TheRestGroupRequestHandler {
     ExploreRequest.Builder requestBuilder =
         ExploreRequest.newBuilder(originalRequest)
             .clearGroupBy() // Remove groupBy
+            .clearOrderBy() // Remove orderBy
             .setIncludeRestGroup(false) // Set includeRestGroup to false.
             .setLimit(1) // Only one row
-            .clearOrderBy() // Remove orderBy
             .setOffset(0); // No offset
 
     // Create a filter to exclude the values in the the groups found in the original request.
