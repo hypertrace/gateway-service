@@ -7,7 +7,7 @@ An entry service that acts as a single access point for querying data from other
 
 ## How do we use Gateway service?
 
-| ![space-1.jpg](https://hypertrace-docs.s3.amazonaws.com/HT-query-architecture.png) | 
+| ![space-1.jpg](https://hypertrace-docs.s3.amazonaws.com/HT-query-arch.png) | 
 |:--:| 
 | *Hypertrace Query Architecture* |
 
