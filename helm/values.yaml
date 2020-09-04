@@ -12,7 +12,7 @@ imagePullSecrets: []
 
 containerPort: 50071
 containerAdminPort: 50072
-containerPortName: http
+containerPortName: grpc
 
 env: []
 
