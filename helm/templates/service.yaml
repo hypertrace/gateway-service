@@ -9,6 +9,6 @@ spec:
   ports:
     - port: {{ .Values.service.port }}
       targetPort: {{ .Values.containerPortName }}
-      name: grpc-{{ .Chart.Name }}
+      name: {{ .Values.containerPortName }}-{{ .Chart.Name }}
   selector:
     {{- toYaml .Values.serviceSelectorLabels | nindent 4 }}
