@@ -66,7 +66,7 @@ spec:
             initialDelaySeconds: {{ int .Values.livenessProbe.initialDelaySeconds }}
             periodSeconds: {{ int .Values.livenessProbe.periodSeconds }}
             tcpSocket:
-              port: http
+              port: {{ .Values.containerPortName }}
           readinessProbe:
             initialDelaySeconds: {{ int .Values.readinessProbe.initialDelaySeconds }}
             periodSeconds: {{ int .Values.readinessProbe.periodSeconds }}
