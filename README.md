@@ -31,7 +31,7 @@ Run `./gradlew test` to execute unit tests.
 
 To test your image using the docker-compose setup follow the steps:
 
-- Commit you changes to a branch say `attribute-service-test`.
+- Commit you changes to a branch say `gateway-service-test`.
 - Go to [hypertrace-service](https://github.com/hypertrace/gateway-service) and checkout the above branch in the submodule.
 ```
 cd gateway-service && git checkout gateway-service-test && cd ..
