@@ -49,6 +49,3 @@ and then run `docker-compose up` to test the setup.
 
 ## Docker Image Source:
 - [DockerHub > Gateway service](https://hub.docker.com/r/hypertrace/gateway-service)
-
-## Contributing
-see [CONTRIBUTING](/CONTRIBUTING.md).
