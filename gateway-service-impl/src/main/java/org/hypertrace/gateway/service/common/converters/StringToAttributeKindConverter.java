@@ -29,14 +29,30 @@ public class StringToAttributeKindConverter extends ToAttributeKindConverter<Str
 
       case TYPE_DOUBLE:
         valueBuilder.setValueType(ValueType.DOUBLE);
-        valueBuilder.setDouble(Double.parseDouble(value));
+        /*
+        * In proto, by default, field with missing value will be set to empty string. As a result,
+        * optional attributes that could return empty string will cause java.lang.NumberFormatException.
+        * Instead, convert this to 0, which is default value for double and long in proto if
+        * field is missing.
+        */
+        if (value.isEmpty()) {
+          valueBuilder.setDouble(0.0d);
+        } else {
+          valueBuilder.setDouble(Double.parseDouble(value));
+        }
         return valueBuilder.build();
 
       case TYPE_INT64:
         valueBuilder.setValueType(ValueType.LONG);
-        // By default, aggregation is returned as String with Decimal-Value
-        // parse as double first before converting to Long
-        valueBuilder.setLong((long) Double.parseDouble(value));
+        // Attributes with missing values are converted to empty string proto. And to be equivalent,
+        // missing long or double is set to 0 as well in proto
+        if (value.isEmpty()) {
+          valueBuilder.setLong(0L);
+        } else {
+          // By default, aggregation is returned as String with Decimal-Value
+          // parse as double first before converting to Long
+          valueBuilder.setLong((long) Double.parseDouble(value));
+        }
         return valueBuilder.build();
 
       case TYPE_STRING:
