@@ -24,16 +24,17 @@ public class ExploreService {
   private Timer queryExecutionTimer;
 
   public ExploreService(
-      QueryServiceClient queryServiceClient,
+      QueryServiceClient queryServiceClient, int requestTimeout,
       AttributeMetadataProvider attributeMetadataProvider,
       ScopeFilterConfigs scopeFiltersConfig) {
     this.attributeMetadataProvider = attributeMetadataProvider;
-    this.normalRequestHandler = new RequestHandler(queryServiceClient, attributeMetadataProvider);
-    this.timeAggregationsRequestHandler =
-        new TimeAggregationsRequestHandler(queryServiceClient, attributeMetadataProvider);
+    this.normalRequestHandler = new RequestHandler(queryServiceClient, requestTimeout,
+        attributeMetadataProvider);
+    this.timeAggregationsRequestHandler = new TimeAggregationsRequestHandler(
+        queryServiceClient, requestTimeout, attributeMetadataProvider);
     this.timeAggregationsWithGroupByRequestHandler =
         new TimeAggregationsWithGroupByRequestHandler(
-            queryServiceClient, attributeMetadataProvider);
+            queryServiceClient, requestTimeout, attributeMetadataProvider);
     this.scopeFilterConfigs = scopeFiltersConfig;
     initMetrics();
   }

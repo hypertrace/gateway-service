@@ -8,7 +8,7 @@ import org.hypertrace.gateway.service.entity.query.visitor.Visitor;
  * nodes
  */
 public class AndNode implements QueryNode {
-  private List<QueryNode> childNodes;
+  private final List<QueryNode> childNodes;
 
   public AndNode(List<QueryNode> childNodes) {
     this.childNodes = childNodes;

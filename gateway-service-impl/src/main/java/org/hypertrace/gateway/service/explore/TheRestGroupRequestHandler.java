@@ -1,7 +1,6 @@
 package org.hypertrace.gateway.service.explore;
 
 import java.util.List;
-import java.util.Set;
 import java.util.stream.Collectors;
 import org.hypertrace.gateway.service.v1.common.ColumnIdentifier;
 import org.hypertrace.gateway.service.v1.common.Expression;
@@ -81,12 +80,13 @@ class TheRestGroupRequestHandler {
    */
   private ExploreRequest createRequest(
       ExploreRequest originalRequest, ExploreResponse.Builder originalResponse) {
-    // Create a new request copied from the originalRequest but without any group by and set
+    // Create a new request copied from the originalRequest but without any group by, order by and set
     // includeRestGroup set to
     // false. This way we create a query with the same conditions as the original request.
     ExploreRequest.Builder requestBuilder =
         ExploreRequest.newBuilder(originalRequest)
             .clearGroupBy() // Remove groupBy
+            .clearOrderBy() // Remove orderBy
             .setIncludeRestGroup(false) // Set includeRestGroup to false.
             .setLimit(1) // Only one row
             .setOffset(0); // No offset
@@ -104,7 +104,25 @@ class TheRestGroupRequestHandler {
     return requestBuilder.build();
   }
 
+  /**
+   * Returns a filter that will exclude all the found group values in the request for the "The Rest".
+   * If the request contains only one group, then we will use a "NOT_IN" group values list filter.
+   * If the request contains multiple groups, then we will want to exclude all tuples of the group
+   * values.
+   * @param originalRequest
+   * @param originalResponse
+   * @return
+   */
   private Filter.Builder createExcludeFoundGroupsFilter(
+      ExploreRequest originalRequest, ExploreResponse.Builder originalResponse) {
+    if (originalRequest.getGroupByList().size() == 1) {
+      return createExcludeFoundGroupsNotInListFilter(originalRequest, originalResponse);
+    } else {
+      return createExcludeFoundGroupsAndChainFilter(originalRequest, originalResponse);
+    }
+  }
+
+  private Filter.Builder createExcludeFoundGroupsNotInListFilter(
       ExploreRequest originalRequest, ExploreResponse.Builder originalResponse) {
     Filter.Builder filterBuilder = Filter.newBuilder();
     filterBuilder.setOperator(Operator.AND);
@@ -113,23 +131,97 @@ class TheRestGroupRequestHandler {
         .forEach(
             groupBy -> {
               String columnName = groupBy.getColumnIdentifier().getColumnName();
-              Set<String> excludedValues = getExcludedValues(columnName, originalResponse);
+              List<String> excludedValues = getExcludedValues(columnName, originalResponse);
               filterBuilder.addChildFilter(createExcludedChildFilter(columnName, excludedValues));
             });
 
     return filterBuilder;
   }
 
-  private Set<String> getExcludedValues(
+  /**
+   * We need to create a filter that excludes all the group tuples found in the original response.
+   * Suppose we are dealing with a table where we group on the column names "c2" and "c3" and we got
+   * back the group tuples below in the original response.
+   * c2  | c3
+   * ---------
+   * v10 | v11
+   * v20 | v21
+   *
+   * So for "The Rest" request we need to exclude rows with the (c2,c3) tuples (v10, v11) or
+   * (v20, v21). So the filter should be ("=" is for equality):
+   *     ( NOT ( ( c2 = 'v10' AND c3 = 'v11' ) OR ( c2 = 'v20' AND c3 = 'v21' ) ) )
+   * However, since the query-service(Pinot) does not support NOT(unless it's NOT IN), then this does
+   * not work. So we can use DeMorgan's law to create a filter that Pinot will support by pushing
+   * the NOT into the filter expression:
+   *     ( ( ( c2 != 'v10' OR c3 != 'v11' ) AND ( c2 != 'v20' OR c3 != 'v21' ) ) )
+   * We will create the filter above.
+   * @param originalRequest
+   * @param originalResponse
+   * @return
+   */
+  private Filter.Builder createExcludeFoundGroupsAndChainFilter(
+      ExploreRequest originalRequest, ExploreResponse.Builder originalResponse) {
+    Filter.Builder filterBuilder = Filter.newBuilder();
+    filterBuilder.setOperator(Operator.AND);
+    List<String> groupByColumns = groupByColumnList(originalRequest);
+
+    originalResponse.getRowBuilderList().forEach(
+        rowBuilder -> filterBuilder.addChildFilter(createGroupValuesOrFilter(groupByColumns, rowBuilder))
+    );
+
+    return filterBuilder;
+  }
+
+  private List<String> groupByColumnList(ExploreRequest originalRequest) {
+    return originalRequest
+        .getGroupByList()
+        .stream()
+        .map(groupBy -> groupBy.getColumnIdentifier().getColumnName())
+        .collect(Collectors.toUnmodifiableList());
+  }
+
+  private Filter.Builder createGroupValuesOrFilter(List<String> groupByColumns, Row.Builder rowBuilder) {
+    Filter.Builder filterBuilder = Filter.newBuilder();
+    filterBuilder.setOperator(Operator.OR);
+    rowBuilder.getColumnsMap().forEach((columnName, columnValue) ->{
+      if (groupByColumns.contains(columnName)) {
+        filterBuilder.addChildFilter(
+            Filter.newBuilder()
+                .setLhs(
+                    Expression.newBuilder()
+                        .setColumnIdentifier(ColumnIdentifier.newBuilder()
+                            .setColumnName(columnName)
+                        )
+                )
+                .setOperator(Operator.NEQ)
+                .setRhs(
+                    Expression.newBuilder()
+                        .setLiteral(
+                            LiteralConstant.newBuilder()
+                                .setValue(
+                                    Value.newBuilder()
+                                        .setValueType(ValueType.STRING)
+                                        .setString(columnValue.getString())
+                                )
+                        )
+                )
+        );
+      }
+    });
+
+    return filterBuilder;
+  }
+
+  private List<String> getExcludedValues(
       String columnName, ExploreResponse.Builder originalResponse) {
     // GroupBy only supports columns expressions for now.
     return originalResponse.getRowBuilderList().stream()
         .map(rowBuilder -> rowBuilder.getColumnsMap().get(columnName))
         .map(Value::getString)
-        .collect(Collectors.toUnmodifiableSet());
+        .collect(Collectors.toUnmodifiableList());
   }
 
-  private Filter.Builder createExcludedChildFilter(String columnName, Set<String> excludedValues) {
+  private Filter.Builder createExcludedChildFilter(String columnName, List<String> excludedValues) {
     return Filter.newBuilder()
         .setLhs(
             Expression.newBuilder()

@@ -2,6 +2,7 @@ package org.hypertrace.gateway.service.common;
 
 import java.util.HashMap;
 import java.util.Map;
+import java.util.Objects;
 import org.hypertrace.gateway.service.v1.common.FunctionExpression;
 import org.hypertrace.gateway.service.v1.common.TimeAggregation;
 
@@ -41,5 +42,22 @@ public class QueryRequestContext extends RequestContext {
 
   public TimeAggregation getTimeAggregationByAlias(String alias) {
     return aliasToTimeAggregation.get(alias);
+  }
+
+  @Override
+  public boolean equals(Object o) {
+    if (this == o) return true;
+    if (o == null || getClass() != o.getClass()) return false;
+    if (!super.equals(o)) return false;
+    QueryRequestContext that = (QueryRequestContext) o;
+    return startTimeMillis == that.startTimeMillis &&
+        endTimeMillis == that.endTimeMillis &&
+        aliasToFunctionExpressionMap.equals(that.aliasToFunctionExpressionMap) &&
+        aliasToTimeAggregation.equals(that.aliasToTimeAggregation);
+  }
+
+  @Override
+  public int hashCode() {
+    return Objects.hash(super.hashCode(), aliasToFunctionExpressionMap, startTimeMillis, endTimeMillis, aliasToTimeAggregation);
   }
 }

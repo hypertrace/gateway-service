@@ -96,6 +96,13 @@ public class QueryExpressionUtil {
         .setRhs(getLiteralExpression(value));
   }
 
+  public static Filter.Builder getSimpleNeqFilter(String columnName, String value) {
+    return Filter.newBuilder()
+        .setLhs(getColumnExpression(columnName))
+        .setOperator(Operator.NEQ)
+        .setRhs(getLiteralExpression(value));
+  }
+
   public static Filter.Builder getLikeFilter(String columnName, String value) {
     return Filter.newBuilder()
         .setLhs(getColumnExpression(columnName))

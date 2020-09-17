@@ -14,7 +14,9 @@ import org.hypertrace.core.query.service.client.QueryServiceClient;
 import org.hypertrace.core.serviceframework.metrics.PlatformMetricsRegistry;
 import org.hypertrace.entity.query.service.client.EntityQueryServiceClient;
 import org.hypertrace.gateway.service.common.AttributeMetadataProvider;
+import org.hypertrace.gateway.service.common.OrderByPercentileSizeSetter;
 import org.hypertrace.gateway.service.common.RequestContext;
+import org.hypertrace.gateway.service.common.config.ScopeFilterConfigs;
 import org.hypertrace.gateway.service.common.datafetcher.EntityDataServiceEntityFetcher;
 import org.hypertrace.gateway.service.common.datafetcher.EntityFetcherResponse;
 import org.hypertrace.gateway.service.common.datafetcher.EntityInteractionsFetcher;
@@ -43,8 +45,8 @@ import org.slf4j.LoggerFactory;
  * <p>If there is any specific implementation for a specific Entity Type, this can be extended
  */
 public class EntityService {
-
   private static final Logger LOG = LoggerFactory.getLogger(EntityService.class);
+
   private static final UpdateEntityRequestValidator updateEntityRequestValidator =
       new UpdateEntityRequestValidator();
   private final AttributeMetadataProvider metadataProvider;
@@ -60,26 +62,28 @@ public class EntityService {
 
   public EntityService(
       QueryServiceClient qsClient,
-      EntityQueryServiceClient edsQueryServiceClient,
+      int qsRequestTimeout, EntityQueryServiceClient edsQueryServiceClient,
       AttributeMetadataProvider metadataProvider,
+      ScopeFilterConfigs scopeFilterConfigs,
       LogConfig logConfig) {
     this.metadataProvider = metadataProvider;
-    this.interactionsFetcher = new EntityInteractionsFetcher(qsClient, metadataProvider);
-    requestPreProcessor = new RequestPreProcessor(metadataProvider);
-    responsePostProcessor = new ResponsePostProcessor(metadataProvider);
-    edsEntityUpdater = new EdsEntityUpdater(edsQueryServiceClient);
+    this.interactionsFetcher = new EntityInteractionsFetcher(qsClient, qsRequestTimeout, metadataProvider);
+    this.requestPreProcessor = new RequestPreProcessor(metadataProvider, scopeFilterConfigs);
+    this.responsePostProcessor = new ResponsePostProcessor(metadataProvider);
+    this.edsEntityUpdater = new EdsEntityUpdater(edsQueryServiceClient);
     this.logConfig = logConfig;
 
-    registerEntityFetchers(qsClient, edsQueryServiceClient);
+    registerEntityFetchers(qsClient, qsRequestTimeout, edsQueryServiceClient);
     initMetrics();
   }
 
   private void registerEntityFetchers(
-      QueryServiceClient queryServiceClient, EntityQueryServiceClient edsQueryServiceClient) {
+      QueryServiceClient queryServiceClient, int qsRequestTimeout,
+      EntityQueryServiceClient edsQueryServiceClient) {
     EntityQueryHandlerRegistry registry = EntityQueryHandlerRegistry.get();
     registry.registerEntityFetcher(
         AttributeSource.QS.name(),
-        new QueryServiceEntityFetcher(queryServiceClient, metadataProvider));
+        new QueryServiceEntityFetcher(queryServiceClient, qsRequestTimeout, metadataProvider));
     registry.registerEntityFetcher(
         AttributeSource.EDS.name(),
         new EntityDataServiceEntityFetcher(edsQueryServiceClient, metadataProvider));
@@ -104,6 +108,9 @@ public class EntityService {
   public EntitiesResponse getEntities(
       String tenantId, EntitiesRequest originalRequest, Map<String, String> requestHeaders) {
     long startTime = System.currentTimeMillis();
+    // Set the size for percentiles in order by if it is not set. This is to give UI the time to fix
+    // the bug which does not set the size when they have order by in the request.
+    originalRequest = OrderByPercentileSizeSetter.setPercentileSize(originalRequest);
     EntitiesRequestContext entitiesRequestContext =
         new EntitiesRequestContext(
             tenantId,
@@ -120,8 +127,12 @@ public class EntityService {
     QueryNode executionTree = executionTreeBuilder.build();
     queryBuildTimer.update(System.currentTimeMillis() - startTime, TimeUnit.MILLISECONDS);
 
+    /*
+    * EntityQueryHandlerRegistry.get() returns Singleton object, so, it's guaranteed that
+    * it won't create new object for each request.
+    */
     EntityFetcherResponse response =
-        executionTree.acceptVisitor(new ExecutionVisitor(executionContext));
+        executionTree.acceptVisitor(new ExecutionVisitor(executionContext, EntityQueryHandlerRegistry.get()));
     List<Builder> results = new ArrayList<>(response.getEntityKeyBuilderMap().values());
 
     // Add interactions.

@@ -1,6 +1,11 @@
 package org.hypertrace.gateway.service.entity;
 
+import static org.hypertrace.gateway.service.common.QueryServiceRequestAndResponseUtils.createQsAggregationExpression;
+import static org.hypertrace.gateway.service.common.QueryServiceRequestAndResponseUtils.createQsColumnExpression;
+import static org.hypertrace.gateway.service.common.QueryServiceRequestAndResponseUtils.createQsDefaultRequestFilter;
+import static org.hypertrace.gateway.service.common.QueryServiceRequestAndResponseUtils.getResultSetChunk;
 import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.when;
 
 import com.typesafe.config.Config;
@@ -15,6 +20,8 @@ import org.hypertrace.core.attribute.service.v1.AttributeScope;
 import org.hypertrace.core.attribute.service.v1.AttributeSource;
 import org.hypertrace.core.attribute.service.v1.AttributeType;
 import org.hypertrace.core.query.service.api.ColumnMetadata;
+import org.hypertrace.core.query.service.api.Filter;
+import org.hypertrace.core.query.service.api.QueryRequest;
 import org.hypertrace.core.query.service.api.ResultSetChunk;
 import org.hypertrace.core.query.service.api.ResultSetMetadata;
 import org.hypertrace.core.query.service.api.Row;
@@ -25,6 +32,7 @@ import org.hypertrace.entity.query.service.client.EntityQueryServiceClient;
 import org.hypertrace.gateway.service.AbstractGatewayServiceTest;
 import org.hypertrace.gateway.service.common.AttributeMetadataProvider;
 import org.hypertrace.gateway.service.common.RequestContext;
+import org.hypertrace.gateway.service.common.config.ScopeFilterConfigs;
 import org.hypertrace.gateway.service.entity.config.DomainObjectConfigs;
 import org.hypertrace.gateway.service.entity.config.LogConfig;
 import org.hypertrace.gateway.service.v1.common.ColumnIdentifier;
@@ -79,7 +87,7 @@ public class EntityServiceTest extends AbstractGatewayServiceTest {
   private void mock(AttributeMetadataProvider attributeMetadataProvider) {
     when(
             attributeMetadataProvider.getAttributesMetadata(
-                any(RequestContext.class), Mockito.eq(AttributeScope.API)))
+                any(RequestContext.class), eq(AttributeScope.API)))
         .thenReturn(
             Map.of(
                 "API.apiId",
@@ -90,6 +98,7 @@ public class EntityServiceTest extends AbstractGatewayServiceTest {
                     .setValueKind(AttributeKind.TYPE_STRING)
                     .setType(AttributeType.ATTRIBUTE)
                     .addSources(AttributeSource.QS)
+                    .setId("API.apiId")
                     .build(),
                 "API.apiName",
                 AttributeMetadata.newBuilder()
@@ -99,6 +108,7 @@ public class EntityServiceTest extends AbstractGatewayServiceTest {
                     .setValueKind(AttributeKind.TYPE_STRING)
                     .setType(AttributeType.ATTRIBUTE)
                     .addSources(AttributeSource.QS)
+                    .setId("API.name")
                     .build(),
                 "API.httpMethod",
                 AttributeMetadata.newBuilder()
@@ -108,11 +118,12 @@ public class EntityServiceTest extends AbstractGatewayServiceTest {
                     .setValueKind(AttributeKind.TYPE_STRING)
                     .setType(AttributeType.ATTRIBUTE)
                     .addSources(AttributeSource.EDS)
+                    .setId("API.httpMethod")
                     .build()));
 
     when(
             attributeMetadataProvider.getAttributeMetadata(
-                any(RequestContext.class), Mockito.eq(AttributeScope.API), Mockito.eq("apiId")))
+                any(RequestContext.class), eq(AttributeScope.API), eq("apiId")))
         .thenReturn(
             Optional.of(
                 AttributeMetadata.newBuilder()
@@ -126,7 +137,7 @@ public class EntityServiceTest extends AbstractGatewayServiceTest {
                     .build()));
     when(
             attributeMetadataProvider.getAttributeMetadata(
-                any(RequestContext.class), Mockito.eq(AttributeScope.API), Mockito.eq("startTime")))
+                any(RequestContext.class), eq(AttributeScope.API), eq("startTime")))
         .thenReturn(
             Optional.of(
                 AttributeMetadata.newBuilder()
@@ -136,31 +147,68 @@ public class EntityServiceTest extends AbstractGatewayServiceTest {
                     .setValueKind(AttributeKind.TYPE_STRING)
                     .setType(AttributeType.ATTRIBUTE)
                     .addSources(AttributeSource.QS)
+                    .setId("API.startTime")
                     .build()));
   }
 
   @Test
   public void testGetEntitiesOnlySelectFromSingleSource() {
-    when(queryServiceClient.executeQuery(any(), any(), Mockito.anyInt()))
-        .thenReturn(
-            List.of(
-                    ResultSetChunk.newBuilder()
-                        .setResultSetMetadata(
-                            generateResultSetMetadataFor("API.apiId", "API.apiName"))
-                        .addRow(generateRowFor("apiId1", "/login"))
-                        .addRow(generateRowFor("apiId2", "/checkout"))
-                        .build())
-                .iterator());
-    EntityService entityService = new EntityService(queryServiceClient,
-        entityQueryServiceClient,
-        attributeMetadataProvider,
-        logConfig);
     EntitiesRequest entitiesRequest =
         EntitiesRequest.newBuilder()
             .setEntityType("API")
             .addSelection(getExpressionFor("API.apiId", "API Id"))
             .addSelection(getExpressionFor("API.apiName", "API Name"))
+            .setLimit(2)
             .build();
+
+    // The filter sent down to query-service by QueryServiceEntityFetcher when there is no filter in
+    // EntitiesRequest
+    Filter queryServiceFilter = createQsDefaultRequestFilter("API.startTime",
+        "API.apiId",0, 0);
+
+    QueryRequest expectedQueryRequest = QueryRequest.newBuilder()
+        .addSelection(createQsColumnExpression("API.apiId")) // Added implicitly in the getEntitiesAndAggregatedMetrics() in order to do GroupBy on the entity id
+        .addSelection(createQsColumnExpression("API.apiName", "API Name"))
+        // QueryServiceEntityFetcher adds Count(entityId) to the request for one that does not have an aggregation.
+        // This is because internally a GroupBy request is created out of the entities request and
+        // an aggregation is needed.
+        .addSelection(createQsAggregationExpression("Count", "API.apiId"))
+        .setFilter(queryServiceFilter)
+        .addGroupBy(createQsColumnExpression("API.apiId"))
+        .addGroupBy(createQsColumnExpression("API.apiName", "API Name"))
+        .setLimit(2)
+        .build();
+    when(queryServiceClient.executeQuery(eq(expectedQueryRequest), any(), Mockito.anyInt()))
+        .thenReturn(
+            List.of(
+                getResultSetChunk(
+                    List.of("API.apiId", "API.apiName"),
+                    new String[][]{
+                        {"apiId1", "/login",},
+                        {"apiId2", "/checkout"}
+                    }
+                )
+            ).iterator());
+
+    // get total request.
+    expectedQueryRequest = QueryRequest.newBuilder()
+        .addSelection(createQsColumnExpression("API.apiId")) // Added implicitly in the getEntitiesAndAggregatedMetrics() in order to do GroupBy on the entity id
+        // QueryServiceEntityFetcher adds Count(entityId) to the request for one that does not have an aggregation.
+        // This is because internally a GroupBy request is created out of the entities request and
+        // an aggregation is needed.
+        .addSelection(createQsAggregationExpression("Count", "API.apiId"))
+        .setFilter(queryServiceFilter)
+        .addGroupBy(createQsColumnExpression("API.apiId"))
+        .setLimit(QueryServiceClient.DEFAULT_QUERY_SERVICE_GROUP_BY_LIMIT)
+        .build();
+
+    when(queryServiceClient.executeQuery(eq(expectedQueryRequest), any(), Mockito.anyInt()))
+        .thenReturn(List.of(
+            getResultSetChunk(List.of("API.apiId"), new String[][]{ {"apiId1"}, {"apiId2"}})).iterator());
+
+    ScopeFilterConfigs scopeFilterConfigs = new ScopeFilterConfigs(ConfigFactory.empty());
+    EntityService entityService = new EntityService(queryServiceClient, 500,
+        entityQueryServiceClient, attributeMetadataProvider, scopeFilterConfigs, logConfig);
     EntitiesResponse response = entityService.getEntities(TENANT_ID, entitiesRequest, Map.of());
     Assertions.assertNotNull(response);
     Assertions.assertEquals(2, response.getTotal());
@@ -195,10 +243,9 @@ public class EntityServiceTest extends AbstractGatewayServiceTest {
                         .addRow(generateEntityServiceRowFor("apiId2", "POST"))
                         .build())
                 .iterator());
-    EntityService entityService = new EntityService(queryServiceClient,
-            entityQueryServiceClient,
-            attributeMetadataProvider,
-            logConfig);
+    ScopeFilterConfigs scopeFilterConfigs = new ScopeFilterConfigs(ConfigFactory.empty());
+    EntityService entityService = new EntityService(queryServiceClient, 500,
+        entityQueryServiceClient, attributeMetadataProvider, scopeFilterConfigs, logConfig);
     EntitiesRequest entitiesRequest =
         EntitiesRequest.newBuilder()
             .setEntityType("API")

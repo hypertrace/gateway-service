@@ -18,15 +18,19 @@ import java.util.stream.IntStream;
 import javax.annotation.Nonnull;
 import javax.annotation.Nullable;
 import org.hypertrace.core.attribute.service.v1.AttributeKind;
+import org.hypertrace.core.attribute.service.v1.AttributeMetadata;
 import org.hypertrace.core.attribute.service.v1.AttributeScope;
 import org.hypertrace.gateway.service.common.AttributeMetadataProvider;
 import org.hypertrace.gateway.service.common.RequestContext;
+import org.hypertrace.gateway.service.common.config.ScopeFilterConfigs;
 import org.hypertrace.gateway.service.common.util.AttributeMetadataUtil;
 import org.hypertrace.gateway.service.common.util.QueryExpressionUtil;
 import org.hypertrace.gateway.service.entity.EntitiesRequestContext;
 import org.hypertrace.gateway.service.entity.EntityKey;
 import org.hypertrace.gateway.service.entity.config.DomainObjectFilter;
 import org.hypertrace.gateway.service.entity.config.DomainObjectMapping;
+import org.hypertrace.gateway.service.trace.TraceScope;
+import org.hypertrace.gateway.service.trace.TraceScopeConverter;
 import org.hypertrace.gateway.service.v1.common.Expression;
 import org.hypertrace.gateway.service.v1.common.Expression.ValueCase;
 import org.hypertrace.gateway.service.v1.common.Filter;
@@ -53,9 +57,12 @@ public class RequestPreProcessor {
 
   private static final Logger LOGGER = LoggerFactory.getLogger(RequestPreProcessor.class);
   private final AttributeMetadataProvider attributeMetadataProvider;
+  private final ScopeFilterConfigs scopeFilterConfigs;
 
-  public RequestPreProcessor(AttributeMetadataProvider attributeMetadataProvider) {
+  public RequestPreProcessor(AttributeMetadataProvider attributeMetadataProvider,
+      ScopeFilterConfigs scopeFilterConfigs) {
     this.attributeMetadataProvider = attributeMetadataProvider;
+    this.scopeFilterConfigs = scopeFilterConfigs;
   }
 
   /**
@@ -102,7 +109,16 @@ public class RequestPreProcessor {
         injectIdFilter(attributeIdMappings, originalRequest.getSelectionList(), context);
     Filter transformedFilter =
         transformFilter(attributeIdMappings, originalRequest.getFilter(), context);
-    entitiesRequestBuilder.setFilter(mergeFilters(filterToInject, transformedFilter));
+    Filter filter = mergeFilters(filterToInject, transformedFilter);
+
+    // Apply the scope filter at the end.
+    filter = scopeFilterConfigs.createScopeFilter(
+            AttributeScope.valueOf(originalRequest.getEntityType()),
+            filter,
+            attributeMetadataProvider,
+            context);
+
+    entitiesRequestBuilder.setFilter(filter);
 
     return entitiesRequestBuilder.build();
   }
@@ -142,7 +158,15 @@ public class RequestPreProcessor {
         injectIdFilter(attributeIdMappings, originalRequest.getSelectionList(), requestContext);
     Filter transformedFilter =
         transformFilter(attributeIdMappings, originalRequest.getFilter(), requestContext);
-    tracesRequestBuilder.setFilter(mergeFilters(filterToInject, transformedFilter));
+    Filter filter = mergeFilters(filterToInject, transformedFilter);
+
+    TraceScope scope = TraceScope.valueOf(originalRequest.getScope());
+    filter = scopeFilterConfigs.createScopeFilter(
+            TraceScopeConverter.toAttributeScope(scope),
+            filter,
+            attributeMetadataProvider,
+            requestContext);
+    tracesRequestBuilder.setFilter(filter);
 
     return tracesRequestBuilder.build();
   }
@@ -314,13 +338,41 @@ public class RequestPreProcessor {
       return filter;
     }
 
+    // If the domain object mappings contains one item that equals to the lhs expression column
+    // there's no need to remap. Note equality also means there's no filter in the mapping eg:
+    //    {
+    //      scope = API
+    //      key = id
+    //      primaryKey = true
+    //      mapping = [
+    //      {
+    //        scope = API
+    //        key = id
+    //      }
+    //     ]
+    //    }
+    String lhsColumnName = filter.getLhs().getColumnIdentifier().getColumnName();
+    List<DomainObjectMapping> domainObjectMappings = attributeIdMappings.get(lhsColumnName);
+
+    if (domainObjectMappings.size() == 1) {
+      DomainObjectMapping domainObjectMapping = domainObjectMappings.get(0);
+      AttributeMetadata attributeMetadata = attributeMetadataProvider.getAttributeMetadata(
+          requestContext,
+          domainObjectMapping.getScope(),
+          domainObjectMapping.getKey()
+      ).orElseThrow();
+      if (domainObjectMapping.getFilter() == null && attributeMetadata.getId().equals(lhsColumnName)) {
+        return filter;
+      }
+    }
+
     Operator operator = filter.getOperator();
     switch (operator) {
       case EQ:
       case NEQ:
       case LIKE:
         return transformSingleValuedFilter(
-            attributeIdMappings.get(filter.getLhs().getColumnIdentifier().getColumnName()),
+            domainObjectMappings,
             operator,
             filter.getRhs().getLiteral().getValue().getString(),
             requestContext);
@@ -332,8 +384,7 @@ public class RequestPreProcessor {
                     .map(
                         val ->
                             transformSingleValuedFilter(
-                                attributeIdMappings.get(
-                                    filter.getLhs().getColumnIdentifier().getColumnName()),
+                                domainObjectMappings,
                                 EQ,
                                 val,
                                 requestContext))
@@ -347,8 +398,7 @@ public class RequestPreProcessor {
                     .map(
                         val ->
                             transformSingleValuedFilter(
-                                attributeIdMappings.get(
-                                    filter.getLhs().getColumnIdentifier().getColumnName()),
+                                domainObjectMappings,
                                 NEQ,
                                 val,
                                 requestContext))
@@ -465,8 +515,24 @@ public class RequestPreProcessor {
   }
 
   /**
-   * Creates a filter for Domain Object, if any filter available { scope = EVENT key = id mapping =
-   * [ { scope = SERVICE key = id }, { scope = API key = isExternal filter { value = true } } ] }
+   * Creates a filter for Domain Object, if any filter available
+   * {
+   *  scope = EVENT
+   *  key = id
+   *  mapping = [
+   *    {
+   *      scope = SERVICE
+   *      key = id
+   *    },
+   *    {
+   *      scope = API
+   *      key = isExternal
+   *      filter {
+   *        value = true
+   *      }
+   *    }
+   *  ]
+   * }
    *
    * <p>will create a filter `API.is_external = true` which needs to be injected when Domain.id is
    * queried

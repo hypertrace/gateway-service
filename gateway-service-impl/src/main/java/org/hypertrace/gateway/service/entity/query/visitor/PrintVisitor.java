@@ -5,8 +5,11 @@ import org.hypertrace.gateway.service.entity.query.AndNode;
 import org.hypertrace.gateway.service.entity.query.DataFetcherNode;
 import org.hypertrace.gateway.service.entity.query.NoOpNode;
 import org.hypertrace.gateway.service.entity.query.OrNode;
+import org.hypertrace.gateway.service.entity.query.PaginateOnlyNode;
+import org.hypertrace.gateway.service.entity.query.SelectionAndFilterNode;
 import org.hypertrace.gateway.service.entity.query.SelectionNode;
 import org.hypertrace.gateway.service.entity.query.SortAndPaginateNode;
+import org.hypertrace.gateway.service.entity.query.TotalFetcherNode;
 
 /**
  * Visitor that prints debug information of every QueryNode. Used primarily for logging and
@@ -56,5 +59,28 @@ public class PrintVisitor implements Visitor<String> {
   @Override
   public String visit(NoOpNode noOpNode) {
     return noOpNode.toString();
+  }
+
+  @Override
+  public String visit(SelectionAndFilterNode selectionAndFilterNode) {
+    return "SELECT_FILTER_AND_ORDER("
+        + selectionAndFilterNode
+        + ")";
+  }
+
+  @Override
+  public String visit(PaginateOnlyNode paginateOnlyNode) {
+    return "PAGINATE_ONLY("
+        + paginateOnlyNode
+        + ") --> \n"
+        + paginateOnlyNode.getChildNode().acceptVisitor(this);
+  }
+
+  @Override
+  public String visit(TotalFetcherNode totalFetcherNode) {
+    return "TOTAL_FETCHER_NODE("
+        + totalFetcherNode
+        + ") --> \n"
+        + totalFetcherNode.getChildNode().acceptVisitor(this);
   }
 }

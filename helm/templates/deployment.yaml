@@ -7,9 +7,6 @@ metadata:
   {{- with .Values.deploymentLabels }}
     {{- toYaml . | nindent 4 }}
   {{- end }}
-  annotations:
-    prometheus.io/scrape: "true"
-    prometheus.io/port: "50072"
 spec:
   replicas: {{ .Values.replicaCount }}
   strategy:
@@ -22,7 +19,12 @@ spec:
   template:
     metadata:
       annotations:
+        prometheus.io/scrape: "true"
+        prometheus.io/port: "{{ .Values.containerAdminPort }}"
         checksum/config: {{ include (print $.Template.BasePath "/configmap.yaml") . | sha256sum }}
+      {{- with .Values.podAnnotations }}
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
       labels:
         release: {{ .Release.Name }}
       {{- with .Values.podLabels }}
@@ -64,7 +66,7 @@ spec:
             initialDelaySeconds: {{ int .Values.livenessProbe.initialDelaySeconds }}
             periodSeconds: {{ int .Values.livenessProbe.periodSeconds }}
             tcpSocket:
-              port: http
+              port: {{ .Values.containerPortName }}
           readinessProbe:
             initialDelaySeconds: {{ int .Values.readinessProbe.initialDelaySeconds }}
             periodSeconds: {{ int .Values.readinessProbe.periodSeconds }}

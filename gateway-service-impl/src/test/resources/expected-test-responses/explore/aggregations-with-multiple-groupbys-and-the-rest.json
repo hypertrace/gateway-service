@@ -1,0 +1,224 @@
+{
+  "row": [
+    {
+      "columns": {
+        "API_TRACE.serviceName": {
+          "valueType": "STRING",
+          "string": "checkoutservice"
+        },
+        "API_TRACE.apiName": {
+          "valueType": "STRING",
+          "string": "POST /shippinginfo"
+        },
+        "AVG#results/avgLatency:Api.Trace|duration": {
+          "valueType": "DOUBLE",
+          "double": 26.2
+        },
+        "COUNT#results/countTraces:Api.Trace|apiTraceId": {
+          "valueType": "LONG",
+          "long": "5"
+        }
+      }
+    },
+    {
+      "columns": {
+        "API_TRACE.serviceName": {
+          "valueType": "STRING",
+          "string": "dataservice"
+        },
+        "API_TRACE.apiName": {
+          "valueType": "STRING",
+          "string": "GET /users"
+        },
+        "AVG#results/avgLatency:Api.Trace|duration": {
+          "valueType": "DOUBLE",
+          "double": 48.48333
+        },
+        "COUNT#results/countTraces:Api.Trace|apiTraceId": {
+          "valueType": "LONG",
+          "long": "60"
+        }
+      }
+    },
+    {
+      "columns": {
+        "API_TRACE.serviceName": {
+          "valueType": "STRING",
+          "string": "checkoutservice"
+        },
+        "API_TRACE.apiName": {
+          "valueType": "STRING",
+          "string": "POST /v2/cart"
+        },
+        "AVG#results/avgLatency:Api.Trace|duration": {
+          "valueType": "DOUBLE",
+          "double": 14.47222
+        },
+        "COUNT#results/countTraces:Api.Trace|apiTraceId": {
+          "valueType": "LONG",
+          "long": "72"
+        }
+      }
+    },
+    {
+      "columns": {
+        "API_TRACE.serviceName": {
+          "valueType": "STRING",
+          "string": "dataservice"
+        },
+        "API_TRACE.apiName": {
+          "valueType": "STRING",
+          "string": "GET /product/879"
+        },
+        "AVG#results/avgLatency:Api.Trace|duration": {
+          "valueType": "DOUBLE",
+          "double": 1.18182
+        },
+        "COUNT#results/countTraces:Api.Trace|apiTraceId": {
+          "valueType": "LONG",
+          "long": "88"
+        }
+      }
+    },
+    {
+      "columns": {
+        "API_TRACE.serviceName": {
+          "valueType": "STRING",
+          "string": "recommendationservice"
+        },
+        "API_TRACE.apiName": {
+          "valueType": "STRING",
+          "string": "POST /v2/new"
+        },
+        "AVG#results/avgLatency:Api.Trace|duration": {
+          "valueType": "DOUBLE",
+          "double": 21.62366
+        },
+        "COUNT#results/countTraces:Api.Trace|apiTraceId": {
+          "valueType": "LONG",
+          "long": "93"
+        }
+      }
+    },
+    {
+      "columns": {
+        "API_TRACE.serviceName": {
+          "valueType": "STRING",
+          "string": "dataservice"
+        },
+        "API_TRACE.apiName": {
+          "valueType": "STRING",
+          "string": "GET /user/1"
+        },
+        "AVG#results/avgLatency:Api.Trace|duration": {
+          "valueType": "DOUBLE",
+          "double": 18.06061
+        },
+        "COUNT#results/countTraces:Api.Trace|apiTraceId": {
+          "valueType": "LONG",
+          "long": "198"
+        }
+      }
+    },
+    {
+      "columns": {
+        "API_TRACE.serviceName": {
+          "valueType": "STRING",
+          "string": "recommendationservice"
+        },
+        "API_TRACE.apiName": {
+          "valueType": "STRING",
+          "string": "GET /user/32/recommendations"
+        },
+        "AVG#results/avgLatency:Api.Trace|duration": {
+          "valueType": "DOUBLE",
+          "double": 10.40663
+        },
+        "COUNT#results/countTraces:Api.Trace|apiTraceId": {
+          "valueType": "LONG",
+          "long": "332"
+        }
+      }
+    },
+    {
+      "columns": {
+        "API_TRACE.serviceName": {
+          "valueType": "STRING",
+          "string": "checkoutservice"
+        },
+        "API_TRACE.apiName": {
+          "valueType": "STRING",
+          "string": "GET /user/45/cart"
+        },
+        "AVG#results/avgLatency:Api.Trace|duration": {
+          "valueType": "DOUBLE",
+          "double": 11.32703
+        },
+        "COUNT#results/countTraces:Api.Trace|apiTraceId": {
+          "valueType": "LONG",
+          "long": "370"
+        }
+      }
+    },
+    {
+      "columns": {
+        "API_TRACE.serviceName": {
+          "valueType": "STRING",
+          "string": "dataservice"
+        },
+        "API_TRACE.apiName": {
+          "valueType": "STRING",
+          "string": "POST /v3/userreviews"
+        },
+        "AVG#results/avgLatency:Api.Trace|duration": {
+          "valueType": "DOUBLE",
+          "double": 2.47059
+        },
+        "COUNT#results/countTraces:Api.Trace|apiTraceId": {
+          "valueType": "LONG",
+          "long": "527"
+        }
+      }
+    },
+    {
+      "columns": {
+        "API_TRACE.serviceName": {
+          "valueType": "STRING",
+          "string": "checkoutservice"
+        },
+        "API_TRACE.apiName": {
+          "valueType": "STRING",
+          "string": "POST /v2/checkout"
+        },
+        "AVG#results/avgLatency:Api.Trace|duration": {
+          "valueType": "DOUBLE",
+          "double": 18.08212
+        },
+        "COUNT#results/countTraces:Api.Trace|apiTraceId": {
+          "valueType": "LONG",
+          "long": "755"
+        }
+      }
+    },
+    {
+      "columns": {
+        "API_TRACE.serviceName": {
+          "valueType": "STRING",
+          "string": "__Other"
+        },
+        "API_TRACE.apiName": {
+          "valueType": "STRING",
+          "string": "__Other"
+        },
+        "AVG#results/avgLatency:Api.Trace|duration": {
+          "valueType": "DOUBLE",
+          "double": 133.38772
+        },
+        "COUNT#results/countTraces:Api.Trace|apiTraceId": {
+          "valueType": "LONG",
+          "long": "400"
+        }
+      }
+    }
+  ]
+}

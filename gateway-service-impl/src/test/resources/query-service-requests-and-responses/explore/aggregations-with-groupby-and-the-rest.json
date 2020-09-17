@@ -1,0 +1,530 @@
+[
+  {
+    "request": {
+      "filter": {
+        "childFilter": [
+          {
+            "childFilter": [
+              {
+                "lhs": {
+                  "columnIdentifier": {
+                    "columnName": "API_TRACE.startTime"
+                  }
+                },
+                "operator": "GE",
+                "rhs": {
+                  "literal": {
+                    "value": {
+                      "string": "1575300533196"
+                    }
+                  }
+                }
+              },
+              {
+                "lhs": {
+                  "columnIdentifier": {
+                    "columnName": "API_TRACE.startTime"
+                  }
+                },
+                "operator": "LT",
+                "rhs": {
+                  "literal": {
+                    "value": {
+                      "string": "1575304133196"
+                    }
+                  }
+                }
+              }
+            ]
+          },
+          {
+            "childFilter": [
+              {
+                "lhs": {
+                  "columnIdentifier": {
+                    "columnName": "API_TRACE.apiBoundaryType"
+                  }
+                },
+                "operator": "EQ",
+                "rhs": {
+                  "literal": {
+                    "value": {
+                      "string": "ENTRY"
+                    }
+                  }
+                }
+              }
+            ]
+          }
+        ]
+      },
+      "selection": [
+        {
+          "function": {
+            "functionName": "AVG",
+            "arguments": [
+              {
+                "columnIdentifier": {
+                  "columnName": "API_TRACE.duration"
+                }
+              }
+            ],
+            "alias": "AVG#results/avgLatency:Api.Trace|duration"
+          }
+        },
+        {
+          "function": {
+            "functionName": "COUNT",
+            "arguments": [
+              {
+                "columnIdentifier": {
+                  "columnName": "API_TRACE.apiTraceId"
+                }
+              }
+            ],
+            "alias": "COUNT#results/countTraces:Api.Trace|apiTraceId"
+          }
+        },
+        {
+          "columnIdentifier": {
+            "columnName": "API_TRACE.serviceName"
+          }
+        }
+      ],
+      "groupBy": [
+        {
+          "columnIdentifier": {
+            "columnName": "API_TRACE.serviceName"
+          }
+        }
+      ],
+      "limit": 10000
+    },
+    "response": {
+      "isLastChunk": true,
+      "resultSetMetadata": {
+        "columnMetadata": [
+          {
+            "columnName": "API_TRACE.serviceName"
+          },
+          {
+            "columnName": "AVG#results/avgLatency:Api.Trace|duration"
+          },
+          {
+            "columnName": "COUNT#results/countTraces:Api.Trace|apiTraceId"
+          }
+        ]
+      },
+      "row": [
+        {
+          "column": [
+            {
+              "string": "checkoutservice"
+            },
+            {
+              "string": "290.39980"
+            },
+            {
+              "string": "1003"
+            }
+          ]
+        },
+        {
+          "column": [
+            {
+              "string": "dataservice"
+            },
+            {
+              "string": "70.19372"
+            },
+            {
+              "string": "19466"
+            }
+          ]
+        },
+        {
+          "column": [
+            {
+              "string": "recommendationservice"
+            },
+            {
+              "string": "50.10688"
+            },
+            {
+              "string": "1104"
+            }
+          ]
+        },
+        {
+          "column": [
+            {
+              "string": "statservice"
+            },
+            {
+              "string": "48.48333"
+            },
+            {
+              "string": "60"
+            }
+          ]
+        },
+        {
+          "column": [
+            {
+              "string": "partnerintegrationservice"
+            },
+            {
+              "string": "42.08581"
+            },
+            {
+              "string": "3263"
+            }
+          ]
+        },
+        {
+          "column": [
+            {
+              "string": "frontend"
+            },
+            {
+              "string": "37.88183"
+            },
+            {
+              "string": "15689"
+            }
+          ]
+        },
+        {
+          "column": [
+            {
+              "string": "auditservice"
+            },
+            {
+              "string": "26.20000"
+            },
+            {
+              "string": "5"
+            }
+          ]
+        },
+        {
+          "column": [
+            {
+              "string": "dummypartner"
+            },
+            {
+              "string": "24.13552"
+            },
+            {
+              "string": "3232"
+            }
+          ]
+        },
+        {
+          "column": [
+            {
+              "string": "shipitservice"
+            },
+            {
+              "string": "21.62366"
+            },
+            {
+              "string": "93"
+            }
+          ]
+        },
+        {
+          "column": [
+            {
+              "string": "adservice"
+            },
+            {
+              "string": "18.08212"
+            },
+            {
+              "string": "755"
+            }
+          ]
+        },
+        {
+          "column": [
+            {
+              "string": "emailservice"
+            },
+            {
+              "string": "18.06061"
+            },
+            {
+              "string": "198"
+            }
+          ]
+        },
+        {
+          "column": [
+            {
+              "string": "null"
+            },
+            {
+              "string": "14.47222"
+            },
+            {
+              "string": "72"
+            }
+          ]
+        },
+        {
+          "column": [
+            {
+              "string": "orderservice"
+            },
+            {
+              "string": "12.69599"
+            },
+            {
+              "string": "5480"
+            }
+          ]
+        },
+        {
+          "column": [
+            {
+              "string": "userreviewservice"
+            },
+            {
+              "string": "11.32703"
+            },
+            {
+              "string": "370"
+            }
+          ]
+        },
+        {
+          "column": [
+            {
+              "string": "shippingservice"
+            },
+            {
+              "string": "10.40663"
+            },
+            {
+              "string": "332"
+            }
+          ]
+        },
+        {
+          "column": [
+            {
+              "string": "productcatalogservice"
+            },
+            {
+              "string": "8.75851"
+            },
+            {
+              "string": "8812"
+            }
+          ]
+        },
+        {
+          "column": [
+            {
+              "string": "cartservice"
+            },
+            {
+              "string": "5.61975"
+            },
+            {
+              "string": "1023"
+            }
+          ]
+        },
+        {
+          "column": [
+            {
+              "string": "loginservice"
+            },
+            {
+              "string": "2.90305"
+            },
+            {
+              "string": "1475"
+            }
+          ]
+        },
+        {
+          "column": [
+            {
+              "string": "userservice"
+            },
+            {
+              "string": "2.47059"
+            },
+            {
+              "string": "527"
+            }
+          ]
+        },
+        {
+          "column": [
+            {
+              "string": "currencyservice"
+            },
+            {
+              "string": "1.81675"
+            },
+            {
+              "string": "2974"
+            }
+          ]
+        },
+        {
+          "column": [
+            {
+              "string": "paymentservice"
+            },
+            {
+              "string": "1.18182"
+            },
+            {
+              "string": "88"
+            }
+          ]
+        }
+      ]
+    }
+  },
+  {
+    "request": {
+      "filter": {
+        "childFilter": [
+          {
+            "childFilter": [
+              {
+                "lhs": {
+                  "columnIdentifier": {
+                    "columnName": "API_TRACE.startTime"
+                  }
+                },
+                "operator": "GE",
+                "rhs": {
+                  "literal": {
+                    "value": {
+                      "string": "1575300533196"
+                    }
+                  }
+                }
+              },
+              {
+                "lhs": {
+                  "columnIdentifier": {
+                    "columnName": "API_TRACE.startTime"
+                  }
+                },
+                "operator": "LT",
+                "rhs": {
+                  "literal": {
+                    "value": {
+                      "string": "1575304133196"
+                    }
+                  }
+                }
+              }
+            ]
+          },
+          {
+            "childFilter": [
+              {
+                "lhs": {
+                  "columnIdentifier": {
+                    "columnName": "API_TRACE.apiBoundaryType"
+                  }
+                },
+                "operator": "EQ",
+                "rhs": {
+                  "literal": {
+                    "value": {
+                      "string": "ENTRY"
+                    }
+                  }
+                }
+              },
+              {
+                "childFilter": [
+                  {
+                    "lhs": {
+                      "columnIdentifier": {
+                        "columnName": "API_TRACE.serviceName"
+                      }
+                    },
+                    "operator": "NOT_IN",
+                    "rhs": {
+                      "literal": {
+                        "value": {
+                          "valueType": "STRING_ARRAY",
+                          "stringArray": ["auditservice", "statservice", "null", "paymentservice", "shipitservice", "emailservice", "shippingservice", "userreviewservice", "userservice", "adservice"]
+                        }
+                      }
+                    }
+                  }
+                ]
+              }
+            ]
+          }
+        ]
+      },
+      "selection": [
+        {
+          "function": {
+            "functionName": "AVG",
+            "arguments": [
+              {
+                "columnIdentifier": {
+                  "columnName": "API_TRACE.duration"
+                }
+              }
+            ],
+            "alias": "AVG#results/avgLatency:Api.Trace|duration"
+          }
+        },
+        {
+          "function": {
+            "functionName": "COUNT",
+            "arguments": [
+              {
+                "columnIdentifier": {
+                  "columnName": "API_TRACE.apiTraceId"
+                }
+              }
+            ],
+            "alias": "COUNT#results/countTraces:Api.Trace|apiTraceId"
+          }
+        }
+      ],
+      "limit": 1
+    },
+    "response": {
+      "isLastChunk": true,
+      "resultSetMetadata": {
+        "columnMetadata": [
+          {
+            "columnName": "AVG#results/avgLatency:Api.Trace|duration"
+          },
+          {
+            "columnName": "COUNT#results/countTraces:Api.Trace|apiTraceId"
+          }
+        ]
+      },
+      "row": [
+        {
+          "column": [
+            {
+              "string": "133.38772"
+            },
+            {
+              "string": "400"
+            }
+          ]
+        }
+      ]
+    }
+  }
+]

@@ -1,0 +1,180 @@
+{
+  "row": [
+    {
+      "columns": {
+        "API_TRACE.serviceName": {
+          "valueType": "STRING",
+          "string": "auditservice"
+        },
+        "AVG#results/avgLatency:Api.Trace|duration": {
+          "valueType": "DOUBLE",
+          "double": 26.2
+        },
+        "COUNT#results/countTraces:Api.Trace|apiTraceId": {
+          "valueType": "LONG",
+          "long": "5"
+        }
+      }
+    },
+    {
+      "columns": {
+        "API_TRACE.serviceName": {
+          "valueType": "STRING",
+          "string": "statservice"
+        },
+        "AVG#results/avgLatency:Api.Trace|duration": {
+          "valueType": "DOUBLE",
+          "double": 48.48333
+        },
+        "COUNT#results/countTraces:Api.Trace|apiTraceId": {
+          "valueType": "LONG",
+          "long": "60"
+        }
+      }
+    },
+    {
+      "columns": {
+        "API_TRACE.serviceName": {
+          "valueType": "STRING",
+          "string": "null"
+        },
+        "AVG#results/avgLatency:Api.Trace|duration": {
+          "valueType": "DOUBLE",
+          "double": 14.47222
+        },
+        "COUNT#results/countTraces:Api.Trace|apiTraceId": {
+          "valueType": "LONG",
+          "long": "72"
+        }
+      }
+    },
+    {
+      "columns": {
+        "API_TRACE.serviceName": {
+          "valueType": "STRING",
+          "string": "paymentservice"
+        },
+        "AVG#results/avgLatency:Api.Trace|duration": {
+          "valueType": "DOUBLE",
+          "double": 1.18182
+        },
+        "COUNT#results/countTraces:Api.Trace|apiTraceId": {
+          "valueType": "LONG",
+          "long": "88"
+        }
+      }
+    },
+    {
+      "columns": {
+        "API_TRACE.serviceName": {
+          "valueType": "STRING",
+          "string": "shipitservice"
+        },
+        "AVG#results/avgLatency:Api.Trace|duration": {
+          "valueType": "DOUBLE",
+          "double": 21.62366
+        },
+        "COUNT#results/countTraces:Api.Trace|apiTraceId": {
+          "valueType": "LONG",
+          "long": "93"
+        }
+      }
+    },
+    {
+      "columns": {
+        "API_TRACE.serviceName": {
+          "valueType": "STRING",
+          "string": "emailservice"
+        },
+        "AVG#results/avgLatency:Api.Trace|duration": {
+          "valueType": "DOUBLE",
+          "double": 18.06061
+        },
+        "COUNT#results/countTraces:Api.Trace|apiTraceId": {
+          "valueType": "LONG",
+          "long": "198"
+        }
+      }
+    },
+    {
+      "columns": {
+        "API_TRACE.serviceName": {
+          "valueType": "STRING",
+          "string": "shippingservice"
+        },
+        "AVG#results/avgLatency:Api.Trace|duration": {
+          "valueType": "DOUBLE",
+          "double": 10.40663
+        },
+        "COUNT#results/countTraces:Api.Trace|apiTraceId": {
+          "valueType": "LONG",
+          "long": "332"
+        }
+      }
+    },
+    {
+      "columns": {
+        "API_TRACE.serviceName": {
+          "valueType": "STRING",
+          "string": "userreviewservice"
+        },
+        "AVG#results/avgLatency:Api.Trace|duration": {
+          "valueType": "DOUBLE",
+          "double": 11.32703
+        },
+        "COUNT#results/countTraces:Api.Trace|apiTraceId": {
+          "valueType": "LONG",
+          "long": "370"
+        }
+      }
+    },
+    {
+      "columns": {
+        "API_TRACE.serviceName": {
+          "valueType": "STRING",
+          "string": "userservice"
+        },
+        "AVG#results/avgLatency:Api.Trace|duration": {
+          "valueType": "DOUBLE",
+          "double": 2.47059
+        },
+        "COUNT#results/countTraces:Api.Trace|apiTraceId": {
+          "valueType": "LONG",
+          "long": "527"
+        }
+      }
+    },
+    {
+      "columns": {
+        "API_TRACE.serviceName": {
+          "valueType": "STRING",
+          "string": "adservice"
+        },
+        "AVG#results/avgLatency:Api.Trace|duration": {
+          "valueType": "DOUBLE",
+          "double": 18.08212
+        },
+        "COUNT#results/countTraces:Api.Trace|apiTraceId": {
+          "valueType": "LONG",
+          "long": "755"
+        }
+      }
+    },
+    {
+      "columns": {
+        "API_TRACE.serviceName": {
+          "valueType": "STRING",
+          "string": "__Other"
+        },
+        "AVG#results/avgLatency:Api.Trace|duration": {
+          "valueType": "DOUBLE",
+          "double": 133.38772
+        },
+        "COUNT#results/countTraces:Api.Trace|apiTraceId": {
+          "valueType": "LONG",
+          "long": "400"
+        }
+      }
+    }
+  ]
+}

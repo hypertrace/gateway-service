@@ -1,0 +1,961 @@
+[
+  {
+    "request": {
+      "filter": {
+        "childFilter": [
+          {
+            "childFilter": [
+              {
+                "lhs": {
+                  "columnIdentifier": {
+                    "columnName": "API_TRACE.startTime"
+                  }
+                },
+                "operator": "GE",
+                "rhs": {
+                  "literal": {
+                    "value": {
+                      "string": "1575300533196"
+                    }
+                  }
+                }
+              },
+              {
+                "lhs": {
+                  "columnIdentifier": {
+                    "columnName": "API_TRACE.startTime"
+                  }
+                },
+                "operator": "LT",
+                "rhs": {
+                  "literal": {
+                    "value": {
+                      "string": "1575304133196"
+                    }
+                  }
+                }
+              }
+            ]
+          },
+          {
+            "childFilter": [
+              {
+                "lhs": {
+                  "columnIdentifier": {
+                    "columnName": "API_TRACE.apiBoundaryType"
+                  }
+                },
+                "operator": "EQ",
+                "rhs": {
+                  "literal": {
+                    "value": {
+                      "string": "ENTRY"
+                    }
+                  }
+                }
+              }
+            ]
+          }
+        ]
+      },
+      "selection": [
+        {
+          "function": {
+            "functionName": "AVG",
+            "arguments": [
+              {
+                "columnIdentifier": {
+                  "columnName": "API_TRACE.duration"
+                }
+              }
+            ],
+            "alias": "AVG#results/avgLatency:Api.Trace|duration"
+          }
+        },
+        {
+          "function": {
+            "functionName": "COUNT",
+            "arguments": [
+              {
+                "columnIdentifier": {
+                  "columnName": "API_TRACE.apiTraceId"
+                }
+              }
+            ],
+            "alias": "COUNT#results/countTraces:Api.Trace|apiTraceId"
+          }
+        },
+        {
+          "columnIdentifier": {
+            "columnName": "API_TRACE.serviceName"
+          }
+        },
+        {
+          "columnIdentifier": {
+            "columnName": "API_TRACE.apiName"
+          }
+        }
+      ],
+      "groupBy": [
+        {
+          "columnIdentifier": {
+            "columnName": "API_TRACE.serviceName"
+          }
+        },
+        {
+          "columnIdentifier": {
+            "columnName": "API_TRACE.apiName"
+          }
+        }
+      ],
+      "limit": 10000
+    },
+    "response": {
+      "isLastChunk": true,
+      "resultSetMetadata": {
+        "columnMetadata": [
+          {
+            "columnName": "API_TRACE.serviceName"
+          },
+          {
+            "columnName": "API_TRACE.apiName"
+          },
+          {
+            "columnName": "AVG#results/avgLatency:Api.Trace|duration"
+          },
+          {
+            "columnName": "COUNT#results/countTraces:Api.Trace|apiTraceId"
+          }
+        ]
+      },
+      "row": [
+        {
+          "column": [
+            {
+              "string": "checkoutservice"
+            },
+            {
+              "string": "POST /checkout"
+            },
+            {
+              "string": "290.39980"
+            },
+            {
+              "string": "1003"
+            }
+          ]
+        },
+        {
+          "column": [
+            {
+              "string": "dataservice"
+            },
+            {
+              "string": "GET /products"
+            },
+            {
+              "string": "70.19372"
+            },
+            {
+              "string": "19466"
+            }
+          ]
+        },
+        {
+          "column": [
+            {
+              "string": "recommendationservice"
+            },
+            {
+              "string": "POST /new"
+            },
+            {
+              "string": "50.10688"
+            },
+            {
+              "string": "1104"
+            }
+          ]
+        },
+        {
+          "column": [
+            {
+              "string": "dataservice"
+            },
+            {
+              "string": "GET /users"
+            },
+            {
+              "string": "48.48333"
+            },
+            {
+              "string": "60"
+            }
+          ]
+        },
+        {
+          "column": [
+            {
+              "string": "checkoutservice"
+            },
+            {
+              "string": "GET /cart"
+            },
+            {
+              "string": "42.08581"
+            },
+            {
+              "string": "3263"
+            }
+          ]
+        },
+        {
+          "column": [
+            {
+              "string": "recommendationservice"
+            },
+            {
+              "string": "GET /prices"
+            },
+            {
+              "string": "37.88183"
+            },
+            {
+              "string": "15689"
+            }
+          ]
+        },
+        {
+          "column": [
+            {
+              "string": "checkoutservice"
+            },
+            {
+              "string": "POST /shippinginfo"
+            },
+            {
+              "string": "26.20000"
+            },
+            {
+              "string": "5"
+            }
+          ]
+        },
+        {
+          "column": [
+            {
+              "string": "dataservice"
+            },
+            {
+              "string": "POST /user"
+            },
+            {
+              "string": "24.13552"
+            },
+            {
+              "string": "3232"
+            }
+          ]
+        },
+        {
+          "column": [
+            {
+              "string": "recommendationservice"
+            },
+            {
+              "string": "POST /v2/new"
+            },
+            {
+              "string": "21.62366"
+            },
+            {
+              "string": "93"
+            }
+          ]
+        },
+        {
+          "column": [
+            {
+              "string": "checkoutservice"
+            },
+            {
+              "string": "POST /v2/checkout"
+            },
+            {
+              "string": "18.08212"
+            },
+            {
+              "string": "755"
+            }
+          ]
+        },
+        {
+          "column": [
+            {
+              "string": "dataservice"
+            },
+            {
+              "string": "GET /user/1"
+            },
+            {
+              "string": "18.06061"
+            },
+            {
+              "string": "198"
+            }
+          ]
+        },
+        {
+          "column": [
+            {
+              "string": "checkoutservice"
+            },
+            {
+              "string": "POST /v2/cart"
+            },
+            {
+              "string": "14.47222"
+            },
+            {
+              "string": "72"
+            }
+          ]
+        },
+        {
+          "column": [
+            {
+              "string": "dataservice"
+            },
+            {
+              "string": "GET /product/1"
+            },
+            {
+              "string": "12.69599"
+            },
+            {
+              "string": "5480"
+            }
+          ]
+        },
+        {
+          "column": [
+            {
+              "string": "checkoutservice"
+            },
+            {
+              "string": "GET /user/45/cart"
+            },
+            {
+              "string": "11.32703"
+            },
+            {
+              "string": "370"
+            }
+          ]
+        },
+        {
+          "column": [
+            {
+              "string": "recommendationservice"
+            },
+            {
+              "string": "GET /user/32/recommendations"
+            },
+            {
+              "string": "10.40663"
+            },
+            {
+              "string": "332"
+            }
+          ]
+        },
+        {
+          "column": [
+            {
+              "string": "dataservice"
+            },
+            {
+              "string": "GET /user/34/rating"
+            },
+            {
+              "string": "8.75851"
+            },
+            {
+              "string": "8812"
+            }
+          ]
+        },
+        {
+          "column": [
+            {
+              "string": "checkoutservice"
+            },
+            {
+              "string": "POST /v3/checkout"
+            },
+            {
+              "string": "5.61975"
+            },
+            {
+              "string": "1023"
+            }
+          ]
+        },
+        {
+          "column": [
+            {
+              "string": "recommendationservice"
+            },
+            {
+              "string": "GET /user/76/recommendations"
+            },
+            {
+              "string": "2.90305"
+            },
+            {
+              "string": "1475"
+            }
+          ]
+        },
+        {
+          "column": [
+            {
+              "string": "dataservice"
+            },
+            {
+              "string": "POST /v3/userreviews"
+            },
+            {
+              "string": "2.47059"
+            },
+            {
+              "string": "527"
+            }
+          ]
+        },
+        {
+          "column": [
+            {
+              "string": "checkoutservice"
+            },
+            {
+              "string": "GET /users/78/cart"
+            },
+            {
+              "string": "1.81675"
+            },
+            {
+              "string": "2974"
+            }
+          ]
+        },
+        {
+          "column": [
+            {
+              "string": "dataservice"
+            },
+            {
+              "string": "GET /product/879"
+            },
+            {
+              "string": "1.18182"
+            },
+            {
+              "string": "88"
+            }
+          ]
+        }
+      ]
+    }
+  },
+  {
+    "request": {
+      "filter": {
+        "childFilter": [
+          {
+            "childFilter": [
+              {
+                "lhs": {
+                  "columnIdentifier": {
+                    "columnName": "API_TRACE.startTime"
+                  }
+                },
+                "operator": "GE",
+                "rhs": {
+                  "literal": {
+                    "value": {
+                      "string": "1575300533196"
+                    }
+                  }
+                }
+              },
+              {
+                "lhs": {
+                  "columnIdentifier": {
+                    "columnName": "API_TRACE.startTime"
+                  }
+                },
+                "operator": "LT",
+                "rhs": {
+                  "literal": {
+                    "value": {
+                      "string": "1575304133196"
+                    }
+                  }
+                }
+              }
+            ]
+          },
+          {
+            "childFilter": [
+              {
+                "lhs": {
+                  "columnIdentifier": {
+                    "columnName": "API_TRACE.apiBoundaryType"
+                  }
+                },
+                "operator": "EQ",
+                "rhs": {
+                  "literal": {
+                    "value": {
+                      "string": "ENTRY"
+                    }
+                  }
+                }
+              },
+              {
+                "operator": "AND",
+                "childFilter": [
+                  {
+                    "operator": "OR",
+                    "childFilter": [
+                      {
+                        "lhs": {
+                          "columnIdentifier": {
+                            "columnName": "API_TRACE.serviceName"
+                          }
+                        },
+                        "operator": "NEQ",
+                        "rhs": {
+                          "literal": {
+                            "value": {
+                              "valueType": "STRING",
+                              "string": "checkoutservice"
+                            }
+                          }
+                        }
+                      },
+                      {
+                        "lhs": {
+                          "columnIdentifier": {
+                            "columnName": "API_TRACE.apiName"
+                          }
+                        },
+                        "operator": "NEQ",
+                        "rhs": {
+                          "literal": {
+                            "value": {
+                              "valueType": "STRING",
+                              "string": "POST /shippinginfo"
+                            }
+                          }
+                        }
+                      }
+                    ]
+                  },
+                  {
+                    "operator": "OR",
+                    "childFilter": [
+                      {
+                        "lhs": {
+                          "columnIdentifier": {
+                            "columnName": "API_TRACE.serviceName"
+                          }
+                        },
+                        "operator": "NEQ",
+                        "rhs": {
+                          "literal": {
+                            "value": {
+                              "valueType": "STRING",
+                              "string": "dataservice"
+                            }
+                          }
+                        }
+                      },
+                      {
+                        "lhs": {
+                          "columnIdentifier": {
+                            "columnName": "API_TRACE.apiName"
+                          }
+                        },
+                        "operator": "NEQ",
+                        "rhs": {
+                          "literal": {
+                            "value": {
+                              "valueType": "STRING",
+                              "string": "GET /users"
+                            }
+                          }
+                        }
+                      }
+                    ]
+                  },
+                  {
+                    "operator": "OR",
+                    "childFilter": [
+                      {
+                        "lhs": {
+                          "columnIdentifier": {
+                            "columnName": "API_TRACE.serviceName"
+                          }
+                        },
+                        "operator": "NEQ",
+                        "rhs": {
+                          "literal": {
+                            "value": {
+                              "valueType": "STRING",
+                              "string": "checkoutservice"
+                            }
+                          }
+                        }
+                      },
+                      {
+                        "lhs": {
+                          "columnIdentifier": {
+                            "columnName": "API_TRACE.apiName"
+                          }
+                        },
+                        "operator": "NEQ",
+                        "rhs": {
+                          "literal": {
+                            "value": {
+                              "valueType": "STRING",
+                              "string": "POST /v2/cart"
+                            }
+                          }
+                        }
+                      }
+                    ]
+                  },
+                  {
+                    "operator": "OR",
+                    "childFilter": [
+                      {
+                        "lhs": {
+                          "columnIdentifier": {
+                            "columnName": "API_TRACE.serviceName"
+                          }
+                        },
+                        "operator": "NEQ",
+                        "rhs": {
+                          "literal": {
+                            "value": {
+                              "valueType": "STRING",
+                              "string": "dataservice"
+                            }
+                          }
+                        }
+                      },
+                      {
+                        "lhs": {
+                          "columnIdentifier": {
+                            "columnName": "API_TRACE.apiName"
+                          }
+                        },
+                        "operator": "NEQ",
+                        "rhs": {
+                          "literal": {
+                            "value": {
+                              "valueType": "STRING",
+                              "string": "GET /product/879"
+                            }
+                          }
+                        }
+                      }
+                    ]
+                  },
+                  {
+                    "operator": "OR",
+                    "childFilter": [
+                      {
+                        "lhs": {
+                          "columnIdentifier": {
+                            "columnName": "API_TRACE.serviceName"
+                          }
+                        },
+                        "operator": "NEQ",
+                        "rhs": {
+                          "literal": {
+                            "value": {
+                              "valueType": "STRING",
+                              "string": "recommendationservice"
+                            }
+                          }
+                        }
+                      },
+                      {
+                        "lhs": {
+                          "columnIdentifier": {
+                            "columnName": "API_TRACE.apiName"
+                          }
+                        },
+                        "operator": "NEQ",
+                        "rhs": {
+                          "literal": {
+                            "value": {
+                              "valueType": "STRING",
+                              "string": "POST /v2/new"
+                            }
+                          }
+                        }
+                      }
+                    ]
+                  },
+                  {
+                    "operator": "OR",
+                    "childFilter": [
+                      {
+                        "lhs": {
+                          "columnIdentifier": {
+                            "columnName": "API_TRACE.serviceName"
+                          }
+                        },
+                        "operator": "NEQ",
+                        "rhs": {
+                          "literal": {
+                            "value": {
+                              "valueType": "STRING",
+                              "string": "dataservice"
+                            }
+                          }
+                        }
+                      },
+                      {
+                        "lhs": {
+                          "columnIdentifier": {
+                            "columnName": "API_TRACE.apiName"
+                          }
+                        },
+                        "operator": "NEQ",
+                        "rhs": {
+                          "literal": {
+                            "value": {
+                              "valueType": "STRING",
+                              "string": "GET /user/1"
+                            }
+                          }
+                        }
+                      }
+                    ]
+                  },
+                  {
+                    "operator": "OR",
+                    "childFilter": [
+                      {
+                        "lhs": {
+                          "columnIdentifier": {
+                            "columnName": "API_TRACE.serviceName"
+                          }
+                        },
+                        "operator": "NEQ",
+                        "rhs": {
+                          "literal": {
+                            "value": {
+                              "valueType": "STRING",
+                              "string": "recommendationservice"
+                            }
+                          }
+                        }
+                      },
+                      {
+                        "lhs": {
+                          "columnIdentifier": {
+                            "columnName": "API_TRACE.apiName"
+                          }
+                        },
+                        "operator": "NEQ",
+                        "rhs": {
+                          "literal": {
+                            "value": {
+                              "valueType": "STRING",
+                              "string": "GET /user/32/recommendations"
+                            }
+                          }
+                        }
+                      }
+                    ]
+                  },
+                  {
+                    "operator": "OR",
+                    "childFilter": [
+                      {
+                        "lhs": {
+                          "columnIdentifier": {
+                            "columnName": "API_TRACE.serviceName"
+                          }
+                        },
+                        "operator": "NEQ",
+                        "rhs": {
+                          "literal": {
+                            "value": {
+                              "valueType": "STRING",
+                              "string": "checkoutservice"
+                            }
+                          }
+                        }
+                      },
+                      {
+                        "lhs": {
+                          "columnIdentifier": {
+                            "columnName": "API_TRACE.apiName"
+                          }
+                        },
+                        "operator": "NEQ",
+                        "rhs": {
+                          "literal": {
+                            "value": {
+                              "valueType": "STRING",
+                              "string": "GET /user/45/cart"
+                            }
+                          }
+                        }
+                      }
+                    ]
+                  },
+                  {
+                    "operator": "OR",
+                    "childFilter": [
+                      {
+                        "lhs": {
+                          "columnIdentifier": {
+                            "columnName": "API_TRACE.serviceName"
+                          }
+                        },
+                        "operator": "NEQ",
+                        "rhs": {
+                          "literal": {
+                            "value": {
+                              "valueType": "STRING",
+                              "string": "dataservice"
+                            }
+                          }
+                        }
+                      },
+                      {
+                        "lhs": {
+                          "columnIdentifier": {
+                            "columnName": "API_TRACE.apiName"
+                          }
+                        },
+                        "operator": "NEQ",
+                        "rhs": {
+                          "literal": {
+                            "value": {
+                              "valueType": "STRING",
+                              "string": "POST /v3/userreviews"
+                            }
+                          }
+                        }
+                      }
+                    ]
+                  },
+                  {
+                    "operator": "OR",
+                    "childFilter": [
+                      {
+                        "lhs": {
+                          "columnIdentifier": {
+                            "columnName": "API_TRACE.serviceName"
+                          }
+                        },
+                        "operator": "NEQ",
+                        "rhs": {
+                          "literal": {
+                            "value": {
+                              "valueType": "STRING",
+                              "string": "checkoutservice"
+                            }
+                          }
+                        }
+                      },
+                      {
+                        "lhs": {
+                          "columnIdentifier": {
+                            "columnName": "API_TRACE.apiName"
+                          }
+                        },
+                        "operator": "NEQ",
+                        "rhs": {
+                          "literal": {
+                            "value": {
+                              "valueType": "STRING",
+                              "string": "POST /v2/checkout"
+                            }
+                          }
+                        }
+                      }
+                    ]
+                  }
+                ]
+              }
+            ]
+          }
+        ]
+      },
+      "selection": [
+        {
+          "function": {
+            "functionName": "AVG",
+            "arguments": [
+              {
+                "columnIdentifier": {
+                  "columnName": "API_TRACE.duration"
+                }
+              }
+            ],
+            "alias": "AVG#results/avgLatency:Api.Trace|duration"
+          }
+        },
+        {
+          "function": {
+            "functionName": "COUNT",
+            "arguments": [
+              {
+                "columnIdentifier": {
+                  "columnName": "API_TRACE.apiTraceId"
+                }
+              }
+            ],
+            "alias": "COUNT#results/countTraces:Api.Trace|apiTraceId"
+          }
+        }
+      ],
+      "limit": 1
+    },
+    "response": {
+      "isLastChunk": true,
+      "resultSetMetadata": {
+        "columnMetadata": [
+          {
+            "columnName": "AVG#results/avgLatency:Api.Trace|duration"
+          },
+          {
+            "columnName": "COUNT#results/countTraces:Api.Trace|apiTraceId"
+          }
+        ]
+      },
+      "row": [
+        {
+          "column": [
+            {
+              "string": "133.38772"
+            },
+            {
+              "string": "400"
+            }
+          ]
+        }
+      ]
+    }
+  }
+]

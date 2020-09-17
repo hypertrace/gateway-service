@@ -40,6 +40,7 @@ public class EntityDataServiceEntityFetcher implements IEntityFetcher {
     this.attributeMetadataProvider = attributeMetadataProvider;
   }
 
+  // TODO: No limit, offset or orderby for this?
   @Override
   public EntityFetcherResponse getEntities(
       EntitiesRequestContext requestContext, EntitiesRequest entitiesRequest) {
@@ -157,5 +158,17 @@ public class EntityDataServiceEntityFetcher implements IEntityFetcher {
   public EntityFetcherResponse getTimeAggregatedMetrics(
       EntitiesRequestContext requestContext, EntitiesRequest entitiesRequest) {
     throw new UnsupportedOperationException("Fetching time series data not supported by EDS");
+  }
+
+  @Override
+  public int getTotalEntities(EntitiesRequestContext requestContext, EntitiesRequest entitiesRequest) {
+    throw new UnsupportedOperationException("Fetching total entities not supported by EDS");
+  }
+
+  @Override
+  public EntityFetcherResponse getEntitiesAndAggregatedMetrics(
+      EntitiesRequestContext requestContext, EntitiesRequest entitiesRequest) {
+    throw new UnsupportedOperationException("Fetching entities and aggregated metric data"
+        + " not supported by EDS");
   }
 }
