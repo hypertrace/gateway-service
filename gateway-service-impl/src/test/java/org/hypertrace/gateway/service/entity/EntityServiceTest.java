@@ -28,11 +28,13 @@ import org.hypertrace.core.query.service.api.Row;
 import org.hypertrace.core.query.service.api.Value;
 import org.hypertrace.core.query.service.api.ValueType;
 import org.hypertrace.core.query.service.client.QueryServiceClient;
+import org.hypertrace.entity.query.service.client.EntityLabelsClient;
 import org.hypertrace.entity.query.service.client.EntityQueryServiceClient;
 import org.hypertrace.gateway.service.AbstractGatewayServiceTest;
 import org.hypertrace.gateway.service.common.AttributeMetadataProvider;
 import org.hypertrace.gateway.service.common.RequestContext;
 import org.hypertrace.gateway.service.common.config.ScopeFilterConfigs;
+import org.hypertrace.gateway.service.common.transformer.EntityLabelsMappings;
 import org.hypertrace.gateway.service.entity.config.DomainObjectConfigs;
 import org.hypertrace.gateway.service.entity.config.LogConfig;
 import org.hypertrace.gateway.service.v1.common.ColumnIdentifier;
@@ -51,6 +53,7 @@ public class EntityServiceTest extends AbstractGatewayServiceTest {
   private EntityQueryServiceClient entityQueryServiceClient;
   private AttributeMetadataProvider attributeMetadataProvider;
   private LogConfig logConfig;
+  private EntityLabelsClient entityLabelsClient;
 
   @BeforeEach
   public void setup() {
@@ -62,6 +65,7 @@ public class EntityServiceTest extends AbstractGatewayServiceTest {
     mock(attributeMetadataProvider);
     logConfig = Mockito.mock(LogConfig.class);
     when(logConfig.getQueryThresholdInMillis()).thenReturn(1500L);
+    entityLabelsClient = Mockito.mock(EntityLabelsClient.class);
   }
 
   private void mockDomainObjectConfigs() {
@@ -207,8 +211,9 @@ public class EntityServiceTest extends AbstractGatewayServiceTest {
             getResultSetChunk(List.of("API.apiId"), new String[][]{ {"apiId1"}, {"apiId2"}})).iterator());
 
     ScopeFilterConfigs scopeFilterConfigs = new ScopeFilterConfigs(ConfigFactory.empty());
+    EntityLabelsMappings entityLabelsMappings = new EntityLabelsMappings(ConfigFactory.empty());
     EntityService entityService = new EntityService(queryServiceClient, 500,
-        entityQueryServiceClient, attributeMetadataProvider, scopeFilterConfigs, logConfig);
+        entityQueryServiceClient, attributeMetadataProvider, scopeFilterConfigs, entityLabelsMappings, logConfig, entityLabelsClient);
     EntitiesResponse response = entityService.getEntities(TENANT_ID, entitiesRequest, Map.of());
     Assertions.assertNotNull(response);
     Assertions.assertEquals(2, response.getTotal());
@@ -244,8 +249,9 @@ public class EntityServiceTest extends AbstractGatewayServiceTest {
                         .build())
                 .iterator());
     ScopeFilterConfigs scopeFilterConfigs = new ScopeFilterConfigs(ConfigFactory.empty());
+    EntityLabelsMappings entityLabelsMappings = new EntityLabelsMappings(ConfigFactory.empty());
     EntityService entityService = new EntityService(queryServiceClient, 500,
-        entityQueryServiceClient, attributeMetadataProvider, scopeFilterConfigs, logConfig);
+        entityQueryServiceClient, attributeMetadataProvider, scopeFilterConfigs, entityLabelsMappings, logConfig, entityLabelsClient);
     EntitiesRequest entitiesRequest =
         EntitiesRequest.newBuilder()
             .setEntityType("API")

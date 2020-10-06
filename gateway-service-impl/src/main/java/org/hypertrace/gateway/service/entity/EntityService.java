@@ -12,6 +12,7 @@ import org.hypertrace.core.attribute.service.v1.AttributeScope;
 import org.hypertrace.core.attribute.service.v1.AttributeSource;
 import org.hypertrace.core.query.service.client.QueryServiceClient;
 import org.hypertrace.core.serviceframework.metrics.PlatformMetricsRegistry;
+import org.hypertrace.entity.query.service.client.EntityLabelsClient;
 import org.hypertrace.entity.query.service.client.EntityQueryServiceClient;
 import org.hypertrace.gateway.service.common.AttributeMetadataProvider;
 import org.hypertrace.gateway.service.common.OrderByPercentileSizeSetter;
@@ -21,6 +22,7 @@ import org.hypertrace.gateway.service.common.datafetcher.EntityDataServiceEntity
 import org.hypertrace.gateway.service.common.datafetcher.EntityFetcherResponse;
 import org.hypertrace.gateway.service.common.datafetcher.EntityInteractionsFetcher;
 import org.hypertrace.gateway.service.common.datafetcher.QueryServiceEntityFetcher;
+import org.hypertrace.gateway.service.common.transformer.EntityLabelsMappings;
 import org.hypertrace.gateway.service.common.transformer.RequestPreProcessor;
 import org.hypertrace.gateway.service.common.transformer.ResponsePostProcessor;
 import org.hypertrace.gateway.service.entity.config.LogConfig;
@@ -65,11 +67,13 @@ public class EntityService {
       int qsRequestTimeout, EntityQueryServiceClient edsQueryServiceClient,
       AttributeMetadataProvider metadataProvider,
       ScopeFilterConfigs scopeFilterConfigs,
-      LogConfig logConfig) {
+      EntityLabelsMappings entityLabelsMappings,
+      LogConfig logConfig,
+      EntityLabelsClient entityLabelsClient) {
     this.metadataProvider = metadataProvider;
     this.interactionsFetcher = new EntityInteractionsFetcher(qsClient, qsRequestTimeout, metadataProvider);
-    this.requestPreProcessor = new RequestPreProcessor(metadataProvider, scopeFilterConfigs);
-    this.responsePostProcessor = new ResponsePostProcessor(metadataProvider);
+    this.requestPreProcessor = new RequestPreProcessor(metadataProvider, scopeFilterConfigs, entityLabelsMappings);
+    this.responsePostProcessor = new ResponsePostProcessor(metadataProvider, entityLabelsMappings, entityLabelsClient);
     this.edsEntityUpdater = new EdsEntityUpdater(edsQueryServiceClient);
     this.logConfig = logConfig;
 

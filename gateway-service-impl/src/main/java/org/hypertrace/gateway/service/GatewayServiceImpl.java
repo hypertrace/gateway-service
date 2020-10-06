@@ -10,11 +10,14 @@ import org.hypertrace.core.attribute.service.client.AttributeServiceClient;
 import org.hypertrace.core.attribute.service.client.config.AttributeServiceClientConfig;
 import org.hypertrace.core.query.service.client.QueryServiceClient;
 import org.hypertrace.core.query.service.client.QueryServiceConfig;
+import org.hypertrace.entity.query.service.client.EntityLabelsCachingClient;
+import org.hypertrace.entity.query.service.client.EntityLabelsClient;
 import org.hypertrace.entity.query.service.client.EntityQueryServiceClient;
 import org.hypertrace.entity.service.client.config.EntityServiceClientConfig;
 import org.hypertrace.gateway.service.common.AttributeMetadataProvider;
 import org.hypertrace.gateway.service.common.RequestContext;
 import org.hypertrace.gateway.service.common.config.ScopeFilterConfigs;
+import org.hypertrace.gateway.service.common.transformer.EntityLabelsMappings;
 import org.hypertrace.gateway.service.entity.EntityService;
 import org.hypertrace.gateway.service.entity.config.LogConfig;
 import org.hypertrace.gateway.service.explore.ExploreService;
@@ -59,18 +62,21 @@ public class GatewayServiceImpl extends GatewayServiceGrpc.GatewayServiceImplBas
     QueryServiceClient queryServiceClient = new QueryServiceClient(new QueryServiceConfig(qsConfig));
     int qsRequestTimeout = getRequestTimeoutMillis(qsConfig);
 
+    EntityServiceClientConfig entityServiceClientConfig = EntityServiceClientConfig.from(appConfig);
     EntityQueryServiceClient eqsClient =
-        new EntityQueryServiceClient(EntityServiceClientConfig.from(appConfig));
+        new EntityQueryServiceClient(entityServiceClientConfig);
+    EntityLabelsClient entityLabelsClient = new EntityLabelsCachingClient(entityServiceClientConfig);
 
     ScopeFilterConfigs scopeFilterConfigs = new ScopeFilterConfigs(appConfig);
+    EntityLabelsMappings entityLabelsMappings = new EntityLabelsMappings(appConfig);
     LogConfig logConfig = new LogConfig(appConfig);
     this.traceService = new TracesService(queryServiceClient, qsRequestTimeout,
-        attributeMetadataProvider, scopeFilterConfigs);
+        attributeMetadataProvider, scopeFilterConfigs, entityLabelsMappings, entityLabelsClient);
     this.spanService = new SpanService(queryServiceClient, qsRequestTimeout,
         attributeMetadataProvider);
     this.entityService =
         new EntityService(queryServiceClient, qsRequestTimeout,
-            eqsClient, attributeMetadataProvider, scopeFilterConfigs, logConfig);
+            eqsClient, attributeMetadataProvider, scopeFilterConfigs, entityLabelsMappings, logConfig, entityLabelsClient);
     this.exploreService =
         new ExploreService(queryServiceClient, qsRequestTimeout,
             attributeMetadataProvider, scopeFilterConfigs);

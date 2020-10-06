@@ -6,6 +6,7 @@ import java.util.Map;
 import java.util.Set;
 import java.util.stream.Collectors;
 import javax.annotation.Nullable;
+import org.hypertrace.entity.query.service.client.EntityLabelsClient;
 import org.hypertrace.gateway.service.common.AttributeMetadataProvider;
 import org.hypertrace.gateway.service.common.RequestContext;
 import org.hypertrace.gateway.service.common.util.AttributeMetadataUtil;
@@ -32,9 +33,25 @@ import org.hypertrace.gateway.service.v1.trace.TracesResponse;
 public class ResponsePostProcessor {
 
   private final AttributeMetadataProvider attributeMetadataProvider;
+  private final EntitiesResponseLabelsPostProcessor entitiesResponseLabelsPostProcessor;
+  private final TracesResponseLabelsPostProcessor tracesResponseLabelsPostProcessor;
 
-  public ResponsePostProcessor(AttributeMetadataProvider attributeMetadataProvider) {
+  public ResponsePostProcessor(AttributeMetadataProvider attributeMetadataProvider,
+                               EntityLabelsMappings entityLabelsMappings,
+                               EntityLabelsClient entityLabelsClient) {
     this.attributeMetadataProvider = attributeMetadataProvider;
+    this.entitiesResponseLabelsPostProcessor =
+        new EntitiesResponseLabelsPostProcessor(
+            attributeMetadataProvider,
+            entityLabelsMappings,
+            entityLabelsClient
+        );
+    this.tracesResponseLabelsPostProcessor =
+        new TracesResponseLabelsPostProcessor(
+            attributeMetadataProvider,
+            entityLabelsMappings,
+            entityLabelsClient
+        );
   }
 
   /**
@@ -49,6 +66,8 @@ public class ResponsePostProcessor {
       EntitiesRequest request,
       EntitiesRequestContext entitiesRequestContext,
       EntitiesResponse.Builder responseBuilder) {
+    entitiesResponseLabelsPostProcessor.addEntityLabelsToResponse(entitiesRequestContext, responseBuilder);
+
     List<Builder> entityBuilders = responseBuilder.getEntityBuilderList();
 
     Map<String, List<DomainObjectMapping>> attributeIdMappings =
@@ -96,6 +115,7 @@ public class ResponsePostProcessor {
       TracesRequest request,
       RequestContext requestContext,
       TracesResponse.Builder responseBuilder) {
+    tracesResponseLabelsPostProcessor.addEntityLabelsToResponse(requestContext, responseBuilder);
     List<Trace.Builder> tracesBuilders = responseBuilder.getTracesBuilderList();
 
     Map<String, List<DomainObjectMapping>> attributeIdMappings =

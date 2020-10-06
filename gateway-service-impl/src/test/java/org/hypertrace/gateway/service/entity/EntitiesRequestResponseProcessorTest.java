@@ -14,8 +14,10 @@ import org.hypertrace.core.attribute.service.v1.AttributeMetadata;
 import org.hypertrace.core.attribute.service.v1.AttributeScope;
 import org.hypertrace.core.attribute.service.v1.AttributeSource;
 import org.hypertrace.core.attribute.service.v1.AttributeType;
+import org.hypertrace.entity.query.service.client.EntityLabelsClient;
 import org.hypertrace.gateway.service.common.AttributeMetadataProvider;
 import org.hypertrace.gateway.service.common.config.ScopeFilterConfigs;
+import org.hypertrace.gateway.service.common.transformer.EntityLabelsMappings;
 import org.hypertrace.gateway.service.common.transformer.RequestPreProcessor;
 import org.hypertrace.gateway.service.common.transformer.ResponsePostProcessor;
 import org.hypertrace.gateway.service.common.util.QueryExpressionUtil;
@@ -52,6 +54,8 @@ public class EntitiesRequestResponseProcessorTest {
           .addOrderBy(QueryExpressionUtil.getOrderBy("API.apiId", SortOrder.ASC))
           .build();
   @Mock private AttributeMetadataProvider attributeMetadataProvider;
+  @Mock
+  private EntityLabelsClient entityLabelsClient;
   private RequestPreProcessor requestPreProcessor;
   private ResponsePostProcessor responsePostProcessor;
 
@@ -59,8 +63,8 @@ public class EntitiesRequestResponseProcessorTest {
   public void setup() {
     mockAttributeMetadataProvider();
     requestPreProcessor = new RequestPreProcessor(attributeMetadataProvider,
-        new ScopeFilterConfigs(ConfigFactory.empty()));
-    responsePostProcessor = new ResponsePostProcessor(attributeMetadataProvider);
+        new ScopeFilterConfigs(ConfigFactory.empty()), new EntityLabelsMappings(ConfigFactory.empty()));
+    responsePostProcessor = new ResponsePostProcessor(attributeMetadataProvider, new EntityLabelsMappings(ConfigFactory.empty()), entityLabelsClient);
   }
 
   @AfterEach

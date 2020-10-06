@@ -19,10 +19,12 @@ import org.hypertrace.core.query.service.api.Row;
 import org.hypertrace.core.query.service.client.QueryServiceClient;
 import org.hypertrace.core.query.service.util.QueryRequestUtil;
 import org.hypertrace.core.serviceframework.metrics.PlatformMetricsRegistry;
+import org.hypertrace.entity.query.service.client.EntityLabelsClient;
 import org.hypertrace.gateway.service.common.AttributeMetadataProvider;
 import org.hypertrace.gateway.service.common.RequestContext;
 import org.hypertrace.gateway.service.common.config.ScopeFilterConfigs;
 import org.hypertrace.gateway.service.common.converters.QueryAndGatewayDtoConverter;
+import org.hypertrace.gateway.service.common.transformer.EntityLabelsMappings;
 import org.hypertrace.gateway.service.common.transformer.RequestPreProcessor;
 import org.hypertrace.gateway.service.common.transformer.ResponsePostProcessor;
 import org.hypertrace.gateway.service.v1.common.OrderByExpression;
@@ -60,14 +62,17 @@ public class TracesService {
   public TracesService(
       QueryServiceClient queryServiceClient,
       int qsRequestTimeout, AttributeMetadataProvider attributeMetadataProvider,
-      ScopeFilterConfigs scopeFilterConfigs) {
+      ScopeFilterConfigs scopeFilterConfigs,
+      EntityLabelsMappings entityLabelsMappings,
+      EntityLabelsClient entityLabelsClient) {
     this.queryServiceClient = queryServiceClient;
     this.queryServiceReqTimeout = qsRequestTimeout;
     this.attributeMetadataProvider = attributeMetadataProvider;
     this.requestValidator = new TracesRequestValidator();
     this.requestPreProcessor = new RequestPreProcessor(attributeMetadataProvider,
-        scopeFilterConfigs);
-    this.responsePostProcessor = new ResponsePostProcessor(attributeMetadataProvider);
+        scopeFilterConfigs, entityLabelsMappings);
+    this.responsePostProcessor = new ResponsePostProcessor(attributeMetadataProvider,
+        entityLabelsMappings, entityLabelsClient);
     initMetrics();
   }
 

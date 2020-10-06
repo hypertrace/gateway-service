@@ -12,6 +12,7 @@ import java.util.ArrayList;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
+import java.util.Optional;
 import java.util.Set;
 import java.util.stream.Collectors;
 import java.util.stream.IntStream;
@@ -31,6 +32,7 @@ import org.hypertrace.gateway.service.entity.config.DomainObjectFilter;
 import org.hypertrace.gateway.service.entity.config.DomainObjectMapping;
 import org.hypertrace.gateway.service.trace.TraceScope;
 import org.hypertrace.gateway.service.trace.TraceScopeConverter;
+import org.hypertrace.gateway.service.v1.common.ColumnIdentifier;
 import org.hypertrace.gateway.service.v1.common.Expression;
 import org.hypertrace.gateway.service.v1.common.Expression.ValueCase;
 import org.hypertrace.gateway.service.v1.common.Filter;
@@ -58,11 +60,13 @@ public class RequestPreProcessor {
   private static final Logger LOGGER = LoggerFactory.getLogger(RequestPreProcessor.class);
   private final AttributeMetadataProvider attributeMetadataProvider;
   private final ScopeFilterConfigs scopeFilterConfigs;
+  private final EntityLabelsMappings entityLabelsMappings;
 
   public RequestPreProcessor(AttributeMetadataProvider attributeMetadataProvider,
-      ScopeFilterConfigs scopeFilterConfigs) {
+      ScopeFilterConfigs scopeFilterConfigs, EntityLabelsMappings entityLabelsMappings) {
     this.attributeMetadataProvider = attributeMetadataProvider;
     this.scopeFilterConfigs = scopeFilterConfigs;
+    this.entityLabelsMappings = entityLabelsMappings;
   }
 
   /**
@@ -194,7 +198,71 @@ public class RequestPreProcessor {
         transformedExpressions.add(expression);
       }
     }
+
+    // Remove selection on labels and add selection on foreign entityId column. Later on in response
+    // post processor, we will fetch the labels based on a filter on the entityId column values.
+    //
+    // Have to do this after Domain transformation - I think
+    // TODO: Validate on selections and filtering allowed on labels. No grouping, ordering or aggregations
+    return transformEntityLabelExpressions(transformedExpressions, requestContext);
+  }
+
+  private List<Expression> transformEntityLabelExpressions(List<Expression> expressions,
+                                                           RequestContext requestContext) {
+    List<Expression> transformedExpressions = new ArrayList<>();
+
+    for (Expression expression : expressions) {
+      if (expression.getValueCase() == ValueCase.COLUMNIDENTIFIER) {
+        if (entityLabelsMappings.isEntityLabelsColumn(expression.getColumnIdentifier().getColumnName())) {
+          Optional<Expression> mappedEntityIdExpression = transformEntityLabelExpression(expression, expressions, requestContext);
+          mappedEntityIdExpression.ifPresent(transformedExpressions::add);
+        } else {
+          transformedExpressions.add(expression);
+        }
+      } else {
+        transformedExpressions.add(expression);
+      }
+    }
+
     return transformedExpressions;
+  }
+
+  private Optional<Expression> transformEntityLabelExpression(Expression labelsColumn,
+                                                              List<Expression> expressions,
+                                                              RequestContext requestContext) {
+    Optional<ScopeEntityLabelsMapping> scopeEntityLabelsMapping = entityLabelsMappings.getEntityLabelsMapping(
+        labelsColumn.getColumnIdentifier().getColumnName());
+    if (scopeEntityLabelsMapping.isEmpty()) {
+      return Optional.empty();
+    }
+
+    // Track this labels column so we can make a request on the entity labels once we get the entities response.
+    requestContext.addEntityLabelExpression(labelsColumn);
+
+    // We need to select on the mapped entity id so that we can execute a request on the labels filtered
+    // on the entity id values. We only do this if it's not in the expressions already.
+    ScopeEntityLabelsMapping scopeEntityLabelsMappingVal = scopeEntityLabelsMapping.get();
+    AttributeMetadata attributeMetadata = attributeMetadataProvider.getAttributeMetadata(
+        requestContext,
+        scopeEntityLabelsMappingVal.getScope(),
+        scopeEntityLabelsMappingVal.getEntityIdKey()
+    ).orElseThrow();
+
+    // No need to add a new selection on the mapped entity id if it's already selected on.
+    for (Expression expression : expressions) {
+      if (expression.hasColumnIdentifier() && expression.getColumnIdentifier().getColumnName().equals(attributeMetadata.getId())) {
+        return Optional.empty();
+      }
+    }
+
+    return Optional.of(
+        Expression.newBuilder()
+            .setColumnIdentifier(
+                ColumnIdentifier.newBuilder()
+                    .setColumnName(attributeMetadata.getId())
+            )
+            .build()
+    );
   }
 
   private List<Expression> getUniqueSelections(List<Expression> expressions) {

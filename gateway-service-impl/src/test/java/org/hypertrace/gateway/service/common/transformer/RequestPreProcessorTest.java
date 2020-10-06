@@ -43,7 +43,7 @@ public class RequestPreProcessorTest {
   public void setup() {
     attributeMetadataProvider = mock(AttributeMetadataProvider.class);
     requestPreProcessor = new RequestPreProcessor(attributeMetadataProvider,
-        new ScopeFilterConfigs(ConfigFactory.empty()));
+        new ScopeFilterConfigs(ConfigFactory.empty()), new EntityLabelsMappings(ConfigFactory.empty()));
   }
 
   @AfterEach
