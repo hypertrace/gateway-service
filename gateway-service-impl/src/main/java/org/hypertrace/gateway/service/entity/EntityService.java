@@ -58,6 +58,8 @@ public class EntityService {
   private final ResponsePostProcessor responsePostProcessor;
   private final EdsEntityUpdater edsEntityUpdater;
   private final LogConfig logConfig;
+  private final EntityLabelsClient entityLabelsClient;
+  private final EntityLabelsMappings entityLabelsMappings;
   // Metrics
   private Timer queryBuildTimer;
   private Timer queryExecutionTimer;
@@ -76,6 +78,8 @@ public class EntityService {
     this.responsePostProcessor = new ResponsePostProcessor(metadataProvider, entityLabelsMappings, entityLabelsClient);
     this.edsEntityUpdater = new EdsEntityUpdater(edsQueryServiceClient);
     this.logConfig = logConfig;
+    this.entityLabelsClient = entityLabelsClient;
+    this.entityLabelsMappings = entityLabelsMappings;
 
     registerEntityFetchers(qsClient, qsRequestTimeout, edsQueryServiceClient);
     initMetrics();
@@ -185,7 +189,36 @@ public class EntityService {
     // to add the capability similar to what we have for querying.
     UpdateEntityResponse.Builder responseBuilder =
         edsEntityUpdater.update(request, updateExecutionContext);
+
+    // Refresh Entity labels cache if it's a labels column that was updated.
+    refreshEntityLabelsCacheIfNecessary(request, requestContext, tenantId, requestHeaders);
+
     return responseBuilder.build();
+  }
+
+  private void refreshEntityLabelsCacheIfNecessary(UpdateEntityRequest request,
+                                                   RequestContext requestContext,
+                                                   String tenantId,
+                                                   Map<String, String> requestHeaders) {
+    String columnName = request.getOperation().getSetAttribute().getAttribute().getColumnName();
+    entityLabelsMappings.getEntityLabelsMapping(columnName)
+        .ifPresent((scopeEntityLabelsMapping) -> {
+          AttributeMetadata entityIdAttributeMetadata = metadataProvider.getAttributeMetadata(
+              requestContext,
+              scopeEntityLabelsMapping.getScope(),
+              scopeEntityLabelsMapping.getEntityIdKey()
+          ).orElseThrow();
+
+          entityLabelsClient.refreshEntityLabelsForEntity(
+              entityIdAttributeMetadata.getId(),
+              scopeEntityLabelsMapping.getLabelsColumnName(),
+              request.getEntityId(),
+              request.getEntityType(),
+              requestHeaders,
+              tenantId
+          );
+        }
+    );
   }
 
   private void addEntityInteractions(
