@@ -14,7 +14,7 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 public class StringToAttributeKindConverter extends ToAttributeKindConverter<String> {
-  private static final Logger log = LoggerFactory.getLogger(StringToAttributeKindConverter.class);
+  private static final Logger LOGGER = LoggerFactory.getLogger(StringToAttributeKindConverter.class);
   private static final TypeReference<Map<String, String>> MAP_TYPE_REFERENCE = new TypeReference<>() {};
   private static final TypeReference<List<String>> LIST_TYPE_REFERENCE = new TypeReference<>() {};
   public static StringToAttributeKindConverter INSTANCE = new StringToAttributeKindConverter();
@@ -89,8 +89,7 @@ public class StringToAttributeKindConverter extends ToAttributeKindConverter<Str
     try {
       return objectMapper.readValue(jsonString, LIST_TYPE_REFERENCE);
     } catch (IOException e) {
-      log.warn("Unable to read List JSON String data from: {}. With error:", jsonString, e);
-      log.warn("Setting data as empty list instead");
+      LOGGER.warn("Unable to read List JSON String data from: {}. Setting data as empty list instead. With error:", jsonString, e);
     }
     return List.of();
   }
@@ -102,8 +101,7 @@ public class StringToAttributeKindConverter extends ToAttributeKindConverter<Str
         mapData = objectMapper.readValue(jsonString, MAP_TYPE_REFERENCE);
       }
     } catch (IOException e) {
-      log.warn("Unable to read Map JSON String data from: {}. With error:", jsonString, e);
-      log.warn("Setting data as empty map instead");
+      LOGGER.warn("Unable to read Map JSON String data from: {}. Setting data as empty map instead. With error:", jsonString, e);
     }
     return mapData;
   }
