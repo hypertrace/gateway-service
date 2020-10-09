@@ -42,8 +42,9 @@ public class RequestPreProcessorTest {
   @BeforeEach
   public void setup() {
     attributeMetadataProvider = mock(AttributeMetadataProvider.class);
+    Config entityLabelsConfig = readConfigFromFile("configs/request-preprocessor-test/entity-labels-config.conf");
     requestPreProcessor = new RequestPreProcessor(attributeMetadataProvider,
-        new ScopeFilterConfigs(ConfigFactory.empty()), new EntityLabelsMappings(ConfigFactory.empty()));
+        new ScopeFilterConfigs(ConfigFactory.empty()), new EntityLabelsMappings(entityLabelsConfig));
   }
 
   @AfterEach
@@ -466,6 +467,143 @@ public class RequestPreProcessorTest {
         transformedRequest);
   }
 
+  @Test
+  public void testServiceEntitiesLabelsColumnIsRemoved() {
+    initializeDomainObjectConfigs("configs/request-preprocessor-test/service-id-config.conf");
+    EntitiesRequestContext entitiesRequestContext =
+        new EntitiesRequestContext(TEST_TENANT_ID, 0L, 1L, "SERVICE", Map.of());
+    Expression labelsExpression = QueryExpressionUtil.getColumnExpression("SERVICE.labels").build();
+    mockAttributeMetadata(entitiesRequestContext, AttributeScope.SERVICE, "id");
+    EntitiesRequest entitiesRequest =
+        EntitiesRequest.newBuilder()
+            .setEntityType("SERVICE")
+            .setStartTimeMillis(0L)
+            .setEndTimeMillis(1L)
+            .setFilter(
+                Filter.newBuilder()
+                    .setOperator(Operator.AND)
+                    .addChildFilter(
+                        GatewayExpressionCreator.createFilter(
+                            QueryExpressionUtil.getColumnExpression("SERVICE.name"),
+                            Operator.LIKE,
+                            QueryExpressionUtil.getLiteralExpression("log"))))
+            .addSelection(QueryExpressionUtil.getColumnExpression("SERVICE.id"))
+            .addSelection(QueryExpressionUtil.getColumnExpression("SERVICE.name"))
+            .addSelection(QueryExpressionUtil.getColumnExpression("SERVICE.labels"))
+            .addSelection(
+                QueryExpressionUtil.getAggregateFunctionExpression(
+                    "SERVICE.duration", FunctionType.AVG, "AVG#SERVICE|duration"))
+            .addSelection(
+                QueryExpressionUtil.getAggregateFunctionExpression(
+                    "SERVICE.errorCount", FunctionType.SUM, "SUM#SERVICE|errorCount"))
+            .addOrderBy(
+                QueryExpressionUtil.getOrderBy(
+                    "SERVICE.duration", FunctionType.AVG, "AVG#SERVICE|duration", SortOrder.DESC))
+            .build();
+
+    EntitiesRequest transformedRequest =
+        requestPreProcessor.transform(entitiesRequest, entitiesRequestContext);
+
+    // RequestPreProcessor should remove duplicate SERVICE.labels and track it in the EntitiesRequestContext
+    Assertions.assertEquals(
+        EntitiesRequest.newBuilder()
+            .setEntityType("SERVICE")
+            .setStartTimeMillis(0L)
+            .setEndTimeMillis(1L)
+            .setFilter(
+                Filter.newBuilder()
+                    .setOperator(Operator.AND)
+                    .addChildFilter(
+                        GatewayExpressionCreator.createFilter(
+                            QueryExpressionUtil.getColumnExpression("SERVICE.name"),
+                            Operator.LIKE,
+                            QueryExpressionUtil.getLiteralExpression("log"))))
+            .addSelection(QueryExpressionUtil.getColumnExpression("SERVICE.id"))
+            .addSelection(QueryExpressionUtil.getColumnExpression("SERVICE.name"))
+            .addSelection(
+                QueryExpressionUtil.getAggregateFunctionExpression(
+                    "SERVICE.duration", FunctionType.AVG, "AVG#SERVICE|duration"))
+            .addSelection(
+                QueryExpressionUtil.getAggregateFunctionExpression(
+                    "SERVICE.errorCount", FunctionType.SUM, "SUM#SERVICE|errorCount"))
+            .addOrderBy(
+                QueryExpressionUtil.getOrderBy(
+                    "SERVICE.duration", FunctionType.AVG, "AVG#SERVICE|duration", SortOrder.DESC))
+            .build(),
+        transformedRequest);
+    // Check if the removed labels column was tracked in entitiesRequestContext.
+    Assertions.assertEquals(1, entitiesRequestContext.getEntityLabelExpressions().size());
+    Assertions.assertEquals(labelsExpression, entitiesRequestContext.getEntityLabelExpressions().get(0));
+  }
+
+  @Test
+  public void testEntitiesRequestWithServiceEntitiesLabelsColumnAddsEntitiesIdColumn() {
+    initializeDomainObjectConfigs("configs/request-preprocessor-test/service-id-config.conf");
+    EntitiesRequestContext entitiesRequestContext =
+        new EntitiesRequestContext(TEST_TENANT_ID, 0L, 1L, "SERVICE", Map.of());
+    Expression labelsExpression = QueryExpressionUtil.getColumnExpression("SERVICE.labels").build();
+    mockAttributeMetadata(entitiesRequestContext, AttributeScope.SERVICE, "id");
+    EntitiesRequest entitiesRequest =
+        EntitiesRequest.newBuilder()
+            .setEntityType("SERVICE")
+            .setStartTimeMillis(0L)
+            .setEndTimeMillis(1L)
+            .setFilter(
+                Filter.newBuilder()
+                    .setOperator(Operator.AND)
+                    .addChildFilter(
+                        GatewayExpressionCreator.createFilter(
+                            QueryExpressionUtil.getColumnExpression("SERVICE.name"),
+                            Operator.LIKE,
+                            QueryExpressionUtil.getLiteralExpression("log"))))
+            .addSelection(QueryExpressionUtil.getColumnExpression("SERVICE.name"))
+            .addSelection(QueryExpressionUtil.getColumnExpression("SERVICE.labels"))
+            .addSelection(
+                QueryExpressionUtil.getAggregateFunctionExpression(
+                    "SERVICE.duration", FunctionType.AVG, "AVG#SERVICE|duration"))
+            .addSelection(
+                QueryExpressionUtil.getAggregateFunctionExpression(
+                    "SERVICE.errorCount", FunctionType.SUM, "SUM#SERVICE|errorCount"))
+            .addOrderBy(
+                QueryExpressionUtil.getOrderBy(
+                    "SERVICE.duration", FunctionType.AVG, "AVG#SERVICE|duration", SortOrder.DESC))
+            .build();
+
+    EntitiesRequest transformedRequest =
+        requestPreProcessor.transform(entitiesRequest, entitiesRequestContext);
+
+    // RequestPreProcessor should remove duplicate SERVICE.labels and track it in the EntitiesRequestContext
+    Assertions.assertEquals(
+        EntitiesRequest.newBuilder()
+            .setEntityType("SERVICE")
+            .setStartTimeMillis(0L)
+            .setEndTimeMillis(1L)
+            .setFilter(
+                Filter.newBuilder()
+                    .setOperator(Operator.AND)
+                    .addChildFilter(
+                        GatewayExpressionCreator.createFilter(
+                            QueryExpressionUtil.getColumnExpression("SERVICE.name"),
+                            Operator.LIKE,
+                            QueryExpressionUtil.getLiteralExpression("log"))))
+            .addSelection(QueryExpressionUtil.getColumnExpression("SERVICE.name"))
+            .addSelection(QueryExpressionUtil.getColumnExpression("SERVICE.id")) // This should be added
+            .addSelection(
+                QueryExpressionUtil.getAggregateFunctionExpression(
+                    "SERVICE.duration", FunctionType.AVG, "AVG#SERVICE|duration"))
+            .addSelection(
+                QueryExpressionUtil.getAggregateFunctionExpression(
+                    "SERVICE.errorCount", FunctionType.SUM, "SUM#SERVICE|errorCount"))
+            .addOrderBy(
+                QueryExpressionUtil.getOrderBy(
+                    "SERVICE.duration", FunctionType.AVG, "AVG#SERVICE|duration", SortOrder.DESC))
+            .build(),
+        transformedRequest);
+    // Check if the removed labels column was tracked in entitiesRequestContext.
+    Assertions.assertEquals(1, entitiesRequestContext.getEntityLabelExpressions().size());
+    Assertions.assertEquals(labelsExpression, entitiesRequestContext.getEntityLabelExpressions().get(0));
+  }
+
   private Expression.Builder createStringArrayLiteralExpressionBuilder(List<String> values) {
     return Expression.newBuilder().setLiteral(
         LiteralConstant.newBuilder().setValue(
@@ -532,6 +670,11 @@ public class RequestPreProcessorTest {
   }
 
   private void initializeDomainObjectConfigs(String filePath) {
+    Config config = readConfigFromFile(filePath);
+    DomainObjectConfigs.init(config);
+  }
+
+  private Config readConfigFromFile(String filePath) {
     String configFilePath =
         Thread.currentThread().getContextClassLoader().getResource(filePath).getPath();
     if (configFilePath == null) {
@@ -539,7 +682,6 @@ public class RequestPreProcessorTest {
     }
 
     Config fileConfig = ConfigFactory.parseFile(new File(configFilePath));
-    Config config = ConfigFactory.load(fileConfig);
-    DomainObjectConfigs.init(config);
+    return ConfigFactory.load(fileConfig);
   }
 }
