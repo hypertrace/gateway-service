@@ -2,7 +2,7 @@ import com.google.protobuf.gradle.*
 
 plugins {
   `java-library`
-  id("com.google.protobuf") version "0.8.8"
+  id("com.google.protobuf") version "0.8.13"
   id("org.hypertrace.publish-plugin")
 }
 
@@ -10,14 +10,14 @@ val generateLocalGoGrpcFiles = false
 
 protobuf {
   protoc {
-    artifact = "com.google.protobuf:protoc:3.6.1"
+    artifact = "com.google.protobuf:protoc:3.13.0"
   }
   plugins {
     // Optional: an artifact spec for a protoc plugin, with "grpc" as
     // the identifier, which can be referred to in the "plugins"
     // container of the "generateProtoTasks" closure.
     id("grpc_java") {
-      artifact = "io.grpc:protoc-gen-grpc-java:1.15.1"
+      artifact = "io.grpc:protoc-gen-grpc-java:1.32.1"
     }
   }
   generateProtoTasks {
@@ -42,8 +42,8 @@ sourceSets {
 }
 
 dependencies {
-  api("io.grpc:grpc-protobuf:1.30.2")
-  api("com.google.api.grpc:proto-google-common-protos:1.18.0")
-  api("io.grpc:grpc-stub:1.30.2")
+  api("io.grpc:grpc-protobuf:1.32.1")
+  api("com.google.api.grpc:proto-google-common-protos:1.18.1")
+  api("io.grpc:grpc-stub:1.32.1")
   api("javax.annotation:javax.annotation-api:1.3.2")
 }
