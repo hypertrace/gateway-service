@@ -4,6 +4,7 @@ import com.fasterxml.jackson.core.type.TypeReference;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import java.io.IOException;
 import java.util.HashMap;
+import java.util.List;
 import java.util.Map;
 import org.apache.commons.lang3.StringUtils;
 import org.hypertrace.core.attribute.service.v1.AttributeKind;
@@ -14,7 +15,8 @@ import org.slf4j.LoggerFactory;
 
 public class StringToAttributeKindConverter extends ToAttributeKindConverter<String> {
   private static final Logger log = LoggerFactory.getLogger(StringToAttributeKindConverter.class);
-  private static final TypeReference<Map<String, String>> mapOfString = new TypeReference<>() {};
+  private static final TypeReference<Map<String, String>> MAP_TYPE_REFERENCE = new TypeReference<>() {};
+  private static final TypeReference<List<String>> LIST_TYPE_REFERENCE = new TypeReference<>() {};
   public static StringToAttributeKindConverter INSTANCE = new StringToAttributeKindConverter();
   private final ObjectMapper objectMapper = new ObjectMapper();
 
@@ -69,20 +71,38 @@ public class StringToAttributeKindConverter extends ToAttributeKindConverter<Str
         valueBuilder.setValueType(ValueType.STRING_MAP);
         valueBuilder.putAllStringMap(convertToMap(value));
         return valueBuilder.build();
+      case TYPE_STRING_ARRAY:
+        valueBuilder.setValueType(ValueType.STRING_ARRAY);
+        valueBuilder.addAllStringArray(convertToArray(value));
+        return valueBuilder.build();
       default:
         break;
     }
     return null;
   }
 
+  private List<String> convertToArray(String jsonString) {
+    if (StringUtils.isEmpty(jsonString)) {
+      return List.of();
+    }
+
+    try {
+      return objectMapper.readValue(jsonString, LIST_TYPE_REFERENCE);
+    } catch (IOException e) {
+      log.warn("Unable to read List JSON String data from: {}. With error:", jsonString, e);
+      log.warn("Setting data as empty list instead");
+    }
+    return List.of();
+  }
+
   private Map<String, String> convertToMap(String jsonString) {
     Map<String, String> mapData = new HashMap<>();
     try {
       if (!StringUtils.isEmpty(jsonString)) {
-        mapData = objectMapper.readValue(jsonString, mapOfString);
+        mapData = objectMapper.readValue(jsonString, MAP_TYPE_REFERENCE);
       }
     } catch (IOException e) {
-      log.warn("Unable to read Map JSON Strig data from: {}. With error: \n", jsonString, e);
+      log.warn("Unable to read Map JSON String data from: {}. With error:", jsonString, e);
       log.warn("Setting data as empty map instead");
     }
     return mapData;
