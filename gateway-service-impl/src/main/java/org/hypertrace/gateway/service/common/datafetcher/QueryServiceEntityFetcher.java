@@ -273,9 +273,21 @@ public class QueryServiceEntityFetcher implements IEntityFetcher {
     QueryRequest.Builder builder =
         constructSelectionQuery(requestContext, entitiesRequest, entityIdAttributes, aggregates);
 
-    // Order by, limit and offset from the request.
-    builder.setLimit(entitiesRequest.getLimit());
-    builder.setOffset(entitiesRequest.getOffset());
+    // If there is more than one groupBy column, we cannot set the same limit that came
+    // in the request since that might return less entities than needed when the same
+    // entity has different values for the other group by columns. Example: A service entity's
+    // name changes and that will now have two different names.
+    // For now, we pass a high value of limit in this case so that we get all the entities.
+    // Limit has to be applied post the query in this case. Setting offset also might be wrong
+    // here, hence not setting it.
+    if (builder.getGroupByCount() > 1) {
+      builder.setLimit(QueryServiceClient.DEFAULT_QUERY_SERVICE_GROUP_BY_LIMIT);
+    } else {
+      builder.setLimit(entitiesRequest.getLimit());
+      builder.setOffset(entitiesRequest.getOffset());
+    }
+
+    // Order by from the request.
     builder.addAllOrderBy(
             QueryAndGatewayDtoConverter.convertToQueryOrderByExpressions(entitiesRequest.getOrderByList()));
 
@@ -381,6 +393,10 @@ public class QueryServiceEntityFetcher implements IEntityFetcher {
     }
 
     // Add all expressions in the select/group that are already not part of the EntityID attributes
+    // We do this mainly because we're reading the other non-id attributes of entities also
+    // from OLAP store but ideally they should be coming from entity service.
+    // TODO: Query non identifying attributes from entity service in parallel to this query
+    //  and remove this logic.
     entitiesRequest.getSelectionList().stream()
         .filter(expression -> expression.getValueCase() == ValueCase.COLUMNIDENTIFIER)
         .filter(

@@ -83,7 +83,7 @@ public class QueryServiceEntityFetcherTests {
     List<OrderByExpression> orderByExpressions = List.of(buildOrderByExpression(API_ID_ATTR));
     long startTime = 0L;
     long endTime = 10L;
-    int limit = 10;
+    int limit = 10000;
     int offset = 0;
     String tenantId = "TENANT_ID";
     Map<String, String> requestHeaders = Map.of("x-tenant-id", tenantId);
