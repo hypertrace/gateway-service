@@ -3,6 +3,7 @@ package org.hypertrace.gateway.service.common.converter;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 
+import java.util.List;
 import org.hypertrace.core.attribute.service.v1.AttributeKind;
 import org.hypertrace.gateway.service.common.converters.StringToAttributeKindConverter;
 import org.hypertrace.gateway.service.v1.common.Value;
@@ -29,5 +30,33 @@ public class StringToAttributeKindConverterTest {
         converter.doConvert("      ", AttributeKind.TYPE_DOUBLE, Value.newBuilder()));
     assertThrows(NumberFormatException.class, () ->
         converter.doConvert("      ", AttributeKind.TYPE_INT64, Value.newBuilder()));
+  }
+
+  @Test
+  public void testStringToAttributeKindConverterJsonArrayStr() {
+    StringToAttributeKindConverter converter = StringToAttributeKindConverter.INSTANCE;
+    assertEquals(List.of("label1", "label2"),
+        converter.doConvert(
+            "[\"label1\", \"label2\"]",
+            AttributeKind.TYPE_STRING_ARRAY,
+            Value.newBuilder()
+        ).getStringArrayList()
+    );
+
+    assertEquals(List.of(),
+        converter.doConvert(
+            "",
+            AttributeKind.TYPE_STRING_ARRAY,
+            Value.newBuilder()
+        ).getStringArrayList()
+    );
+
+    assertEquals(List.of(),
+        converter.doConvert(
+            "label1",
+            AttributeKind.TYPE_STRING_ARRAY,
+            Value.newBuilder()
+        ).getStringArrayList()
+    );
   }
 }
