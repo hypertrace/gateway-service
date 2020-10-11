@@ -83,7 +83,7 @@ public class QueryServiceEntityFetcherTests {
     List<OrderByExpression> orderByExpressions = List.of(buildOrderByExpression(API_ID_ATTR));
     long startTime = 0L;
     long endTime = 10L;
-    int limit = 10000;
+    int limit = 10;
     int offset = 0;
     String tenantId = "TENANT_ID";
     Map<String, String> requestHeaders = Map.of("x-tenant-id", tenantId);
@@ -130,7 +130,9 @@ public class QueryServiceEntityFetcherTests {
         .addGroupBy(createQsColumnExpression(API_NAME_ATTR))
         .addOrderBy(createQsOrderBy(createQsColumnExpression(API_ID_ATTR), SortOrder.ASC))
         .setOffset(offset)
-        .setLimit(limit)
+        // Though the limit on entities request is less, since there are multiple columns in the
+        // groupBy, the limit will be set to the default from query service.
+        .setLimit(QueryServiceClient.DEFAULT_QUERY_SERVICE_GROUP_BY_LIMIT)
         .build();
 
     List<ResultSetChunk> resultSetChunks = List.of(
@@ -191,7 +193,6 @@ public class QueryServiceEntityFetcherTests {
             .setEntityType(entityType.name())
             .setStartTimeMillis(startTime)
             .setEndTimeMillis(endTime)
-            .addSelection(buildExpression(API_NAME_ATTR))
             .addSelection(buildAggregateExpression(API_DURATION_ATTR, FunctionType.AVG, "AVG_API.duration", List.of()))
             .addTimeAggregation(buildTimeAggregation(30, API_NUM_CALLS_ATTR, FunctionType.SUM, "SUM_API.numCalls", List.of()))
             .setFilter(generateEQFilter(API_DISCOVERY_STATE_ATTR, "DISCOVERED"))

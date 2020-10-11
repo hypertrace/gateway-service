@@ -92,10 +92,7 @@ public class QueryServiceEntityFetcher implements IEntityFetcher {
     QueryRequest.Builder builder =
         constructSelectionQuery(requestContext, entitiesRequest, entityIdAttributes, aggregates);
 
-    // Pinot truncates the GroupBy results to 10 when there is no limit explicitly but
-    // here we neither want the results to be truncated nor apply the limit coming from client.
-    // We would like to get all entities based on filters so we set the limit to a high value.
-    builder.setLimit(QueryServiceClient.DEFAULT_QUERY_SERVICE_GROUP_BY_LIMIT);
+    adjustLimitAndOffset(builder, entitiesRequest.getLimit(), entitiesRequest.getOffset());
 
     QueryRequest queryRequest = builder.build();
 
@@ -180,12 +177,7 @@ public class QueryServiceEntityFetcher implements IEntityFetcher {
 
     QueryRequest.Builder builder =
         constructSelectionQuery(requestContext, entitiesRequest, entityIdAttributes, aggregates);
-
-
-    // Pinot truncates the GroupBy results to 10 when there is no limit explicitly but
-    // here we neither want the results to be truncated nor apply the limit coming from client.
-    // We would like to get all entities based on filters so we set the limit to a high value.
-    builder.setLimit(QueryServiceClient.DEFAULT_QUERY_SERVICE_GROUP_BY_LIMIT);
+    adjustLimitAndOffset(builder, entitiesRequest.getLimit(), entitiesRequest.getOffset());
 
     QueryRequest request = builder.build();
 
@@ -273,19 +265,7 @@ public class QueryServiceEntityFetcher implements IEntityFetcher {
     QueryRequest.Builder builder =
         constructSelectionQuery(requestContext, entitiesRequest, entityIdAttributes, aggregates);
 
-    // If there is more than one groupBy column, we cannot set the same limit that came
-    // in the request since that might return less entities than needed when the same
-    // entity has different values for the other group by columns. Example: A service entity's
-    // name changes and that will now have two different names.
-    // For now, we pass a high value of limit in this case so that we get all the entities.
-    // Limit has to be applied post the query in this case. Setting offset also might be wrong
-    // here, hence not setting it.
-    if (builder.getGroupByCount() > 1) {
-      builder.setLimit(QueryServiceClient.DEFAULT_QUERY_SERVICE_GROUP_BY_LIMIT);
-    } else {
-      builder.setLimit(entitiesRequest.getLimit());
-      builder.setOffset(entitiesRequest.getOffset());
-    }
+    adjustLimitAndOffset(builder, entitiesRequest.getLimit(), entitiesRequest.getOffset());
 
     // Order by from the request.
     builder.addAllOrderBy(
@@ -364,6 +344,22 @@ public class QueryServiceEntityFetcher implements IEntityFetcher {
       }
     }
     return new EntityFetcherResponse(entityBuilders);
+  }
+
+  private void adjustLimitAndOffset(QueryRequest.Builder builder, int limit, int offset) {
+    // If there is more than one groupBy column, we cannot set the same limit that came
+    // in the request since that might return less entities than needed when the same
+    // entity has different values for the other group by columns. Example: A service entity's
+    // name changes and that will now have two different names.
+    // For now, we pass a high value of limit in this case so that we get all the entities.
+    // Limit has to be applied post the query in this case. Setting offset also might be wrong
+    // here, hence not setting it.
+    if (builder.getGroupByCount() > 1) {
+      builder.setLimit(QueryServiceClient.DEFAULT_QUERY_SERVICE_GROUP_BY_LIMIT);
+    } else {
+      builder.setLimit(limit);
+      builder.setOffset(offset);
+    }
   }
 
   private QueryRequest.Builder constructSelectionQuery(EntitiesRequestContext requestContext,
