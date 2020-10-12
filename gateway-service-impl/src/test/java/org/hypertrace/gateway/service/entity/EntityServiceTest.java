@@ -176,7 +176,7 @@ public class EntityServiceTest extends AbstractGatewayServiceTest {
         .setFilter(queryServiceFilter)
         .addGroupBy(createQsColumnExpression("API.apiId"))
         .addGroupBy(createQsColumnExpression("API.apiName", "API Name"))
-        .setLimit(2)
+        .setLimit(QueryServiceClient.DEFAULT_QUERY_SERVICE_GROUP_BY_LIMIT)
         .build();
     when(queryServiceClient.executeQuery(eq(expectedQueryRequest), any(), Mockito.anyInt()))
         .thenReturn(

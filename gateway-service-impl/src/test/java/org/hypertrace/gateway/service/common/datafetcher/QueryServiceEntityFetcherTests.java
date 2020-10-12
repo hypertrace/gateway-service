@@ -130,7 +130,9 @@ public class QueryServiceEntityFetcherTests {
         .addGroupBy(createQsColumnExpression(API_NAME_ATTR))
         .addOrderBy(createQsOrderBy(createQsColumnExpression(API_ID_ATTR), SortOrder.ASC))
         .setOffset(offset)
-        .setLimit(limit)
+        // Though the limit on entities request is less, since there are multiple columns in the
+        // groupBy, the limit will be set to the default from query service.
+        .setLimit(QueryServiceClient.DEFAULT_QUERY_SERVICE_GROUP_BY_LIMIT)
         .build();
 
     List<ResultSetChunk> resultSetChunks = List.of(

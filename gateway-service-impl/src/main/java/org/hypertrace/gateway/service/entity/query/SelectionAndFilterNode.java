@@ -1,8 +1,6 @@
 package org.hypertrace.gateway.service.entity.query;
 
-import java.util.List;
 import org.hypertrace.gateway.service.entity.query.visitor.Visitor;
-import org.hypertrace.gateway.service.v1.common.OrderByExpression;
 
 public class SelectionAndFilterNode implements QueryNode {
 
