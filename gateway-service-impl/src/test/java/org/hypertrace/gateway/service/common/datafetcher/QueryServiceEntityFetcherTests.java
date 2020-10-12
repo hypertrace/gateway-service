@@ -193,6 +193,7 @@ public class QueryServiceEntityFetcherTests {
             .setEntityType(entityType.name())
             .setStartTimeMillis(startTime)
             .setEndTimeMillis(endTime)
+            .addSelection(buildExpression(API_NAME_ATTR))
             .addSelection(buildAggregateExpression(API_DURATION_ATTR, FunctionType.AVG, "AVG_API.duration", List.of()))
             .addTimeAggregation(buildTimeAggregation(30, API_NUM_CALLS_ATTR, FunctionType.SUM, "SUM_API.numCalls", List.of()))
             .setFilter(generateEQFilter(API_DISCOVERY_STATE_ATTR, "DISCOVERED"))
