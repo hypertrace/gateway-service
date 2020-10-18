@@ -3,6 +3,8 @@ package org.hypertrace.gateway.service;
 import com.google.common.base.Preconditions;
 import com.google.protobuf.ServiceException;
 import com.typesafe.config.Config;
+import io.grpc.ManagedChannel;
+import io.grpc.ManagedChannelBuilder;
 import io.grpc.stub.StreamObserver;
 import java.util.Optional;
 import org.apache.commons.lang3.StringUtils;
@@ -59,8 +61,11 @@ public class GatewayServiceImpl extends GatewayServiceGrpc.GatewayServiceImplBas
     QueryServiceClient queryServiceClient = new QueryServiceClient(new QueryServiceConfig(qsConfig));
     int qsRequestTimeout = getRequestTimeoutMillis(qsConfig);
 
-    EntityQueryServiceClient eqsClient =
-        new EntityQueryServiceClient(EntityServiceClientConfig.from(appConfig));
+    EntityServiceClientConfig esConfig = EntityServiceClientConfig.from(appConfig);
+    ManagedChannel entityServiceChannel =
+        ManagedChannelBuilder.forAddress(esConfig.getHost(), esConfig.getPort())
+            .usePlaintext().build();
+    EntityQueryServiceClient eqsClient = new EntityQueryServiceClient(entityServiceChannel);
 
     ScopeFilterConfigs scopeFilterConfigs = new ScopeFilterConfigs(appConfig);
     LogConfig logConfig = new LogConfig(appConfig);
