@@ -53,8 +53,10 @@ public class GatewayServiceImpl extends GatewayServiceGrpc.GatewayServiceImplBas
 
   public GatewayServiceImpl(Config appConfig) {
     AttributeServiceClientConfig asConfig = AttributeServiceClientConfig.from(appConfig);
-    AttributeServiceClient asClient =
-        new AttributeServiceClient(asConfig.getHost(), asConfig.getPort());
+    ManagedChannel attributeServiceChannel =
+        ManagedChannelBuilder.forAddress(asConfig.getHost(), asConfig.getPort())
+            .usePlaintext().build();
+    AttributeServiceClient asClient = new AttributeServiceClient(attributeServiceChannel);
     AttributeMetadataProvider attributeMetadataProvider = new AttributeMetadataProvider(asClient);
 
     Config qsConfig = appConfig.getConfig(QUERY_SERVICE_CONFIG_KEY);
