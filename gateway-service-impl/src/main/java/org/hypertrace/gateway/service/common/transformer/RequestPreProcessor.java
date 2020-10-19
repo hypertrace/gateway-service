@@ -31,6 +31,7 @@ import org.hypertrace.gateway.service.entity.config.DomainObjectFilter;
 import org.hypertrace.gateway.service.entity.config.DomainObjectMapping;
 import org.hypertrace.gateway.service.trace.TraceScope;
 import org.hypertrace.gateway.service.trace.TraceScopeConverter;
+import org.hypertrace.gateway.service.v1.common.ColumnIdentifier;
 import org.hypertrace.gateway.service.v1.common.Expression;
 import org.hypertrace.gateway.service.v1.common.Expression.ValueCase;
 import org.hypertrace.gateway.service.v1.common.Filter;
@@ -42,6 +43,9 @@ import org.hypertrace.gateway.service.v1.common.TimeAggregation;
 import org.hypertrace.gateway.service.v1.common.Value;
 import org.hypertrace.gateway.service.v1.common.ValueType;
 import org.hypertrace.gateway.service.v1.entity.EntitiesRequest;
+import org.hypertrace.gateway.service.v1.entity.SetAttribute;
+import org.hypertrace.gateway.service.v1.entity.UpdateEntityOperation;
+import org.hypertrace.gateway.service.v1.entity.UpdateEntityRequest;
 import org.hypertrace.gateway.service.v1.trace.TracesRequest;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -171,6 +175,45 @@ public class RequestPreProcessor {
     return tracesRequestBuilder.build();
   }
 
+  public UpdateEntityRequest transform(UpdateEntityRequest originalRequest, RequestContext requestContext) {
+    Map<String, List<DomainObjectMapping>> attributeIdMappings =
+        AttributeMetadataUtil.getAttributeIdMappings(
+            attributeMetadataProvider, requestContext, originalRequest.getEntityType());
+    if (attributeIdMappings.isEmpty()) {
+      LOGGER.debug("No attribute id mappings found for scope:{}", originalRequest.getEntityType());
+      return originalRequest;
+    }
+
+    UpdateEntityRequest.Builder updateEntityRequestBuilder = UpdateEntityRequest.newBuilder(originalRequest);
+    // Handle entity id and type
+    // TODO: Handle entity id and type. What happens when there are multiple columns the id maps to?
+    EntityKey entitykey = EntityKey.from(originalRequest.getEntityId());
+    // Handle mappings in selection expressions
+    updateEntityRequestBuilder.clearSelection();
+    updateEntityRequestBuilder.addAllSelection(
+        transformSelection(
+            attributeIdMappings, originalRequest.getSelectionList(), requestContext));
+
+    // Handle mappings in update operation's attributes
+    updateEntityRequestBuilder.clearOperation();
+    updateEntityRequestBuilder.setOperation(
+        UpdateEntityOperation.newBuilder().setSetAttribute(
+            SetAttribute.newBuilder()
+                .setAttribute(
+                    transformColumnIdentifier(attributeIdMappings,
+                        originalRequest.getOperation().getSetAttribute().getAttribute(), requestContext)
+                )
+                .setValue(
+                    originalRequest.getOperation().getSetAttribute().getValue()
+                )
+        )
+    );
+
+
+
+    return updateEntityRequestBuilder.build();
+  }
+
   private boolean doesExpressionNeedRemapping(
       Map<String, List<DomainObjectMapping>> attributeIdMappings, Expression expression) {
     return expression.getValueCase() == ValueCase.COLUMNIDENTIFIER
@@ -278,6 +321,40 @@ public class RequestPreProcessor {
                         .getId())
                     .build())
         .collect(Collectors.toList());
+  }
+
+  private ColumnIdentifier transformColumnIdentifier(
+      Map<String, List<DomainObjectMapping>> attributeIdMappings,
+      ColumnIdentifier columnIdentifier,
+      RequestContext requestContext) {
+    String columnName = columnIdentifier.getColumnName();
+//    return expression.getValueCase() == ValueCase.COLUMNIDENTIFIER
+//        && attributeIdMappings.containsKey(expression.getColumnIdentifier().getColumnName());
+    if (!attributeIdMappings.containsKey(columnName)) {
+      return columnIdentifier;
+    }
+
+    List<DomainObjectMapping> domainObjectMappingList = attributeIdMappings.get(columnName);
+    // TODO: Only handle 1-to-1 transformations. Do we need to handle multiple column transformations?
+
+    AttributeMetadata attributeMetadata = AttributeMetadataUtil.getAttributeMetadata(
+        attributeMetadataProvider, requestContext, domainObjectMappingList.get(0));
+
+    return ColumnIdentifier.newBuilder(columnIdentifier)
+        .setColumnName(
+            attributeMetadata.getId()
+        )
+        .build();
+    //String column = expression.getColumnIdentifier().getColumnName();
+//    return attributeIdMappings.get(column).stream()
+//        .map(
+//            col ->
+//                QueryExpressionUtil.getColumnExpression(
+//                    AttributeMetadataUtil.getAttributeMetadata(
+//                        attributeMetadataProvider, requestContext, col)
+//                        .getId())
+//                    .build())
+//        .collect(Collectors.toList());
   }
 
   private List<OrderByExpression> transformOrderBy(
