@@ -6,7 +6,6 @@ import java.util.Map;
 import java.util.Optional;
 import java.util.stream.Collectors;
 import org.hypertrace.core.attribute.service.v1.AttributeMetadata;
-import org.hypertrace.core.attribute.service.v1.AttributeScope;
 import org.hypertrace.gateway.service.common.AttributeMetadataProvider;
 import org.hypertrace.gateway.service.common.RequestContext;
 import org.hypertrace.gateway.service.common.exp.UnknownScopeAndKeyForAttributeException;
@@ -118,12 +117,11 @@ public class AttributeMetadataUtil {
   public static String getTimestampAttributeId(
       AttributeMetadataProvider attributeMetadataProvider,
       RequestContext requestContext,
-      String attributeScopeStr) {
+      String attributeScope) {
     Map<String, List<DomainObjectMapping>> attributeIdMappings =
-        getAttributeIdMappings(attributeMetadataProvider, requestContext, attributeScopeStr);
+        getAttributeIdMappings(attributeMetadataProvider, requestContext, attributeScope);
 
-    AttributeScope attributeScope = AttributeScope.valueOf(attributeScopeStr);
-    String key = getStartTimeAttributeKeyName(attributeScope.name());
+    String key = getStartTimeAttributeKeyName(attributeScope);
     AttributeMetadata timeId =
         attributeMetadataProvider
             .getAttributeMetadata(requestContext, attributeScope, key)
@@ -153,9 +151,7 @@ public class AttributeMetadataUtil {
 
   private static AttributeMetadata getAttributeMetadata(
       AttributeMetadataProvider attributeMetadataProvider,
-      RequestContext requestContext,
-      AttributeScope scope,
-      String key) {
+      RequestContext requestContext, String scope, String key) {
     return attributeMetadataProvider
         .getAttributeMetadata(requestContext, scope, key)
         .orElseThrow(() -> new UnknownScopeAndKeyForAttributeException(scope, key));

@@ -80,20 +80,20 @@ public class ScopeFilterConfigsTest {
     RequestContext requestContext = new RequestContext("some-tenant-id", Map.of());
     AttributeMetadataProvider attributeMetadataProvider = mock(AttributeMetadataProvider.class);
     when(attributeMetadataProvider.getAttributeMetadata(
-            requestContext, AttributeScope.API_TRACE, "apiBoundaryType"))
+            requestContext, AttributeScope.API_TRACE.name(), "apiBoundaryType"))
         .thenReturn(
             Optional.of(
                 AttributeMetadata.newBuilder()
-                    .setScope(AttributeScope.API_TRACE)
+                    .setScopeString(AttributeScope.API_TRACE.name())
                     .setKey("apiBoundaryType")
                     .setId("API_TRACE.apiBoundaryType")
                     .build()));
     when(attributeMetadataProvider.getAttributeMetadata(
-            requestContext, AttributeScope.API_TRACE, "apiId"))
+            requestContext, AttributeScope.API_TRACE.name(), "apiId"))
         .thenReturn(
             Optional.of(
                 AttributeMetadata.newBuilder()
-                    .setScope(AttributeScope.API_TRACE)
+                    .setScopeString(AttributeScope.API_TRACE.name())
                     .setKey("apiId")
                     .setId("API_TRACE.apiId")
                     .build()));
@@ -119,12 +119,12 @@ public class ScopeFilterConfigsTest {
             .addChildFilter(expectedExtraFilter)
             .build(),
         scopeFilterConfigs.createScopeFilter(
-            AttributeScope.API_TRACE, filter1, attributeMetadataProvider, requestContext));
+            AttributeScope.API_TRACE.name(), filter1, attributeMetadataProvider, requestContext));
 
     Assertions.assertEquals(
         expectedExtraFilter.build(),
         scopeFilterConfigs.createScopeFilter(
-            AttributeScope.API_TRACE, filter2, attributeMetadataProvider, requestContext));
+            AttributeScope.API_TRACE.name(), filter2, attributeMetadataProvider, requestContext));
     Assertions.assertEquals(
         Filter.newBuilder()
             .setOperator(Operator.AND)
@@ -132,13 +132,13 @@ public class ScopeFilterConfigsTest {
             .addChildFilter(expectedExtraFilter)
             .build(),
         scopeFilterConfigs.createScopeFilter(
-            AttributeScope.API_TRACE, filter3, attributeMetadataProvider, requestContext));
+            AttributeScope.API_TRACE.name(), filter3, attributeMetadataProvider, requestContext));
 
     // Test for scope without extra filters in the config
     Assertions.assertEquals(
         filter1,
         scopeFilterConfigs.createScopeFilter(
-            AttributeScope.TRACE, filter1, attributeMetadataProvider, requestContext));
+            AttributeScope.TRACE.name(), filter1, attributeMetadataProvider, requestContext));
   }
 
   @Test
@@ -187,7 +187,7 @@ public class ScopeFilterConfigsTest {
     Assertions.assertEquals(
         filter1,
         scopeFilterConfigs.createScopeFilter(
-            AttributeScope.API_TRACE, filter1, attributeMetadataProvider, requestContext));
+            AttributeScope.API_TRACE.name(), filter1, attributeMetadataProvider, requestContext));
   }
 
   @Test
@@ -217,12 +217,12 @@ public class ScopeFilterConfigsTest {
     Assertions.assertEquals(
         filter1,
         scopeFilterConfigs.createScopeFilter(
-            AttributeScope.API_TRACE, filter1, attributeMetadataProvider, requestContext));
+            AttributeScope.API_TRACE.name(), filter1, attributeMetadataProvider, requestContext));
 
     Assertions.assertEquals(
         filter1,
         scopeFilterConfigs.createScopeFilter(
-            AttributeScope.TRACE, filter1, attributeMetadataProvider, requestContext));
+            AttributeScope.TRACE.name(), filter1, attributeMetadataProvider, requestContext));
   }
 
   private Expression.Builder createLiteralStringExpression(String str) {

@@ -56,7 +56,7 @@ public class RequestPreProcessorTest {
     initializeDomainObjectConfigs("configs/request-preprocessor-test/service-id-config.conf");
     EntitiesRequestContext entitiesRequestContext =
         new EntitiesRequestContext(TEST_TENANT_ID, 0L, 1L, "SERVICE", Map.of());
-    mockAttributeMetadata(entitiesRequestContext, AttributeScope.SERVICE, "id");
+    mockAttributeMetadata(entitiesRequestContext, AttributeScope.SERVICE.name(), "id");
     EntitiesRequest entitiesRequest =
         EntitiesRequest.newBuilder()
             .setEntityType("SERVICE")
@@ -478,26 +478,25 @@ public class RequestPreProcessorTest {
 
   private void mockAttributeMetadataForDomainAndMappings(
       EntitiesRequestContext entitiesRequestContext) {
-    mockAttributeMetadata(entitiesRequestContext, AttributeScope.EVENT, "name");
-    mockAttributeMetadata(entitiesRequestContext, AttributeScope.EVENT, "id");
-    mockAttributeMetadata(entitiesRequestContext, AttributeScope.EVENT, "duration");
-    mockAttributeMetadata(entitiesRequestContext, AttributeScope.EVENT, "errorCount");
-    mockAttributeMetadata(entitiesRequestContext, AttributeScope.SERVICE, "hostHeader");
-    mockAttributeMetadata(
-        entitiesRequestContext, AttributeScope.API, "isExternal", AttributeKind.TYPE_BOOL);
-    mockAttributeMetadata(entitiesRequestContext, AttributeScope.SERVICE, "duration");
-    mockAttributeMetadata(entitiesRequestContext, AttributeScope.SERVICE, "errorCount");
-    mockAttributeMetadata(entitiesRequestContext, AttributeScope.SERVICE, "id");
-    mockAttributeMetadata(entitiesRequestContext, AttributeScope.SERVICE, "mappedAttr1");
-    mockAttributeMetadata(entitiesRequestContext, AttributeScope.SERVICE, "attr1");
-    mockAttributeMetadata(entitiesRequestContext, AttributeScope.SERVICE, "attr2");
-    mockAttributeMetadata(entitiesRequestContext, AttributeScope.SERVICE, "mappedAttr2",
+    mockAttributeMetadata(entitiesRequestContext, AttributeScope.EVENT.name(), "name");
+    mockAttributeMetadata(entitiesRequestContext, AttributeScope.EVENT.name(), "id");
+    mockAttributeMetadata(entitiesRequestContext, AttributeScope.EVENT.name(), "duration");
+    mockAttributeMetadata(entitiesRequestContext, AttributeScope.EVENT.name(), "errorCount");
+    mockAttributeMetadata(entitiesRequestContext, AttributeScope.SERVICE.name(), "hostHeader");
+    mockAttributeMetadata(entitiesRequestContext, AttributeScope.API.name(), "isExternal", AttributeKind.TYPE_BOOL);
+    mockAttributeMetadata(entitiesRequestContext, AttributeScope.SERVICE.name(), "duration");
+    mockAttributeMetadata(entitiesRequestContext, AttributeScope.SERVICE.name(), "errorCount");
+    mockAttributeMetadata(entitiesRequestContext, AttributeScope.SERVICE.name(), "id");
+    mockAttributeMetadata(entitiesRequestContext, AttributeScope.SERVICE.name(), "mappedAttr1");
+    mockAttributeMetadata(entitiesRequestContext, AttributeScope.SERVICE.name(), "attr1");
+    mockAttributeMetadata(entitiesRequestContext, AttributeScope.SERVICE.name(), "attr2");
+    mockAttributeMetadata(entitiesRequestContext, AttributeScope.SERVICE.name(), "mappedAttr2",
         AttributeKind.TYPE_STRING);
-    mockAttributeMetadata(entitiesRequestContext, AttributeScope.SERVICE, "attr10");
+    mockAttributeMetadata(entitiesRequestContext, AttributeScope.SERVICE.name(), "attr10");
   }
 
   private void mockAttributeMetadata(
-      EntitiesRequestContext entitiesRequestContext, AttributeScope attributeScope, String key) {
+      EntitiesRequestContext entitiesRequestContext, String attributeScope, String key) {
     when(attributeMetadataProvider.getAttributeMetadata(
             entitiesRequestContext, attributeScope, key))
         .thenReturn(createAttributeMetadata(attributeScope, key));
@@ -505,26 +504,24 @@ public class RequestPreProcessorTest {
 
   private void mockAttributeMetadata(
       EntitiesRequestContext entitiesRequestContext,
-      AttributeScope attributeScope,
-      String key,
-      AttributeKind attributeKind) {
+      String attributeScope, String key, AttributeKind attributeKind) {
     when(attributeMetadataProvider.getAttributeMetadata(
             entitiesRequestContext, attributeScope, key))
         .thenReturn(createAttributeMetadata(attributeScope, key, attributeKind));
   }
 
   private Optional<AttributeMetadata> createAttributeMetadata(
-      AttributeScope attributeScope, String key) {
+      String attributeScope, String key) {
     return Optional.of(
         AttributeMetadata.newBuilder()
-            .setScope(attributeScope)
+            .setScopeString(attributeScope)
             .setKey(key)
             .setId(attributeScope + "." + key)
             .build());
   }
 
   private Optional<AttributeMetadata> createAttributeMetadata(
-      AttributeScope attributeScope, String key, AttributeKind kind) {
+      String attributeScope, String key, AttributeKind kind) {
     return Optional.of(
         AttributeMetadata.newBuilder(createAttributeMetadata(attributeScope, key).orElseThrow())
             .setValueKind(kind)

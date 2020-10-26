@@ -60,7 +60,7 @@ public class SpanService {
     final Context timerContext = queryExecutionTimer.time();
     try {
       Map<String, AttributeMetadata> attributeMap =
-          attributeMetadataProvider.getAttributesMetadata(context, AttributeScope.EVENT);
+          attributeMetadataProvider.getAttributesMetadata(context, AttributeScope.EVENT.name());
       SpansResponse.Builder spanResponseBuilder = SpansResponse.newBuilder();
 
       Collection<SpanEvent> filteredSpanEvents = filterSpans(context, request, attributeMap);
@@ -168,7 +168,7 @@ public class SpanService {
             request.getEndTimeMillis(),
             attributeMetadataProvider
                 .getAttributeMetadata(
-                    requestContext, AttributeScope.EVENT, SPAN_TIMESTAMP_ATTRIBUTE_NAME_KEY)
+                    requestContext, AttributeScope.EVENT.name(), SPAN_TIMESTAMP_ATTRIBUTE_NAME_KEY)
                 .get()
                 .getId(),
             request.getFilter());
@@ -184,7 +184,7 @@ public class SpanService {
         QueryRequestUtil.createCountByColumnSelection(
             attributeMetadataProvider
                 .getAttributeMetadata(
-                    context, AttributeScope.EVENT, SPAN_TIMESTAMP_ATTRIBUTE_NAME_KEY)
+                    context, AttributeScope.EVENT.name(), SPAN_TIMESTAMP_ATTRIBUTE_NAME_KEY)
                 .get()
                 .getId()));
     QueryRequest queryRequest = queryBuilder.build();

@@ -4,7 +4,6 @@ import java.util.Collections;
 import java.util.List;
 import java.util.Map;
 import java.util.Objects;
-import org.hypertrace.core.attribute.service.v1.AttributeScope;
 import org.hypertrace.gateway.service.v1.entity.EntitiesRequest;
 
 /**
@@ -41,17 +40,17 @@ public class DomainObjectConfig {
   }
 
   public static class DomainAttribute {
-    private final AttributeScope scope;
+    private final String scope;
     private final String key;
     private final boolean isPrimaryKey;
 
-    public DomainAttribute(AttributeScope scope, String key, boolean isPrimaryKey) {
+    public DomainAttribute(String scope, String key, boolean isPrimaryKey) {
       this.scope = scope;
       this.key = key;
       this.isPrimaryKey = isPrimaryKey;
     }
 
-    public AttributeScope getScope() {
+    public String getScope() {
       return scope;
     }
 
@@ -65,14 +64,16 @@ public class DomainObjectConfig {
 
     @Override
     public boolean equals(Object o) {
-      if (this == o) return true;
-      if (o == null || getClass() != o.getClass()) return false;
-
+      if (this == o) {
+        return true;
+      }
+      if (o == null || getClass() != o.getClass()) {
+        return false;
+      }
       DomainAttribute that = (DomainAttribute) o;
-
-      if (isPrimaryKey != that.isPrimaryKey) return false;
-      if (scope != that.scope) return false;
-      return key.equals(that.key);
+      return isPrimaryKey == that.isPrimaryKey &&
+          scope.equals(that.scope) &&
+          key.equals(that.key);
     }
 
     @Override

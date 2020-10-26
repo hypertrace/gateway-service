@@ -1,15 +1,14 @@
 package org.hypertrace.gateway.service.entity.config;
 
 import com.typesafe.config.Config;
-import org.hypertrace.core.attribute.service.v1.AttributeScope;
 
 public class DomainObjectMapping {
   private static final String VALUE = "value";
-  private final AttributeScope scope;
+  private final String scope;
   private final String key;
   private final DomainObjectFilter filter;
 
-  public DomainObjectMapping(AttributeScope scope, String key, Config filterConfig) {
+  public DomainObjectMapping(String scope, String key, Config filterConfig) {
     this.scope = scope;
     this.key = key;
     if (filterConfig != null) {
@@ -20,7 +19,7 @@ public class DomainObjectMapping {
     }
   }
 
-  public AttributeScope getScope() {
+  public String getScope() {
     return scope;
   }
 

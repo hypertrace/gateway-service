@@ -17,7 +17,6 @@ import java.util.stream.Collectors;
 import org.hypertrace.core.attribute.service.client.AttributeServiceClient;
 import org.hypertrace.core.attribute.service.v1.AttributeMetadata;
 import org.hypertrace.core.attribute.service.v1.AttributeMetadataFilter;
-import org.hypertrace.core.attribute.service.v1.AttributeScope;
 import org.hypertrace.gateway.service.entity.config.DomainObjectConfig;
 import org.hypertrace.gateway.service.entity.config.DomainObjectConfigs;
 import org.hypertrace.gateway.service.entity.config.DomainObjectMapping;
@@ -35,24 +34,23 @@ public class AttributeMetadataProvider {
   private static final int DEFAULT_CACHE_SIZE = 4096;
   private static final int DEFAULT_EXPIRE_DURATION_MIN = 60; // 60 min
   // AttributeScope to Map<id, AttributeMetadata>
-  private final LoadingCache<AttributeCacheKey<AttributeScope>, Map<String, AttributeMetadata>>
+  private final LoadingCache<AttributeCacheKey<String>, Map<String, AttributeMetadata>>
       scopeToMapOfIdAndAttributeMetadataCache;
   // Pair<AttributeScope, key> to AttributeMetadata
-  private final LoadingCache<
-      AttributeCacheKey<Map.Entry<AttributeScope, String>>, AttributeMetadata>
+  private final LoadingCache<AttributeCacheKey<Map.Entry<String, String>>, AttributeMetadata>
       scopeAndKeyToAttrMetadataCache;
 
   public AttributeMetadataProvider(AttributeServiceClient attributesServiceClient) {
-    CacheLoader<AttributeCacheKey<AttributeScope>, Map<String, AttributeMetadata>> cacheLoader =
+    CacheLoader<AttributeCacheKey<String>, Map<String, AttributeMetadata>> cacheLoader =
         new CacheLoader<>() {
           @Override
           public Map<String, AttributeMetadata> load(
-              AttributeCacheKey<AttributeScope> scopeBasedCacheKey) {
+              AttributeCacheKey<String> scopeBasedCacheKey) {
             Iterator<AttributeMetadata> attributeMetadataIterator =
                 attributesServiceClient.findAttributes(
                     scopeBasedCacheKey.getHeaders(),
                     AttributeMetadataFilter.newBuilder()
-                        .addScope(scopeBasedCacheKey.getDataKey())
+                        .addScopeString(scopeBasedCacheKey.getDataKey())
                         .build());
 
             Map<String, AttributeMetadata> attributeMetadataMap = new HashMap<>();
@@ -63,18 +61,18 @@ public class AttributeMetadataProvider {
           }
         };
 
-    CacheLoader<AttributeCacheKey<Map.Entry<AttributeScope, String>>, AttributeMetadata>
+    CacheLoader<AttributeCacheKey<Map.Entry<String, String>>, AttributeMetadata>
         scopeAndAliasToAttrMetadataCacheLoader =
         new CacheLoader<>() {
           @Override
           public AttributeMetadata load(
-              AttributeCacheKey<Map.Entry<AttributeScope, String>>
+              AttributeCacheKey<Map.Entry<String, String>>
                   scopeAndKeyPairBasedCacheKey) {
             Iterator<AttributeMetadata> attributeMetadataIterator =
                 attributesServiceClient.findAttributes(
                     scopeAndKeyPairBasedCacheKey.getHeaders(),
                     AttributeMetadataFilter.newBuilder()
-                        .addScope(scopeAndKeyPairBasedCacheKey.getDataKey().getKey())
+                        .addScopeString(scopeAndKeyPairBasedCacheKey.getDataKey().getKey())
                         .build());
 
             while (attributeMetadataIterator.hasNext()) {
@@ -102,14 +100,14 @@ public class AttributeMetadataProvider {
   }
 
   public Map<String, AttributeMetadata> getAttributesMetadata(
-      RequestContext requestContext, AttributeScope attributeScope) {
-    List<AttributeScope> scopes = getDomainAttributeScopes(attributeScope);
+      RequestContext requestContext, String attributeScope) {
+    List<String> scopes = getDomainAttributeScopes(attributeScope);
     Map<String, AttributeMetadata> attributeMetadataMap = new HashMap<>();
     scopes.forEach(
         scope -> {
           try {
             // attributes metadata should be populated for all the mapped scoped in domain object
-            AttributeCacheKey<AttributeScope> cacheKey =
+            AttributeCacheKey<String> cacheKey =
                 new AttributeCacheKey<>(requestContext, scope);
             attributeMetadataMap.putAll(scopeToMapOfIdAndAttributeMetadataCache.get(cacheKey));
           } catch (ExecutionException e) {
@@ -121,9 +119,9 @@ public class AttributeMetadataProvider {
   }
 
   public Optional<AttributeMetadata> getAttributeMetadata(
-      RequestContext requestContext, AttributeScope scope, String key) {
+      RequestContext requestContext, String scope, String key) {
     try {
-      AttributeCacheKey<Map.Entry<AttributeScope, String>> cacheKey =
+      AttributeCacheKey<Map.Entry<String, String>> cacheKey =
           new AttributeCacheKey<>(requestContext, new AbstractMap.SimpleEntry<>(scope, key));
       return Optional.ofNullable(scopeAndKeyToAttrMetadataCache.get(cacheKey));
     } catch (ExecutionException e) {
@@ -134,10 +132,10 @@ public class AttributeMetadataProvider {
   }
 
   // returns a list of scopes mapped in domain object config
-  private List<AttributeScope> getDomainAttributeScopes(AttributeScope scope) {
+  private List<String> getDomainAttributeScopes(String scope) {
     Optional<DomainObjectConfig> domainObjectConfig =
-        DomainObjectConfigs.getDomainObjectConfig(scope.name());
-    List<AttributeScope> scopes = new ArrayList<>();
+        DomainObjectConfigs.getDomainObjectConfig(scope);
+    List<String> scopes = new ArrayList<>();
     scopes.add(scope);
 
     if (domainObjectConfig.isEmpty()) {
@@ -149,7 +147,7 @@ public class AttributeMetadataProvider {
         objectConfig.getAttributeMappings();
     for (Map.Entry<DomainObjectConfig.DomainAttribute, List<DomainObjectMapping>> entry :
         attributeMappings.entrySet()) {
-      if (entry.getKey().getScope() != scope) {
+      if (!entry.getKey().getScope().equals(scope)) {
         continue;
       }
 

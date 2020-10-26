@@ -76,7 +76,7 @@ public class AttributeMetadataUtilTest {
     AttributeMetadataProvider provider = mock(AttributeMetadataProvider.class);
     String entityType = DomainEntityType.API.name();
     when(provider.getAttributeMetadata(
-            any(RequestContext.class), eq(AttributeScope.API), eq("apiId")))
+            any(RequestContext.class), eq(AttributeScope.API.name()), eq("apiId")))
         .thenReturn(Optional.of(AttributeMetadata.newBuilder().setId("API.apiId").build()));
 
     Assertions.assertEquals(
@@ -129,13 +129,13 @@ public class AttributeMetadataUtilTest {
 
     AttributeMetadataProvider provider = mock(AttributeMetadataProvider.class);
     when(provider.getAttributeMetadata(
-            any(RequestContext.class), eq(AttributeScope.API), eq("apiId")))
+            any(RequestContext.class), eq(AttributeScope.API.name()), eq("apiId")))
         .thenReturn(Optional.of(AttributeMetadata.newBuilder().setId("API.apiId").build()));
     when(provider.getAttributeMetadata(
-            any(RequestContext.class), eq(AttributeScope.SERVICE), eq("id")))
+            any(RequestContext.class), eq(AttributeScope.SERVICE.name()), eq("id")))
         .thenReturn(Optional.of(AttributeMetadata.newBuilder().setId("SERVICE.id").build()));
     when(provider.getAttributeMetadata(
-            any(RequestContext.class), eq(AttributeScope.BACKEND), eq("id")))
+            any(RequestContext.class), eq(AttributeScope.BACKEND.name()), eq("id")))
         .thenReturn(Optional.of(AttributeMetadata.newBuilder().setId("BACKEND.id").build()));
 
     Assertions.assertEquals(

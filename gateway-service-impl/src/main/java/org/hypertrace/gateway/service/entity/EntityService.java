@@ -8,7 +8,6 @@ import java.util.Map;
 import java.util.concurrent.TimeUnit;
 import org.apache.commons.lang3.StringUtils;
 import org.hypertrace.core.attribute.service.v1.AttributeMetadata;
-import org.hypertrace.core.attribute.service.v1.AttributeScope;
 import org.hypertrace.core.attribute.service.v1.AttributeSource;
 import org.hypertrace.core.query.service.client.QueryServiceClient;
 import org.hypertrace.core.serviceframework.metrics.PlatformMetricsRegistry;
@@ -168,8 +167,7 @@ public class EntityService {
     RequestContext requestContext = new RequestContext(tenantId, requestHeaders);
 
     Map<String, AttributeMetadata> attributeMetadataMap =
-        metadataProvider.getAttributesMetadata(
-            requestContext, AttributeScope.valueOf(request.getEntityType()));
+        metadataProvider.getAttributesMetadata(requestContext, request.getEntityType());
 
     updateEntityRequestValidator.validate(request, attributeMetadataMap);
 

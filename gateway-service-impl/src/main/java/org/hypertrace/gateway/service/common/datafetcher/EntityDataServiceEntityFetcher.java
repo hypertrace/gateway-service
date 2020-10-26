@@ -6,7 +6,6 @@ import java.util.List;
 import java.util.Map;
 import java.util.stream.Collectors;
 import java.util.stream.IntStream;
-import org.hypertrace.core.attribute.service.v1.AttributeScope;
 import org.hypertrace.entity.query.service.client.EntityQueryServiceClient;
 import org.hypertrace.entity.query.service.v1.ColumnMetadata;
 import org.hypertrace.entity.query.service.v1.EntityQueryRequest;
@@ -140,7 +139,7 @@ public class EntityDataServiceEntityFetcher implements IEntityFetcher {
                   attributeName,
                   row.getColumn(i),
                   attributeMetadataProvider.getAttributesMetadata(
-                      requestContext, AttributeScope.valueOf(entitiesRequest.getEntityType()))));
+                      requestContext, entitiesRequest.getEntityType())));
         }
       }
     }

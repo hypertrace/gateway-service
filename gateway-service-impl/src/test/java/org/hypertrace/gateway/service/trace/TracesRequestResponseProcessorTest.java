@@ -134,11 +134,11 @@ public class TracesRequestResponseProcessorTest {
   private void mockAttributeMetadataProvider() {
     attributeMetadataProvider = mock(AttributeMetadataProvider.class);
     when(attributeMetadataProvider.getAttributeMetadata(
-            any(RequestContext.class), eq(AttributeScope.API_TRACE), eq("domainId")))
+            any(RequestContext.class), eq(AttributeScope.API_TRACE.name()), eq("domainId")))
         .thenReturn(
             Optional.of(
                 AttributeMetadata.newBuilder()
-                    .setScope(AttributeScope.API_TRACE)
+                    .setScopeString(AttributeScope.API_TRACE.name())
                     .setKey("domainId")
                     .setFqn("Api.Trace.domainId")
                     .setId("API_TRACE.domainId")
@@ -147,11 +147,11 @@ public class TracesRequestResponseProcessorTest {
                     .build()));
 
     when(attributeMetadataProvider.getAttributeMetadata(
-            any(RequestContext.class), eq(AttributeScope.SERVICE), eq("id")))
+            any(RequestContext.class), eq(AttributeScope.SERVICE.name()), eq("id")))
         .thenReturn(
             Optional.of(
                 AttributeMetadata.newBuilder()
-                    .setScope(AttributeScope.SERVICE)
+                    .setScopeString(AttributeScope.SERVICE.name())
                     .setKey("id")
                     .setFqn("Service.id")
                     .setId("SERVICE.id")
@@ -161,11 +161,11 @@ public class TracesRequestResponseProcessorTest {
                     .build()));
 
     when(attributeMetadataProvider.getAttributeMetadata(
-            any(RequestContext.class), eq(AttributeScope.API), eq("isExternal")))
+            any(RequestContext.class), eq(AttributeScope.API.name()), eq("isExternal")))
         .thenReturn(
             Optional.of(
                 AttributeMetadata.newBuilder()
-                    .setScope(AttributeScope.API)
+                    .setScopeString(AttributeScope.API.name())
                     .setKey("isExternal")
                     .setFqn("API.is_external")
                     .setId("API.isExternal")
@@ -174,11 +174,11 @@ public class TracesRequestResponseProcessorTest {
                     .addSources(AttributeSource.QS)
                     .build()));
     when(attributeMetadataProvider.getAttributeMetadata(
-        any(RequestContext.class), eq(AttributeScope.API_TRACE), eq("apiBoundaryType")))
+        any(RequestContext.class), eq(AttributeScope.API_TRACE.name()), eq("apiBoundaryType")))
         .thenReturn(
             Optional.of(
                 AttributeMetadata.newBuilder()
-                    .setScope(AttributeScope.API_TRACE)
+                    .setScopeString(AttributeScope.API_TRACE.name())
                     .setKey("apiBoundaryType")
                     .setFqn("API_TRACE.apiBoundaryType")
                     .setId("API_TRACE.apiBoundaryType")
@@ -187,11 +187,11 @@ public class TracesRequestResponseProcessorTest {
                     .addSources(AttributeSource.QS)
                     .build()));
     when(attributeMetadataProvider.getAttributeMetadata(
-        any(RequestContext.class), eq(AttributeScope.API_TRACE), eq("apiId")))
+        any(RequestContext.class), eq(AttributeScope.API_TRACE.name()), eq("apiId")))
         .thenReturn(
             Optional.of(
                 AttributeMetadata.newBuilder()
-                    .setScope(AttributeScope.API_TRACE)
+                    .setScopeString(AttributeScope.API_TRACE.name())
                     .setKey("apiId")
                     .setFqn("API_TRACE.apiId")
                     .setId("API_TRACE.apiId")

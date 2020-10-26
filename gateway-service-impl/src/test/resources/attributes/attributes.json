@@ -4,7 +4,7 @@
     "valueKind": "TYPE_STRING",
     "key": "id",
     "displayName": "Trace ID",
-    "scope": "TRACE",
+    "scopeString": "TRACE",
     "type": "ATTRIBUTE",
     "sources": [
       "QS"
@@ -15,7 +15,7 @@
     "valueKind": "TYPE_STRING",
     "key": "name",
     "displayName": "Trace Name",
-    "scope": "TRACE",
+    "scopeString": "TRACE",
     "type": "ATTRIBUTE",
     "sources": [
       "QS"
@@ -26,7 +26,7 @@
     "valueKind": "TYPE_INT64",
     "key": "startTime",
     "displayName": "Trace Start Time",
-    "scope": "TRACE",
+    "scopeString": "TRACE",
     "unit": "ms",
     "type": "ATTRIBUTE",
     "sources": [
@@ -38,7 +38,7 @@
     "valueKind": "TYPE_INT64",
     "key": "endTime",
     "displayName": "Trace End Time",
-    "scope": "TRACE",
+    "scopeString": "TRACE",
     "unit": "ms",
     "type": "ATTRIBUTE",
     "sources": [
@@ -50,7 +50,7 @@
     "valueKind": "TYPE_STRING",
     "key": "services",
     "displayName": "Service Name",
-    "scope": "TRACE",
+    "scopeString": "TRACE",
     "type": "ATTRIBUTE",
     "sources": [
       "QS"
@@ -61,7 +61,7 @@
     "valueKind": "TYPE_INT64",
     "key": "duration",
     "displayName": "Trace Duration",
-    "scope": "TRACE",
+    "scopeString": "TRACE",
     "unit": "ms",
     "type": "METRIC",
     "sources": [
@@ -73,7 +73,7 @@
     "valueKind": "TYPE_INT64",
     "key": "numServices",
     "displayName": "Trace Service Count",
-    "scope": "TRACE",
+    "scopeString": "TRACE",
     "unit": "ms",
     "type": "METRIC",
     "sources": [
@@ -85,7 +85,7 @@
     "valueKind": "TYPE_INT64",
     "key": "numSpans",
     "displayName": "Trace Span Count",
-    "scope": "TRACE",
+    "scopeString": "TRACE",
     "unit": "ms",
     "type": "METRIC",
     "sources": [
@@ -97,7 +97,7 @@
     "valueKind": "TYPE_STRING",
     "key": "id",
     "displayName": "Span ID",
-    "scope": "EVENT",
+    "scopeString": "EVENT",
     "type": "ATTRIBUTE",
     "sources": [
       "QS"
@@ -108,7 +108,7 @@
     "valueKind": "TYPE_STRING",
     "key": "serviceId",
     "displayName": "Span Service Id",
-    "scope": "EVENT",
+    "scopeString": "EVENT",
     "type": "ATTRIBUTE",
     "sources": [
       "QS"
@@ -119,7 +119,7 @@
     "valueKind": "TYPE_STRING",
     "key": "serviceName",
     "displayName": "Span Service Name",
-    "scope": "EVENT",
+    "scopeString": "EVENT",
     "type": "ATTRIBUTE",
     "sources": [
       "QS"
@@ -130,7 +130,7 @@
     "valueKind": "TYPE_STRING",
     "key": "apiId",
     "displayName": "Span API Id",
-    "scope": "EVENT",
+    "scopeString": "EVENT",
     "type": "ATTRIBUTE",
     "sources": [
       "QS"
@@ -141,7 +141,7 @@
     "valueKind": "TYPE_STRING",
     "key": "apiName",
     "displayName": "Span API Name",
-    "scope": "EVENT",
+    "scopeString": "EVENT",
     "type": "ATTRIBUTE",
     "sources": [
       "QS"
@@ -152,7 +152,7 @@
     "valueKind": "TYPE_INT64",
     "key": "startTime",
     "displayName": "Span Start Time",
-    "scope": "EVENT",
+    "scopeString": "EVENT",
     "unit": "ms",
     "type": "ATTRIBUTE",
     "sources": [
@@ -164,7 +164,7 @@
     "valueKind": "TYPE_INT64",
     "key": "endTime",
     "displayName": "Span End Time",
-    "scope": "EVENT",
+    "scopeString": "EVENT",
     "unit": "ms",
     "type": "ATTRIBUTE",
     "sources": [
@@ -176,7 +176,7 @@
     "valueKind": "TYPE_STRING",
     "key": "type",
     "displayName": "Span Type",
-    "scope": "EVENT",
+    "scopeString": "EVENT",
     "type": "ATTRIBUTE",
     "sources": [
       "QS"
@@ -187,7 +187,7 @@
     "valueKind": "TYPE_STRING",
     "key": "traceId",
     "displayName": "Span Trace ID",
-    "scope": "EVENT",
+    "scopeString": "EVENT",
     "type": "ATTRIBUTE",
     "sources": [
       "QS"
@@ -198,7 +198,7 @@
     "valueKind": "TYPE_STRING",
     "key": "spanKind",
     "displayName": "Span Type",
-    "scope": "EVENT",
+    "scopeString": "EVENT",
     "type": "ATTRIBUTE",
     "sources": [
       "QS"
@@ -209,7 +209,7 @@
     "valueKind": "TYPE_STRING",
     "key": "upstreamService",
     "displayName": "Span Upstream Service",
-    "scope": "EVENT",
+    "scopeString": "EVENT",
     "type": "ATTRIBUTE",
     "sources": [
       "QS"
@@ -220,7 +220,7 @@
     "valueKind": "TYPE_STRING",
     "key": "downstreamServices",
     "displayName": "Span Downstream Services",
-    "scope": "EVENT",
+    "scopeString": "EVENT",
     "type": "ATTRIBUTE",
     "sources": [
       "QS"
@@ -231,7 +231,7 @@
     "valueKind": "TYPE_INT64",
     "key": "duration",
     "displayName": "Span Duration",
-    "scope": "EVENT",
+    "scopeString": "EVENT",
     "unit": "ms",
     "type": "METRIC",
     "sources": [
@@ -243,7 +243,7 @@
     "valueKind": "TYPE_INT64",
     "key": "bytesReceived",
     "displayName": "Span Bytes Received",
-    "scope": "EVENT",
+    "scopeString": "EVENT",
     "type": "METRIC",
     "sources": [
       "QS"
@@ -254,7 +254,7 @@
     "valueKind": "TYPE_INT64",
     "key": "bytesSent",
     "displayName": "Span Bytes Sent",
-    "scope": "EVENT",
+    "scopeString": "EVENT",
     "type": "METRIC",
     "sources": [
       "QS"
@@ -265,7 +265,7 @@
     "valueKind": "TYPE_INT64",
     "key": "errorCount",
     "displayName": "Span Error Count",
-    "scope": "EVENT",
+    "scopeString": "EVENT",
     "type": "METRIC",
     "sources": [
       "QS"
@@ -276,7 +276,7 @@
     "valueKind": "TYPE_INT64",
     "key": "exceptionCount",
     "displayName": "Span Exception Count",
-    "scope": "EVENT",
+    "scopeString": "EVENT",
     "type": "METRIC",
     "sources": [
       "QS"
@@ -287,7 +287,7 @@
     "valueKind": "TYPE_STRING",
     "key": "parentSpanId",
     "displayName": "Parent Span Id",
-    "scope": "EVENT",
+    "scopeString": "EVENT",
     "type": "ATTRIBUTE",
     "sources": [
       "QS"
@@ -298,7 +298,7 @@
     "valueKind": "TYPE_STRING_MAP",
     "key": "spanTags",
     "displayName": "Span Tags",
-    "scope": "EVENT",
+    "scopeString": "EVENT",
     "type": "ATTRIBUTE",
     "sources": [
       "QS"
@@ -309,7 +309,7 @@
     "valueKind": "TYPE_STRING_MAP",
     "key": "spanRequestHeaders",
     "displayName": "Span Request Headers",
-    "scope": "EVENT",
+    "scopeString": "EVENT",
     "type": "ATTRIBUTE",
     "sources": [
       "QS"
@@ -320,7 +320,7 @@
     "valueKind": "TYPE_STRING_MAP",
     "key": "spanRequestParams",
     "displayName": "Span Request Params",
-    "scope": "EVENT",
+    "scopeString": "EVENT",
     "type": "ATTRIBUTE",
     "sources": [
       "QS"
@@ -331,7 +331,7 @@
     "valueKind": "TYPE_STRING_MAP",
     "key": "spanResponseHeaders",
     "displayName": "Span Response Headers",
-    "scope": "EVENT",
+    "scopeString": "EVENT",
     "type": "ATTRIBUTE",
     "sources": [
       "QS"
@@ -342,7 +342,7 @@
     "valueKind": "TYPE_STRING",
     "key": "spanRequestBody",
     "displayName": "Span Request Body",
-    "scope": "EVENT",
+    "scopeString": "EVENT",
     "type": "ATTRIBUTE",
     "sources": [
       "QS"
@@ -353,7 +353,7 @@
     "valueKind": "TYPE_STRING",
     "key": "spanResponseBody",
     "displayName": "Span Response Body",
-    "scope": "EVENT",
+    "scopeString": "EVENT",
     "type": "ATTRIBUTE",
     "sources": [
       "QS"
@@ -364,7 +364,7 @@
     "valueKind": "TYPE_STRING",
     "key": "spanRequestMethod",
     "displayName": "Span Request Method",
-    "scope": "EVENT",
+    "scopeString": "EVENT",
     "type": "ATTRIBUTE",
     "sources": [
       "QS"
@@ -375,7 +375,7 @@
     "valueKind": "TYPE_STRING",
     "key": "protocolName",
     "displayName": "Span Protocol",
-    "scope": "EVENT",
+    "scopeString": "EVENT",
     "type": "ATTRIBUTE",
     "sources": [
       "QS"
@@ -386,7 +386,7 @@
     "valueKind": "TYPE_STRING",
     "key": "statusCode",
     "displayName": "Span Status Code",
-    "scope": "EVENT",
+    "scopeString": "EVENT",
     "type": "ATTRIBUTE",
     "sources": [
       "QS"
@@ -397,7 +397,7 @@
     "valueKind": "TYPE_STRING",
     "key": "entryApiId",
     "displayName": "Span Entry API Id",
-    "scope": "EVENT",
+    "scopeString": "EVENT",
     "type": "ATTRIBUTE",
     "sources": [
       "QS"
@@ -408,7 +408,7 @@
     "valueKind": "TYPE_STRING",
     "key": "apiTraceId",
     "displayName": "Span Id",
-    "scope": "EVENT",
+    "scopeString": "EVENT",
     "type": "ATTRIBUTE",
     "sources": [
       "QS"
@@ -419,7 +419,7 @@
     "valueKind": "TYPE_STRING",
     "key": "apiTraceId",
     "displayName": "Span Id",
-    "scope": "API_TRACE",
+    "scopeString": "API_TRACE",
     "type": "ATTRIBUTE",
     "sources": [
       "QS"
@@ -430,7 +430,7 @@
     "valueKind": "TYPE_STRING",
     "key": "type",
     "displayName": "Span Type",
-    "scope": "API_TRACE",
+    "scopeString": "API_TRACE",
     "type": "ATTRIBUTE",
     "sources": [
       "QS"
@@ -441,7 +441,7 @@
     "valueKind": "TYPE_INT64",
     "key": "startTime",
     "displayName": "API Trace Start Time",
-    "scope": "API_TRACE",
+    "scopeString": "API_TRACE",
     "unit": "ms",
     "type": "ATTRIBUTE",
     "sources": [
@@ -453,7 +453,7 @@
     "valueKind": "TYPE_INT64",
     "key": "endTime",
     "displayName": "API Trace End Time",
-    "scope": "API_TRACE",
+    "scopeString": "API_TRACE",
     "unit": "ms",
     "type": "ATTRIBUTE",
     "sources": [
@@ -465,7 +465,7 @@
     "valueKind": "TYPE_STRING",
     "key": "traceId",
     "displayName": "API Trace Transacation Trace ID",
-    "scope": "API_TRACE",
+    "scopeString": "API_TRACE",
     "type": "ATTRIBUTE",
     "sources": [
       "QS"
@@ -476,7 +476,7 @@
     "valueKind": "TYPE_STRING",
     "key": "serviceName",
     "displayName": "API Trace Service Name",
-    "scope": "API_TRACE",
+    "scopeString": "API_TRACE",
     "type": "ATTRIBUTE",
     "sources": [
       "QS"
@@ -487,7 +487,7 @@
     "valueKind": "TYPE_STRING",
     "key": "serviceId",
     "displayName": "API Trace Service Id",
-    "scope": "API_TRACE",
+    "scopeString": "API_TRACE",
     "type": "ATTRIBUTE",
     "sources": [
       "QS"
@@ -498,7 +498,7 @@
     "valueKind": "TYPE_STRING",
     "key": "apiName",
     "displayName": "API Trace API Name",
-    "scope": "API_TRACE",
+    "scopeString": "API_TRACE",
     "type": "ATTRIBUTE",
     "sources": [
       "QS"
@@ -509,7 +509,7 @@
     "valueKind": "TYPE_STRING",
     "key": "apiId",
     "displayName": "API Trace API Id",
-    "scope": "API_TRACE",
+    "scopeString": "API_TRACE",
     "type": "ATTRIBUTE",
     "sources": [
       "QS"
@@ -521,7 +521,7 @@
     "key": "duration",
     "id": "API_TRACE.duration",
     "displayName": "API Trace Duration",
-    "scope": "API_TRACE",
+    "scopeString": "API_TRACE",
     "unit": "ms",
     "type": "ATTRIBUTE",
     "sources": [
@@ -533,7 +533,7 @@
     "valueKind": "TYPE_STRING",
     "key": "protocol",
     "displayName": "API Trace Protocol",
-    "scope": "API_TRACE",
+    "scopeString": "API_TRACE",
     "type": "ATTRIBUTE",
     "sources": [
       "QS"
@@ -544,7 +544,7 @@
     "valueKind": "TYPE_STRING",
     "key": "statusCode",
     "displayName": "API Trace Status Code",
-    "scope": "API_TRACE",
+    "scopeString": "API_TRACE",
     "type": "ATTRIBUTE",
     "sources": [
       "QS"
@@ -555,7 +555,7 @@
     "valueKind": "TYPE_STRING",
     "key": "apiBoundaryType",
     "displayName": "API Trace  API Boundary Type",
-    "scope": "API_TRACE",
+    "scopeString": "API_TRACE",
     "type": "ATTRIBUTE",
     "sources": [
       "QS"
@@ -566,7 +566,7 @@
     "valueKind": "TYPE_STRING",
     "key": "id",
     "displayName": "API ID",
-    "scope": "API",
+    "scopeString": "API",
     "type": "ATTRIBUTE",
     "sources": [
       "QS"
@@ -577,7 +577,7 @@
     "valueKind": "TYPE_STRING",
     "key": "type",
     "displayName": "Entity Type",
-    "scope": "API",
+    "scopeString": "API",
     "type": "ATTRIBUTE",
     "sources": [
       "EDS"
@@ -588,7 +588,7 @@
     "valueKind": "TYPE_STRING",
     "key": "name",
     "displayName": "API Name",
-    "scope": "API",
+    "scopeString": "API",
     "type": "ATTRIBUTE",
     "sources": [
       "QS"
@@ -599,7 +599,7 @@
     "valueKind": "TYPE_STRING",
     "key": "apiType",
     "displayName": "API Type",
-    "scope": "API",
+    "scopeString": "API",
     "type": "ATTRIBUTE",
     "sources": [
       "EDS"
@@ -610,7 +610,7 @@
     "valueKind": "TYPE_INT64",
     "key": "startTime",
     "displayName": "API Start Time",
-    "scope": "API",
+    "scopeString": "API",
     "unit": "ms",
     "type": "ATTRIBUTE",
     "sources": [
@@ -622,7 +622,7 @@
     "valueKind": "TYPE_INT64",
     "key": "endTime",
     "displayName": "API End Time",
-    "scope": "API",
+    "scopeString": "API",
     "unit": "ms",
     "type": "ATTRIBUTE",
     "sources": [
@@ -634,7 +634,7 @@
     "valueKind": "TYPE_STRING",
     "key": "serviceName",
     "displayName": "Service Name",
-    "scope": "API",
+    "scopeString": "API",
     "type": "ATTRIBUTE",
     "sources": [
       "QS"
@@ -645,7 +645,7 @@
     "valueKind": "TYPE_STRING",
     "key": "serviceId",
     "displayName": "Service Id",
-    "scope": "API",
+    "scopeString": "API",
     "type": "ATTRIBUTE",
     "sources": [
       "QS"
@@ -656,7 +656,7 @@
     "valueKind": "TYPE_STRING",
     "key": "namespace",
     "displayName": "Namespace",
-    "scope": "API",
+    "scopeString": "API",
     "type": "ATTRIBUTE",
     "sources": [
       "QS"
@@ -667,7 +667,7 @@
     "valueKind": "TYPE_INT64",
     "key": "duration",
     "displayName": "API Duration",
-    "scope": "API",
+    "scopeString": "API",
     "unit": "ms",
     "type": "METRIC",
     "sources": [
@@ -679,7 +679,7 @@
     "valueKind": "TYPE_INT64",
     "key": "totalDuration",
     "displayName": "Total Duration",
-    "scope": "API",
+    "scopeString": "API",
     "type": "METRIC",
     "sources": [
       "QS"
@@ -690,7 +690,7 @@
     "valueKind": "TYPE_INT64",
     "key": "bytesSent",
     "displayName": "Server Bytes Sent",
-    "scope": "API",
+    "scopeString": "API",
     "type": "METRIC",
     "sources": [
       "QS"
@@ -701,7 +701,7 @@
     "valueKind": "TYPE_INT64",
     "key": "bytesReceived",
     "displayName": "Server Bytes Received",
-    "scope": "API",
+    "scopeString": "API",
     "type": "METRIC",
     "sources": [
       "QS"
@@ -712,7 +712,7 @@
     "valueKind": "TYPE_INT64",
     "key": "clientBytesSent",
     "displayName": "Client Bytes Sent",
-    "scope": "API",
+    "scopeString": "API",
     "type": "METRIC",
     "sources": [
       "QS"
@@ -723,7 +723,7 @@
     "valueKind": "TYPE_INT64",
     "key": "clientBytesReceived",
     "displayName": "Client Bytes Received",
-    "scope": "API",
+    "scopeString": "API",
     "type": "METRIC",
     "sources": [
       "QS"
@@ -734,7 +734,7 @@
     "valueKind": "TYPE_INT64",
     "key": "errorCount",
     "displayName": "Error Count",
-    "scope": "API",
+    "scopeString": "API",
     "type": "METRIC",
     "sources": [
       "QS"
@@ -745,7 +745,7 @@
     "valueKind": "TYPE_INT64",
     "key": "exceptionCount",
     "displayName": "Exception Count",
-    "scope": "API",
+    "scopeString": "API",
     "type": "METRIC",
     "sources": [
       "QS"
@@ -756,7 +756,7 @@
     "valueKind": "TYPE_INT64",
     "key": "numCalls",
     "displayName": "Calls",
-    "scope": "API",
+    "scopeString": "API",
     "type": "METRIC",
     "sources": [
       "QS"
@@ -767,7 +767,7 @@
     "valueKind": "TYPE_STRING_MAP",
     "key": "pathParamsSchema",
     "displayName": "Path Params Schema",
-    "scope": "API",
+    "scopeString": "API",
     "type": "ATTRIBUTE",
     "sources": [
       "EDS"
@@ -778,7 +778,7 @@
     "valueKind": "TYPE_STRING_MAP",
     "key": "pathParamsType",
     "displayName": "Path Params Type",
-    "scope": "API",
+    "scopeString": "API",
     "type": "ATTRIBUTE",
     "sources": [
       "EDS"
@@ -789,7 +789,7 @@
     "valueKind": "TYPE_STRING_MAP",
     "key": "queryParamsSchema",
     "displayName": "Query Params Schema",
-    "scope": "API",
+    "scopeString": "API",
     "type": "ATTRIBUTE",
     "sources": [
       "EDS"
@@ -800,7 +800,7 @@
     "valueKind": "TYPE_STRING_MAP",
     "key": "queryParamsType",
     "displayName": "Query Params Type",
-    "scope": "API",
+    "scopeString": "API",
     "type": "ATTRIBUTE",
     "sources": [
       "EDS"
@@ -811,7 +811,7 @@
     "valueKind": "TYPE_STRING_MAP",
     "key": "requestHeaders",
     "displayName": "Request Headers",
-    "scope": "API",
+    "scopeString": "API",
     "type": "ATTRIBUTE",
     "sources": [
       "EDS"
@@ -822,7 +822,7 @@
     "valueKind": "TYPE_STRING_MAP",
     "key": "responseHeaders",
     "displayName": "Response Headers",
-    "scope": "API",
+    "scopeString": "API",
     "type": "ATTRIBUTE",
     "sources": [
       "EDS"
@@ -833,7 +833,7 @@
     "valueKind": "TYPE_STRING_MAP",
     "key": "responseHeadersType",
     "displayName": "Response Headers Type",
-    "scope": "API",
+    "scopeString": "API",
     "type": "ATTRIBUTE",
     "sources": [
       "EDS"
@@ -844,7 +844,7 @@
     "valueKind": "TYPE_STRING_MAP",
     "key": "requestHeadersType",
     "displayName": "Request Headers Type",
-    "scope": "API",
+    "scopeString": "API",
     "type": "ATTRIBUTE",
     "sources": [
       "EDS"
@@ -855,7 +855,7 @@
     "valueKind": "TYPE_STRING",
     "key": "requestBodySchema",
     "displayName": "Request Body Schema",
-    "scope": "API",
+    "scopeString": "API",
     "type": "ATTRIBUTE",
     "sources": [
       "EDS"
@@ -866,7 +866,7 @@
     "valueKind": "TYPE_STRING",
     "key": "responseBodySchema",
     "displayName": "Response Body Schema",
-    "scope": "API",
+    "scopeString": "API",
     "type": "ATTRIBUTE",
     "sources": [
       "EDS"
@@ -877,7 +877,7 @@
     "valueKind": "TYPE_STRING",
     "key": "httpMethod",
     "displayName": "HTTP Method",
-    "scope": "API",
+    "scopeString": "API",
     "type": "ATTRIBUTE",
     "sources": [
       "EDS"
@@ -888,7 +888,7 @@
     "valueKind": "TYPE_STRING",
     "key": "httpUrl",
     "displayName": "URL",
-    "scope": "API",
+    "scopeString": "API",
     "type": "ATTRIBUTE",
     "sources": [
       "EDS"
@@ -899,7 +899,7 @@
     "valueKind": "TYPE_STRING",
     "key": "id",
     "displayName": "Service ID",
-    "scope": "SERVICE",
+    "scopeString": "SERVICE",
     "type": "ATTRIBUTE",
     "sources": [
       "QS"
@@ -910,7 +910,7 @@
     "valueKind": "TYPE_STRING",
     "key": "type",
     "displayName": "Entity Type",
-    "scope": "SERVICE",
+    "scopeString": "SERVICE",
     "type": "ATTRIBUTE",
     "sources": [
       "EDS"
@@ -921,7 +921,7 @@
     "valueKind": "TYPE_STRING",
     "key": "name",
     "displayName": "Service Name",
-    "scope": "SERVICE",
+    "scopeString": "SERVICE",
     "type": "ATTRIBUTE",
     "sources": [
       "QS"
@@ -932,7 +932,7 @@
     "valueKind": "TYPE_INT64",
     "key": "startTime",
     "displayName": "Service Start Time",
-    "scope": "SERVICE",
+    "scopeString": "SERVICE",
     "unit": "ms",
     "type": "ATTRIBUTE",
     "sources": [
@@ -944,7 +944,7 @@
     "valueKind": "TYPE_INT64",
     "key": "endTime",
     "displayName": "Service End Time",
-    "scope": "SERVICE",
+    "scopeString": "SERVICE",
     "unit": "ms",
     "type": "ATTRIBUTE",
     "sources": [
@@ -956,7 +956,7 @@
     "valueKind": "TYPE_STRING",
     "key": "namespace",
     "displayName": "Namespace",
-    "scope": "SERVICE",
+    "scopeString": "SERVICE",
     "type": "ATTRIBUTE",
     "sources": [
       "QS"
@@ -967,7 +967,7 @@
     "valueKind": "TYPE_INT64",
     "key": "duration",
     "displayName": "Service Call Duration",
-    "scope": "SERVICE",
+    "scopeString": "SERVICE",
     "unit": "ms",
     "type": "METRIC",
     "sources": [
@@ -979,7 +979,7 @@
     "valueKind": "TYPE_INT64",
     "key": "totalDuration",
     "displayName": "Total Duration",
-    "scope": "SERVICE",
+    "scopeString": "SERVICE",
     "type": "METRIC",
     "sources": [
       "QS"
@@ -990,7 +990,7 @@
     "valueKind": "TYPE_INT64",
     "key": "bytesSent",
     "displayName": "Server Bytes Sent",
-    "scope": "SERVICE",
+    "scopeString": "SERVICE",
     "type": "METRIC",
     "sources": [
       "QS"
@@ -1001,7 +1001,7 @@
     "valueKind": "TYPE_INT64",
     "key": "bytesReceived",
     "displayName": "Server Bytes Received",
-    "scope": "SERVICE",
+    "scopeString": "SERVICE",
     "type": "METRIC",
     "sources": [
       "QS"
@@ -1012,7 +1012,7 @@
     "valueKind": "TYPE_INT64",
     "key": "clientBytesSent",
     "displayName": "Client Bytes Sent",
-    "scope": "SERVICE",
+    "scopeString": "SERVICE",
     "type": "METRIC",
     "sources": [
       "QS"
@@ -1023,7 +1023,7 @@
     "valueKind": "TYPE_INT64",
     "key": "clientBytesReceived",
     "displayName": "Client Bytes Received",
-    "scope": "SERVICE",
+    "scopeString": "SERVICE",
     "type": "METRIC",
     "sources": [
       "QS"
@@ -1034,7 +1034,7 @@
     "valueKind": "TYPE_INT64",
     "key": "errorCount",
     "displayName": "Error Count",
-    "scope": "SERVICE",
+    "scopeString": "SERVICE",
     "type": "METRIC",
     "sources": [
       "QS"
@@ -1045,7 +1045,7 @@
     "valueKind": "TYPE_INT64",
     "key": "exceptionCount",
     "displayName": "Exception Count",
-    "scope": "SERVICE",
+    "scopeString": "SERVICE",
     "type": "METRIC",
     "sources": [
       "QS"
@@ -1056,7 +1056,7 @@
     "valueKind": "TYPE_INT64",
     "key": "numCalls",
     "displayName": "Number of Calls",
-    "scope": "SERVICE",
+    "scopeString": "SERVICE",
     "type": "METRIC",
     "sources": [
       "QS"
@@ -1068,7 +1068,7 @@
     "key": "startTime",
     "id": "INTERACTION.startTime",
     "displayName": "Interaction Start Time",
-    "scope": "INTERACTION",
+    "scopeString": "INTERACTION",
     "unit": "ms",
     "type": "ATTRIBUTE",
     "sources": [
@@ -1081,7 +1081,7 @@
     "key": "endTime",
     "id": "INTERACTION.endTime",
     "displayName": "Interaction End Time",
-    "scope": "INTERACTION",
+    "scopeString": "INTERACTION",
     "unit": "ms",
     "type": "ATTRIBUTE",
     "sources": [
@@ -1094,7 +1094,7 @@
     "key": "fromEntityType",
     "id": "INTERACTION.fromEntityType",
     "displayName": "Caller EntityType",
-    "scope": "INTERACTION",
+    "scopeString": "INTERACTION",
     "type": "ATTRIBUTE",
     "sources": [
       "QS"
@@ -1106,7 +1106,7 @@
     "key": "toEntityType",
     "id": "INTERACTION.toEntityType",
     "displayName": "Callee EntityType",
-    "scope": "INTERACTION",
+    "scopeString": "INTERACTION",
     "type": "ATTRIBUTE",
     "sources": [
       "QS"
@@ -1118,7 +1118,7 @@
     "key": "fromEntityId",
     "id": "INTERACTION.fromEntityId",
     "displayName": "Interaction Callee Service",
-    "scope": "INTERACTION",
+    "scopeString": "INTERACTION",
     "type": "ATTRIBUTE",
     "sources": [
       "QS"
@@ -1130,7 +1130,7 @@
     "key": "toEntityId",
     "id": "INTERACTION.toEntityId",
     "displayName": "Interaction Callee API",
-    "scope": "INTERACTION",
+    "scopeString": "INTERACTION",
     "type": "ATTRIBUTE",
     "sources": [
       "QS"
@@ -1141,7 +1141,7 @@
     "valueKind": "TYPE_INT64",
     "key": "duration",
     "displayName": "Edge Duration",
-    "scope": "INTERACTION",
+    "scopeString": "INTERACTION",
     "unit": "ms",
     "type": "METRIC",
     "sources": [
@@ -1153,7 +1153,7 @@
     "valueKind": "TYPE_INT64",
     "key": "bytesReceived",
     "displayName": "Interaction Bytes Received",
-    "scope": "INTERACTION",
+    "scopeString": "INTERACTION",
     "type": "METRIC",
     "sources": [
       "QS"
@@ -1164,7 +1164,7 @@
     "valueKind": "TYPE_INT64",
     "key": "bytesSent",
     "displayName": "Interaction Bytes Sent",
-    "scope": "INTERACTION",
+    "scopeString": "INTERACTION",
     "type": "METRIC",
     "sources": [
       "QS"
@@ -1175,7 +1175,7 @@
     "valueKind": "TYPE_INT64",
     "key": "numCalls",
     "displayName": "Calls",
-    "scope": "INTERACTION",
+    "scopeString": "INTERACTION",
     "type": "METRIC",
     "sources": [
       "QS"
@@ -1186,7 +1186,7 @@
     "valueKind": "TYPE_STRING",
     "key": "id",
     "displayName": "Backend ID",
-    "scope": "BACKEND",
+    "scopeString": "BACKEND",
     "type": "ATTRIBUTE",
     "sources": [
       "QS"
@@ -1197,7 +1197,7 @@
     "valueKind": "TYPE_INT64",
     "key": "startTime",
     "displayName": "Backend Start Time",
-    "scope": "BACKEND",
+    "scopeString": "BACKEND",
     "unit": "ms",
     "type": "ATTRIBUTE",
     "sources": [
@@ -1209,7 +1209,7 @@
     "valueKind": "TYPE_INT64",
     "key": "endTime",
     "displayName": "Backend End Time",
-    "scope": "BACKEND",
+    "scopeString": "BACKEND",
     "unit": "ms",
     "type": "ATTRIBUTE",
     "sources": [
@@ -1221,7 +1221,7 @@
     "valueKind": "TYPE_INT64",
     "key": "duration",
     "displayName": "Backend Duration",
-    "scope": "BACKEND",
+    "scopeString": "BACKEND",
     "unit": "ms",
     "type": "ATTRIBUTE",
     "sources": [
@@ -1233,7 +1233,7 @@
     "valueKind": "TYPE_STRING",
     "key": "protocol",
     "displayName": "Backend Protocol",
-    "scope": "BACKEND",
+    "scopeString": "BACKEND",
     "type": "ATTRIBUTE",
     "sources": [
       "QS"
@@ -1244,7 +1244,7 @@
     "valueKind": "TYPE_STRING",
     "key": "host",
     "displayName": "Backend Host",
-    "scope": "BACKEND",
+    "scopeString": "BACKEND",
     "type": "ATTRIBUTE",
     "sources": [
       "QS"
@@ -1255,7 +1255,7 @@
     "valueKind": "TYPE_STRING",
     "key": "port",
     "displayName": "Backend Port",
-    "scope": "BACKEND",
+    "scopeString": "BACKEND",
     "type": "ATTRIBUTE",
     "sources": [
       "QS"
@@ -1266,7 +1266,7 @@
     "valueKind": "TYPE_STRING",
     "key": "path",
     "displayName": "Backend Path",
-    "scope": "BACKEND",
+    "scopeString": "BACKEND",
     "type": "ATTRIBUTE",
     "sources": [
       "QS"
@@ -1277,7 +1277,7 @@
     "valueKind": "TYPE_STRING",
     "key": "name",
     "displayName": "Name",
-    "scope": "BACKEND",
+    "scopeString": "BACKEND",
     "type": "ATTRIBUTE",
     "sources": [
       "QS"
@@ -1288,7 +1288,7 @@
     "valueKind": "TYPE_INT64",
     "key": "bytesReceived",
     "displayName": "Backend Bytes Received",
-    "scope": "BACKEND",
+    "scopeString": "BACKEND",
     "type": "METRIC",
     "sources": [
       "QS"
@@ -1299,7 +1299,7 @@
     "valueKind": "TYPE_INT64",
     "key": "bytesSent",
     "displayName": "Backend Bytes Sent",
-    "scope": "BACKEND",
+    "scopeString": "BACKEND",
     "type": "METRIC",
     "sources": [
       "QS"
@@ -1310,7 +1310,7 @@
     "valueKind": "TYPE_INT64",
     "key": "errorCount",
     "displayName": "Backend Error Count",
-    "scope": "BACKEND",
+    "scopeString": "BACKEND",
     "type": "METRIC",
     "sources": [
       "QS"
@@ -1321,7 +1321,7 @@
     "valueKind": "TYPE_INT64",
     "key": "exceptionCount",
     "displayName": "Backend Exception Count",
-    "scope": "BACKEND",
+    "scopeString": "BACKEND",
     "type": "METRIC",
     "sources": [
       "QS"
@@ -1332,7 +1332,7 @@
     "valueKind": "TYPE_INT64",
     "key": "numCalls",
     "displayName": "Calls",
-    "scope": "BACKEND",
+    "scopeString": "BACKEND",
     "type": "METRIC",
     "sources": [
       "QS"

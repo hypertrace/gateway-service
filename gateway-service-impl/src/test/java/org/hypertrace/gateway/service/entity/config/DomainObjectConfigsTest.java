@@ -44,9 +44,9 @@ public class DomainObjectConfigsTest {
             .getAttributeMappings()
             .get(
                 new DomainObjectConfig.DomainAttribute(
-                    AttributeScope.valueOf("EVENT"), "id", false))
+                    AttributeScope.EVENT.name(), "id", false))
             .get(0);
-    Assertions.assertEquals("SERVICE", serviceDomainObject.getScope().name());
+    Assertions.assertEquals("SERVICE", serviceDomainObject.getScope());
     Assertions.assertEquals("id", serviceDomainObject.getKey());
 
     DomainObjectMapping apiDomainObject =
@@ -54,9 +54,9 @@ public class DomainObjectConfigsTest {
             .getAttributeMappings()
             .get(
                 new DomainObjectConfig.DomainAttribute(
-                    AttributeScope.valueOf("EVENT"), "id", false))
+                    AttributeScope.EVENT.name(), "id", false))
             .get(1);
-    Assertions.assertEquals("API", apiDomainObject.getScope().name());
+    Assertions.assertEquals("API", apiDomainObject.getScope());
     Assertions.assertEquals("isExternal", apiDomainObject.getKey());
   }
 
@@ -94,9 +94,9 @@ public class DomainObjectConfigsTest {
             .getAttributeMappings()
             .get(
                 new DomainObjectConfig.DomainAttribute(
-                    AttributeScope.valueOf("EVENT"), "id", false))
+                    AttributeScope.EVENT.name(), "id", false))
             .get(0);
-    Assertions.assertEquals("SERVICE", serviceDomainObject.getScope().name());
+    Assertions.assertEquals("SERVICE", serviceDomainObject.getScope());
     Assertions.assertEquals("id", serviceDomainObject.getKey());
 
     DomainObjectMapping apiDomainObject =
@@ -104,9 +104,9 @@ public class DomainObjectConfigsTest {
             .getAttributeMappings()
             .get(
                 new DomainObjectConfig.DomainAttribute(
-                    AttributeScope.valueOf("EVENT"), "id", false))
+                    AttributeScope.EVENT.name(), "id", false))
             .get(1);
-    Assertions.assertEquals("API", apiDomainObject.getScope().name());
+    Assertions.assertEquals("API", apiDomainObject.getScope());
     Assertions.assertEquals("isExternal", apiDomainObject.getKey());
     Assertions.assertEquals("true", apiDomainObject.getFilter().getValue());
   }

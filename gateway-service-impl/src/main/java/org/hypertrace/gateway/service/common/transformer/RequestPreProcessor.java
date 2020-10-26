@@ -19,7 +19,6 @@ import javax.annotation.Nonnull;
 import javax.annotation.Nullable;
 import org.hypertrace.core.attribute.service.v1.AttributeKind;
 import org.hypertrace.core.attribute.service.v1.AttributeMetadata;
-import org.hypertrace.core.attribute.service.v1.AttributeScope;
 import org.hypertrace.gateway.service.common.AttributeMetadataProvider;
 import org.hypertrace.gateway.service.common.RequestContext;
 import org.hypertrace.gateway.service.common.config.ScopeFilterConfigs;
@@ -30,7 +29,6 @@ import org.hypertrace.gateway.service.entity.EntityKey;
 import org.hypertrace.gateway.service.entity.config.DomainObjectFilter;
 import org.hypertrace.gateway.service.entity.config.DomainObjectMapping;
 import org.hypertrace.gateway.service.trace.TraceScope;
-import org.hypertrace.gateway.service.trace.TraceScopeConverter;
 import org.hypertrace.gateway.service.v1.common.Expression;
 import org.hypertrace.gateway.service.v1.common.Expression.ValueCase;
 import org.hypertrace.gateway.service.v1.common.Filter;
@@ -113,7 +111,7 @@ public class RequestPreProcessor {
 
     // Apply the scope filter at the end.
     filter = scopeFilterConfigs.createScopeFilter(
-            AttributeScope.valueOf(originalRequest.getEntityType()),
+            originalRequest.getEntityType(),
             filter,
             attributeMetadataProvider,
             context);
@@ -162,7 +160,7 @@ public class RequestPreProcessor {
 
     TraceScope scope = TraceScope.valueOf(originalRequest.getScope());
     filter = scopeFilterConfigs.createScopeFilter(
-            TraceScopeConverter.toAttributeScope(scope),
+            scope.name(),
             filter,
             attributeMetadataProvider,
             requestContext);
@@ -590,7 +588,7 @@ public class RequestPreProcessor {
    */
   @Nonnull
   private Value getValueFromDomainObjectFilter(
-      RequestContext requestContext, AttributeScope scope, String key, String value) {
+      RequestContext requestContext, String scope, String key, String value) {
     AttributeKind attributeKind =
         attributeMetadataProvider
             .getAttributeMetadata(requestContext, scope, key)

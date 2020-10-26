@@ -15,7 +15,6 @@ import java.util.stream.Collectors;
 import java.util.stream.IntStream;
 import org.apache.commons.lang3.StringUtils;
 import org.hypertrace.core.attribute.service.v1.AttributeMetadata;
-import org.hypertrace.core.attribute.service.v1.AttributeScope;
 import org.hypertrace.core.query.service.api.ColumnMetadata;
 import org.hypertrace.core.query.service.api.Expression;
 import org.hypertrace.core.query.service.api.Filter;
@@ -79,7 +78,7 @@ public class QueryServiceEntityFetcher implements IEntityFetcher {
       EntitiesRequestContext requestContext, EntitiesRequest entitiesRequest) {
     Map<String, AttributeMetadata> attributeMetadataMap =
         attributeMetadataProvider.getAttributesMetadata(
-            requestContext, AttributeScope.valueOf(entitiesRequest.getEntityType()));
+            requestContext, entitiesRequest.getEntityType());
     // Validate EntitiesRequest
     entitiesRequestValidator.validate(entitiesRequest, attributeMetadataMap);
 
@@ -162,7 +161,7 @@ public class QueryServiceEntityFetcher implements IEntityFetcher {
     // Only supported filter is entityIds IN ["id1", "id2", "id3"]
     Map<String, AttributeMetadata> attributeMetadataMap =
         attributeMetadataProvider.getAttributesMetadata(
-            requestContext, AttributeScope.valueOf(entitiesRequest.getEntityType()));
+            requestContext, entitiesRequest.getEntityType());
     entitiesRequestValidator.validate(entitiesRequest, attributeMetadataMap);
 
     List<org.hypertrace.gateway.service.v1.common.Expression> aggregates =
@@ -253,7 +252,7 @@ public class QueryServiceEntityFetcher implements IEntityFetcher {
     // Validate EntitiesRequest
     Map<String, AttributeMetadata> attributeMetadataMap =
         attributeMetadataProvider.getAttributesMetadata(
-            requestContext, AttributeScope.valueOf(entitiesRequest.getEntityType()));
+            requestContext, entitiesRequest.getEntityType());
     entitiesRequestValidator.validate(entitiesRequest, attributeMetadataMap);
     List<String> entityIdAttributes =
         AttributeMetadataUtil.getIdAttributeIds(
@@ -501,7 +500,7 @@ public class QueryServiceEntityFetcher implements IEntityFetcher {
             attributeMetadataProvider, requestContext, entitiesRequest.getEntityType());
     Map<String, AttributeMetadata> attributeMetadataMap =
         attributeMetadataProvider.getAttributesMetadata(
-            requestContext, AttributeScope.valueOf(entitiesRequest.getEntityType()));
+            requestContext, entitiesRequest.getEntityType());
 
     entitiesRequestValidator.validate(entitiesRequest, attributeMetadataMap);
 
@@ -650,7 +649,7 @@ public class QueryServiceEntityFetcher implements IEntityFetcher {
   public int getTotalEntities(EntitiesRequestContext requestContext, EntitiesRequest entitiesRequest) {
     Map<String, AttributeMetadata> attributeMetadataMap =
         attributeMetadataProvider.getAttributesMetadata(
-            requestContext, AttributeScope.valueOf(entitiesRequest.getEntityType()));
+            requestContext, entitiesRequest.getEntityType());
     // Validate EntitiesRequest
     entitiesRequestValidator.validate(entitiesRequest, attributeMetadataMap);
     return getTotalEntitiesForMultipleEntityId(requestContext, entitiesRequest);

@@ -358,7 +358,7 @@ public class EntityInteractionsFetcher {
                 QueryRequestUtil.createBetweenTimesFilter(
                     metadataProvider
                         .getAttributeMetadata(
-                            requestContext, AttributeScope.INTERACTION, TIMESTAMP_COLUMN_KEY)
+                            requestContext, AttributeScope.INTERACTION.name(), TIMESTAMP_COLUMN_KEY)
                         .get()
                         .getId(),
                     startTime,
@@ -454,7 +454,7 @@ public class EntityInteractionsFetcher {
       RequestContext requestContext) {
 
     Map<String, AttributeMetadata> attributeMetadataMap =
-        metadataProvider.getAttributesMetadata(requestContext, AttributeScope.INTERACTION);
+        metadataProvider.getAttributesMetadata(requestContext, AttributeScope.INTERACTION.name());
 
     Map<String, AttributeKind> aliasToAttributeKind =
         MetricAggregationFunctionUtil.getValueTypeFromFunction(
