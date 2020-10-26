@@ -11,6 +11,12 @@ tasks.test {
 dependencies {
   api(project(":gateway-service-api"))
 
+  constraints {
+    implementation("com.google.guava:guava:30.0-jre") {
+      because("Information Disclosure [Medium Severity][https://snyk.io/vuln/SNYK-JAVA-COMGOOGLEGUAVA-1015415] in com.google.guava:guava@29.0-android")
+    }
+  }
+
   implementation("org.hypertrace.core.query.service:query-service-client:0.1.14")
   implementation("org.hypertrace.core.attribute.service:attribute-service-client:0.6.0")
   implementation("org.hypertrace.entity.service:entity-service-client:0.1.26")
@@ -35,5 +41,5 @@ dependencies {
   testImplementation("org.junit.jupiter:junit-jupiter:5.6.2")
   testImplementation("org.mockito:mockito-core:3.3.3")
   testImplementation("org.apache.logging.log4j:log4j-slf4j-impl:2.13.3")
-  testImplementation("io.grpc:grpc-netty:1.32.1")
+  testImplementation("io.grpc:grpc-netty:1.33.0")
 }
