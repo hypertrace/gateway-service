@@ -9,7 +9,7 @@ dependencies {
   implementation(project(":gateway-service-impl"))
 
   implementation("org.hypertrace.core.grpcutils:grpc-server-utils:0.3.0")
-  implementation("org.hypertrace.core.serviceframework:platform-service-framework:0.1.14")
+  implementation("org.hypertrace.core.serviceframework:platform-service-framework:0.1.16")
 
   implementation("io.grpc:grpc-netty:1.33.0")
 
