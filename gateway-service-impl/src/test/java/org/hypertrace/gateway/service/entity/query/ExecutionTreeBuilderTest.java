@@ -63,46 +63,46 @@ public class ExecutionTreeBuilderTest {
         {
           put(
               API_API_ID_ATTR,
-              buildAttributeMetadataForSources(API_API_ID_ATTR, AttributeScope.API, "apiId", List.of(AttributeSource.EDS)));
+              buildAttributeMetadataForSources(API_API_ID_ATTR, AttributeScope.API.name(), "apiId", List.of(AttributeSource.EDS)));
           put(
               API_PATTERN_ATTR,
-              buildAttributeMetadataForSources(API_PATTERN_ATTR, AttributeScope.API, "urlPattern", List.of(AttributeSource.EDS)));
+              buildAttributeMetadataForSources(API_PATTERN_ATTR, AttributeScope.API.name(), "urlPattern", List.of(AttributeSource.EDS)));
           put(
               API_NAME_ATTR,
-              buildAttributeMetadataForSources(API_NAME_ATTR, AttributeScope.API, "name", List.of(AttributeSource.EDS)));
+              buildAttributeMetadataForSources(API_NAME_ATTR, AttributeScope.API.name(), "name", List.of(AttributeSource.EDS)));
           put(
               API_TYPE_ATTR,
-              buildAttributeMetadataForSources(API_TYPE_ATTR, AttributeScope.API, "apiType", List.of(AttributeSource.EDS)));
+              buildAttributeMetadataForSources(API_TYPE_ATTR, AttributeScope.API.name(), "apiType", List.of(AttributeSource.EDS)));
           put(
               API_START_TIME_ATTR,
-              buildAttributeMetadataForSources(API_START_TIME_ATTR, AttributeScope.API, "start_time_millis", List.of(AttributeSource.QS)));
+              buildAttributeMetadataForSources(API_START_TIME_ATTR, AttributeScope.API.name(), "start_time_millis", List.of(AttributeSource.QS)));
           put(
               API_END_TIME_ATTR,
-              buildAttributeMetadataForSources(API_END_TIME_ATTR, AttributeScope.API, "end_time_millis", List.of(AttributeSource.QS)));
+              buildAttributeMetadataForSources(API_END_TIME_ATTR, AttributeScope.API.name(), "end_time_millis", List.of(AttributeSource.QS)));
           put(
               API_NUM_CALLS_ATTR,
-              buildAttributeMetadataForSources(API_NUM_CALLS_ATTR, AttributeScope.API, "numCalls", List.of(AttributeSource.QS)));
+              buildAttributeMetadataForSources(API_NUM_CALLS_ATTR, AttributeScope.API.name(), "numCalls", List.of(AttributeSource.QS)));
           put(
               API_STATE_ATTR,
-              buildAttributeMetadataForSources(API_STATE_ATTR, AttributeScope.API, "state", List.of(AttributeSource.QS)));
+              buildAttributeMetadataForSources(API_STATE_ATTR, AttributeScope.API.name(), "state", List.of(AttributeSource.QS)));
           put(
               API_DISCOVERY_STATE,
-              buildAttributeMetadataForSources(API_DISCOVERY_STATE, AttributeScope.API, "apiDiscoveryState", List.of(AttributeSource.EDS, AttributeSource.QS)));
+              buildAttributeMetadataForSources(API_DISCOVERY_STATE, AttributeScope.API.name(), "apiDiscoveryState", List.of(AttributeSource.EDS, AttributeSource.QS)));
           put(
               API_ID_ATTR,
-              buildAttributeMetadataForSources(API_ID_ATTR, AttributeScope.API, "id", List.of(AttributeSource.EDS, AttributeSource.QS)));
+              buildAttributeMetadataForSources(API_ID_ATTR, AttributeScope.API.name(), "id", List.of(AttributeSource.EDS, AttributeSource.QS)));
         }
       };
 
   @Mock private AttributeMetadataProvider attributeMetadataProvider;
 
   private static AttributeMetadata buildAttributeMetadataForSources(String attributeId,
-                                                                    AttributeScope scope,
+                                                                    String scope,
                                                                     String key,
                                                                     List<AttributeSource> sources) {
     return AttributeMetadata.newBuilder()
         .setId(attributeId)
-        .setScope(scope)
+        .setScopeString(scope)
         .setKey(key)
         .addAllSources(sources)
         .build();
@@ -113,16 +113,15 @@ public class ExecutionTreeBuilderTest {
     attributeMetadataProvider = mock(AttributeMetadataProvider.class);
     when(attributeMetadataProvider.getAttributesMetadata(
         any(RequestContext.class),
-        eq(AttributeScope.API))
+        eq(AttributeScope.API.name()))
     ).thenReturn(attributeSources);
 
-    attributeSources.forEach((attributeId, attribute) -> {
-      when(attributeMetadataProvider.getAttributeMetadata(
-          any(RequestContext.class),
-          eq(attribute.getScope()),
-          eq(attribute.getKey()))
-      ).thenReturn(Optional.of(attribute));
-    });
+    attributeSources.forEach((attributeId, attribute) ->
+        when(attributeMetadataProvider.getAttributeMetadata(
+            any(RequestContext.class),
+            eq(attribute.getScopeString()),
+            eq(attribute.getKey()))
+        ).thenReturn(Optional.of(attribute)));
   }
 
   private ExecutionTreeBuilder getExecutionTreeBuilderForOptimizedFilterTests() {

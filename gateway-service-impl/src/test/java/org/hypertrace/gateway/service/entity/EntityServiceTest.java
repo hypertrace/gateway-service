@@ -87,12 +87,12 @@ public class EntityServiceTest extends AbstractGatewayServiceTest {
   private void mock(AttributeMetadataProvider attributeMetadataProvider) {
     when(
             attributeMetadataProvider.getAttributesMetadata(
-                any(RequestContext.class), eq(AttributeScope.API)))
+                any(RequestContext.class), eq(AttributeScope.API.name())))
         .thenReturn(
             Map.of(
                 "API.apiId",
                 AttributeMetadata.newBuilder()
-                    .setScope(AttributeScope.API)
+                    .setScopeString(AttributeScope.API.name())
                     .setKey("apiId")
                     .setFqn("API.apiId")
                     .setValueKind(AttributeKind.TYPE_STRING)
@@ -102,7 +102,7 @@ public class EntityServiceTest extends AbstractGatewayServiceTest {
                     .build(),
                 "API.apiName",
                 AttributeMetadata.newBuilder()
-                    .setScope(AttributeScope.API)
+                    .setScopeString(AttributeScope.API.name())
                     .setKey("apiName")
                     .setFqn("API.name")
                     .setValueKind(AttributeKind.TYPE_STRING)
@@ -112,7 +112,7 @@ public class EntityServiceTest extends AbstractGatewayServiceTest {
                     .build(),
                 "API.httpMethod",
                 AttributeMetadata.newBuilder()
-                    .setScope(AttributeScope.API)
+                    .setScopeString(AttributeScope.API.name())
                     .setKey("httpMethod")
                     .setFqn("API.http.method")
                     .setValueKind(AttributeKind.TYPE_STRING)
@@ -123,11 +123,11 @@ public class EntityServiceTest extends AbstractGatewayServiceTest {
 
     when(
             attributeMetadataProvider.getAttributeMetadata(
-                any(RequestContext.class), eq(AttributeScope.API), eq("apiId")))
+                any(RequestContext.class), eq(AttributeScope.API.name()), eq("apiId")))
         .thenReturn(
             Optional.of(
                 AttributeMetadata.newBuilder()
-                    .setScope(AttributeScope.API)
+                    .setScopeString(AttributeScope.API.name())
                     .setKey("apiId")
                     .setFqn("API.apiId")
                     .setValueKind(AttributeKind.TYPE_STRING)
@@ -137,11 +137,11 @@ public class EntityServiceTest extends AbstractGatewayServiceTest {
                     .build()));
     when(
             attributeMetadataProvider.getAttributeMetadata(
-                any(RequestContext.class), eq(AttributeScope.API), eq("startTime")))
+                any(RequestContext.class), eq(AttributeScope.API.name()), eq("startTime")))
         .thenReturn(
             Optional.of(
                 AttributeMetadata.newBuilder()
-                    .setScope(AttributeScope.API)
+                    .setScopeString(AttributeScope.API.name())
                     .setKey("startTime")
                     .setFqn("API.start_time_millis")
                     .setValueKind(AttributeKind.TYPE_STRING)

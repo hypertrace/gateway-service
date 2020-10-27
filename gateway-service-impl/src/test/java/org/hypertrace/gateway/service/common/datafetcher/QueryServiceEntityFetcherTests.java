@@ -67,7 +67,7 @@ public class QueryServiceEntityFetcherTests {
   public void setup () {
     queryServiceClient = mock(QueryServiceClient.class);
     attributeMetadataProvider = mock(AttributeMetadataProvider.class);
-    mockAttributeMetadataProvider(AttributeScope.API);
+    mockAttributeMetadataProvider(AttributeScope.API.name());
     mockDomainObjectConfigs();
     queryServiceEntityFetcher = new QueryServiceEntityFetcher(queryServiceClient, 500,
         attributeMetadataProvider);
@@ -237,28 +237,28 @@ public class QueryServiceEntityFetcherTests {
     assertEquals(2, queryServiceEntityFetcher.getTotalEntities(entitiesRequestContext, entitiesRequest));
   }
 
-  private void mockAttributeMetadataProvider(AttributeScope attributeScope) {
-    AttributeMetadata idAttributeMetadata = AttributeMetadata.newBuilder().setId(API_ID_ATTR).setKey("id").setScope(attributeScope)
+  private void mockAttributeMetadataProvider(String attributeScope) {
+    AttributeMetadata idAttributeMetadata = AttributeMetadata.newBuilder().setId(API_ID_ATTR).setKey("id").setScopeString(attributeScope)
         .setValueKind(AttributeKind.TYPE_STRING).build();
-    AttributeMetadata startTimeAttributeMetadata = AttributeMetadata.newBuilder().setId(API_START_TIME_ATTR).setKey("startTime").setScope(attributeScope)
+    AttributeMetadata startTimeAttributeMetadata = AttributeMetadata.newBuilder().setId(API_START_TIME_ATTR).setKey("startTime").setScopeString(attributeScope)
         .setValueKind(AttributeKind.TYPE_TIMESTAMP).build();
     when(attributeMetadataProvider.getAttributesMetadata(any(RequestContext.class), eq(attributeScope)))
         .thenReturn(Map.of(
             API_ID_ATTR, idAttributeMetadata,
-            API_NAME_ATTR, AttributeMetadata.newBuilder().setId(API_NAME_ATTR).setKey("name").setScope(attributeScope)
+            API_NAME_ATTR, AttributeMetadata.newBuilder().setId(API_NAME_ATTR).setKey("name").setScopeString(attributeScope)
                 .setValueKind(AttributeKind.TYPE_STRING).build(),
-            API_TYPE_ATTR, AttributeMetadata.newBuilder().setId(API_TYPE_ATTR).setKey("type").setScope(attributeScope)
+            API_TYPE_ATTR, AttributeMetadata.newBuilder().setId(API_TYPE_ATTR).setKey("type").setScopeString(attributeScope)
                 .setValueKind(AttributeKind.TYPE_STRING).build(),
-            API_PATTERN_ATTR, AttributeMetadata.newBuilder().setId(API_PATTERN_ATTR).setKey("urlPattern").setScope(attributeScope)
+            API_PATTERN_ATTR, AttributeMetadata.newBuilder().setId(API_PATTERN_ATTR).setKey("urlPattern").setScopeString(attributeScope)
                 .setValueKind(AttributeKind.TYPE_STRING).build(),
             API_START_TIME_ATTR, startTimeAttributeMetadata,
-            API_END_TIME_ATTR, AttributeMetadata.newBuilder().setId(API_END_TIME_ATTR).setKey("endTime").setScope(attributeScope)
+            API_END_TIME_ATTR, AttributeMetadata.newBuilder().setId(API_END_TIME_ATTR).setKey("endTime").setScopeString(attributeScope)
                 .setValueKind(AttributeKind.TYPE_TIMESTAMP).build(),
-            API_NUM_CALLS_ATTR, AttributeMetadata.newBuilder().setId(API_NUM_CALLS_ATTR).setKey("numCalls").setScope(attributeScope)
+            API_NUM_CALLS_ATTR, AttributeMetadata.newBuilder().setId(API_NUM_CALLS_ATTR).setKey("numCalls").setScopeString(attributeScope)
                 .setValueKind(AttributeKind.TYPE_INT64).build(),
-            API_DURATION_ATTR, AttributeMetadata.newBuilder().setId(API_DURATION_ATTR).setKey("duration").setScope(attributeScope)
+            API_DURATION_ATTR, AttributeMetadata.newBuilder().setId(API_DURATION_ATTR).setKey("duration").setScopeString(attributeScope)
                 .setValueKind(AttributeKind.TYPE_DOUBLE).build(),
-            API_DISCOVERY_STATE_ATTR, AttributeMetadata.newBuilder().setId(API_DISCOVERY_STATE_ATTR).setKey("apiDiscoveryState").setScope(attributeScope)
+            API_DISCOVERY_STATE_ATTR, AttributeMetadata.newBuilder().setId(API_DISCOVERY_STATE_ATTR).setKey("apiDiscoveryState").setScopeString(attributeScope)
                 .setValueKind(AttributeKind.TYPE_STRING).build()
         ));
     when(attributeMetadataProvider.getAttributeMetadata(any(RequestContext.class), eq(attributeScope), eq("id"))).thenReturn(Optional.of(idAttributeMetadata));

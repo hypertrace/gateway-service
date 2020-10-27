@@ -133,7 +133,7 @@ public class EntityInteractionsFetcherTest extends AbstractGatewayServiceTest {
     attributeMetadataProvider = mock(AttributeMetadataProvider.class);
     Mockito.when(
             attributeMetadataProvider.getAttributeMetadata(
-                any(), Mockito.eq(AttributeScope.INTERACTION), Mockito.eq("startTime")))
+                any(), Mockito.eq(AttributeScope.INTERACTION.name()), Mockito.eq("startTime")))
         .thenReturn(Optional.of(AttributeMetadata.newBuilder().setId("dummy").build()));
 
     EntityInteractionsFetcher aggregator =
@@ -246,7 +246,7 @@ public class EntityInteractionsFetcherTest extends AbstractGatewayServiceTest {
     attributeMetadataProvider = mock(AttributeMetadataProvider.class);
     Mockito.when(
             attributeMetadataProvider.getAttributeMetadata(
-                any(), Mockito.eq(AttributeScope.INTERACTION), Mockito.eq("startTime")))
+                any(), Mockito.eq(AttributeScope.INTERACTION.name()), Mockito.eq("startTime")))
         .thenReturn(Optional.of(AttributeMetadata.newBuilder().setId("dummy").build()));
 
     EntityInteractionsFetcher aggregator =
@@ -311,7 +311,7 @@ public class EntityInteractionsFetcherTest extends AbstractGatewayServiceTest {
     attributeMetadataProvider = mock(AttributeMetadataProvider.class);
     Mockito.when(
             attributeMetadataProvider.getAttributeMetadata(
-                any(), Mockito.eq(AttributeScope.INTERACTION), Mockito.eq("startTime")))
+                any(), Mockito.eq(AttributeScope.INTERACTION.name()), Mockito.eq("startTime")))
         .thenReturn(
             Optional.of(AttributeMetadata.newBuilder().setId("INTERACTION.startTime").build()));
 
@@ -424,7 +424,7 @@ public class EntityInteractionsFetcherTest extends AbstractGatewayServiceTest {
     attributeMetadataProvider = mock(AttributeMetadataProvider.class);
     Mockito.when(
         attributeMetadataProvider.getAttributeMetadata(
-            any(), Mockito.eq(AttributeScope.INTERACTION), Mockito.eq("startTime")))
+            any(), Mockito.eq(AttributeScope.INTERACTION.name()), Mockito.eq("startTime")))
         .thenReturn(
             Optional.of(AttributeMetadata.newBuilder().setId("INTERACTION.startTime").build()));
 
@@ -547,7 +547,7 @@ public class EntityInteractionsFetcherTest extends AbstractGatewayServiceTest {
     attributeMetadataProvider = mock(AttributeMetadataProvider.class);
     Mockito.when(
             attributeMetadataProvider.getAttributeMetadata(
-                any(), Mockito.eq(AttributeScope.INTERACTION), Mockito.eq("startTime")))
+                any(), Mockito.eq(AttributeScope.INTERACTION.name()), Mockito.eq("startTime")))
         .thenReturn(Optional.of(AttributeMetadata.newBuilder().setId("dummy").build()));
 
     EntityInteractionsFetcher aggregator =
@@ -602,25 +602,25 @@ public class EntityInteractionsFetcherTest extends AbstractGatewayServiceTest {
     Mockito.when(
             attributeMetadataProvider.getAttributeMetadata(
                 any(EntitiesRequestContext.class),
-                Mockito.eq(AttributeScope.API),
+                Mockito.eq(AttributeScope.API.name()),
                 Mockito.eq("apiId")))
         .thenReturn(Optional.of(AttributeMetadata.newBuilder().setFqn("API.apiId").build()));
     Mockito.when(
             attributeMetadataProvider.getAttributeMetadata(
                 any(EntitiesRequestContext.class),
-                Mockito.eq(AttributeScope.SERVICE),
+                Mockito.eq(AttributeScope.SERVICE.name()),
                 Mockito.eq("id")))
         .thenReturn(Optional.of(AttributeMetadata.newBuilder().setFqn("Service.id").build()));
     Mockito.when(
             attributeMetadataProvider.getAttributeMetadata(
                 any(EntitiesRequestContext.class),
-                Mockito.eq(AttributeScope.BACKEND),
+                Mockito.eq(AttributeScope.BACKEND.name()),
                 Mockito.eq("id")))
         .thenReturn(Optional.of(AttributeMetadata.newBuilder().setFqn("Backend.id").build()));
     Mockito.when(
             attributeMetadataProvider.getAttributeMetadata(
                 any(RequestContext.class),
-                Mockito.eq(AttributeScope.INTERACTION),
+                Mockito.eq(AttributeScope.INTERACTION.name()),
                 Mockito.eq("startTime")))
         .thenReturn(Optional.of(AttributeMetadata.newBuilder().setFqn("dummy").build()));
     EntityInteractionsFetcher aggregator =

@@ -6,7 +6,6 @@ import java.util.List;
 import java.util.Map;
 import java.util.stream.Collectors;
 import org.hypertrace.core.attribute.service.v1.AttributeMetadata;
-import org.hypertrace.core.attribute.service.v1.AttributeScope;
 import org.hypertrace.gateway.service.common.AttributeMetadataProvider;
 import org.hypertrace.gateway.service.common.RequestContext;
 import org.hypertrace.gateway.service.v1.common.ColumnIdentifier;
@@ -50,7 +49,7 @@ public class ScopeFilterConfigs {
   private static final String FILTER_OPERATOR_CONFIG = "op";
   private static final String FILTER_VALUE_CONFIG = "value";
 
-  private final Map<AttributeScope, ScopeFilterConfig> scopeFilterConfigMap;
+  private final Map<String, ScopeFilterConfig> scopeFilterConfigMap;
 
   public ScopeFilterConfigs(Config config) {
     this.scopeFilterConfigMap = new HashMap<>();
@@ -64,7 +63,7 @@ public class ScopeFilterConfigs {
   }
 
   private void addScopeFilterConfig(Config config) {
-    AttributeScope attributeScope = AttributeScope.valueOf(config.getString(SCOPE_CONFIG));
+    String attributeScope = config.getString(SCOPE_CONFIG);
     List<? extends Config> filterConfigsList = config.getConfigList(FILTERS_CONFIG);
     try {
       List<ScopeFilter> scopeFilters =
@@ -85,7 +84,7 @@ public class ScopeFilterConfigs {
   }
 
   public Filter createScopeFilter(
-      AttributeScope scope,
+      String scope,
       Filter originalFilter,
       AttributeMetadataProvider attributeMetadataProvider,
       RequestContext requestContext) {
@@ -133,7 +132,7 @@ public class ScopeFilterConfigs {
       RequestContext requestContext) {
     AttributeMetadata attributeMetadata =
         attributeMetadataProvider.getAttributeMetadata(
-            requestContext, AttributeScope.valueOf(scopeFilter.getScope()), scopeFilter.getKey())
+            requestContext, scopeFilter.getScope(), scopeFilter.getKey())
             .orElseThrow();
     return Filter.newBuilder()
         .setLhs(

@@ -11,7 +11,6 @@ import java.util.Optional;
 import java.util.Set;
 import java.util.stream.Collectors;
 import org.hypertrace.core.attribute.service.v1.AttributeMetadata;
-import org.hypertrace.core.attribute.service.v1.AttributeScope;
 import org.hypertrace.core.attribute.service.v1.AttributeSource;
 import org.hypertrace.gateway.service.entity.query.visitor.ExecutionContextBuilderVisitor;
 import org.hypertrace.gateway.service.entity.query.visitor.OptimizingVisitor;
@@ -39,7 +38,7 @@ public class ExecutionTreeBuilder {
             .getAttributeMetadataProvider()
             .getAttributesMetadata(
                 executionContext.getEntitiesRequestContext(),
-                AttributeScope.valueOf(executionContext.getEntitiesRequest().getEntityType()));
+                executionContext.getEntitiesRequest().getEntityType());
   }
 
   /**

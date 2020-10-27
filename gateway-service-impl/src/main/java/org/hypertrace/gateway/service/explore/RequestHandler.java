@@ -6,7 +6,6 @@ import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
 import org.hypertrace.core.attribute.service.v1.AttributeMetadata;
-import org.hypertrace.core.attribute.service.v1.AttributeScope;
 import org.hypertrace.core.query.service.api.ColumnIdentifier;
 import org.hypertrace.core.query.service.api.ColumnMetadata;
 import org.hypertrace.core.query.service.api.Filter;
@@ -279,7 +278,7 @@ public class RequestHandler implements RequestHandlerWithSorting {
       FunctionExpression function) {
     Map<String, AttributeMetadata> attributeMetadataMap =
         attributeMetadataProvider.getAttributesMetadata(
-            requestContext, AttributeScope.valueOf(requestContext.getContext()));
+            requestContext, requestContext.getContext());
     org.hypertrace.gateway.service.v1.common.Value gwValue;
     if (function != null) { // Function expression value
       gwValue =

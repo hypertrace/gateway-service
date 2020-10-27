@@ -12,7 +12,6 @@ import java.util.Set;
 import java.util.stream.Collectors;
 import java.util.stream.IntStream;
 import org.hypertrace.core.attribute.service.v1.AttributeMetadata;
-import org.hypertrace.core.attribute.service.v1.AttributeScope;
 import org.hypertrace.core.attribute.service.v1.AttributeSource;
 import org.hypertrace.gateway.service.common.AttributeMetadataProvider;
 import org.hypertrace.gateway.service.common.util.AttributeMetadataUtil;
@@ -285,7 +284,7 @@ public class ExecutionContext {
     Map<String, List<Expression>> sourceToExpressionMap = new HashMap<>();
     Map<String, AttributeMetadata> attrNameToMetadataMap =
         attributeMetadataProvider.getAttributesMetadata(
-            this.entitiesRequestContext, AttributeScope.valueOf(entitiesRequest.getEntityType()));
+            this.entitiesRequestContext, entitiesRequest.getEntityType());
     for (Expression expression : expressions) {
       Set<String> columnNames = new HashSet<>();
       extractColumn(columnNames, expression);

@@ -160,11 +160,11 @@ public class EntitiesRequestResponseProcessorTest {
   private void mockAttributeMetadataProvider() {
     attributeMetadataProvider = mock(AttributeMetadataProvider.class);
     when(attributeMetadataProvider.getAttributeMetadata(
-            any(EntitiesRequestContext.class), eq(AttributeScope.API), eq("apiId")))
+            any(EntitiesRequestContext.class), eq(AttributeScope.API.name()), eq("apiId")))
         .thenReturn(
             Optional.of(
                 AttributeMetadata.newBuilder()
-                    .setScope(AttributeScope.API)
+                    .setScopeString(AttributeScope.API.name())
                     .setKey("apiId")
                     .setFqn("API.apiId")
                     .setId("API.apiId")
@@ -174,11 +174,11 @@ public class EntitiesRequestResponseProcessorTest {
                     .build()));
 
     when(attributeMetadataProvider.getAttributeMetadata(
-            any(EntitiesRequestContext.class), eq(AttributeScope.API), eq("apiName")))
+            any(EntitiesRequestContext.class), eq(AttributeScope.API.name()), eq("apiName")))
         .thenReturn(
             Optional.of(
                 AttributeMetadata.newBuilder()
-                    .setScope(AttributeScope.API)
+                    .setScopeString(AttributeScope.API.name())
                     .setKey("apiName")
                     .setFqn("API.name")
                     .setId("API.apiName")
@@ -188,11 +188,11 @@ public class EntitiesRequestResponseProcessorTest {
                     .build()));
 
     when(attributeMetadataProvider.getAttributeMetadata(
-            any(EntitiesRequestContext.class), eq(AttributeScope.API), eq("isExternal")))
+            any(EntitiesRequestContext.class), eq(AttributeScope.API.name()), eq("isExternal")))
         .thenReturn(
             Optional.of(
                 AttributeMetadata.newBuilder()
-                    .setScope(AttributeScope.API)
+                    .setScopeString(AttributeScope.API.name())
                     .setKey("isExternal")
                     .setFqn("API.external")
                     .setId("API.isExternal")

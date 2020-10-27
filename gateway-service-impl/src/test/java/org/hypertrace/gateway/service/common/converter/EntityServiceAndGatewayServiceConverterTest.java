@@ -66,7 +66,7 @@ public class EntityServiceAndGatewayServiceConverterTest extends AbstractGateway
 
     AttributeMetadataProvider mockProvider = mock(AttributeMetadataProvider.class);
     when(mockProvider.getAttributeMetadata(
-            any(EntitiesRequestContext.class), eq(BACKEND), eq(timestamp)))
+            any(EntitiesRequestContext.class), eq(BACKEND.name()), eq(timestamp)))
         .thenReturn(
             Optional.of(AttributeMetadata.newBuilder().setId(timestampAttributeName).build()));
 

@@ -6,7 +6,6 @@ import java.util.List;
 import java.util.Map;
 import java.util.Optional;
 import java.util.stream.Collectors;
-import org.hypertrace.core.attribute.service.v1.AttributeScope;
 
 /**
  * Static class holding all the configs for Domain Objects
@@ -38,13 +37,13 @@ public class DomainObjectConfigs {
               .map(
                   c ->
                       new DomainObjectMapping(
-                          AttributeScope.valueOf(c.getString(SCOPE)),
+                          c.getString(SCOPE),
                           c.getString(KEY),
                           c.hasPath(FILTER) ? c.getConfig(FILTER) : null))
               .collect(Collectors.toList());
 
       DomainObjectConfig.DomainAttribute attribute =
-          new DomainObjectConfig.DomainAttribute(AttributeScope.valueOf(scope), key, isPrimaryKey);
+          new DomainObjectConfig.DomainAttribute(scope, key, isPrimaryKey);
       if (!CONFIG_MAP.containsKey(scope)) {
         Map<DomainObjectConfig.DomainAttribute, List<DomainObjectMapping>> attributeMappings =
             new HashMap<>();

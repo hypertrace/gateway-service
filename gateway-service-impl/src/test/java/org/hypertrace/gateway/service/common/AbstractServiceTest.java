@@ -20,6 +20,7 @@ import java.io.Reader;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.HashMap;
+import java.util.HashSet;
 import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
@@ -29,7 +30,6 @@ import java.util.stream.Stream;
 import org.hypertrace.core.attribute.service.client.AttributeServiceClient;
 import org.hypertrace.core.attribute.service.v1.AttributeMetadata;
 import org.hypertrace.core.attribute.service.v1.AttributeMetadataFilter;
-import org.hypertrace.core.attribute.service.v1.AttributeScope;
 import org.hypertrace.core.query.service.api.QueryRequest;
 import org.hypertrace.core.query.service.api.ResultSetChunk;
 import org.hypertrace.core.query.service.client.QueryServiceClient;
@@ -99,10 +99,9 @@ public abstract class AbstractServiceTest<
                 invocation -> {
                   AttributeMetadataFilter filter =
                       (AttributeMetadataFilter) invocation.getArguments()[1];
-                  Set<AttributeScope> scopes =
-                      filter.getScopeList().stream().collect(Collectors.toSet());
+                  Set<String> scopes = new HashSet<>(filter.getScopeStringList());
                   return attributeMetadataList.stream()
-                      .filter(a -> scopes.contains(a.getScope()))
+                      .filter(a -> scopes.contains(a.getScopeString()))
                       .collect(Collectors.toList())
                       .iterator();
                 });
@@ -129,7 +128,7 @@ public abstract class AbstractServiceTest<
               }
 
               // Set the id explicitly here.
-              builder.setId(builder.getScope().name() + "." + builder.getKey());
+              builder.setId(builder.getScopeString() + "." + builder.getKey());
 
               attributeMetadataList.add(builder.build());
             });

@@ -9,7 +9,6 @@ import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
 import org.hypertrace.core.attribute.service.v1.AttributeMetadata;
-import org.hypertrace.core.attribute.service.v1.AttributeScope;
 import org.hypertrace.core.query.service.api.ColumnMetadata;
 import org.hypertrace.core.query.service.api.Filter;
 import org.hypertrace.core.query.service.api.QueryRequest;
@@ -84,9 +83,8 @@ public class TracesService {
       TracesRequest preProcessedRequest = requestPreProcessor.transform(request, context);
 
       TraceScope scope = TraceScope.valueOf(preProcessedRequest.getScope());
-      AttributeScope attributeScope = TraceScopeConverter.toAttributeScope(scope);
       Map<String, AttributeMetadata> attributeMap =
-          attributeMetadataProvider.getAttributesMetadata(context, attributeScope);
+          attributeMetadataProvider.getAttributesMetadata(context, preProcessedRequest.getScope());
 
       requestValidator.validate(preProcessedRequest, attributeMap);
 
@@ -212,7 +210,6 @@ public class TracesService {
 
   private Builder createQueryWithFilter(
       TracesRequest request, TraceScope scope, RequestContext requestContext) {
-    AttributeScope attributeScope = TraceScopeConverter.toAttributeScope(scope);
     Builder queryBuilder = QueryRequest.newBuilder();
 
     Filter.Builder filterBuilder =
@@ -220,7 +217,7 @@ public class TracesService {
             request.getStartTimeMillis(),
             request.getEndTimeMillis(),
             attributeMetadataProvider
-                .getAttributeMetadata(requestContext, attributeScope, START_TIMESTAMP_KEY_NAME)
+                .getAttributeMetadata(requestContext, scope.name(), START_TIMESTAMP_KEY_NAME)
                 .get()
                 .getId(),
             request.getFilter());

@@ -4,7 +4,6 @@ import com.codahale.metrics.Timer;
 import com.codahale.metrics.Timer.Context;
 import java.util.Map;
 import org.hypertrace.core.attribute.service.v1.AttributeMetadata;
-import org.hypertrace.core.attribute.service.v1.AttributeScope;
 import org.hypertrace.core.query.service.client.QueryServiceClient;
 import org.hypertrace.core.serviceframework.metrics.PlatformMetricsRegistry;
 import org.hypertrace.gateway.service.common.AttributeMetadataProvider;
@@ -50,14 +49,13 @@ public class ExploreService {
     try {
       ExploreRequestContext exploreRequestContext =
           new ExploreRequestContext(tenantId, request, requestHeaders);
-      AttributeScope requestScope = AttributeScope.valueOf(request.getContext());
 
       // Add extra filters based on the scope.
       request =
           ExploreRequest.newBuilder(request)
               .setFilter(
                   scopeFilterConfigs.createScopeFilter(
-                      requestScope,
+                      request.getContext(),
                       request.getFilter(),
                       attributeMetadataProvider,
                       exploreRequestContext))
@@ -66,7 +64,7 @@ public class ExploreService {
           new ExploreRequestContext(tenantId, request, requestHeaders);
 
       Map<String, AttributeMetadata> attributeMetadataMap =
-          attributeMetadataProvider.getAttributesMetadata(newExploreRequestContext, requestScope);
+          attributeMetadataProvider.getAttributesMetadata(newExploreRequestContext, request.getContext());
       exploreRequestValidator.validate(request, attributeMetadataMap);
 
       IRequestHandler requestHandler = getRequestHandler(request);
