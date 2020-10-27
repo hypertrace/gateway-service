@@ -15,6 +15,12 @@ dependencies {
     implementation("com.google.guava:guava:30.0-jre") {
       because("Information Disclosure [Medium Severity][https://snyk.io/vuln/SNYK-JAVA-COMGOOGLEGUAVA-1015415] in com.google.guava:guava@29.0-android")
     }
+    testRuntimeOnly("io.netty:netty-codec-http2:4.1.53.Final") {
+      because("https://snyk.io/vuln/SNYK-JAVA-IONETTY-1020439")
+    }
+    testRuntimeOnly("io.netty:netty-handler-proxy:4.1.53.Final") {
+      because("https://snyk.io/vuln/SNYK-JAVA-IONETTY-1020439s")
+    }
   }
 
   implementation("org.hypertrace.core.query.service:query-service-client:0.3.4")
@@ -33,13 +39,6 @@ dependencies {
 
   // Metrics
   implementation("io.dropwizard.metrics:metrics-core:4.1.9")
-
-  runtimeOnly("io.netty:netty-codec-http2:4.1.53.Final") {
-    because("https://snyk.io/vuln/SNYK-JAVA-IONETTY-1020439")
-  }
-  runtimeOnly("io.netty:netty-handler-proxy:4.1.53.Final") {
-    because("https://snyk.io/vuln/SNYK-JAVA-IONETTY-1020439s")
-  }
 
   // Needed by clusters snapshots
   implementation("com.fasterxml.jackson.core:jackson-annotations:2.11.1")
