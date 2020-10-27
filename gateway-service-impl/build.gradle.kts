@@ -34,6 +34,13 @@ dependencies {
   // Metrics
   implementation("io.dropwizard.metrics:metrics-core:4.1.9")
 
+  runtimeOnly("io.netty:netty-codec-http2:4.1.53.Final") {
+    because("https://snyk.io/vuln/SNYK-JAVA-IONETTY-1020439")
+  }
+  runtimeOnly("io.netty:netty-handler-proxy:4.1.53.Final") {
+    because("https://snyk.io/vuln/SNYK-JAVA-IONETTY-1020439s")
+  }
+
   // Needed by clusters snapshots
   implementation("com.fasterxml.jackson.core:jackson-annotations:2.11.1")
   implementation("com.fasterxml.jackson.core:jackson-databind:2.11.1")
