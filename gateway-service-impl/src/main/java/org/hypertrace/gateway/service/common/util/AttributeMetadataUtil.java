@@ -151,7 +151,9 @@ public class AttributeMetadataUtil {
 
   private static AttributeMetadata getAttributeMetadata(
       AttributeMetadataProvider attributeMetadataProvider,
-      RequestContext requestContext, String scope, String key) {
+      RequestContext requestContext,
+      String scope,
+      String key) {
     return attributeMetadataProvider
         .getAttributeMetadata(requestContext, scope, key)
         .orElseThrow(() -> new UnknownScopeAndKeyForAttributeException(scope, key));
