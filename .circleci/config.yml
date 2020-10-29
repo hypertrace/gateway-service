@@ -8,9 +8,15 @@ executors:
   gradle_docker:
     docker:
       - image: cimg/openjdk:11.0
+        auth:
+          username: $DOCKERHUB_USERNAME
+          password: $DOCKERHUB_PASSWORD
   helm:
     docker:
       - image: hypertrace/helm-gcs-packager:0.1.1
+        auth:
+          username: $DOCKERHUB_USERNAME
+          password: $DOCKERHUB_PASSWORD
 
 commands:
   gradle:
@@ -33,6 +39,9 @@ commands:
             # fallback to using the latest cache if no exact match is found
             - v1-dependencies-
       - setup_remote_docker
+      - run:
+          name: Dockerhub login
+          command: echo $DOCKERHUB_PASSWORD | docker login --username $DOCKERHUB_USERNAME --password-stdin
   populate_and_save_cache:
     description: 'Downloads all gradle dependencies and uploads cache for later use'
     steps:
@@ -104,12 +113,20 @@ workflows:
   version: 2
   build-and-publish:
     jobs:
-      - build
-      - validate-charts
+      - build:
+          context:
+            - dockerhub-read
+      - validate-charts:
+          context:
+            - dockerhub-read
       - snyk-scan:
-          context: hypertrace-vulnerability-scanning
+          context:
+            - hypertrace-vulnerability-scanning
+            - dockerhub-read
       - publish:
-          context: hypertrace-publishing
+          context:
+            - hypertrace-publishing
+            - dockerhub-read
           requires:
             - build
             - validate-charts
@@ -119,7 +136,9 @@ workflows:
               only:
                 - main
       - package-charts:
-          context: hypertrace-publishing
+          context:
+            - hypertrace-publishing
+            - dockerhub-read
           requires:
             - publish
           filters:
