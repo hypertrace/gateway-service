@@ -15,6 +15,7 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.mock;
+import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.spy;
 import static org.mockito.Mockito.times;
 import static org.mockito.Mockito.verify;
@@ -45,6 +46,7 @@ import org.hypertrace.gateway.service.entity.query.SelectionAndFilterNode;
 import org.hypertrace.gateway.service.entity.query.SelectionNode;
 import org.hypertrace.gateway.service.entity.query.TotalFetcherNode;
 import org.hypertrace.gateway.service.v1.common.ColumnIdentifier;
+import org.hypertrace.gateway.service.v1.common.DomainEntityType;
 import org.hypertrace.gateway.service.v1.common.Expression;
 import org.hypertrace.gateway.service.v1.common.Filter;
 import org.hypertrace.gateway.service.v1.common.FunctionType;
@@ -727,6 +729,33 @@ public class ExecutionVisitorTest {
     executionVisitor.visit(selectionNode);
     verify(entityDataServiceEntityFetcher).getEntities(any(), any());
     verify(queryServiceEntityFetcher).getAggregatedMetrics(any(), any());
+  }
+
+  @Test
+  public void test_visitSelectionNode_nonEmptyFilter_emptyResult() {
+    // Create a request with non-empty filter.
+    EntitiesRequest entitiesRequest =
+        EntitiesRequest.newBuilder()
+            .setEntityType(DomainEntityType.API.name())
+            .setStartTimeMillis(10)
+            .setEndTimeMillis(20)
+            .addSelection(buildExpression(API_NAME_ATTR))
+            .setFilter(generateEQFilter(API_DISCOVERY_STATE, "DISCOVERED"))
+            .build();
+    ExecutionVisitor executionVisitor =
+        spy(new ExecutionVisitor(executionContext, entityQueryHandlerRegistry));
+    when(executionContext.getEntitiesRequest()).thenReturn(entitiesRequest);
+
+    // Selection node with NoOp child, to short-circuit the call to first service.
+    SelectionNode selectionNode = new SelectionNode.Builder(new NoOpNode())
+        .setAttrSelectionSources(Set.of(EDS_SOURCE))
+        .setAggMetricSelectionSources(Set.of(QS_SOURCE))
+        .build();
+
+    EntityFetcherResponse response = executionVisitor.visit(selectionNode);
+    Assertions.assertTrue(response.isEmpty());
+    verify(queryServiceEntityFetcher, never()).getEntities(any(), any());
+    verify(queryServiceEntityFetcher, never()).getAggregatedMetrics(any(), any());
   }
 
   private MetricSeries getMockMetricSeries(int period, String aggregation) {
