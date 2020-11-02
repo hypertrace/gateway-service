@@ -10,6 +10,7 @@ import static org.hypertrace.gateway.service.common.EntitiesRequestAndResponseUt
 import static org.hypertrace.gateway.service.common.EntitiesRequestAndResponseUtils.getStringValue;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.eq;
@@ -36,6 +37,7 @@ import org.hypertrace.gateway.service.common.datafetcher.QueryServiceEntityFetch
 import org.hypertrace.gateway.service.entity.EntitiesRequestContext;
 import org.hypertrace.gateway.service.entity.EntityKey;
 import org.hypertrace.gateway.service.entity.EntityQueryHandlerRegistry;
+import org.hypertrace.gateway.service.entity.query.DataFetcherNode;
 import org.hypertrace.gateway.service.entity.query.ExecutionContext;
 import org.hypertrace.gateway.service.entity.query.NoOpNode;
 import org.hypertrace.gateway.service.entity.query.PaginateOnlyNode;
@@ -74,7 +76,7 @@ public class ExecutionVisitorTest {
   private static final String API_DURATION_ATTR = "API.duration";
   private static final String API_DISCOVERY_STATE = "API.apiDiscoveryState";
 
-  private EntityFetcherResponse result1 =
+  private final EntityFetcherResponse result1 =
       new EntityFetcherResponse(
           Map.of(
               EntityKey.of("id1"),
@@ -83,21 +85,21 @@ public class ExecutionVisitorTest {
                   Entity.newBuilder().putAttribute("key12", getStringValue("value12")),
               EntityKey.of("id3"),
                   Entity.newBuilder().putAttribute("key13", getStringValue("value13"))));
-  private EntityFetcherResponse result2 =
+  private final EntityFetcherResponse result2 =
       new EntityFetcherResponse(
           Map.of(
               EntityKey.of("id1"),
                   Entity.newBuilder().putAttribute("key21", getStringValue("value21")),
               EntityKey.of("id2"),
                   Entity.newBuilder().putAttribute("key22", getStringValue("value22"))));
-  private EntityFetcherResponse result3 =
+  private final EntityFetcherResponse result3 =
       new EntityFetcherResponse(
           Map.of(
               EntityKey.of("id1"),
                   Entity.newBuilder().putAttribute("key31", getStringValue("value31")),
               EntityKey.of("id3"),
                   Entity.newBuilder().putAttribute("key33", getStringValue("value33"))));
-  private EntityFetcherResponse result4 =
+  private final EntityFetcherResponse result4 =
       new EntityFetcherResponse(
           Map.of(
               EntityKey.of("id4"),
@@ -381,6 +383,34 @@ public class ExecutionVisitorTest {
     SelectionAndFilterNode selectionAndFilterNode = new SelectionAndFilterNode("QS", limit, offset);
 
     compareEntityFetcherResponses(entityFetcherResponse, executionVisitor.visit(selectionAndFilterNode));
+  }
+
+  /**
+   * A simple test to verify that the responses are merged properly when multiple data sources are involved in
+   * entities query.
+   */
+  @Test
+  public void testSelectionAndFilterWithMultipleSources() {
+    ExecutionVisitor executionVisitor =
+        spy(new ExecutionVisitor(executionContext, entityQueryHandlerRegistry));
+
+    // Make the first query, which involves a filter to EDS.
+    DataFetcherNode dataFetcherNode = new DataFetcherNode("EDS", generateEQFilter(API_DISCOVERY_STATE, "DISCOVERED"));
+
+    // Let the EDS query return result4, which has one entity in it
+    when(entityDataServiceEntityFetcher.getEntities(any(), any())).thenReturn(result4);
+
+    SelectionNode selectionNode = new SelectionNode.Builder(dataFetcherNode)
+        .setAttrSelectionSources(Set.of(QS_SOURCE))
+        .build();
+    mockExecutionContext(Set.of(QS_SOURCE), Set.of(), Map.of(QS_SOURCE, List.of(buildExpression(API_NAME_ATTR))), Map.of());
+
+    // When the query is made to Query service, don't return any response.
+    when(queryServiceEntityFetcher.getEntities(any(), any())).thenReturn(new EntityFetcherResponse());
+    EntityFetcherResponse response = executionVisitor.visit(selectionNode);
+
+    // The final result should be empty because query service didn't return anything.
+    assertTrue(response.getEntityKeyBuilderMap().isEmpty());
   }
 
   @Test
