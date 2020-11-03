@@ -142,18 +142,18 @@ public class ExecutionVisitor implements Visitor<EntityFetcherResponse> {
 
   @Override
   public EntityFetcherResponse visit(SelectionNode selectionNode) {
-    EntityFetcherResponse childNodeResponse = selectionNode.getChildNode().acceptVisitor(this);
+    EntityFetcherResponse result = selectionNode.getChildNode().acceptVisitor(this);
 
     // If the result was empty when the filter is non-empty, it means no entities matched the filter
     // and hence no need to do any more follow up calls.
-    if (childNodeResponse.isEmpty()
+    if (result.isEmpty()
         && !Filter.getDefaultInstance().equals(executionContext.getEntitiesRequest().getFilter())) {
       LOG.debug("No results matched the filter so not fetching aggregate/timeseries metrics.");
-      return childNodeResponse;
+      return result;
     }
 
     // Construct the filter from the child nodes result
-    Filter filter = constructFilterFromChildNodesResult(childNodeResponse);
+    Filter filter = constructFilterFromChildNodesResult(result);
     // Select attributes, metric aggregations and time-series data from corresponding sources
     List<EntityFetcherResponse> resultMapList = new ArrayList<>();
     // if data are coming from multiple sources, then, get entities and aggregated metrics
@@ -226,12 +226,7 @@ public class ExecutionVisitor implements Visitor<EntityFetcherResponse> {
                   return entityFetcher.getTimeAggregatedMetrics(requestContext, request);
                 })
             .collect(Collectors.toList()));
-    // Union all the responses from this single source first.
-    EntityFetcherResponse currentResponse =
-        resultMapList.stream().reduce(new EntityFetcherResponse(), (r1, r2) -> union(Arrays.asList(r1, r2)));
-
-    // Intersect the response from this source with the response from the child.
-    return intersect(Arrays.asList(childNodeResponse, currentResponse));
+    return resultMapList.stream().reduce(result, (r1, r2) -> union(Arrays.asList(r1, r2)));
   }
 
   Filter constructFilterFromChildNodesResult(EntityFetcherResponse result) {
