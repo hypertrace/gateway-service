@@ -230,8 +230,13 @@ public class ExecutionVisitor implements Visitor<EntityFetcherResponse> {
     EntityFetcherResponse currentResponse =
         resultMapList.stream().reduce(new EntityFetcherResponse(), (r1, r2) -> union(Arrays.asList(r1, r2)));
 
-    // Intersect the response from this source with the response from the child.
-    return intersect(Arrays.asList(childNodeResponse, currentResponse));
+    // If the child node was a NoOp, just return the current response.
+    if (selectionNode.getChildNode() instanceof NoOpNode) {
+      return currentResponse;
+    } else {
+      // Intersect the response from this source with the response from the child.
+      return intersect(Arrays.asList(childNodeResponse, currentResponse));
+    }
   }
 
   Filter constructFilterFromChildNodesResult(EntityFetcherResponse result) {

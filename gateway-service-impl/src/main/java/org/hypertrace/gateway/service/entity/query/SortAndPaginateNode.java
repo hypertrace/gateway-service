@@ -51,6 +51,8 @@ public class SortAndPaginateNode implements QueryNode {
         + offset
         + ", orderByExpressionList="
         + orderByExpressionList
+        + ", childNode="
+        + childNode
         + '}';
   }
 }
