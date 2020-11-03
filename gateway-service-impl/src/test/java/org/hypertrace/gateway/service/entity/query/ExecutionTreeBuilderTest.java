@@ -32,7 +32,6 @@ import org.hypertrace.gateway.service.common.RequestContext;
 import org.hypertrace.gateway.service.entity.EntitiesRequestContext;
 import org.hypertrace.gateway.service.entity.config.DomainObjectConfigs;
 import org.hypertrace.gateway.service.entity.query.visitor.OptimizingVisitor;
-import org.hypertrace.gateway.service.entity.query.visitor.PrintVisitor;
 import org.hypertrace.gateway.service.v1.common.Filter;
 import org.hypertrace.gateway.service.v1.common.FunctionType;
 import org.hypertrace.gateway.service.v1.common.Operator;
@@ -738,38 +737,6 @@ public class ExecutionTreeBuilderTest {
         ((SelectionNode) secondChild)
             .getAttrSelectionSources()
             .contains(AttributeSource.EDS.name()));
-  }
-
-  @Test
-  public void test_build_selectAttributeWithFiltersWithDifferentSource_shouldCreateDifferentNode() {
-    EntitiesRequest entitiesRequest =
-        EntitiesRequest.newBuilder()
-            .setEntityType(AttributeScope.API.name())
-            .setFilter(generateEQFilter(API_PATTERN_ATTR, "/login"))
-            .addSelection(buildExpression(API_NAME_ATTR))
-            .addSelection(
-                buildAggregateExpression(API_NUM_CALLS_ATTR,
-                    FunctionType.SUM,
-                    "SUM_numCalls",
-                    List.of()))
-            .build();
-    EntitiesRequestContext entitiesRequestContext =
-        new EntitiesRequestContext(TENANT_ID, 0L, 10L, "API", new HashMap<>());
-    ExecutionContext executionContext =
-        ExecutionContext.from(attributeMetadataProvider, entitiesRequest, entitiesRequestContext);
-    ExecutionTreeBuilder executionTreeBuilder = new ExecutionTreeBuilder(executionContext);
-    QueryNode executionTree = executionTreeBuilder.build();
-    assertNotNull(executionTree);
-    assertTrue(executionTree instanceof SelectionNode);
-    assertTrue(
-        ((SelectionNode) executionTree)
-            .getAggMetricSelectionSources()
-            .contains(AttributeSource.QS.name()));
-    QueryNode firstChild = ((SelectionNode) executionTree).getChildNode();
-    assertTrue(firstChild instanceof SortAndPaginateNode);
-    QueryNode secondChild = ((SortAndPaginateNode) firstChild).getChildNode();
-    assertTrue(secondChild instanceof DataFetcherNode);
-    assertEquals(AttributeSource.EDS.name(), ((DataFetcherNode) secondChild).getSource());
   }
 
   private void mockDomainObjectConfigs() {

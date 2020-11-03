@@ -37,8 +37,6 @@ import org.hypertrace.gateway.service.entity.config.DomainObjectConfigs;
 import org.hypertrace.gateway.service.entity.config.LogConfig;
 import org.hypertrace.gateway.service.v1.common.ColumnIdentifier;
 import org.hypertrace.gateway.service.v1.common.Expression;
-import org.hypertrace.gateway.service.v1.common.LiteralConstant;
-import org.hypertrace.gateway.service.v1.common.Operator;
 import org.hypertrace.gateway.service.v1.entity.EntitiesRequest;
 import org.hypertrace.gateway.service.v1.entity.EntitiesResponse;
 import org.hypertrace.gateway.service.v1.entity.Entity;
@@ -251,11 +249,6 @@ public class EntityServiceTest extends AbstractGatewayServiceTest {
     EntitiesRequest entitiesRequest =
         EntitiesRequest.newBuilder()
             .setEntityType("API")
-            .setFilter(org.hypertrace.gateway.service.v1.common.Filter.newBuilder()
-                .setOperator(Operator.IN)
-                .setLhs(getExpressionFor("API.httpMethod", "API Http method"))
-                .setRhs(getStringListLiteral(List.of("GET", "POST")))
-            )
             .addSelection(getExpressionFor("API.apiId", "API Id"))
             .addSelection(getExpressionFor("API.apiName", "API Name"))
             .addSelection(getExpressionFor("API.httpMethod", "API Http method"))
@@ -263,23 +256,14 @@ public class EntityServiceTest extends AbstractGatewayServiceTest {
     EntitiesResponse response = entityService.getEntities(TENANT_ID, entitiesRequest, Map.of());
     Assertions.assertNotNull(response);
     Assertions.assertEquals(2, response.getTotal());
-    for (Entity entity: response.getEntityList()) {
-      if ("apiId1".equals(entity.getAttributeMap().get("API.apiId").getString())) {
-        Assertions.assertEquals("/login", entity.getAttributeMap().get("API.apiName").getString());
-        Assertions.assertEquals("GET", entity.getAttributeMap().get("API.httpMethod").getString());
-      } else if ("apiId2".equals(entity.getAttributeMap().get("API.apiId").getString())) {
-        Assertions.assertEquals("/checkout", entity.getAttributeMap().get("API.apiName").getString());
-        Assertions.assertEquals("POST", entity.getAttributeMap().get("API.httpMethod").getString());
-      }
-    }
-  }
-
-  private Expression getStringListLiteral(List<String> values) {
-    return Expression.newBuilder().setLiteral(
-        LiteralConstant.newBuilder().setValue(
-            org.hypertrace.gateway.service.v1.common.Value.newBuilder()
-                .setValueType(org.hypertrace.gateway.service.v1.common.ValueType.STRING_ARRAY)
-                .addAllStringArray(values))).build();
+    Entity entity1 = response.getEntity(0);
+    Assertions.assertEquals("apiId1", entity1.getAttributeMap().get("API.apiId").getString());
+    Assertions.assertEquals("/login", entity1.getAttributeMap().get("API.apiName").getString());
+    Assertions.assertEquals("GET", entity1.getAttributeMap().get("API.httpMethod").getString());
+    Entity entity2 = response.getEntity(1);
+    Assertions.assertEquals("apiId2", entity2.getAttributeMap().get("API.apiId").getString());
+    Assertions.assertEquals("/checkout", entity2.getAttributeMap().get("API.apiName").getString());
+    Assertions.assertEquals("POST", entity2.getAttributeMap().get("API.httpMethod").getString());
   }
 
   private Expression getExpressionFor(String columnName, String alias) {
