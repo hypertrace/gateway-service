@@ -8,6 +8,8 @@ import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.when;
 
+import com.google.protobuf.InvalidProtocolBufferException;
+import com.google.protobuf.util.JsonFormat;
 import com.typesafe.config.Config;
 import com.typesafe.config.ConfigFactory;
 import java.util.Arrays;
@@ -92,6 +94,16 @@ public class EntityServiceTest extends AbstractGatewayServiceTest {
                 any(RequestContext.class), eq(AttributeScope.API.name())))
         .thenReturn(
             Map.of(
+                "API.startTime",
+                AttributeMetadata.newBuilder()
+                    .setScopeString(AttributeScope.API.name())
+                    .setKey("startTime")
+                    .setFqn("API.startTime")
+                    .setValueKind(AttributeKind.TYPE_INT64)
+                    .setType(AttributeType.ATTRIBUTE)
+                    .addSources(AttributeSource.QS)
+                    .setId("API.startTime")
+                    .build(),
                 "API.apiId",
                 AttributeMetadata.newBuilder()
                     .setScopeString(AttributeScope.API.name())
@@ -155,9 +167,12 @@ public class EntityServiceTest extends AbstractGatewayServiceTest {
 
   @Test
   public void testGetEntitiesOnlySelectFromSingleSource() {
+    long endTime = System.currentTimeMillis();
+    long startTime = endTime - 1000;
     EntitiesRequest entitiesRequest =
         EntitiesRequest.newBuilder()
             .setEntityType("API")
+            .setStartTimeMillis(startTime).setEndTimeMillis(endTime)
             .addSelection(getExpressionFor("API.apiId", "API Id"))
             .addSelection(getExpressionFor("API.apiName", "API Name"))
             .setLimit(2)
@@ -166,7 +181,7 @@ public class EntityServiceTest extends AbstractGatewayServiceTest {
     // The filter sent down to query-service by QueryServiceEntityFetcher when there is no filter in
     // EntitiesRequest
     Filter queryServiceFilter = createQsDefaultRequestFilter("API.startTime",
-        "API.apiId",0, 0);
+        "API.apiId", startTime, endTime);
 
     QueryRequest expectedQueryRequest = QueryRequest.newBuilder()
         .addSelection(createQsColumnExpression("API.apiId")) // Added implicitly in the getEntitiesAndAggregatedMetrics() in order to do GroupBy on the entity id
@@ -180,6 +195,11 @@ public class EntityServiceTest extends AbstractGatewayServiceTest {
         .addGroupBy(createQsColumnExpression("API.apiName", "API Name"))
         .setLimit(QueryServiceClient.DEFAULT_QUERY_SERVICE_GROUP_BY_LIMIT)
         .build();
+    try {
+      System.out.println("expected: " + JsonFormat.printer().omittingInsignificantWhitespace().print(expectedQueryRequest));
+    } catch (InvalidProtocolBufferException e) {
+      e.printStackTrace();
+    }
     when(queryServiceClient.executeQuery(eq(expectedQueryRequest), any(), Mockito.anyInt()))
         .thenReturn(
             List.of(

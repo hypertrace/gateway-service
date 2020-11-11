@@ -29,6 +29,7 @@ import org.hypertrace.gateway.service.entity.EntityKey;
 import org.hypertrace.gateway.service.entity.config.DomainObjectFilter;
 import org.hypertrace.gateway.service.entity.config.DomainObjectMapping;
 import org.hypertrace.gateway.service.trace.TraceScope;
+import org.hypertrace.gateway.service.v1.common.ColumnIdentifier;
 import org.hypertrace.gateway.service.v1.common.Expression;
 import org.hypertrace.gateway.service.v1.common.Expression.ValueCase;
 import org.hypertrace.gateway.service.v1.common.Filter;
@@ -109,16 +110,37 @@ public class RequestPreProcessor {
         transformFilter(attributeIdMappings, originalRequest.getFilter(), context);
     Filter filter = mergeFilters(filterToInject, transformedFilter);
 
+    // Convert the time range into a filter and set it on the request so that all downstream
+    // components needn't treat it specially.
+    String timestampAttributeId = AttributeMetadataUtil.getTimestampAttributeId(
+        attributeMetadataProvider, context, originalRequest.getEntityType());
+
+    Filter.Builder filterBuilder = Filter.newBuilder()
+        .setOperator(AND)
+        .addChildFilter(getTimestampFilter(timestampAttributeId, Operator.GE, originalRequest.getStartTimeMillis()))
+        .addChildFilter(getTimestampFilter(timestampAttributeId, Operator.LT, originalRequest.getEndTimeMillis()));
+    if (!Filter.getDefaultInstance().equals(filter)) {
+      filterBuilder.addChildFilter(filter);
+    }
+
     // Apply the scope filter at the end.
     filter = scopeFilterConfigs.createScopeFilter(
             originalRequest.getEntityType(),
-            filter,
+            filterBuilder.build(),
             attributeMetadataProvider,
             context);
 
     entitiesRequestBuilder.setFilter(filter);
 
     return entitiesRequestBuilder.build();
+  }
+
+  private Filter getTimestampFilter(String colName, Operator operator, long timestamp) {
+    return Filter.newBuilder().setOperator(operator)
+        .setLhs(Expression.newBuilder().setColumnIdentifier(ColumnIdentifier.newBuilder().setColumnName(colName)))
+        .setRhs(Expression.newBuilder().setLiteral(
+            LiteralConstant.newBuilder().setValue(Value.newBuilder().setValueType(ValueType.LONG).setLong(timestamp))))
+        .build();
   }
 
   /**

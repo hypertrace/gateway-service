@@ -1,5 +1,36 @@
 package org.hypertrace.gateway.service.entity.query;
 
+import com.typesafe.config.Config;
+import com.typesafe.config.ConfigFactory;
+import org.hypertrace.core.attribute.service.v1.AttributeMetadata;
+import org.hypertrace.core.attribute.service.v1.AttributeScope;
+import org.hypertrace.core.attribute.service.v1.AttributeSource;
+import org.hypertrace.gateway.service.common.AttributeMetadataProvider;
+import org.hypertrace.gateway.service.common.RequestContext;
+import org.hypertrace.gateway.service.entity.EntitiesRequestContext;
+import org.hypertrace.gateway.service.entity.config.DomainObjectConfigs;
+import org.hypertrace.gateway.service.entity.query.visitor.OptimizingVisitor;
+import org.hypertrace.gateway.service.v1.common.Filter;
+import org.hypertrace.gateway.service.v1.common.FunctionType;
+import org.hypertrace.gateway.service.v1.common.Operator;
+import org.hypertrace.gateway.service.v1.common.OrderByExpression;
+import org.hypertrace.gateway.service.v1.common.Value;
+import org.hypertrace.gateway.service.v1.common.ValueType;
+import org.hypertrace.gateway.service.v1.entity.EntitiesRequest;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
+import org.mockito.Mock;
+
+import java.util.Arrays;
+import java.util.HashMap;
+import java.util.HashSet;
+import java.util.List;
+import java.util.Map;
+import java.util.Optional;
+import java.util.Set;
+import java.util.UUID;
+import java.util.stream.Collectors;
+
 import static org.hypertrace.gateway.service.common.EntitiesRequestAndResponseUtils.buildAggregateExpression;
 import static org.hypertrace.gateway.service.common.EntitiesRequestAndResponseUtils.buildExpression;
 import static org.hypertrace.gateway.service.common.EntitiesRequestAndResponseUtils.buildOrderByExpression;
@@ -14,35 +45,6 @@ import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.when;
-
-import com.typesafe.config.Config;
-import com.typesafe.config.ConfigFactory;
-import java.util.Arrays;
-import java.util.HashMap;
-import java.util.List;
-import java.util.Map;
-import java.util.Optional;
-import java.util.UUID;
-import java.util.stream.Collectors;
-import org.hypertrace.core.attribute.service.v1.AttributeMetadata;
-import org.hypertrace.core.attribute.service.v1.AttributeScope;
-import org.hypertrace.core.attribute.service.v1.AttributeSource;
-import org.hypertrace.gateway.service.common.AttributeMetadataProvider;
-import org.hypertrace.gateway.service.common.RequestContext;
-import org.hypertrace.gateway.service.entity.EntitiesRequestContext;
-import org.hypertrace.gateway.service.entity.config.DomainObjectConfigs;
-import org.hypertrace.gateway.service.entity.query.visitor.OptimizingVisitor;
-import org.hypertrace.gateway.service.entity.query.visitor.PrintVisitor;
-import org.hypertrace.gateway.service.v1.common.Filter;
-import org.hypertrace.gateway.service.v1.common.FunctionType;
-import org.hypertrace.gateway.service.v1.common.Operator;
-import org.hypertrace.gateway.service.v1.common.OrderByExpression;
-import org.hypertrace.gateway.service.v1.common.Value;
-import org.hypertrace.gateway.service.v1.common.ValueType;
-import org.hypertrace.gateway.service.v1.entity.EntitiesRequest;
-import org.junit.jupiter.api.BeforeEach;
-import org.junit.jupiter.api.Test;
-import org.mockito.Mock;
 
 public class ExecutionTreeBuilderTest {
 
@@ -76,10 +78,10 @@ public class ExecutionTreeBuilderTest {
               buildAttributeMetadataForSources(API_TYPE_ATTR, AttributeScope.API.name(), "apiType", List.of(AttributeSource.EDS)));
           put(
               API_START_TIME_ATTR,
-              buildAttributeMetadataForSources(API_START_TIME_ATTR, AttributeScope.API.name(), "start_time_millis", List.of(AttributeSource.QS)));
+              buildAttributeMetadataForSources(API_START_TIME_ATTR, AttributeScope.API.name(), "startTime", List.of(AttributeSource.QS)));
           put(
               API_END_TIME_ATTR,
-              buildAttributeMetadataForSources(API_END_TIME_ATTR, AttributeScope.API.name(), "end_time_millis", List.of(AttributeSource.QS)));
+              buildAttributeMetadataForSources(API_END_TIME_ATTR, AttributeScope.API.name(), "endTime", List.of(AttributeSource.QS)));
           put(
               API_NUM_CALLS_ATTR,
               buildAttributeMetadataForSources(API_NUM_CALLS_ATTR, AttributeScope.API.name(), "numCalls", List.of(AttributeSource.QS)));
@@ -428,15 +430,19 @@ public class ExecutionTreeBuilderTest {
       ExecutionTreeBuilder executionTreeBuilder = new ExecutionTreeBuilder(executionContext);
       QueryNode executionTree = executionTreeBuilder.build();
       assertNotNull(executionTree);
-      assertTrue(executionTree instanceof SelectionNode);
-      assertTrue(
-          ((SelectionNode) executionTree)
-              .getAttrSelectionSources()
-              .contains(AttributeSource.QS.name()));
-      QueryNode firstChild = ((SelectionNode) executionTree).getChildNode();
-      assertTrue(firstChild instanceof SortAndPaginateNode);
-      QueryNode grandchild = ((SortAndPaginateNode) firstChild).getChildNode();
-      assertEquals(AttributeSource.EDS.name(), ((DataFetcherNode) grandchild).getSource());
+      assertTrue(executionTree instanceof SortAndPaginateNode);
+      assertEquals(10, ((SortAndPaginateNode) executionTree).getLimit());
+      QueryNode firstChild = ((SortAndPaginateNode) executionTree).getChildNode();
+      assertTrue(firstChild instanceof AndNode);
+      List<QueryNode> grandchildren = ((AndNode) firstChild).getChildNodes();
+      assertEquals(2, grandchildren.size());
+      Set<String> sources = new HashSet<>();
+      grandchildren.forEach(c -> {
+        assertTrue(c instanceof DataFetcherNode);
+        sources.add(((DataFetcherNode) c).getSource());
+      });
+      assertTrue(sources.contains(AttributeSource.EDS.name()));
+      assertTrue(sources.contains(AttributeSource.QS.name()));
     }
   }
 
@@ -726,18 +732,18 @@ public class ExecutionTreeBuilderTest {
     QueryNode executionTree = executionTreeBuilder.build();
     assertNotNull(executionTree);
     assertTrue(executionTree instanceof SelectionNode);
-    assertTrue(
-        ((SelectionNode) executionTree)
-            .getAggMetricSelectionSources()
-            .contains(AttributeSource.QS.name()));
+    assertTrue(((SelectionNode) executionTree).getAggMetricSelectionSources().contains(AttributeSource.QS.name()));
     QueryNode firstChild = ((SelectionNode) executionTree).getChildNode();
-    assertTrue(firstChild instanceof SortAndPaginateNode);
-    QueryNode secondChild = ((SortAndPaginateNode) firstChild).getChildNode();
-    assertTrue(secondChild instanceof SelectionNode);
-    assertTrue(
-        ((SelectionNode) secondChild)
-            .getAttrSelectionSources()
-            .contains(AttributeSource.EDS.name()));
+    assertTrue(firstChild instanceof SelectionNode);
+    assertTrue(((SelectionNode) firstChild).getAttrSelectionSources().contains(AttributeSource.EDS.name()));
+
+    QueryNode secondChild = ((SelectionNode) firstChild).getChildNode();
+    assertTrue(secondChild instanceof SortAndPaginateNode);
+    assertEquals(10, ((SortAndPaginateNode) secondChild).getLimit());
+
+    QueryNode thirdChild = ((SortAndPaginateNode) secondChild).getChildNode();
+    assertTrue(thirdChild instanceof DataFetcherNode);
+    assertEquals("QS", ((DataFetcherNode) thirdChild).getSource());
   }
 
   @Test
@@ -768,8 +774,8 @@ public class ExecutionTreeBuilderTest {
     QueryNode firstChild = ((SelectionNode) executionTree).getChildNode();
     assertTrue(firstChild instanceof SortAndPaginateNode);
     QueryNode secondChild = ((SortAndPaginateNode) firstChild).getChildNode();
-    assertTrue(secondChild instanceof DataFetcherNode);
-    assertEquals(AttributeSource.EDS.name(), ((DataFetcherNode) secondChild).getSource());
+    assertTrue(secondChild instanceof AndNode);
+    assertEquals(2, ((AndNode) secondChild).getChildNodes().size());
   }
 
   private void mockDomainObjectConfigs() {

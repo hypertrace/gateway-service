@@ -59,6 +59,8 @@ public class SelectionNode implements QueryNode {
         + aggMetricSelectionSources
         + ", timeSeriesSelectionSources="
         + timeSeriesSelectionSources
+        + ", childNode="
+        + childNode
         + '}';
   }
 
