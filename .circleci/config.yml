@@ -13,7 +13,7 @@ executors:
           password: $DOCKERHUB_PASSWORD
   helm:
     docker:
-      - image: hypertrace/helm-gcs-packager:0.1.1
+      - image: hypertrace/helm-gcs-packager:0.3.0
         auth:
           username: $DOCKERHUB_USERNAME
           password: $DOCKERHUB_PASSWORD
@@ -32,7 +32,7 @@ commands:
       - checkout
       - run:
           name: Generate cache key
-          command: find . -type f -name "*.gradle*" -exec shasum {} + | sort > /tmp/checksum.txt && cat /tmp/checksum.txt
+          command: find . -type f -name "*.gradle-wrapper*" -exec shasum {} + | sort > /tmp/checksum.txt && cat /tmp/checksum.txt
       - restore_cache:
           keys:
             - v1-dependencies-{{ checksum "/tmp/checksum.txt" }}
@@ -51,12 +51,20 @@ commands:
           paths:
             - ~/.gradle
           key: v1-dependencies-{{ checksum "/tmp/checksum.txt" }}
+  docker_login:
+    description: "Login to dockerhub with readonly credentials"
+    steps:
+      - run:
+          name: Dockerhub login
+          command: echo $DOCKERHUB_PASSWORD | docker login --username $DOCKERHUB_USERNAME --password-stdin
 
 jobs:
   build:
     executor: gradle_docker
     steps:
       - setup_build_environment
+      - setup_remote_docker: &latest_remote_docker
+          version: 19.03.12
       - populate_and_save_cache
       - gradle:
           args: build dockerBuildImages
@@ -64,16 +72,20 @@ jobs:
           args: jacocoTestReport
       - codecov/upload:
           flags: unit
-  publish:
+  merge-publish:
     executor: gradle_docker
     steps:
       - setup_build_environment
+      - setup_remote_docker: *latest_remote_docker
+      - docker_login
       - gradle:
-          args: :tag -Prelease
-      - add_ssh_keys:
-          fingerprints:
-            - '9e:5e:1b:28:cf:14:d6:7d:cd:48:64:72:d0:6f:01:c8'
-      - run: git push origin $(./gradlew -q :printVersion)
+          args: dockerPushImages
+  release-publish:
+    executor: gradle_docker
+    steps:
+      - setup_build_environment
+      - setup_remote_docker: *latest_remote_docker
+      - docker_login
       - gradle:
           args: publish dockerPushImages
   validate-charts:
@@ -94,10 +106,20 @@ jobs:
       - setup_build_environment
       - snyk/scan:
           additional-arguments: --all-sub-projects --policy-path=.snyk
-  package-charts:
+  release-charts:
     executor: helm
+    working_directory: ~/repo
     steps:
       - checkout
+      - run:
+          name: Add release tag
+          command: |
+            git config --global user.email "${CIRCLE_USERNAME}@hypertrace.org"
+            git config --global user.name "$CIRCLE_USERNAME"
+            git tag -am "Released by $CIRCLE_USERNAME" $(git describe --abbrev=0 --tags | sed 's/^release-//')
+      - run:
+          name: Remove trigger tag
+          command: git tag -d release-$(git describe --abbrev=0)
       - run:
           name: Package and Publish Helm Charts
           # Read the "name:" from Chart.yaml. The chart version is <chart-name>-<semver git tag>
@@ -106,9 +128,17 @@ jobs:
             CHART_NAME=$(awk '/^name:/ {print $2}' ./helm/Chart.yaml)
             export GOOGLE_APPLICATION_CREDENTIALS=${HOME}/helm-gcs-key.json
             echo ${HELM_GCS_CREDENTIALS} > ${GOOGLE_APPLICATION_CREDENTIALS}
+            helm dependency update ./helm/
             helm repo add helm-gcs ${HELM_GCS_REPOSITORY}
             helm package --version ${CHART_VERSION} --app-version ${CHART_VERSION} ./helm/
             helm gcs push ${CHART_NAME}-${CHART_VERSION}.tgz helm-gcs --public --retry
+      - add_ssh_keys:
+          fingerprints:
+            # This ssh key gives write permission needed for the following step.
+            - '76:7a:c8:91:c0:cd:eb:71:96:3c:44:c6:cf:b0:26:83'
+      - run:
+          name: Update remote tags
+          command: git push origin refs/tags/$(git describe --abbrev=0) :refs/tags/release-$(git describe --abbrev=0)
 workflows:
   version: 2
   build-and-publish:
@@ -123,7 +153,7 @@ workflows:
           context:
             - hypertrace-vulnerability-scanning
             - dockerhub-read
-      - publish:
+      - merge-publish:
           context:
             - hypertrace-publishing
             - dockerhub-read
@@ -135,13 +165,23 @@ workflows:
             branches:
               only:
                 - main
-      - package-charts:
+      - release-publish:
+          context:
+            - hypertrace-publishing
+            - dockerhub-read
+          filters:
+            branches:
+              ignore: /.*/
+            tags:
+              only: /^release-.*/
+      - release-charts:
           context:
             - hypertrace-publishing
             - dockerhub-read
           requires:
-            - publish
+            - release-publish
           filters:
             branches:
-              only:
-                - main
+              ignore: /.*/
+            tags:
+              only: /^release-.*/
