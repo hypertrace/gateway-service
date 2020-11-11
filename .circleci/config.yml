@@ -38,10 +38,6 @@ commands:
             - v1-dependencies-{{ checksum "/tmp/checksum.txt" }}
             # fallback to using the latest cache if no exact match is found
             - v1-dependencies-
-      - setup_remote_docker
-      - run:
-          name: Dockerhub login
-          command: echo $DOCKERHUB_PASSWORD | docker login --username $DOCKERHUB_USERNAME --password-stdin
   populate_and_save_cache:
     description: 'Downloads all gradle dependencies and uploads cache for later use'
     steps:
