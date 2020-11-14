@@ -16,7 +16,7 @@ import org.hypertrace.gateway.service.entity.query.TotalFetcherNode;
  */
 public class ExecutionContextBuilderVisitor implements Visitor<Void> {
 
-  private ExecutionContext executionContext;
+  private final ExecutionContext executionContext;
 
   public ExecutionContextBuilderVisitor(ExecutionContext executionContext) {
     this.executionContext = executionContext;

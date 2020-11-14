@@ -285,6 +285,11 @@ public class QueryServiceEntityFetcher implements IEntityFetcher {
       LOG.debug("Sending Query to Query Service ======== \n {}", queryRequest);
     }
 
+    try {
+      System.out.println("Actual: " + JsonFormat.printer().omittingInsignificantWhitespace().print(queryRequest));
+    } catch (InvalidProtocolBufferException e) {
+      e.printStackTrace();
+    }
     Iterator<ResultSetChunk> resultSetChunkIterator =
         queryServiceClient.executeQuery(queryRequest, requestContext.getHeaders(), requestTimeout);
 

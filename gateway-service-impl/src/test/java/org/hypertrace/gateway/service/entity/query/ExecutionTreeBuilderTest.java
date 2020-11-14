@@ -38,6 +38,7 @@ import static org.hypertrace.gateway.service.common.EntitiesRequestAndResponseUt
 import static org.hypertrace.gateway.service.common.EntitiesRequestAndResponseUtils.generateAndOrNotFilter;
 import static org.hypertrace.gateway.service.common.EntitiesRequestAndResponseUtils.generateEQFilter;
 import static org.hypertrace.gateway.service.common.EntitiesRequestAndResponseUtils.generateFilter;
+import static org.hypertrace.gateway.service.common.EntitiesRequestAndResponseUtils.getTimeRangeFilter;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.junit.jupiter.api.Assertions.assertTrue;
@@ -54,8 +55,8 @@ public class ExecutionTreeBuilderTest {
   private static final String API_NAME_ATTR = "API.name";
   private static final String API_TYPE_ATTR = "API.apiType";
   private static final String API_PATTERN_ATTR = "API.urlPattern";
-  private static final String API_START_TIME_ATTR = "API.start_time_millis";
-  private static final String API_END_TIME_ATTR = "API.end_time_millis";
+  private static final String API_START_TIME_ATTR = "API.startTime";
+  private static final String API_END_TIME_ATTR = "API.endTime";
   private static final String API_NUM_CALLS_ATTR = "API.numCalls";
   private static final String API_STATE_ATTR = "API.state";
   private static final String API_DISCOVERY_STATE = "API.apiDiscoveryState";
@@ -128,10 +129,15 @@ public class ExecutionTreeBuilderTest {
   }
 
   private ExecutionTreeBuilder getExecutionTreeBuilderForOptimizedFilterTests() {
-    EntitiesRequest entitiesRequest =
-        EntitiesRequest.newBuilder().setEntityType(AttributeScope.API.name()).build();
+    long endTime = System.currentTimeMillis();
+    long startTime = endTime - 1000;
+    EntitiesRequest entitiesRequest = EntitiesRequest.newBuilder()
+        .setStartTimeMillis(startTime).setEndTimeMillis(endTime)
+        .setEntityType(AttributeScope.API.name())
+        .setFilter(getTimeRangeFilter("API.startTime", startTime, endTime))
+        .build();
     EntitiesRequestContext entitiesRequestContext =
-        new EntitiesRequestContext(TENANT_ID, 0L, 10L, "API", new HashMap<>());
+        new EntitiesRequestContext(TENANT_ID, startTime, endTime, "API", new HashMap<>());
     ExecutionContext executionContext =
         ExecutionContext.from(attributeMetadataProvider, entitiesRequest, entitiesRequestContext);
     return new ExecutionTreeBuilder(executionContext);
@@ -414,22 +420,27 @@ public class ExecutionTreeBuilderTest {
     }
 
     {
+      long endTime = System.currentTimeMillis();
+      long startTime = endTime - 1000;
+      Filter apiIdFilter = generateEQFilter(API_API_ID_ATTR, UUID.randomUUID().toString());
+      Filter trFilter = getTimeRangeFilter(API_START_TIME_ATTR, startTime, endTime);
       EntitiesRequest entitiesRequest =
           EntitiesRequest.newBuilder()
               .setEntityType(AttributeScope.API.name())
               .addSelection(buildExpression(API_START_TIME_ATTR))
-              .setFilter(generateEQFilter(API_API_ID_ATTR, UUID.randomUUID().toString()))
+              .setFilter(Filter.newBuilder().setOperator(Operator.AND).addChildFilter(trFilter).addChildFilter(apiIdFilter))
               .addOrderBy(orderByExpression)
               .setLimit(10)
               .setOffset(0)
               .build();
       EntitiesRequestContext entitiesRequestContext =
-          new EntitiesRequestContext(TENANT_ID, 0L, 10L, "API", new HashMap<>());
+          new EntitiesRequestContext(TENANT_ID, startTime, endTime, "API", new HashMap<>());
       ExecutionContext executionContext =
           ExecutionContext.from(attributeMetadataProvider, entitiesRequest, entitiesRequestContext);
       ExecutionTreeBuilder executionTreeBuilder = new ExecutionTreeBuilder(executionContext);
       QueryNode executionTree = executionTreeBuilder.build();
       assertNotNull(executionTree);
+      System.out.println(executionTree);
       assertTrue(executionTree instanceof SortAndPaginateNode);
       assertEquals(10, ((SortAndPaginateNode) executionTree).getLimit());
       QueryNode firstChild = ((SortAndPaginateNode) executionTree).getChildNode();
@@ -721,11 +732,13 @@ public class ExecutionTreeBuilderTest {
                     FunctionType.SUM,
                     "SUM_numCalls",
                     List.of()))
+            .setFilter(getTimeRangeFilter("API.startTime", System.currentTimeMillis() - 1000, System.currentTimeMillis()))
             .setLimit(10)
             .setOffset(0)
             .build();
     EntitiesRequestContext entitiesRequestContext =
-        new EntitiesRequestContext(TENANT_ID, 0L, 10L, "API", new HashMap<>());
+        new EntitiesRequestContext(TENANT_ID, entitiesRequest.getStartTimeMillis(), entitiesRequest.getEndTimeMillis(),
+            "API", new HashMap<>());
     ExecutionContext executionContext =
         ExecutionContext.from(attributeMetadataProvider, entitiesRequest, entitiesRequestContext);
     ExecutionTreeBuilder executionTreeBuilder = new ExecutionTreeBuilder(executionContext);
@@ -739,11 +752,11 @@ public class ExecutionTreeBuilderTest {
 
     QueryNode secondChild = ((SelectionNode) firstChild).getChildNode();
     assertTrue(secondChild instanceof SortAndPaginateNode);
-    assertEquals(10, ((SortAndPaginateNode) secondChild).getLimit());
+    assertEquals(entitiesRequest.getLimit(), ((SortAndPaginateNode) secondChild).getLimit());
 
     QueryNode thirdChild = ((SortAndPaginateNode) secondChild).getChildNode();
     assertTrue(thirdChild instanceof DataFetcherNode);
-    assertEquals("QS", ((DataFetcherNode) thirdChild).getSource());
+    assertEquals(AttributeSource.QS.name(), ((DataFetcherNode) thirdChild).getSource());
   }
 
   @Test
@@ -766,6 +779,7 @@ public class ExecutionTreeBuilderTest {
     ExecutionTreeBuilder executionTreeBuilder = new ExecutionTreeBuilder(executionContext);
     QueryNode executionTree = executionTreeBuilder.build();
     assertNotNull(executionTree);
+    System.out.println(executionTree);
     assertTrue(executionTree instanceof SelectionNode);
     assertTrue(
         ((SelectionNode) executionTree)
@@ -774,8 +788,8 @@ public class ExecutionTreeBuilderTest {
     QueryNode firstChild = ((SelectionNode) executionTree).getChildNode();
     assertTrue(firstChild instanceof SortAndPaginateNode);
     QueryNode secondChild = ((SortAndPaginateNode) firstChild).getChildNode();
-    assertTrue(secondChild instanceof AndNode);
-    assertEquals(2, ((AndNode) secondChild).getChildNodes().size());
+    assertTrue(secondChild instanceof DataFetcherNode);
+    assertEquals(AttributeSource.EDS.name(), ((DataFetcherNode) secondChild).getSource());
   }
 
   private void mockDomainObjectConfigs() {

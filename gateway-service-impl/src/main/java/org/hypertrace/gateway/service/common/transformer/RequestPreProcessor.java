@@ -106,27 +106,26 @@ public class RequestPreProcessor {
     entitiesRequestBuilder.clearFilter();
     Filter filterToInject =
         injectIdFilter(attributeIdMappings, originalRequest.getSelectionList(), context);
-    Filter transformedFilter =
-        transformFilter(attributeIdMappings, originalRequest.getFilter(), context);
-    Filter filter = mergeFilters(filterToInject, transformedFilter);
 
     // Convert the time range into a filter and set it on the request so that all downstream
     // components needn't treat it specially.
     String timestampAttributeId = AttributeMetadataUtil.getTimestampAttributeId(
         attributeMetadataProvider, context, originalRequest.getEntityType());
 
-    Filter.Builder filterBuilder = Filter.newBuilder()
-        .setOperator(AND)
-        .addChildFilter(getTimestampFilter(timestampAttributeId, Operator.GE, originalRequest.getStartTimeMillis()))
-        .addChildFilter(getTimestampFilter(timestampAttributeId, Operator.LT, originalRequest.getEndTimeMillis()));
-    if (!Filter.getDefaultInstance().equals(filter)) {
-      filterBuilder.addChildFilter(filter);
+    Filter.Builder filterBuilder = Filter.newBuilder().setOperator(AND);
+    if (!Filter.getDefaultInstance().equals(originalRequest.getFilter())) {
+      filterBuilder.addChildFilter(originalRequest.getFilter());
     }
+    filterBuilder.addChildFilter(getTimestampFilter(timestampAttributeId, Operator.GE, originalRequest.getStartTimeMillis()))
+        .addChildFilter(getTimestampFilter(timestampAttributeId, Operator.LT, originalRequest.getEndTimeMillis()));
+
+    Filter transformedFilter = transformFilter(attributeIdMappings, filterBuilder.build(), context);
+    Filter filter = mergeFilters(filterToInject, transformedFilter);
 
     // Apply the scope filter at the end.
     filter = scopeFilterConfigs.createScopeFilter(
             originalRequest.getEntityType(),
-            filterBuilder.build(),
+            filter,
             attributeMetadataProvider,
             context);
 
@@ -472,7 +471,8 @@ public class RequestPreProcessor {
                         .setRhs(QueryExpressionUtil.getLiteralExpression(entityKey.get(i)))
                         .build())
             .collect(Collectors.toList());
-    return Filter.newBuilder().setOperator(AND).addAllChildFilter(childFilters).build();
+    return childFilters.size() > 1 ? Filter.newBuilder().setOperator(AND).addAllChildFilter(childFilters).build() :
+        childFilters.get(0);
   }
 
   private Filter transformNEQFilter(
@@ -491,7 +491,8 @@ public class RequestPreProcessor {
                         .setRhs(QueryExpressionUtil.getLiteralExpression(entityKey.get(i)))
                         .build())
             .collect(Collectors.toList());
-    return Filter.newBuilder().setOperator(OR).addAllChildFilter(childFilters).build();
+    return childFilters.size() > 1 ? Filter.newBuilder().setOperator(OR).addAllChildFilter(childFilters).build() :
+        childFilters.get(0);
   }
 
   private Filter transformLikeFilter(
@@ -510,7 +511,8 @@ public class RequestPreProcessor {
                         .setRhs(QueryExpressionUtil.getLiteralExpression(entityKey.get(i)))
                         .build())
             .collect(Collectors.toList());
-    return Filter.newBuilder().setOperator(AND).addAllChildFilter(childFilters).build();
+    return childFilters.size() > 1 ? Filter.newBuilder().setOperator(AND).addAllChildFilter(childFilters).build() :
+        childFilters.get(0);
   }
 
   /**

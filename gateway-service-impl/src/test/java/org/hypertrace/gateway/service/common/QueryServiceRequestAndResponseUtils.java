@@ -138,36 +138,19 @@ public class QueryServiceRequestAndResponseUtils {
                                              long endTime,
                                              Filter requestFilter) {
     return Filter.newBuilder()
+        .setOperator(Operator.AND)
         .addChildFilter(
             Filter.newBuilder()
-                .addChildFilter(
-                    createQsFilter(
-                        createQsColumnExpression(timestampColumnName),
-                        Operator.GE,
-                        createQsLongLiteralExpression(startTime)
-                    )
-                )
-                .addChildFilter(
-                    createQsFilter(
-                        createQsColumnExpression(timestampColumnName),
-                        Operator.LT,
-                        createQsLongLiteralExpression(endTime)
-                    )
-                )
+                .setOperator(Operator.AND)
+                .addChildFilter(createQsTimeRangeFilter(timestampColumnName, startTime, endTime))
+                .addChildFilter(requestFilter)
         )
         .addChildFilter(
-            requestFilter
+            createQsFilter(createQsColumnExpression(entityIdColumnName),
+                Operator.NEQ,
+                createQsStringLiteralExpression("null"))
         )
-        .addChildFilter(
-            Filter.newBuilder()
-                .addChildFilter(
-                    createQsFilter(
-                        createQsColumnExpression(entityIdColumnName),
-                        Operator.NEQ,
-                        createQsStringLiteralExpression("null")
-                    )
-                )
-        ).build();
+        .build();
   }
 
   public static Filter createQsDefaultRequestFilter(String timestampColumnName,
@@ -176,28 +159,32 @@ public class QueryServiceRequestAndResponseUtils {
                                                     long endTime) {
     return Filter.newBuilder()
         .setOperator(Operator.AND)
-        .addChildFilter(
-            Filter.newBuilder()
-                .setOperator(Operator.AND)
-                .addChildFilter(
-                    createQsFilter(
-                        createQsColumnExpression(timestampColumnName),
-                        Operator.GE,
-                        createQsLongLiteralExpression(startTime)
-                    )
-                )
-                .addChildFilter(
-                    createQsFilter(
-                        createQsColumnExpression(timestampColumnName),
-                        Operator.LT,
-                        createQsLongLiteralExpression(endTime)
-                    )
-                ))
+        .addChildFilter(createQsTimeRangeFilter(timestampColumnName, startTime, endTime))
         .addChildFilter(
             createQsFilter(
                 createQsColumnExpression(entityIdColumnName),
                 Operator.NEQ,
                 createQsStringLiteralExpression("null")
+            )
+        )
+        .build();
+  }
+
+  private static Filter createQsTimeRangeFilter(String timestampColumnName, long startTime, long endTime) {
+    return Filter.newBuilder()
+        .setOperator(Operator.AND)
+        .addChildFilter(
+            createQsFilter(
+                createQsColumnExpression(timestampColumnName),
+                Operator.GE,
+                createQsLongLiteralExpression(startTime)
+            )
+        )
+        .addChildFilter(
+            createQsFilter(
+                createQsColumnExpression(timestampColumnName),
+                Operator.LT,
+                createQsLongLiteralExpression(endTime)
             )
         )
         .build();

@@ -1,18 +1,12 @@
 package org.hypertrace.gateway.service.common.transformer;
 
-import static org.mockito.Mockito.mock;
-import static org.mockito.Mockito.when;
-
 import com.typesafe.config.Config;
 import com.typesafe.config.ConfigFactory;
-import java.io.File;
-import java.util.List;
-import java.util.Map;
-import java.util.Optional;
 import org.hypertrace.core.attribute.service.v1.AttributeKind;
 import org.hypertrace.core.attribute.service.v1.AttributeMetadata;
 import org.hypertrace.core.attribute.service.v1.AttributeScope;
 import org.hypertrace.gateway.service.common.AttributeMetadataProvider;
+import org.hypertrace.gateway.service.common.EntitiesRequestAndResponseUtils;
 import org.hypertrace.gateway.service.common.config.ScopeFilterConfigs;
 import org.hypertrace.gateway.service.common.util.QueryExpressionUtil;
 import org.hypertrace.gateway.service.entity.EntitiesRequestContext;
@@ -33,11 +27,20 @@ import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.mockito.Mock;
 
+import java.io.File;
+import java.util.List;
+import java.util.Map;
+import java.util.Optional;
+
+import static org.mockito.Mockito.mock;
+import static org.mockito.Mockito.when;
+
 public class RequestPreProcessorTest {
   private static final String TEST_TENANT_ID = "test-tenant-id";
   private RequestPreProcessor requestPreProcessor;
 
-  @Mock private AttributeMetadataProvider attributeMetadataProvider;
+  @Mock
+  private AttributeMetadataProvider attributeMetadataProvider;
 
   @BeforeEach
   public void setup() {
@@ -57,19 +60,18 @@ public class RequestPreProcessorTest {
     EntitiesRequestContext entitiesRequestContext =
         new EntitiesRequestContext(TEST_TENANT_ID, 0L, 1L, "SERVICE", Map.of());
     mockAttributeMetadata(entitiesRequestContext, AttributeScope.SERVICE.name(), "id");
+    mockAttributeMetadata(entitiesRequestContext, AttributeScope.SERVICE.name(), "startTime");
+
     EntitiesRequest entitiesRequest =
         EntitiesRequest.newBuilder()
             .setEntityType("SERVICE")
             .setStartTimeMillis(0L)
             .setEndTimeMillis(1L)
             .setFilter(
-                Filter.newBuilder()
-                    .setOperator(Operator.AND)
-                    .addChildFilter(
-                        GatewayExpressionCreator.createFilter(
-                            QueryExpressionUtil.getColumnExpression("SERVICE.name"),
-                            Operator.LIKE,
-                            QueryExpressionUtil.getLiteralExpression("log"))))
+                GatewayExpressionCreator.createFilter(
+                    QueryExpressionUtil.getColumnExpression("SERVICE.name"),
+                    Operator.LIKE,
+                    QueryExpressionUtil.getLiteralExpression("log")))
             .addSelection(QueryExpressionUtil.getColumnExpression("SERVICE.id"))
             .addSelection(
                 QueryExpressionUtil.getColumnExpression(
@@ -102,7 +104,10 @@ public class RequestPreProcessorTest {
                         GatewayExpressionCreator.createFilter(
                             QueryExpressionUtil.getColumnExpression("SERVICE.name"),
                             Operator.LIKE,
-                            QueryExpressionUtil.getLiteralExpression("log"))))
+                            QueryExpressionUtil.getLiteralExpression("log")))
+                .addChildFilter(EntitiesRequestAndResponseUtils.getTimestampFilter("SERVICE.startTime", Operator.GE, 0L))
+                .addChildFilter(EntitiesRequestAndResponseUtils.getTimestampFilter("SERVICE.startTime", Operator.LT, 1L))
+            )
             .addSelection(QueryExpressionUtil.getColumnExpression("SERVICE.id"))
             .addSelection(QueryExpressionUtil.getColumnExpression("SERVICE.name"))
             .addSelection(
@@ -132,13 +137,10 @@ public class RequestPreProcessorTest {
             .setStartTimeMillis(0L)
             .setEndTimeMillis(1L)
             .setFilter(
-                Filter.newBuilder()
-                    .setOperator(Operator.AND)
-                    .addChildFilter(
-                        GatewayExpressionCreator.createFilter(
-                            QueryExpressionUtil.getColumnExpression("EVENT.name"),
-                            Operator.LIKE,
-                            QueryExpressionUtil.getLiteralExpression("log"))))
+                GatewayExpressionCreator.createFilter(
+                    QueryExpressionUtil.getColumnExpression("EVENT.name"),
+                    Operator.LIKE,
+                    QueryExpressionUtil.getLiteralExpression("log")))
             .addSelection(QueryExpressionUtil.getColumnExpression("EVENT.id"))
             .addSelection(
                 QueryExpressionUtil.getColumnExpression(
@@ -175,15 +177,14 @@ public class RequestPreProcessorTest {
                     .addChildFilter(
                         Filter.newBuilder()
                             .setOperator(Operator.AND)
-                            .addChildFilter(
-                                Filter.newBuilder()
-                                    .setOperator(Operator.AND)
-                                    .addChildFilter(
-                                        GatewayExpressionCreator.createFilter(
-                                            QueryExpressionUtil.getColumnExpression(
-                                                "SERVICE.hostHeader"),
-                                            Operator.LIKE,
-                                            QueryExpressionUtil.getLiteralExpression("log"))))))
+                            .addChildFilter(GatewayExpressionCreator.createFilter(
+                                QueryExpressionUtil.getColumnExpression("SERVICE.hostHeader"),
+                                Operator.LIKE,
+                                QueryExpressionUtil.getLiteralExpression("log")))
+                            .addChildFilter(EntitiesRequestAndResponseUtils.getTimestampFilter("SERVICE.startTime", Operator.GE, 0L))
+                            .addChildFilter(EntitiesRequestAndResponseUtils.getTimestampFilter("SERVICE.startTime", Operator.LT, 1L))
+                    )
+            )
             .addSelection(QueryExpressionUtil.getColumnExpression("SERVICE.hostHeader"))
             .addSelection(QueryExpressionUtil.getColumnExpression("API.isExternal"))
             // Note that the aliases are not transformed
@@ -214,13 +215,10 @@ public class RequestPreProcessorTest {
             .setStartTimeMillis(0L)
             .setEndTimeMillis(1L)
             .setFilter(
-                Filter.newBuilder()
-                    .setOperator(Operator.AND)
-                    .addChildFilter(
-                        GatewayExpressionCreator.createFilter(
-                            QueryExpressionUtil.getColumnExpression("EVENT.name"),
-                            Operator.NEQ,
-                            QueryExpressionUtil.getLiteralExpression("some-entity-name"))))
+                GatewayExpressionCreator.createFilter(
+                    QueryExpressionUtil.getColumnExpression("EVENT.name"),
+                    Operator.NEQ,
+                    QueryExpressionUtil.getLiteralExpression("some-entity-name")))
             .addSelection(QueryExpressionUtil.getColumnExpression("EVENT.id"))
             .addSelection(QueryExpressionUtil.getColumnExpression("EVENT.name"))
             .addSelection(
@@ -235,7 +233,7 @@ public class RequestPreProcessorTest {
         requestPreProcessor.transform(entitiesRequest, entitiesRequestContext);
 
     // RequestPreProcessor should remove duplicate Service.Id selection.
-    Assertions.assertEquals(
+    EntitiesRequest expectedRequest =
         EntitiesRequest.newBuilder()
             .setEntityType("EVENT")
             .setStartTimeMillis(0L)
@@ -247,20 +245,21 @@ public class RequestPreProcessorTest {
                         GatewayExpressionCreator.createFilter(
                             QueryExpressionUtil.getColumnExpression("API.isExternal"),
                             Operator.EQ,
-                            GatewayExpressionCreator.createLiteralExpression(true)))
+                            GatewayExpressionCreator.createLiteralExpression(true))
+                    )
                     .addChildFilter(
                         Filter.newBuilder()
                             .setOperator(Operator.AND)
-                            .addChildFilter(
-                                Filter.newBuilder()
-                                    .setOperator(Operator.OR)
-                                    .addChildFilter(
-                                        GatewayExpressionCreator.createFilter(
-                                            QueryExpressionUtil.getColumnExpression(
-                                                "SERVICE.hostHeader"),
-                                            Operator.NEQ,
-                                            QueryExpressionUtil.getLiteralExpression(
-                                                "some-entity-name"))))))
+                            .addChildFilter(GatewayExpressionCreator.createFilter(
+                                QueryExpressionUtil.getColumnExpression(
+                                    "SERVICE.hostHeader"),
+                                Operator.NEQ,
+                                QueryExpressionUtil.getLiteralExpression(
+                                    "some-entity-name")))
+                            .addChildFilter(EntitiesRequestAndResponseUtils.getTimestampFilter("SERVICE.startTime", Operator.GE, 0L))
+                            .addChildFilter(EntitiesRequestAndResponseUtils.getTimestampFilter("SERVICE.startTime", Operator.LT, 1L))
+                    )
+            )
             .addSelection(QueryExpressionUtil.getColumnExpression("SERVICE.hostHeader"))
             .addSelection(QueryExpressionUtil.getColumnExpression("API.isExternal"))
             // Note that the aliases are not transformed
@@ -270,8 +269,8 @@ public class RequestPreProcessorTest {
             .addOrderBy(
                 QueryExpressionUtil.getOrderBy(
                     "SERVICE.duration", FunctionType.AVG, "AVG#EVENT|duration", SortOrder.DESC))
-            .build(),
-        transformedRequest);
+            .build();
+    Assertions.assertEquals(expectedRequest, transformedRequest);
   }
 
   @Test
@@ -288,6 +287,22 @@ public class RequestPreProcessorTest {
             .setStartTimeMillis(0L)
             .setEndTimeMillis(1L)
             .setFilter(
+                GatewayExpressionCreator.createFilter(
+                    QueryExpressionUtil.getColumnExpression("SERVICE.id"),
+                    Operator.IN,
+                    createStringArrayLiteralExpressionBuilder(List.of("service1-id", "service2-id"))
+                )
+            )
+            .addSelection(QueryExpressionUtil.getColumnExpression("SERVICE.id"))
+            .build();
+
+    // There should be no transformation except addition of time range filter.
+    EntitiesRequest expectedRequest =
+        EntitiesRequest.newBuilder()
+            .setEntityType("SERVICE")
+            .setStartTimeMillis(0L)
+            .setEndTimeMillis(1L)
+            .setFilter(
                 Filter.newBuilder()
                     .setOperator(Operator.AND)
                     .addChildFilter(
@@ -297,6 +312,8 @@ public class RequestPreProcessorTest {
                             createStringArrayLiteralExpressionBuilder(List.of("service1-id", "service2-id"))
                         )
                     )
+                    .addChildFilter(EntitiesRequestAndResponseUtils.getTimestampFilter("SERVICE.startTime", Operator.GE, 0L))
+                    .addChildFilter(EntitiesRequestAndResponseUtils.getTimestampFilter("SERVICE.startTime", Operator.LT, 1L))
             )
             .addSelection(QueryExpressionUtil.getColumnExpression("SERVICE.id"))
             .build();
@@ -304,8 +321,7 @@ public class RequestPreProcessorTest {
     EntitiesRequest transformedRequest =
         requestPreProcessor.transform(entitiesRequest, entitiesRequestContext);
 
-    // There should be no transformation
-    Assertions.assertEquals(entitiesRequest, transformedRequest);
+    Assertions.assertEquals(expectedRequest, transformedRequest);
   }
 
   @Test
@@ -322,13 +338,10 @@ public class RequestPreProcessorTest {
             .setStartTimeMillis(0L)
             .setEndTimeMillis(1L)
             .setFilter(
-                Filter.newBuilder()
-                    .setOperator(Operator.AND)
-                    .addChildFilter(
-                        GatewayExpressionCreator.createFilter(
-                            QueryExpressionUtil.getColumnExpression("SERVICE.mappedAttr1"),
-                            Operator.IN,
-                            createStringArrayLiteralExpressionBuilder(List.of("attr1_val100:::attr2_val200", "attr1_val101:::attr2_val201")))))
+                GatewayExpressionCreator.createFilter(
+                    QueryExpressionUtil.getColumnExpression("SERVICE.mappedAttr1"),
+                    Operator.IN,
+                    createStringArrayLiteralExpressionBuilder(List.of("attr1_val100:::attr2_val200", "attr1_val101:::attr2_val201"))))
             .addSelection(QueryExpressionUtil.getColumnExpression("SERVICE.mappedAttr1"))
             .addSelection(QueryExpressionUtil.getColumnExpression("SERVICE.id"))
             .build();
@@ -389,6 +402,8 @@ public class RequestPreProcessorTest {
                                     )
                             )
                     )
+                    .addChildFilter(EntitiesRequestAndResponseUtils.getTimestampFilter("SERVICE.startTime", Operator.GE, 0L))
+                    .addChildFilter(EntitiesRequestAndResponseUtils.getTimestampFilter("SERVICE.startTime", Operator.LT, 1L))
             )
             .addSelection(QueryExpressionUtil.getColumnExpression("SERVICE.attr1"))
             .addSelection(QueryExpressionUtil.getColumnExpression("SERVICE.attr2"))
@@ -411,15 +426,11 @@ public class RequestPreProcessorTest {
             .setStartTimeMillis(0L)
             .setEndTimeMillis(1L)
             .setFilter(
-                Filter.newBuilder()
-                    .setOperator(Operator.AND)
-                    .addChildFilter(
-                        GatewayExpressionCreator.createFilter(
-                            QueryExpressionUtil.getColumnExpression("SERVICE.mappedAttr2"),
-                            Operator.EQ,
-                            GatewayExpressionCreator.createLiteralExpression("attr10_val20")
-                        )
-                    )
+                GatewayExpressionCreator.createFilter(
+                    QueryExpressionUtil.getColumnExpression("SERVICE.mappedAttr2"),
+                    Operator.EQ,
+                    GatewayExpressionCreator.createLiteralExpression("attr10_val20")
+                )
             )
             .addSelection(QueryExpressionUtil.getColumnExpression("SERVICE.mappedAttr2"))
             .addSelection(QueryExpressionUtil.getColumnExpression("SERVICE.id"))
@@ -448,16 +459,14 @@ public class RequestPreProcessorTest {
                         Filter.newBuilder()
                             .setOperator(Operator.AND)
                             .addChildFilter(
-                                Filter.newBuilder()
-                                    .setOperator(Operator.AND)
-                                    .addChildFilter(
-                                        GatewayExpressionCreator.createFilter(
-                                            QueryExpressionUtil.getColumnExpression("SERVICE.mappedAttr2"),
-                                            Operator.EQ,
-                                            GatewayExpressionCreator.createLiteralExpression("attr10_val20")
-                                        )
-                                    )
+                                GatewayExpressionCreator.createFilter(
+                                    QueryExpressionUtil.getColumnExpression("SERVICE.mappedAttr2"),
+                                    Operator.EQ,
+                                    GatewayExpressionCreator.createLiteralExpression("attr10_val20")
+                                )
                             )
+                            .addChildFilter(EntitiesRequestAndResponseUtils.getTimestampFilter("SERVICE.startTime", Operator.GE, 0L))
+                            .addChildFilter(EntitiesRequestAndResponseUtils.getTimestampFilter("SERVICE.startTime", Operator.LT, 1L))
                     )
             )
             .addSelection(QueryExpressionUtil.getColumnExpression("SERVICE.mappedAttr2"))
@@ -482,11 +491,13 @@ public class RequestPreProcessorTest {
     mockAttributeMetadata(entitiesRequestContext, AttributeScope.EVENT.name(), "id");
     mockAttributeMetadata(entitiesRequestContext, AttributeScope.EVENT.name(), "duration");
     mockAttributeMetadata(entitiesRequestContext, AttributeScope.EVENT.name(), "errorCount");
+    mockAttributeMetadata(entitiesRequestContext, AttributeScope.EVENT.name(), "startTime");
     mockAttributeMetadata(entitiesRequestContext, AttributeScope.SERVICE.name(), "hostHeader");
     mockAttributeMetadata(entitiesRequestContext, AttributeScope.API.name(), "isExternal", AttributeKind.TYPE_BOOL);
     mockAttributeMetadata(entitiesRequestContext, AttributeScope.SERVICE.name(), "duration");
     mockAttributeMetadata(entitiesRequestContext, AttributeScope.SERVICE.name(), "errorCount");
     mockAttributeMetadata(entitiesRequestContext, AttributeScope.SERVICE.name(), "id");
+    mockAttributeMetadata(entitiesRequestContext, AttributeScope.SERVICE.name(), "startTime");
     mockAttributeMetadata(entitiesRequestContext, AttributeScope.SERVICE.name(), "mappedAttr1");
     mockAttributeMetadata(entitiesRequestContext, AttributeScope.SERVICE.name(), "attr1");
     mockAttributeMetadata(entitiesRequestContext, AttributeScope.SERVICE.name(), "attr2");
@@ -498,7 +509,7 @@ public class RequestPreProcessorTest {
   private void mockAttributeMetadata(
       EntitiesRequestContext entitiesRequestContext, String attributeScope, String key) {
     when(attributeMetadataProvider.getAttributeMetadata(
-            entitiesRequestContext, attributeScope, key))
+        entitiesRequestContext, attributeScope, key))
         .thenReturn(createAttributeMetadata(attributeScope, key));
   }
 
@@ -506,7 +517,7 @@ public class RequestPreProcessorTest {
       EntitiesRequestContext entitiesRequestContext,
       String attributeScope, String key, AttributeKind attributeKind) {
     when(attributeMetadataProvider.getAttributeMetadata(
-            entitiesRequestContext, attributeScope, key))
+        entitiesRequestContext, attributeScope, key))
         .thenReturn(createAttributeMetadata(attributeScope, key, attributeKind));
   }
 
