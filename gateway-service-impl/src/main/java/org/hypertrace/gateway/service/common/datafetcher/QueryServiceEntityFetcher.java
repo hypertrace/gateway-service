@@ -15,8 +15,6 @@ import java.util.concurrent.TimeUnit;
 import java.util.stream.Collectors;
 import java.util.stream.IntStream;
 
-import com.google.protobuf.InvalidProtocolBufferException;
-import com.google.protobuf.util.JsonFormat;
 import org.apache.commons.lang3.StringUtils;
 import org.hypertrace.core.attribute.service.v1.AttributeMetadata;
 import org.hypertrace.core.query.service.api.ColumnMetadata;
@@ -103,11 +101,6 @@ public class QueryServiceEntityFetcher implements IEntityFetcher {
       LOG.debug("Sending Query to Query Service ======== \n {}", queryRequest);
     }
 
-    try {
-      System.out.println("actual: " + JsonFormat.printer().omittingInsignificantWhitespace().print(queryRequest));
-    } catch (InvalidProtocolBufferException e) {
-      e.printStackTrace();
-    }
     Iterator<ResultSetChunk> resultSetChunkIterator =
         queryServiceClient.executeQuery(queryRequest, requestContext.getHeaders(),
             requestTimeout);
@@ -285,11 +278,6 @@ public class QueryServiceEntityFetcher implements IEntityFetcher {
       LOG.debug("Sending Query to Query Service ======== \n {}", queryRequest);
     }
 
-    try {
-      System.out.println("Actual: " + JsonFormat.printer().omittingInsignificantWhitespace().print(queryRequest));
-    } catch (InvalidProtocolBufferException e) {
-      e.printStackTrace();
-    }
     Iterator<ResultSetChunk> resultSetChunkIterator =
         queryServiceClient.executeQuery(queryRequest, requestContext.getHeaders(), requestTimeout);
 
@@ -543,7 +531,7 @@ public class QueryServiceEntityFetcher implements IEntityFetcher {
       long periodSecs = Duration.of(period.getValue(), unit).getSeconds();
       QueryRequest request =
           buildTimeSeriesQueryRequest(
-              entitiesRequest, requestContext, periodSecs, batch, idColumns, timeColumn);
+              entitiesRequest, periodSecs, batch, idColumns, timeColumn);
 
       if (LOG.isDebugEnabled()) {
         LOG.debug(
@@ -686,7 +674,6 @@ public class QueryServiceEntityFetcher implements IEntityFetcher {
 
   private QueryRequest buildTimeSeriesQueryRequest(
       EntitiesRequest entitiesRequest,
-      EntitiesRequestContext entitiesRequestContext,
       long periodSecs,
       List<TimeAggregation> timeAggregationBatch,
       List<String> idColumns,
@@ -702,13 +689,6 @@ public class QueryServiceEntityFetcher implements IEntityFetcher {
             .setStartTimeMillis(alignedStartTime)
             .setEndTimeMillis(alignedEndTime)
             .build();
-    EntitiesRequestContext timeAlignedEntitiesRequestContext =
-        new EntitiesRequestContext(
-            entitiesRequestContext.getTenantId(),
-            alignedStartTime,
-            alignedEndTime,
-            entitiesRequestContext.getEntityType(),
-            entitiesRequestContext.getHeaders());
 
     QueryRequest.Builder builder = QueryRequest.newBuilder();
     timeAggregationBatch.forEach(

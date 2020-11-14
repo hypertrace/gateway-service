@@ -1,7 +1,14 @@
 package org.hypertrace.gateway.service.common.transformer;
 
+import static org.mockito.Mockito.mock;
+import static org.mockito.Mockito.when;
+
 import com.typesafe.config.Config;
 import com.typesafe.config.ConfigFactory;
+import java.io.File;
+import java.util.List;
+import java.util.Map;
+import java.util.Optional;
 import org.hypertrace.core.attribute.service.v1.AttributeKind;
 import org.hypertrace.core.attribute.service.v1.AttributeMetadata;
 import org.hypertrace.core.attribute.service.v1.AttributeScope;
@@ -26,14 +33,6 @@ import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.mockito.Mock;
-
-import java.io.File;
-import java.util.List;
-import java.util.Map;
-import java.util.Optional;
-
-import static org.mockito.Mockito.mock;
-import static org.mockito.Mockito.when;
 
 public class RequestPreProcessorTest {
   private static final String TEST_TENANT_ID = "test-tenant-id";
@@ -105,8 +104,8 @@ public class RequestPreProcessorTest {
                             QueryExpressionUtil.getColumnExpression("SERVICE.name"),
                             Operator.LIKE,
                             QueryExpressionUtil.getLiteralExpression("log")))
-                .addChildFilter(EntitiesRequestAndResponseUtils.getTimestampFilter("SERVICE.startTime", Operator.GE, 0L))
-                .addChildFilter(EntitiesRequestAndResponseUtils.getTimestampFilter("SERVICE.startTime", Operator.LT, 1L))
+                    .addChildFilter(EntitiesRequestAndResponseUtils.getTimestampFilter("SERVICE.startTime", Operator.GE, 0L))
+                    .addChildFilter(EntitiesRequestAndResponseUtils.getTimestampFilter("SERVICE.startTime", Operator.LT, 1L))
             )
             .addSelection(QueryExpressionUtil.getColumnExpression("SERVICE.id"))
             .addSelection(QueryExpressionUtil.getColumnExpression("SERVICE.name"))

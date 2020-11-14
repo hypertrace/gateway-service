@@ -4,7 +4,6 @@ import static org.hypertrace.core.attribute.service.v1.AttributeSource.EDS;
 import static org.hypertrace.core.attribute.service.v1.AttributeSource.QS;
 
 import com.google.common.annotations.VisibleForTesting;
-
 import java.util.Collection;
 import java.util.List;
 import java.util.Map;

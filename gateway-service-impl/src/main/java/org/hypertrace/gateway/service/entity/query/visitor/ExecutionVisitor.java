@@ -226,12 +226,7 @@ public class ExecutionVisitor implements Visitor<EntityFetcherResponse> {
                   return entityFetcher.getTimeAggregatedMetrics(requestContext, request);
                 })
             .collect(Collectors.toList()));
-    // Union all the responses from this single source first.
-    EntityFetcherResponse currentResponse =
-        resultMapList.stream().reduce(new EntityFetcherResponse(), (r1, r2) -> union(Arrays.asList(r1, r2)));
-
-    // Intersect the response from this source with the response from the child.
-    return intersect(Arrays.asList(childNodeResponse, currentResponse));
+    return resultMapList.stream().reduce(childNodeResponse, (r1, r2) -> union(Arrays.asList(r1, r2)));
   }
 
   Filter constructFilterFromChildNodesResult(EntityFetcherResponse result) {

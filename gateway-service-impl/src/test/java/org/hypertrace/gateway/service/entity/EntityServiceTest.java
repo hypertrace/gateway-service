@@ -195,11 +195,6 @@ public class EntityServiceTest extends AbstractGatewayServiceTest {
         .addGroupBy(createQsColumnExpression("API.apiName", "API Name"))
         .setLimit(QueryServiceClient.DEFAULT_QUERY_SERVICE_GROUP_BY_LIMIT)
         .build();
-    try {
-      System.out.println("expected: " + JsonFormat.printer().omittingInsignificantWhitespace().print(expectedQueryRequest));
-    } catch (InvalidProtocolBufferException e) {
-      e.printStackTrace();
-    }
     when(queryServiceClient.executeQuery(eq(expectedQueryRequest), any(), Mockito.anyInt()))
         .thenReturn(
             List.of(

@@ -1,5 +1,35 @@
 package org.hypertrace.gateway.service.common.datafetcher;
 
+import com.typesafe.config.Config;
+import com.typesafe.config.ConfigFactory;
+import org.hypertrace.core.attribute.service.v1.AttributeKind;
+import org.hypertrace.core.attribute.service.v1.AttributeMetadata;
+import org.hypertrace.core.attribute.service.v1.AttributeScope;
+import org.hypertrace.core.query.service.api.Operator;
+import org.hypertrace.core.query.service.api.QueryRequest;
+import org.hypertrace.core.query.service.api.ResultSetChunk;
+import org.hypertrace.core.query.service.api.SortOrder;
+import org.hypertrace.core.query.service.client.QueryServiceClient;
+import org.hypertrace.gateway.service.common.AttributeMetadataProvider;
+import org.hypertrace.gateway.service.common.EntitiesRequestAndResponseUtils;
+import org.hypertrace.gateway.service.common.RequestContext;
+import org.hypertrace.gateway.service.entity.EntitiesRequestContext;
+import org.hypertrace.gateway.service.entity.EntityKey;
+import org.hypertrace.gateway.service.entity.config.DomainObjectConfigs;
+import org.hypertrace.gateway.service.v1.common.Filter;
+import org.hypertrace.gateway.service.v1.common.FunctionType;
+import org.hypertrace.gateway.service.v1.common.OrderByExpression;
+import org.hypertrace.gateway.service.v1.entity.EntitiesRequest;
+import org.hypertrace.gateway.service.v1.entity.Entity;
+import org.hypertrace.gateway.service.v1.entity.Entity.Builder;
+import org.junit.jupiter.api.AfterEach;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
+
+import java.util.List;
+import java.util.Map;
+import java.util.Optional;
+
 import static org.hypertrace.gateway.service.common.EntitiesRequestAndResponseUtils.buildAggregateExpression;
 import static org.hypertrace.gateway.service.common.EntitiesRequestAndResponseUtils.buildExpression;
 import static org.hypertrace.gateway.service.common.EntitiesRequestAndResponseUtils.buildOrderByExpression;
@@ -21,38 +51,6 @@ import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.when;
-
-import com.google.protobuf.InvalidProtocolBufferException;
-import com.google.protobuf.util.JsonFormat;
-import com.typesafe.config.Config;
-import com.typesafe.config.ConfigFactory;
-import java.util.List;
-import java.util.Map;
-import java.util.Optional;
-import org.hypertrace.core.attribute.service.v1.AttributeKind;
-import org.hypertrace.core.attribute.service.v1.AttributeMetadata;
-import org.hypertrace.core.attribute.service.v1.AttributeScope;
-import org.hypertrace.core.query.service.api.Operator;
-import org.hypertrace.core.query.service.api.QueryRequest;
-import org.hypertrace.core.query.service.api.ResultSetChunk;
-import org.hypertrace.core.query.service.api.SortOrder;
-import org.hypertrace.core.query.service.client.QueryServiceClient;
-import org.hypertrace.gateway.service.common.AttributeMetadataProvider;
-import org.hypertrace.gateway.service.common.EntitiesRequestAndResponseUtils;
-import org.hypertrace.gateway.service.common.QueryServiceRequestAndResponseUtils;
-import org.hypertrace.gateway.service.common.RequestContext;
-import org.hypertrace.gateway.service.entity.EntitiesRequestContext;
-import org.hypertrace.gateway.service.entity.EntityKey;
-import org.hypertrace.gateway.service.entity.config.DomainObjectConfigs;
-import org.hypertrace.gateway.service.v1.common.Filter;
-import org.hypertrace.gateway.service.v1.common.FunctionType;
-import org.hypertrace.gateway.service.v1.common.OrderByExpression;
-import org.hypertrace.gateway.service.v1.entity.EntitiesRequest;
-import org.hypertrace.gateway.service.v1.entity.Entity;
-import org.hypertrace.gateway.service.v1.entity.Entity.Builder;
-import org.junit.jupiter.api.AfterEach;
-import org.junit.jupiter.api.BeforeEach;
-import org.junit.jupiter.api.Test;
 
 public class QueryServiceEntityFetcherTests {
   private static final String API_ID_ATTR = "API.id";
@@ -179,13 +177,8 @@ public class QueryServiceEntityFetcherTests {
             .putAttribute(API_ID_ATTR, getStringValue("api-id-3"))
             .putMetric("AVG_API.duration", getAggregatedMetricValue(FunctionType.AVG, 17.0))
     );
-    EntityFetcherResponse expectedEntityFetcherResponse = new EntityFetcherResponse(expectedEntityKeyBuilderResponseMap);
 
-    try {
-      System.out.println("Expected: " + JsonFormat.printer().omittingInsignificantWhitespace().print(expectedQueryRequest));
-    } catch (InvalidProtocolBufferException e) {
-      e.printStackTrace();
-    }
+    EntityFetcherResponse expectedEntityFetcherResponse = new EntityFetcherResponse(expectedEntityKeyBuilderResponseMap);
     when(queryServiceClient.executeQuery(eq(expectedQueryRequest), eq(requestHeaders), eq(500)))
         .thenReturn(resultSetChunks.iterator());
 
