@@ -724,8 +724,7 @@ public class QueryServiceEntityFetcher implements IEntityFetcher {
   }
 
   /**
-   * - Adds the time range to the filter - Adds a non null filter on entity id - Converts it to the
-   * query service filter
+   * Converts the filter in the given request to the query service filter and adds a non null filter on entity id.
    */
   private Filter.Builder constructQueryServiceFilter(EntitiesRequest entitiesRequest, List<String> entityIdAttributes) {
     Filter.Builder filterBuilder = convertToQueryFilter(entitiesRequest.getFilter());

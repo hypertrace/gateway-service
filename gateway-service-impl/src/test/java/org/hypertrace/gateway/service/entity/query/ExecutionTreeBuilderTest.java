@@ -439,7 +439,6 @@ public class ExecutionTreeBuilderTest {
       ExecutionTreeBuilder executionTreeBuilder = new ExecutionTreeBuilder(executionContext);
       QueryNode executionTree = executionTreeBuilder.build();
       assertNotNull(executionTree);
-      System.out.println(executionTree);
       assertTrue(executionTree instanceof SortAndPaginateNode);
       assertEquals(10, ((SortAndPaginateNode) executionTree).getLimit());
       QueryNode firstChild = ((SortAndPaginateNode) executionTree).getChildNode();
@@ -778,12 +777,8 @@ public class ExecutionTreeBuilderTest {
     ExecutionTreeBuilder executionTreeBuilder = new ExecutionTreeBuilder(executionContext);
     QueryNode executionTree = executionTreeBuilder.build();
     assertNotNull(executionTree);
-    System.out.println(executionTree);
     assertTrue(executionTree instanceof SelectionNode);
-    assertTrue(
-        ((SelectionNode) executionTree)
-            .getAggMetricSelectionSources()
-            .contains(AttributeSource.QS.name()));
+    assertTrue(((SelectionNode) executionTree).getAggMetricSelectionSources().contains(AttributeSource.QS.name()));
     QueryNode firstChild = ((SelectionNode) executionTree).getChildNode();
     assertTrue(firstChild instanceof SortAndPaginateNode);
     QueryNode secondChild = ((SortAndPaginateNode) firstChild).getChildNode();
