@@ -104,6 +104,19 @@ public class QueryServiceRequestAndResponseUtils {
         .build();
   }
 
+  public static Expression createQsLongLiteralExpression(long val) {
+    return Expression.newBuilder()
+        .setLiteral(
+            LiteralConstant.newBuilder()
+                .setValue(
+                    Value.newBuilder()
+                        .setLong(val)
+                        .setValueType(ValueType.LONG)
+                )
+        )
+        .build();
+  }
+
   public static Filter createQsFilter(Expression lhs, Operator operator, Expression rhs) {
     return Filter.newBuilder()
         .setLhs(lhs)
@@ -125,36 +138,19 @@ public class QueryServiceRequestAndResponseUtils {
                                              long endTime,
                                              Filter requestFilter) {
     return Filter.newBuilder()
+        .setOperator(Operator.AND)
         .addChildFilter(
             Filter.newBuilder()
-                .addChildFilter(
-                    createQsFilter(
-                        createQsColumnExpression(timestampColumnName),
-                        Operator.GE,
-                        createQsStringLiteralExpression(Long.toString(startTime))
-                    )
-                )
-                .addChildFilter(
-                    createQsFilter(
-                        createQsColumnExpression(timestampColumnName),
-                        Operator.LT,
-                        createQsStringLiteralExpression(Long.toString(endTime))
-                    )
-                )
+                .setOperator(Operator.AND)
+                .addChildFilter(createQsTimeRangeFilter(timestampColumnName, startTime, endTime))
+                .addChildFilter(requestFilter)
         )
         .addChildFilter(
-            requestFilter
+            createQsFilter(createQsColumnExpression(entityIdColumnName),
+                Operator.NEQ,
+                createQsStringLiteralExpression("null"))
         )
-        .addChildFilter(
-            Filter.newBuilder()
-                .addChildFilter(
-                    createQsFilter(
-                        createQsColumnExpression(entityIdColumnName),
-                        Operator.NEQ,
-                        createQsStringLiteralExpression("null")
-                    )
-                )
-        ).build();
+        .build();
   }
 
   public static Filter createQsDefaultRequestFilter(String timestampColumnName,
@@ -162,29 +158,35 @@ public class QueryServiceRequestAndResponseUtils {
                                                     long startTime,
                                                     long endTime) {
     return Filter.newBuilder()
+        .setOperator(Operator.AND)
+        .addChildFilter(createQsTimeRangeFilter(timestampColumnName, startTime, endTime))
+        .addChildFilter(
+            createQsFilter(
+                createQsColumnExpression(entityIdColumnName),
+                Operator.NEQ,
+                createQsStringLiteralExpression("null")
+            )
+        )
+        .build();
+  }
+
+  private static Filter createQsTimeRangeFilter(String timestampColumnName, long startTime, long endTime) {
+    return Filter.newBuilder()
+        .setOperator(Operator.AND)
         .addChildFilter(
             createQsFilter(
                 createQsColumnExpression(timestampColumnName),
                 Operator.GE,
-                createQsStringLiteralExpression(Long.toString(startTime))
+                createQsLongLiteralExpression(startTime)
             )
         )
         .addChildFilter(
             createQsFilter(
                 createQsColumnExpression(timestampColumnName),
                 Operator.LT,
-                createQsStringLiteralExpression(Long.toString(endTime))
+                createQsLongLiteralExpression(endTime)
             )
         )
-        .addChildFilter(
-            Filter.newBuilder()
-                .addChildFilter(
-                    createQsFilter(
-                        createQsColumnExpression(entityIdColumnName),
-                        Operator.NEQ,
-                        createQsStringLiteralExpression("null")
-                    )
-                )
-        ).build();
+        .build();
   }
 }

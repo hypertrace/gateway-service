@@ -1,6 +1,7 @@
 package org.hypertrace.gateway.service.common.datafetcher;
 
 import static org.hypertrace.gateway.service.common.converters.QueryAndGatewayDtoConverter.convertToQueryExpression;
+import static org.hypertrace.gateway.service.common.converters.QueryAndGatewayDtoConverter.convertToQueryFilter;
 
 import com.google.common.base.Preconditions;
 import java.time.Duration;
@@ -13,6 +14,7 @@ import java.util.Map;
 import java.util.concurrent.TimeUnit;
 import java.util.stream.Collectors;
 import java.util.stream.IntStream;
+
 import org.apache.commons.lang3.StringUtils;
 import org.hypertrace.core.attribute.service.v1.AttributeMetadata;
 import org.hypertrace.core.query.service.api.ColumnMetadata;
@@ -371,7 +373,7 @@ public class QueryServiceEntityFetcher implements IEntityFetcher {
             .map(Expression.Builder::build)
             .collect(Collectors.toList());
     Filter.Builder filterBuilder =
-        constructQueryServiceFilter(entitiesRequest, requestContext, entityIdAttributes);
+        constructQueryServiceFilter(entitiesRequest, entityIdAttributes);
 
     QueryRequest.Builder builder =
         QueryRequest.newBuilder()
@@ -529,7 +531,7 @@ public class QueryServiceEntityFetcher implements IEntityFetcher {
       long periodSecs = Duration.of(period.getValue(), unit).getSeconds();
       QueryRequest request =
           buildTimeSeriesQueryRequest(
-              entitiesRequest, requestContext, periodSecs, batch, idColumns, timeColumn);
+              entitiesRequest, periodSecs, batch, idColumns, timeColumn);
 
       if (LOG.isDebugEnabled()) {
         LOG.debug(
@@ -672,7 +674,6 @@ public class QueryServiceEntityFetcher implements IEntityFetcher {
 
   private QueryRequest buildTimeSeriesQueryRequest(
       EntitiesRequest entitiesRequest,
-      EntitiesRequestContext entitiesRequestContext,
       long periodSecs,
       List<TimeAggregation> timeAggregationBatch,
       List<String> idColumns,
@@ -688,13 +689,6 @@ public class QueryServiceEntityFetcher implements IEntityFetcher {
             .setStartTimeMillis(alignedStartTime)
             .setEndTimeMillis(alignedEndTime)
             .build();
-    EntitiesRequestContext timeAlignedEntitiesRequestContext =
-        new EntitiesRequestContext(
-            entitiesRequestContext.getTenantId(),
-            alignedStartTime,
-            alignedEndTime,
-            entitiesRequestContext.getEntityType(),
-            entitiesRequestContext.getHeaders());
 
     QueryRequest.Builder builder = QueryRequest.newBuilder();
     timeAggregationBatch.forEach(
@@ -704,7 +698,7 @@ public class QueryServiceEntityFetcher implements IEntityFetcher {
 
     Filter.Builder queryFilter =
         constructQueryServiceFilter(
-            timeAlignedEntitiesRequest, timeAlignedEntitiesRequestContext, idColumns);
+            timeAlignedEntitiesRequest, idColumns);
     builder.setFilter(queryFilter);
 
     // First group by the id columns.
@@ -730,32 +724,22 @@ public class QueryServiceEntityFetcher implements IEntityFetcher {
   }
 
   /**
-   * - Adds the time range to the filter - Adds a non null filter on entity id - Converts it to the
-   * query service filter
+   * Converts the filter in the given request to the query service filter and adds a non null filter on entity id.
    */
-  private Filter.Builder constructQueryServiceFilter(
-      EntitiesRequest entitiesRequest,
-      EntitiesRequestContext entitiesRequestContext,
-      List<String> entityIdAttributes) {
-    Filter.Builder filterBuilder =
-        QueryAndGatewayDtoConverter.addTimeFilterAndConvertToQueryFilter(
-            entitiesRequest.getStartTimeMillis(),
-            entitiesRequest.getEndTimeMillis(),
-            AttributeMetadataUtil.getTimestampAttributeId(
-                attributeMetadataProvider, entitiesRequestContext, entitiesRequest.getEntityType()),
-            entitiesRequest.getFilter());
+  private Filter.Builder constructQueryServiceFilter(EntitiesRequest entitiesRequest, List<String> entityIdAttributes) {
+    Filter.Builder filterBuilder = convertToQueryFilter(entitiesRequest.getFilter());
     // adds the Id != "null" filter to remove null entities.
-    return filterBuilder.addChildFilter(
-        Filter.newBuilder()
-            .setOperator(Operator.AND)
-            .addAllChildFilter(
-                entityIdAttributes.stream()
-                    .map(
-                        entityIdAttribute ->
-                            QueryRequestUtil.createColumnValueFilter(
-                                entityIdAttribute, Operator.NEQ, QUERY_SERVICE_NULL))
-                    .map(Filter.Builder::build)
-                    .collect(Collectors.toList())));
+    return Filter.newBuilder()
+        .setOperator(Operator.AND)
+        .addChildFilter(filterBuilder)
+        .addAllChildFilter(
+            entityIdAttributes.stream()
+                .map(
+                    entityIdAttribute ->
+                        QueryRequestUtil.createColumnValueFilter(
+                            entityIdAttribute, Operator.NEQ, QUERY_SERVICE_NULL))
+                .map(Filter.Builder::build)
+                .collect(Collectors.toList()));
   }
 
   private MetricSeries.Builder getMetricSeriesBuilder(

@@ -14,6 +14,7 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.mock;
+import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.spy;
 import static org.mockito.Mockito.times;
 import static org.mockito.Mockito.verify;
@@ -43,6 +44,7 @@ import org.hypertrace.gateway.service.entity.query.SelectionAndFilterNode;
 import org.hypertrace.gateway.service.entity.query.SelectionNode;
 import org.hypertrace.gateway.service.entity.query.TotalFetcherNode;
 import org.hypertrace.gateway.service.v1.common.ColumnIdentifier;
+import org.hypertrace.gateway.service.v1.common.DomainEntityType;
 import org.hypertrace.gateway.service.v1.common.Expression;
 import org.hypertrace.gateway.service.v1.common.Filter;
 import org.hypertrace.gateway.service.v1.common.FunctionType;
@@ -74,7 +76,7 @@ public class ExecutionVisitorTest {
   private static final String API_DURATION_ATTR = "API.duration";
   private static final String API_DISCOVERY_STATE = "API.apiDiscoveryState";
 
-  private EntityFetcherResponse result1 =
+  private final EntityFetcherResponse result1 =
       new EntityFetcherResponse(
           Map.of(
               EntityKey.of("id1"),
@@ -83,21 +85,21 @@ public class ExecutionVisitorTest {
                   Entity.newBuilder().putAttribute("key12", getStringValue("value12")),
               EntityKey.of("id3"),
                   Entity.newBuilder().putAttribute("key13", getStringValue("value13"))));
-  private EntityFetcherResponse result2 =
+  private final EntityFetcherResponse result2 =
       new EntityFetcherResponse(
           Map.of(
               EntityKey.of("id1"),
                   Entity.newBuilder().putAttribute("key21", getStringValue("value21")),
               EntityKey.of("id2"),
                   Entity.newBuilder().putAttribute("key22", getStringValue("value22"))));
-  private EntityFetcherResponse result3 =
+  private final EntityFetcherResponse result3 =
       new EntityFetcherResponse(
           Map.of(
               EntityKey.of("id1"),
                   Entity.newBuilder().putAttribute("key31", getStringValue("value31")),
               EntityKey.of("id3"),
                   Entity.newBuilder().putAttribute("key33", getStringValue("value33"))));
-  private EntityFetcherResponse result4 =
+  private final EntityFetcherResponse result4 =
       new EntityFetcherResponse(
           Map.of(
               EntityKey.of("id4"),
@@ -697,6 +699,33 @@ public class ExecutionVisitorTest {
     executionVisitor.visit(selectionNode);
     verify(entityDataServiceEntityFetcher).getEntities(any(), any());
     verify(queryServiceEntityFetcher).getAggregatedMetrics(any(), any());
+  }
+
+  @Test
+  public void test_visitSelectionNode_nonEmptyFilter_emptyResult() {
+    // Create a request with non-empty filter.
+    EntitiesRequest entitiesRequest =
+        EntitiesRequest.newBuilder()
+            .setEntityType(DomainEntityType.API.name())
+            .setStartTimeMillis(10)
+            .setEndTimeMillis(20)
+            .addSelection(buildExpression(API_NAME_ATTR))
+            .setFilter(generateEQFilter(API_DISCOVERY_STATE, "DISCOVERED"))
+            .build();
+    ExecutionVisitor executionVisitor =
+        spy(new ExecutionVisitor(executionContext, entityQueryHandlerRegistry));
+    when(executionContext.getEntitiesRequest()).thenReturn(entitiesRequest);
+
+    // Selection node with NoOp child, to short-circuit the call to first service.
+    SelectionNode selectionNode = new SelectionNode.Builder(new NoOpNode())
+        .setAttrSelectionSources(Set.of(EDS_SOURCE))
+        .setAggMetricSelectionSources(Set.of(QS_SOURCE))
+        .build();
+
+    EntityFetcherResponse response = executionVisitor.visit(selectionNode);
+    Assertions.assertTrue(response.isEmpty());
+    verify(queryServiceEntityFetcher, never()).getEntities(any(), any());
+    verify(queryServiceEntityFetcher, never()).getAggregatedMetrics(any(), any());
   }
 
   private MetricSeries getMockMetricSeries(int period, String aggregation) {

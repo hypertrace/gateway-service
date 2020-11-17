@@ -53,7 +53,7 @@ public class GatewayValueToQueryValueConverterTest {
     getFilterMap()
         .forEach(
             (gf, qf) ->
-                Assertions.assertEquals(qf, QueryAndGatewayDtoConverter.convertToQueryFilter(gf)));
+                Assertions.assertEquals(qf, QueryAndGatewayDtoConverter.convertToQueryFilter(gf).build()));
   }
 
   private Map<Expression, org.hypertrace.core.query.service.api.Expression>

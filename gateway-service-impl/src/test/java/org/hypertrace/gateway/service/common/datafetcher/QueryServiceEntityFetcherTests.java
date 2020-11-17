@@ -15,6 +15,7 @@ import static org.hypertrace.gateway.service.common.QueryServiceRequestAndRespon
 import static org.hypertrace.gateway.service.common.QueryServiceRequestAndResponseUtils.createQsRequestFilter;
 import static org.hypertrace.gateway.service.common.QueryServiceRequestAndResponseUtils.createQsStringLiteralExpression;
 import static org.hypertrace.gateway.service.common.QueryServiceRequestAndResponseUtils.getResultSetChunk;
+import static org.hypertrace.gateway.service.v1.common.Operator.AND;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.eq;
@@ -35,10 +36,12 @@ import org.hypertrace.core.query.service.api.ResultSetChunk;
 import org.hypertrace.core.query.service.api.SortOrder;
 import org.hypertrace.core.query.service.client.QueryServiceClient;
 import org.hypertrace.gateway.service.common.AttributeMetadataProvider;
+import org.hypertrace.gateway.service.common.EntitiesRequestAndResponseUtils;
 import org.hypertrace.gateway.service.common.RequestContext;
 import org.hypertrace.gateway.service.entity.EntitiesRequestContext;
 import org.hypertrace.gateway.service.entity.EntityKey;
 import org.hypertrace.gateway.service.entity.config.DomainObjectConfigs;
+import org.hypertrace.gateway.service.v1.common.Filter;
 import org.hypertrace.gateway.service.v1.common.FunctionType;
 import org.hypertrace.gateway.service.v1.common.OrderByExpression;
 import org.hypertrace.gateway.service.v1.entity.EntitiesRequest;
@@ -95,7 +98,11 @@ public class QueryServiceEntityFetcherTests {
             .setEndTimeMillis(endTime)
             .addSelection(buildExpression(API_NAME_ATTR))
             .addSelection(buildAggregateExpression(API_DURATION_ATTR, FunctionType.AVG, "AVG_API.duration", List.of()))
-            .setFilter(generateEQFilter(API_DISCOVERY_STATE_ATTR, "DISCOVERED"))
+            .setFilter(
+                Filter.newBuilder().setOperator(AND)
+                .addChildFilter(EntitiesRequestAndResponseUtils.getTimeRangeFilter("API.startTime", startTime, endTime))
+                .addChildFilter(generateEQFilter(API_DISCOVERY_STATE_ATTR, "DISCOVERED"))
+            )
             .addAllOrderBy(orderByExpressions)
             .setLimit(limit)
             .setOffset(offset)
@@ -169,8 +176,8 @@ public class QueryServiceEntityFetcherTests {
             .putAttribute(API_ID_ATTR, getStringValue("api-id-3"))
             .putMetric("AVG_API.duration", getAggregatedMetricValue(FunctionType.AVG, 17.0))
     );
-    EntityFetcherResponse expectedEntityFetcherResponse = new EntityFetcherResponse(expectedEntityKeyBuilderResponseMap);
 
+    EntityFetcherResponse expectedEntityFetcherResponse = new EntityFetcherResponse(expectedEntityKeyBuilderResponseMap);
     when(queryServiceClient.executeQuery(eq(expectedQueryRequest), eq(requestHeaders), eq(500)))
         .thenReturn(resultSetChunks.iterator());
 
@@ -196,7 +203,11 @@ public class QueryServiceEntityFetcherTests {
             .addSelection(buildExpression(API_NAME_ATTR))
             .addSelection(buildAggregateExpression(API_DURATION_ATTR, FunctionType.AVG, "AVG_API.duration", List.of()))
             .addTimeAggregation(buildTimeAggregation(30, API_NUM_CALLS_ATTR, FunctionType.SUM, "SUM_API.numCalls", List.of()))
-            .setFilter(generateEQFilter(API_DISCOVERY_STATE_ATTR, "DISCOVERED"))
+            .setFilter(
+                Filter.newBuilder().setOperator(AND)
+                    .addChildFilter(EntitiesRequestAndResponseUtils.getTimeRangeFilter("API.startTime", startTime, endTime))
+                    .addChildFilter(generateEQFilter(API_DISCOVERY_STATE_ATTR, "DISCOVERED"))
+            )
             .addAllOrderBy(orderByExpressions)
             .setLimit(limit)
             .setOffset(offset)

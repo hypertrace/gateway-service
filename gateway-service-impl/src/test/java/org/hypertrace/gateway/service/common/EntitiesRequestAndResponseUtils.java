@@ -1,5 +1,6 @@
 package org.hypertrace.gateway.service.common;
 
+import static org.hypertrace.gateway.service.v1.common.Operator.AND;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
@@ -139,5 +140,20 @@ public class EntitiesRequestAndResponseUtils {
       assertTrue(actualEntityFetcherResponseMap.containsKey(k), "Missing key: " + k);
       assertEquals(expectedEntityFetcherResponseMap.get(k).build(), actualEntityFetcherResponseMap.get(k).build());
     });
+  }
+
+  public static Filter getTimeRangeFilter(String colName, long startTime, long endTime) {
+    return Filter.newBuilder()
+        .setOperator(AND)
+        .addChildFilter(getTimestampFilter(colName, Operator.GE, startTime))
+        .addChildFilter(getTimestampFilter(colName, Operator.LT, endTime))
+        .build();
+  }
+
+  public static Filter getTimestampFilter(String colName, Operator operator, long timestamp) {
+    return Filter.newBuilder()
+        .setOperator(operator)
+        .setLhs(buildExpression(colName))
+        .setRhs(getLiteralExpression(timestamp)).build();
   }
 }

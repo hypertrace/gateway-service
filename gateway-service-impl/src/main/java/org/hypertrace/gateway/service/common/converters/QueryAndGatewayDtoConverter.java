@@ -392,10 +392,10 @@ public class QueryAndGatewayDtoConverter {
     return builder.build();
   }
 
-  public static Filter convertToQueryFilter(
+  public static Filter.Builder convertToQueryFilter(
       org.hypertrace.gateway.service.v1.common.Filter filter) {
     if (filter.equals(org.hypertrace.gateway.service.v1.common.Filter.getDefaultInstance())) {
-      return Filter.getDefaultInstance();
+      return Filter.newBuilder();
     }
     Filter.Builder builder = Filter.newBuilder();
     builder.setOperator(convertOperator(filter.getOperator()));
@@ -410,7 +410,7 @@ public class QueryAndGatewayDtoConverter {
       builder.setRhs(convertToQueryExpression(filter.getRhs()));
     }
 
-    return builder.build();
+    return builder;
   }
 
   public static Filter.Builder addTimeFilterAndConvertToQueryFilter(

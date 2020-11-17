@@ -34,7 +34,9 @@ public class SelectionAndFilterNode implements QueryNode {
   @Override
   public String toString() {
     return "SelectionAndFilterNode{"
-        + "limit="
+        + "source="
+        + source
+        + ", limit="
         + limit
         + ", offset="
         + offset
