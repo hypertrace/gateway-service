@@ -111,7 +111,7 @@ public class EntityServiceTest extends AbstractGatewayServiceTest {
                     .setFqn("API.apiId")
                     .setValueKind(AttributeKind.TYPE_STRING)
                     .setType(AttributeType.ATTRIBUTE)
-                    .addSources(AttributeSource.QS)
+                    .addSources(AttributeSource.QS).addSources(AttributeSource.EDS)
                     .setId("API.apiId")
                     .build(),
                 "API.apiName",
@@ -121,7 +121,7 @@ public class EntityServiceTest extends AbstractGatewayServiceTest {
                     .setFqn("API.name")
                     .setValueKind(AttributeKind.TYPE_STRING)
                     .setType(AttributeType.ATTRIBUTE)
-                    .addSources(AttributeSource.QS)
+                    .addSources(AttributeSource.QS).addSources(AttributeSource.EDS)
                     .setId("API.name")
                     .build(),
                 "API.httpMethod",
@@ -147,7 +147,7 @@ public class EntityServiceTest extends AbstractGatewayServiceTest {
                     .setValueKind(AttributeKind.TYPE_STRING)
                     .setId("API.apiId")
                     .setType(AttributeType.ATTRIBUTE)
-                    .addSources(AttributeSource.QS)
+                    .addSources(AttributeSource.QS).addSources(AttributeSource.EDS)
                     .build()));
     when(
             attributeMetadataProvider.getAttributeMetadata(
@@ -166,7 +166,7 @@ public class EntityServiceTest extends AbstractGatewayServiceTest {
   }
 
   @Test
-  public void testGetEntitiesOnlySelectFromSingleSource() {
+  public void testGetEntitiesOnlySelectFromSingleSourceWithTimeRangeShouldUseQueryService() {
     long endTime = System.currentTimeMillis();
     long startTime = endTime - 1000;
     EntitiesRequest entitiesRequest =
@@ -238,6 +238,45 @@ public class EntityServiceTest extends AbstractGatewayServiceTest {
   }
 
   @Test
+  public void testGetEntitiesOnlySelectFromSingleSourceWithoutTimeRangeShouldUseEds() {
+    EntitiesRequest entitiesRequest =
+        EntitiesRequest.newBuilder()
+            .setEntityType("API")
+            .addSelection(getExpressionFor("API.apiId", "API Id"))
+            .addSelection(getExpressionFor("API.apiName", "API Name"))
+            .addSelection(getExpressionFor("API.httpMethod", "API Method"))
+            .setLimit(2)
+            .build();
+
+    when(entityQueryServiceClient.execute(any(), any()))
+        .thenReturn(
+            List.of(
+                org.hypertrace.entity.query.service.v1.ResultSetChunk.newBuilder()
+                    .setResultSetMetadata(
+                        generateEntityServiceResultSetMetadataFor(
+                            "API.apiId", "API.apiName", "API.httpMethod"))
+                    .addRow(generateEntityServiceRowFor("apiId1", "/login", "GET"))
+                    .addRow(generateEntityServiceRowFor("apiId2", "/checkout", "POST"))
+                    .build())
+                .iterator());
+
+    ScopeFilterConfigs scopeFilterConfigs = new ScopeFilterConfigs(ConfigFactory.empty());
+    EntityService entityService = new EntityService(queryServiceClient, 500,
+        entityQueryServiceClient, attributeMetadataProvider, scopeFilterConfigs, logConfig);
+    EntitiesResponse response = entityService.getEntities(TENANT_ID, entitiesRequest, Map.of());
+    Assertions.assertNotNull(response);
+    Assertions.assertEquals(2, response.getTotal());
+    Entity entity1 = response.getEntity(0);
+    Assertions.assertEquals("apiId1", entity1.getAttributeMap().get("API.apiId").getString());
+    Assertions.assertEquals("/login", entity1.getAttributeMap().get("API.apiName").getString());
+    Assertions.assertEquals("GET", entity1.getAttributeMap().get("API.httpMethod").getString());
+    Entity entity2 = response.getEntity(1);
+    Assertions.assertEquals("apiId2", entity2.getAttributeMap().get("API.apiId").getString());
+    Assertions.assertEquals("/checkout", entity2.getAttributeMap().get("API.apiName").getString());
+    Assertions.assertEquals("POST", entity2.getAttributeMap().get("API.httpMethod").getString());
+  }
+
+  @Test
   public void testGetEntitiesOnlySelectFromMultipleSources() {
     when(queryServiceClient.executeQuery(any(), any(), Mockito.anyInt()))
         .thenReturn(
@@ -266,6 +305,8 @@ public class EntityServiceTest extends AbstractGatewayServiceTest {
     EntitiesRequest entitiesRequest =
         EntitiesRequest.newBuilder()
             .setEntityType("API")
+            .setStartTimeMillis(System.currentTimeMillis() - 1000)
+            .setEndTimeMillis(System.currentTimeMillis())
             .setFilter(org.hypertrace.gateway.service.v1.common.Filter.newBuilder()
                 .setOperator(Operator.IN)
                 .setLhs(getExpressionFor("API.httpMethod", "API Http method"))

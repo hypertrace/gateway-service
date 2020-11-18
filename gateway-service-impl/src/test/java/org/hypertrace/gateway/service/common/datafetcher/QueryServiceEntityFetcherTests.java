@@ -84,7 +84,7 @@ public class QueryServiceEntityFetcherTests {
   @Test
   public void test_getEntitiesAndAggregatedMetrics() {
     List<OrderByExpression> orderByExpressions = List.of(buildOrderByExpression(API_ID_ATTR));
-    long startTime = 0L;
+    long startTime = 1L;
     long endTime = 10L;
     int limit = 10;
     int offset = 0;
@@ -188,7 +188,7 @@ public class QueryServiceEntityFetcherTests {
   @Test
   public void test_getTotalEntitiesSingleEntityIdAttribute() {
     List<OrderByExpression> orderByExpressions = List.of(buildOrderByExpression(API_ID_ATTR));
-    long startTime = 0L;
+    long startTime = 1L;
     long endTime = 10L;
     int limit = 10;
     int offset = 0;

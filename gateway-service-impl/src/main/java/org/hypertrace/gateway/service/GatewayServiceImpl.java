@@ -169,12 +169,6 @@ public class GatewayServiceImpl extends GatewayServiceGrpc.GatewayServiceImplBas
       Preconditions.checkArgument(
           request.getSelectionCount() > 0, "Selection list can't be empty in the request.");
 
-      Preconditions.checkArgument(
-          request.getStartTimeMillis() > 0
-              && request.getEndTimeMillis() > 0
-              && request.getStartTimeMillis() < request.getEndTimeMillis(),
-          "Invalid time range. Both start and end times have to be valid timestamps.");
-
       EntitiesResponse response =
           entityService.getEntities(
               tenantId.get(),

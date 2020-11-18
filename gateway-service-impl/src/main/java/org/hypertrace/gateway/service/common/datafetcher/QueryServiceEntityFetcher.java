@@ -75,9 +75,24 @@ public class QueryServiceEntityFetcher implements IEntityFetcher {
     this.attributeMetadataProvider = attributeMetadataProvider;
   }
 
+  /**
+   * Since query service has time series data, time range is must for all query service requests.
+   * This method validates that the received time range is valid in the EntitiesRequest.
+   */
+  private void validateTimeRange(EntitiesRequest request) {
+    Preconditions.checkArgument(
+        request.getStartTimeMillis() > 0
+            && request.getEndTimeMillis() > 0
+            && request.getStartTimeMillis() < request.getEndTimeMillis(),
+        "Invalid time range. Both start and end times have to be valid timestamps.");
+  }
+
   @Override
   public EntityFetcherResponse getEntities(
       EntitiesRequestContext requestContext, EntitiesRequest entitiesRequest) {
+    // Time range is mandatory.
+    validateTimeRange(entitiesRequest);
+
     Map<String, AttributeMetadata> attributeMetadataMap =
         attributeMetadataProvider.getAttributesMetadata(
             requestContext, entitiesRequest.getEntityType());
@@ -160,6 +175,9 @@ public class QueryServiceEntityFetcher implements IEntityFetcher {
   @Override
   public EntityFetcherResponse getAggregatedMetrics(
       EntitiesRequestContext requestContext, EntitiesRequest entitiesRequest) {
+    // Time range is mandatory.
+    validateTimeRange(entitiesRequest);
+
     // Only supported filter is entityIds IN ["id1", "id2", "id3"]
     Map<String, AttributeMetadata> attributeMetadataMap =
         attributeMetadataProvider.getAttributesMetadata(
@@ -251,6 +269,9 @@ public class QueryServiceEntityFetcher implements IEntityFetcher {
   @Override
   public EntityFetcherResponse getEntitiesAndAggregatedMetrics(
       EntitiesRequestContext requestContext, EntitiesRequest entitiesRequest) {
+    // Time range is mandatory.
+    validateTimeRange(entitiesRequest);
+
     // Validate EntitiesRequest
     Map<String, AttributeMetadata> attributeMetadataMap =
         attributeMetadataProvider.getAttributesMetadata(
@@ -489,6 +510,9 @@ public class QueryServiceEntityFetcher implements IEntityFetcher {
   @Override
   public EntityFetcherResponse getTimeAggregatedMetrics(
       EntitiesRequestContext requestContext, EntitiesRequest entitiesRequest) {
+    // Time range is mandatory.
+    validateTimeRange(entitiesRequest);
+
     // No need to make execute the rest of this if there are no TimeAggregations in the request.
     if (entitiesRequest.getTimeAggregationCount() == 0) {
       return new EntityFetcherResponse();
@@ -649,6 +673,9 @@ public class QueryServiceEntityFetcher implements IEntityFetcher {
 
   @Override
   public int getTotalEntities(EntitiesRequestContext requestContext, EntitiesRequest entitiesRequest) {
+    // Time range is mandatory.
+    validateTimeRange(entitiesRequest);
+
     Map<String, AttributeMetadata> attributeMetadataMap =
         attributeMetadataProvider.getAttributesMetadata(
             requestContext, entitiesRequest.getEntityType());

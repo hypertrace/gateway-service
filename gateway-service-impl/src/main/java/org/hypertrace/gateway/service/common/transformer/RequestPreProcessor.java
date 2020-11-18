@@ -112,15 +112,27 @@ public class RequestPreProcessor {
     String timestampAttributeId = AttributeMetadataUtil.getTimestampAttributeId(
         attributeMetadataProvider, context, originalRequest.getEntityType());
 
-    Filter.Builder filterBuilder = Filter.newBuilder().setOperator(AND);
-    if (!Filter.getDefaultInstance().equals(originalRequest.getFilter())) {
-      filterBuilder.addChildFilter(originalRequest.getFilter());
-    }
-    filterBuilder.addChildFilter(getTimestampFilter(timestampAttributeId, Operator.GE, originalRequest.getStartTimeMillis()))
-        .addChildFilter(getTimestampFilter(timestampAttributeId, Operator.LT, originalRequest.getEndTimeMillis()));
+    Filter filter = originalRequest.getFilter();
+    if (originalRequest.getStartTimeMillis() > 0 || originalRequest.getEndTimeMillis() > 0) {
+      Filter.Builder filterBuilder = Filter.newBuilder().setOperator(AND);
+      if (!Filter.getDefaultInstance().equals(filter)) {
+        filterBuilder.addChildFilter(filter);
+      }
 
-    Filter transformedFilter = transformFilter(attributeIdMappings, filterBuilder.build(), context);
-    Filter filter = mergeFilters(filterToInject, transformedFilter);
+      if (originalRequest.getStartTimeMillis() > 0) {
+        filterBuilder.addChildFilter(
+            getTimestampFilter(timestampAttributeId, Operator.GE, originalRequest.getStartTimeMillis()));
+      }
+      if (originalRequest.getEndTimeMillis() > 0) {
+        filterBuilder.addChildFilter(
+            getTimestampFilter(timestampAttributeId, Operator.LT, originalRequest.getEndTimeMillis()));
+      }
+
+      filter = filterBuilder.build();
+    }
+
+    Filter transformedFilter = transformFilter(attributeIdMappings, filter, context);
+    filter = mergeFilters(filterToInject, transformedFilter);
 
     // Apply the scope filter at the end.
     filter = scopeFilterConfigs.createScopeFilter(
