@@ -140,16 +140,13 @@ public class QueryServiceRequestAndResponseUtils {
     return Filter.newBuilder()
         .setOperator(Operator.AND)
         .addChildFilter(
-            Filter.newBuilder()
-                .setOperator(Operator.AND)
-                .addChildFilter(createQsTimeRangeFilter(timestampColumnName, startTime, endTime))
-                .addChildFilter(requestFilter)
-        )
-        .addChildFilter(
             createQsFilter(createQsColumnExpression(entityIdColumnName),
                 Operator.NEQ,
                 createQsStringLiteralExpression("null"))
         )
+        .addChildFilter(Filter.newBuilder().setOperator(Operator.AND)
+            .addChildFilter(createQsTimeRangeFilter(timestampColumnName, startTime, endTime))
+            .addChildFilter(requestFilter))
         .build();
   }
 
@@ -159,7 +156,6 @@ public class QueryServiceRequestAndResponseUtils {
                                                     long endTime) {
     return Filter.newBuilder()
         .setOperator(Operator.AND)
-        .addChildFilter(createQsTimeRangeFilter(timestampColumnName, startTime, endTime))
         .addChildFilter(
             createQsFilter(
                 createQsColumnExpression(entityIdColumnName),
@@ -167,6 +163,7 @@ public class QueryServiceRequestAndResponseUtils {
                 createQsStringLiteralExpression("null")
             )
         )
+        .addChildFilter(createQsTimeRangeFilter(timestampColumnName, startTime, endTime))
         .build();
   }
 

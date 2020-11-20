@@ -22,6 +22,7 @@ import org.hypertrace.gateway.service.common.datafetcher.EntityInteractionsFetch
 import org.hypertrace.gateway.service.common.datafetcher.QueryServiceEntityFetcher;
 import org.hypertrace.gateway.service.common.transformer.RequestPreProcessor;
 import org.hypertrace.gateway.service.common.transformer.ResponsePostProcessor;
+import org.hypertrace.gateway.service.common.util.AttributeMetadataUtil;
 import org.hypertrace.gateway.service.entity.config.LogConfig;
 import org.hypertrace.gateway.service.entity.query.ExecutionContext;
 import org.hypertrace.gateway.service.entity.query.ExecutionTreeBuilder;
@@ -107,6 +108,9 @@ public class EntityService {
   public EntitiesResponse getEntities(
       String tenantId, EntitiesRequest originalRequest, Map<String, String> requestHeaders) {
     long startTime = System.currentTimeMillis();
+    String timestampAttributeId = AttributeMetadataUtil.getTimestampAttributeId(
+        metadataProvider, new RequestContext(tenantId, requestHeaders), originalRequest.getEntityType());
+
     // Set the size for percentiles in order by if it is not set. This is to give UI the time to fix
     // the bug which does not set the size when they have order by in the request.
     originalRequest = OrderByPercentileSizeSetter.setPercentileSize(originalRequest);
@@ -116,6 +120,7 @@ public class EntityService {
             originalRequest.getStartTimeMillis(),
             originalRequest.getEndTimeMillis(),
             originalRequest.getEntityType(),
+            timestampAttributeId,
             requestHeaders);
     EntitiesRequest preProcessedRequest =
         requestPreProcessor.transform(originalRequest, entitiesRequestContext);

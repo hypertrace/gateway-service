@@ -120,6 +120,7 @@ public class ExecutionVisitor implements Visitor<EntityFetcherResponse> {
             request.getStartTimeMillis(),
             request.getEndTimeMillis(),
             request.getEntityType(),
+            executionContext.getTimestampAttributeId(),
             executionContext.getRequestHeaders());
     return entityFetcher.getEntities(context, request);
   }
@@ -153,7 +154,8 @@ public class ExecutionVisitor implements Visitor<EntityFetcherResponse> {
     }
 
     // Construct the filter from the child nodes result
-    Filter filter = constructFilterFromChildNodesResult(childNodeResponse);
+    final Filter filter = constructFilterFromChildNodesResult(childNodeResponse);
+
     // Select attributes, metric aggregations and time-series data from corresponding sources
     List<EntityFetcherResponse> resultMapList = new ArrayList<>();
     // if data are coming from multiple sources, then, get entities and aggregated metrics
@@ -176,6 +178,7 @@ public class ExecutionVisitor implements Visitor<EntityFetcherResponse> {
                       request.getStartTimeMillis(),
                       request.getEndTimeMillis(),
                       request.getEntityType(),
+                      executionContext.getTimestampAttributeId(),
                       executionContext.getRequestHeaders());
               return entityFetcher.getEntities(context, request);
             })
@@ -199,6 +202,7 @@ public class ExecutionVisitor implements Visitor<EntityFetcherResponse> {
                           request.getStartTimeMillis(),
                           request.getEndTimeMillis(),
                           request.getEntityType(),
+                          executionContext.getTimestampAttributeId(),
                           executionContext.getRequestHeaders());
                   return entityFetcher.getAggregatedMetrics(context, request);
                 })
@@ -222,6 +226,7 @@ public class ExecutionVisitor implements Visitor<EntityFetcherResponse> {
                           request.getStartTimeMillis(),
                           request.getEndTimeMillis(),
                           request.getEntityType(),
+                          executionContext.getTimestampAttributeId(),
                           executionContext.getRequestHeaders());
                   return entityFetcher.getTimeAggregatedMetrics(requestContext, request);
                 })
@@ -325,6 +330,7 @@ public class ExecutionVisitor implements Visitor<EntityFetcherResponse> {
             request.getStartTimeMillis(),
             request.getEndTimeMillis(),
             request.getEntityType(),
+            executionContext.getTimestampAttributeId(),
             executionContext.getRequestHeaders());
 
     String source = selectionAndFilterNode.getSource();

@@ -24,12 +24,12 @@ import org.hypertrace.gateway.service.common.RequestContext;
 import org.hypertrace.gateway.service.common.config.ScopeFilterConfigs;
 import org.hypertrace.gateway.service.common.util.AttributeMetadataUtil;
 import org.hypertrace.gateway.service.common.util.QueryExpressionUtil;
+import org.hypertrace.gateway.service.common.util.TimeRangeFilterUtil;
 import org.hypertrace.gateway.service.entity.EntitiesRequestContext;
 import org.hypertrace.gateway.service.entity.EntityKey;
 import org.hypertrace.gateway.service.entity.config.DomainObjectFilter;
 import org.hypertrace.gateway.service.entity.config.DomainObjectMapping;
 import org.hypertrace.gateway.service.trace.TraceScope;
-import org.hypertrace.gateway.service.v1.common.ColumnIdentifier;
 import org.hypertrace.gateway.service.v1.common.Expression;
 import org.hypertrace.gateway.service.v1.common.Expression.ValueCase;
 import org.hypertrace.gateway.service.v1.common.Filter;
@@ -76,12 +76,20 @@ public class RequestPreProcessor {
         AttributeMetadataUtil.getAttributeIdMappings(
             attributeMetadataProvider, context, originalRequest.getEntityType());
     EntitiesRequest.Builder entitiesRequestBuilder = EntitiesRequest.newBuilder(originalRequest);
+
+    // Convert the time range into a filter and set it on the request so that all downstream
+    // components needn't treat it specially.
+    Filter filter = TimeRangeFilterUtil.addTimeRangeFilter(
+        context.getTimestampAttributeId(), originalRequest.getFilter(),
+        originalRequest.getStartTimeMillis(), originalRequest.getEndTimeMillis());
+
     if (attributeIdMappings.isEmpty()) {
       LOGGER.debug(
           "No attribute id mappings found for entityType:{}", originalRequest.getEntityType());
-      // Clean out duplicate columns in selections
       return entitiesRequestBuilder
           .clearSelection()
+          .setFilter(filter)
+          // Clean out duplicate columns in selections
           .addAllSelection(getUniqueSelections(originalRequest.getSelectionList()))
           .build();
     }
@@ -107,20 +115,8 @@ public class RequestPreProcessor {
     Filter filterToInject =
         injectIdFilter(attributeIdMappings, originalRequest.getSelectionList(), context);
 
-    // Convert the time range into a filter and set it on the request so that all downstream
-    // components needn't treat it specially.
-    String timestampAttributeId = AttributeMetadataUtil.getTimestampAttributeId(
-        attributeMetadataProvider, context, originalRequest.getEntityType());
-
-    Filter.Builder filterBuilder = Filter.newBuilder().setOperator(AND);
-    if (!Filter.getDefaultInstance().equals(originalRequest.getFilter())) {
-      filterBuilder.addChildFilter(originalRequest.getFilter());
-    }
-    filterBuilder.addChildFilter(getTimestampFilter(timestampAttributeId, Operator.GE, originalRequest.getStartTimeMillis()))
-        .addChildFilter(getTimestampFilter(timestampAttributeId, Operator.LT, originalRequest.getEndTimeMillis()));
-
-    Filter transformedFilter = transformFilter(attributeIdMappings, filterBuilder.build(), context);
-    Filter filter = mergeFilters(filterToInject, transformedFilter);
+    Filter transformedFilter = transformFilter(attributeIdMappings, filter, context);
+    filter = mergeFilters(filterToInject, transformedFilter);
 
     // Apply the scope filter at the end.
     filter = scopeFilterConfigs.createScopeFilter(
@@ -132,14 +128,6 @@ public class RequestPreProcessor {
     entitiesRequestBuilder.setFilter(filter);
 
     return entitiesRequestBuilder.build();
-  }
-
-  private Filter getTimestampFilter(String colName, Operator operator, long timestamp) {
-    return Filter.newBuilder().setOperator(operator)
-        .setLhs(Expression.newBuilder().setColumnIdentifier(ColumnIdentifier.newBuilder().setColumnName(colName)))
-        .setRhs(Expression.newBuilder().setLiteral(
-            LiteralConstant.newBuilder().setValue(Value.newBuilder().setValueType(ValueType.LONG).setLong(timestamp))))
-        .build();
   }
 
   /**

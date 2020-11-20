@@ -8,8 +8,6 @@ import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.when;
 
-import com.google.protobuf.InvalidProtocolBufferException;
-import com.google.protobuf.util.JsonFormat;
 import com.typesafe.config.Config;
 import com.typesafe.config.ConfigFactory;
 import java.util.Arrays;
@@ -111,7 +109,7 @@ public class EntityServiceTest extends AbstractGatewayServiceTest {
                     .setFqn("API.apiId")
                     .setValueKind(AttributeKind.TYPE_STRING)
                     .setType(AttributeType.ATTRIBUTE)
-                    .addSources(AttributeSource.QS)
+                    .addSources(AttributeSource.QS).addSources(AttributeSource.EDS)
                     .setId("API.apiId")
                     .build(),
                 "API.apiName",
@@ -121,7 +119,7 @@ public class EntityServiceTest extends AbstractGatewayServiceTest {
                     .setFqn("API.name")
                     .setValueKind(AttributeKind.TYPE_STRING)
                     .setType(AttributeType.ATTRIBUTE)
-                    .addSources(AttributeSource.QS)
+                    .addSources(AttributeSource.QS).addSources(AttributeSource.EDS)
                     .setId("API.name")
                     .build(),
                 "API.httpMethod",
@@ -147,7 +145,7 @@ public class EntityServiceTest extends AbstractGatewayServiceTest {
                     .setValueKind(AttributeKind.TYPE_STRING)
                     .setId("API.apiId")
                     .setType(AttributeType.ATTRIBUTE)
-                    .addSources(AttributeSource.QS)
+                    .addSources(AttributeSource.QS).addSources(AttributeSource.EDS)
                     .build()));
     when(
             attributeMetadataProvider.getAttributeMetadata(
@@ -166,7 +164,7 @@ public class EntityServiceTest extends AbstractGatewayServiceTest {
   }
 
   @Test
-  public void testGetEntitiesOnlySelectFromSingleSource() {
+  public void testGetEntitiesOnlySelectFromSingleSourceWithTimeRangeShouldUseQueryService() {
     long endTime = System.currentTimeMillis();
     long startTime = endTime - 1000;
     EntitiesRequest entitiesRequest =
@@ -266,6 +264,8 @@ public class EntityServiceTest extends AbstractGatewayServiceTest {
     EntitiesRequest entitiesRequest =
         EntitiesRequest.newBuilder()
             .setEntityType("API")
+            .setStartTimeMillis(System.currentTimeMillis() - 1000)
+            .setEndTimeMillis(System.currentTimeMillis())
             .setFilter(org.hypertrace.gateway.service.v1.common.Filter.newBuilder()
                 .setOperator(Operator.IN)
                 .setLhs(getExpressionFor("API.httpMethod", "API Http method"))
