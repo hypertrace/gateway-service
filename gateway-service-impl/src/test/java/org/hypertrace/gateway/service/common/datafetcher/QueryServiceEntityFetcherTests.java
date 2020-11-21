@@ -22,8 +22,6 @@ import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.when;
 
-import com.google.protobuf.InvalidProtocolBufferException;
-import com.google.protobuf.util.JsonFormat;
 import com.typesafe.config.Config;
 import com.typesafe.config.ConfigFactory;
 import java.util.List;
@@ -157,11 +155,6 @@ public class QueryServiceEntityFetcherTests {
             )
     );
 
-    try {
-      System.out.println("Expected: " + JsonFormat.printer().omittingInsignificantWhitespace().print(expectedQueryRequest));
-    } catch (InvalidProtocolBufferException e) {
-      e.printStackTrace();
-    }
     Map<EntityKey, Builder> expectedEntityKeyBuilderResponseMap = Map.of(
         EntityKey.of("api-id-0"), Entity.newBuilder()
             .setEntityType(AttributeScope.API.name())

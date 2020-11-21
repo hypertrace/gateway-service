@@ -4,8 +4,6 @@ import static org.hypertrace.gateway.service.common.converters.QueryAndGatewayDt
 import static org.hypertrace.gateway.service.common.converters.QueryAndGatewayDtoConverter.convertToQueryFilter;
 
 import com.google.common.base.Preconditions;
-import com.google.protobuf.InvalidProtocolBufferException;
-import com.google.protobuf.util.JsonFormat;
 import java.time.Duration;
 import java.time.temporal.ChronoUnit;
 import java.util.Collection;
@@ -279,11 +277,6 @@ public class QueryServiceEntityFetcher implements IEntityFetcher {
       LOG.debug("Sending Query to Query Service ======== \n {}", queryRequest);
     }
 
-    try {
-      System.out.println("Actual: " + JsonFormat.printer().omittingInsignificantWhitespace().print(queryRequest));
-    } catch (InvalidProtocolBufferException e) {
-      e.printStackTrace();
-    }
     Iterator<ResultSetChunk> resultSetChunkIterator =
         queryServiceClient.executeQuery(queryRequest, requestContext.getHeaders(), requestTimeout);
 
