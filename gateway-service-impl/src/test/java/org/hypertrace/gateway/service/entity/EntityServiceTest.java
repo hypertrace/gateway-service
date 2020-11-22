@@ -31,6 +31,7 @@ import org.hypertrace.core.query.service.client.QueryServiceClient;
 import org.hypertrace.entity.query.service.client.EntityQueryServiceClient;
 import org.hypertrace.gateway.service.AbstractGatewayServiceTest;
 import org.hypertrace.gateway.service.common.AttributeMetadataProvider;
+import org.hypertrace.gateway.service.common.QueryServiceRequestAndResponseUtils;
 import org.hypertrace.gateway.service.common.RequestContext;
 import org.hypertrace.gateway.service.common.config.ScopeFilterConfigs;
 import org.hypertrace.gateway.service.entity.config.DomainObjectConfigs;
@@ -237,16 +238,6 @@ public class EntityServiceTest extends AbstractGatewayServiceTest {
 
   @Test
   public void testGetEntitiesOnlySelectFromMultipleSources() {
-    when(queryServiceClient.executeQuery(any(), any(), Mockito.anyInt()))
-        .thenReturn(
-            List.of(
-                    ResultSetChunk.newBuilder()
-                        .setResultSetMetadata(
-                            generateResultSetMetadataFor("API.apiId", "API.apiName"))
-                        .addRow(generateRowFor("apiId1", "/login"))
-                        .addRow(generateRowFor("apiId2", "/checkout"))
-                        .build())
-                .iterator());
     when(entityQueryServiceClient.execute(any(), any()))
         .thenReturn(
             List.of(
@@ -275,6 +266,27 @@ public class EntityServiceTest extends AbstractGatewayServiceTest {
             .addSelection(getExpressionFor("API.apiName", "API Name"))
             .addSelection(getExpressionFor("API.httpMethod", "API Http method"))
             .build();
+    QueryRequest expectedQueryRequest = QueryRequest.newBuilder()
+        .setFilter(
+            QueryServiceRequestAndResponseUtils.createQsDefaultRequestFilter("API.startTime",
+                "API.apiId", entitiesRequest.getStartTimeMillis(), entitiesRequest.getEndTimeMillis()))
+        .addSelection(QueryServiceRequestAndResponseUtils.createQsColumnExpression("API.apiId"))
+        .addSelection(QueryServiceRequestAndResponseUtils.createQsColumnExpression("API.apiName", "API Name"))
+        .addSelection(QueryServiceRequestAndResponseUtils.createQsAggregationExpression("Count", "API.apiId"))
+        .addGroupBy(QueryServiceRequestAndResponseUtils.createQsColumnExpression("API.apiId"))
+        .addGroupBy(QueryServiceRequestAndResponseUtils.createQsColumnExpression("API.apiName", "API Name"))
+        .setLimit(10000)
+        .build();
+    when(queryServiceClient.executeQuery(expectedQueryRequest, Map.of(), 500))
+        .thenReturn(
+            List.of(
+                ResultSetChunk.newBuilder()
+                    .setResultSetMetadata(
+                        generateResultSetMetadataFor("API.apiId", "API.apiName"))
+                    .addRow(generateRowFor("apiId1", "/login"))
+                    .addRow(generateRowFor("apiId2", "/checkout"))
+                    .build())
+                .iterator());
     EntitiesResponse response = entityService.getEntities(TENANT_ID, entitiesRequest, Map.of());
     Assertions.assertNotNull(response);
     Assertions.assertEquals(2, response.getTotal());
