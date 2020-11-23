@@ -53,6 +53,16 @@ public class QueryServiceRequestAndResponseUtils {
     return resultSetChunkBuilder.build();
   }
 
+  public static Expression createQsAggregationExpression(String functionName, String functionAlias, String columnName, String columnAlias) {
+    return Expression.newBuilder()
+        .setFunction(Function.newBuilder()
+            .setFunctionName(functionName)
+            .setAlias(functionAlias)
+            .addArguments(createQsColumnExpression(columnName, columnAlias))
+        )
+        .build();
+  }
+
   public static Expression createQsAggregationExpression(String functionName, String columnName, String alias) {
     return Expression.newBuilder()
         .setFunction(Function.newBuilder()
@@ -104,6 +114,19 @@ public class QueryServiceRequestAndResponseUtils {
         .build();
   }
 
+  public static Expression createQsStringListLiteralExpression(List<String> list) {
+    return Expression.newBuilder()
+        .setLiteral(
+            LiteralConstant.newBuilder()
+                .setValue(
+                    Value.newBuilder()
+                        .addAllStringArray(list)
+                        .setValueType(ValueType.STRING_ARRAY)
+                )
+        )
+        .build();
+  }
+
   public static Expression createQsLongLiteralExpression(long val) {
     return Expression.newBuilder()
         .setLiteral(
@@ -140,16 +163,13 @@ public class QueryServiceRequestAndResponseUtils {
     return Filter.newBuilder()
         .setOperator(Operator.AND)
         .addChildFilter(
-            Filter.newBuilder()
-                .setOperator(Operator.AND)
-                .addChildFilter(createQsTimeRangeFilter(timestampColumnName, startTime, endTime))
-                .addChildFilter(requestFilter)
-        )
-        .addChildFilter(
             createQsFilter(createQsColumnExpression(entityIdColumnName),
                 Operator.NEQ,
                 createQsStringLiteralExpression("null"))
         )
+        .addChildFilter(Filter.newBuilder().setOperator(Operator.AND)
+            .addChildFilter(createQsTimeRangeFilter(timestampColumnName, startTime, endTime))
+            .addChildFilter(requestFilter))
         .build();
   }
 
@@ -159,7 +179,6 @@ public class QueryServiceRequestAndResponseUtils {
                                                     long endTime) {
     return Filter.newBuilder()
         .setOperator(Operator.AND)
-        .addChildFilter(createQsTimeRangeFilter(timestampColumnName, startTime, endTime))
         .addChildFilter(
             createQsFilter(
                 createQsColumnExpression(entityIdColumnName),
@@ -167,10 +186,11 @@ public class QueryServiceRequestAndResponseUtils {
                 createQsStringLiteralExpression("null")
             )
         )
+        .addChildFilter(createQsTimeRangeFilter(timestampColumnName, startTime, endTime))
         .build();
   }
 
-  private static Filter createQsTimeRangeFilter(String timestampColumnName, long startTime, long endTime) {
+  public static Filter createQsTimeRangeFilter(String timestampColumnName, long startTime, long endTime) {
     return Filter.newBuilder()
         .setOperator(Operator.AND)
         .addChildFilter(

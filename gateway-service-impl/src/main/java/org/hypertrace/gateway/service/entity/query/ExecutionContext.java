@@ -81,6 +81,10 @@ public class ExecutionContext {
     return entitiesRequestContext.getTenantId();
   }
 
+  public String getTimestampAttributeId() {
+    return entitiesRequestContext.getTimestampAttributeId();
+  }
+
   public EntitiesRequest getEntitiesRequest() {
     return entitiesRequest;
   }

@@ -231,6 +231,10 @@ public class ExecutionTreeBuilder {
         executionContext.getSourceToOrderByExpressionMap().values().stream()
             .flatMap(Collection::stream)
             .collect(Collectors.toList());
+    if (orderByExpressions.isEmpty() && executionContext.getEntitiesRequest().getLimit() == 0) {
+      return childNode;
+    }
+
     executionContext.setSortAndPaginationNodeAdded(true);
     return new SortAndPaginateNode(
         childNode,

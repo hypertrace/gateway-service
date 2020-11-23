@@ -14,12 +14,13 @@ import java.util.Map;
 import java.util.concurrent.TimeUnit;
 import java.util.stream.Collectors;
 import java.util.stream.IntStream;
-
 import org.apache.commons.lang3.StringUtils;
 import org.hypertrace.core.attribute.service.v1.AttributeMetadata;
+import org.hypertrace.core.query.service.api.ColumnIdentifier;
 import org.hypertrace.core.query.service.api.ColumnMetadata;
 import org.hypertrace.core.query.service.api.Expression;
 import org.hypertrace.core.query.service.api.Filter;
+import org.hypertrace.core.query.service.api.LiteralConstant;
 import org.hypertrace.core.query.service.api.Operator;
 import org.hypertrace.core.query.service.api.QueryRequest;
 import org.hypertrace.core.query.service.api.ResultSetChunk;
@@ -373,7 +374,7 @@ public class QueryServiceEntityFetcher implements IEntityFetcher {
             .map(Expression.Builder::build)
             .collect(Collectors.toList());
     Filter.Builder filterBuilder =
-        constructQueryServiceFilter(entitiesRequest, entityIdAttributes);
+        constructQueryServiceFilter(entitiesRequest, requestContext, entityIdAttributes);
 
     QueryRequest.Builder builder =
         QueryRequest.newBuilder()
@@ -409,9 +410,7 @@ public class QueryServiceEntityFetcher implements IEntityFetcher {
     // Pinot's GroupBy queries need at least one aggregate operation in the selection
     // so we add count(*) as a dummy placeholder.
     if (aggregates.isEmpty()) {
-      builder.addSelection(
-          QueryRequestUtil
-              .createCountByColumnSelection(entityIdAttributes.toArray(new String[]{})));
+      builder.addSelection(QueryRequestUtil.createCountByColumnSelection(entityIdAttributes.toArray(new String[]{})));
     }
     return builder;
   }
@@ -531,7 +530,7 @@ public class QueryServiceEntityFetcher implements IEntityFetcher {
       long periodSecs = Duration.of(period.getValue(), unit).getSeconds();
       QueryRequest request =
           buildTimeSeriesQueryRequest(
-              entitiesRequest, periodSecs, batch, idColumns, timeColumn);
+              entitiesRequest, requestContext, periodSecs, batch, idColumns, timeColumn);
 
       if (LOG.isDebugEnabled()) {
         LOG.debug(
@@ -674,6 +673,7 @@ public class QueryServiceEntityFetcher implements IEntityFetcher {
 
   private QueryRequest buildTimeSeriesQueryRequest(
       EntitiesRequest entitiesRequest,
+      EntitiesRequestContext context,
       long periodSecs,
       List<TimeAggregation> timeAggregationBatch,
       List<String> idColumns,
@@ -696,9 +696,7 @@ public class QueryServiceEntityFetcher implements IEntityFetcher {
             builder.addSelection(
                 QueryAndGatewayDtoConverter.convertToQueryExpression(e.getAggregation())));
 
-    Filter.Builder queryFilter =
-        constructQueryServiceFilter(
-            timeAlignedEntitiesRequest, idColumns);
+    Filter.Builder queryFilter = constructQueryServiceFilter(timeAlignedEntitiesRequest, context, idColumns);
     builder.setFilter(queryFilter);
 
     // First group by the id columns.
@@ -726,12 +724,11 @@ public class QueryServiceEntityFetcher implements IEntityFetcher {
   /**
    * Converts the filter in the given request to the query service filter and adds a non null filter on entity id.
    */
-  private Filter.Builder constructQueryServiceFilter(EntitiesRequest entitiesRequest, List<String> entityIdAttributes) {
-    Filter.Builder filterBuilder = convertToQueryFilter(entitiesRequest.getFilter());
+  private Filter.Builder constructQueryServiceFilter(EntitiesRequest entitiesRequest, EntitiesRequestContext context,
+                                                     List<String> entityIdAttributes) {
     // adds the Id != "null" filter to remove null entities.
-    return Filter.newBuilder()
+    Filter.Builder filterBuilder = Filter.newBuilder()
         .setOperator(Operator.AND)
-        .addChildFilter(filterBuilder)
         .addAllChildFilter(
             entityIdAttributes.stream()
                 .map(
@@ -740,6 +737,41 @@ public class QueryServiceEntityFetcher implements IEntityFetcher {
                             entityIdAttribute, Operator.NEQ, QUERY_SERVICE_NULL))
                 .map(Filter.Builder::build)
                 .collect(Collectors.toList()));
+
+    // Convert the existing filter into query service filter.
+    Filter queryFilter = convertToQueryFilter(entitiesRequest.getFilter()).build();
+    if (!Filter.getDefaultInstance().equals(queryFilter)) {
+      filterBuilder.addChildFilter(queryFilter);
+    }
+
+    // Time range is a mandatory filter for query service, hence add it if it's not already present.
+    if (!hasTimeRangeFilter(queryFilter, context.getTimestampAttributeId())) {
+      filterBuilder.addChildFilter(Filter.newBuilder().setOperator(Operator.AND)
+          .addChildFilter(createTimeFilter(context.getTimestampAttributeId(), Operator.GE, entitiesRequest.getStartTimeMillis()))
+          .addChildFilter(createTimeFilter(context.getTimestampAttributeId(), Operator.LT, entitiesRequest.getEndTimeMillis())));
+    }
+
+    return filterBuilder;
+  }
+
+  private static Filter createTimeFilter(String columnName, Operator op, long value) {
+    ColumnIdentifier.Builder timeColumn = ColumnIdentifier.newBuilder().setColumnName(columnName);
+    Expression.Builder lhs = Expression.newBuilder().setColumnIdentifier(timeColumn);
+    LiteralConstant.Builder constant = LiteralConstant.newBuilder().setValue(
+        org.hypertrace.core.query.service.api.Value.newBuilder()
+            .setValueType(org.hypertrace.core.query.service.api.ValueType.LONG).setLong(value));
+    Expression.Builder rhs = Expression.newBuilder().setLiteral(constant);
+    return Filter.newBuilder().setLhs(lhs).setOperator(op).setRhs(rhs).build();
+  }
+
+  private boolean hasTimeRangeFilter(Filter filter, String timestampAttributeId) {
+    if (filter.getOperator() == Operator.AND || filter.getOperator() == Operator.OR) {
+      return filter.getChildFilterList().stream()
+          .anyMatch(f -> hasTimeRangeFilter(f, timestampAttributeId));
+    } else {
+      return filter.getLhs().getValueCase() == Expression.ValueCase.COLUMNIDENTIFIER &&
+          filter.getLhs().getColumnIdentifier().getColumnName().equals(timestampAttributeId);
+    }
   }
 
   private MetricSeries.Builder getMetricSeriesBuilder(

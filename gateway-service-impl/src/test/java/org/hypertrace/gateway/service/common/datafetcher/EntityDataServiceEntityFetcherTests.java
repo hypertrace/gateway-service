@@ -13,14 +13,12 @@ import org.junit.jupiter.api.Test;
 
 public class EntityDataServiceEntityFetcherTests {
   private EntityDataServiceEntityFetcher entityDataServiceEntityFetcher;
-  private EntityQueryServiceClient entityQueryServiceClient;
-  private AttributeMetadataProvider attributeMetadataProvider;
   private static final String TENANT_ID = "tenant-id";
 
   @BeforeEach
   public void setup() {
-    entityQueryServiceClient = mock(EntityQueryServiceClient.class);
-    attributeMetadataProvider = mock(AttributeMetadataProvider.class);
+    EntityQueryServiceClient entityQueryServiceClient = mock(EntityQueryServiceClient.class);
+    AttributeMetadataProvider attributeMetadataProvider = mock(AttributeMetadataProvider.class);
     entityDataServiceEntityFetcher =
         new EntityDataServiceEntityFetcher(entityQueryServiceClient, attributeMetadataProvider);
   }
@@ -29,7 +27,7 @@ public class EntityDataServiceEntityFetcherTests {
   public void test_getEntitiesAndAggregatedMetrics() {
     assertThrows(UnsupportedOperationException.class, () -> {
       entityDataServiceEntityFetcher.getEntitiesAndAggregatedMetrics(
-          new EntitiesRequestContext(TENANT_ID, 0, 1, "API", Map.of()),
+          new EntitiesRequestContext(TENANT_ID, 0, 1, "API", "API.startTime", Map.of()),
           EntitiesRequest.newBuilder().build()
       );
     });
@@ -39,7 +37,7 @@ public class EntityDataServiceEntityFetcherTests {
   public void test_getTotalEntities() {
     assertThrows(UnsupportedOperationException.class, () -> {
       entityDataServiceEntityFetcher.getTotalEntities(
-          new EntitiesRequestContext(TENANT_ID, 0, 1, "API", Map.of()),
+          new EntitiesRequestContext(TENANT_ID, 0, 1, "API", "API.startTime", Map.of()),
           EntitiesRequest.newBuilder().build()
       );
     });
@@ -49,7 +47,7 @@ public class EntityDataServiceEntityFetcherTests {
   public void test_getAggregatedMetrics() {
     assertThrows(UnsupportedOperationException.class, () -> {
       entityDataServiceEntityFetcher.getAggregatedMetrics(
-          new EntitiesRequestContext(TENANT_ID, 0, 1, "API", Map.of()),
+          new EntitiesRequestContext(TENANT_ID, 0, 1, "API", "API.startTime", Map.of()),
           EntitiesRequest.newBuilder().build()
       );
     });
@@ -59,7 +57,7 @@ public class EntityDataServiceEntityFetcherTests {
   public void test_getTimeAggregatedMetrics() {
     assertThrows(UnsupportedOperationException.class, () -> {
       entityDataServiceEntityFetcher.getTimeAggregatedMetrics(
-          new EntitiesRequestContext(TENANT_ID, 0, 1, "API", Map.of()),
+          new EntitiesRequestContext(TENANT_ID, 0, 1, "API", "API.startTime", Map.of()),
           EntitiesRequest.newBuilder().build()
       );
     });

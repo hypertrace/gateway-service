@@ -56,16 +56,18 @@ public class RequestPreProcessorTest {
   @Test
   public void testServiceEntitiesRequestDuplicateColumnSelectionIsRemoved() {
     initializeDomainObjectConfigs("configs/request-preprocessor-test/service-id-config.conf");
+    long endTime = System.currentTimeMillis();
+    long startTime = endTime - 1000L;
     EntitiesRequestContext entitiesRequestContext =
-        new EntitiesRequestContext(TEST_TENANT_ID, 0L, 1L, "SERVICE", Map.of());
+        new EntitiesRequestContext(TEST_TENANT_ID, startTime, endTime, "SERVICE", "SERVICE.startTime", Map.of());
     mockAttributeMetadata(entitiesRequestContext, AttributeScope.SERVICE.name(), "id");
     mockAttributeMetadata(entitiesRequestContext, AttributeScope.SERVICE.name(), "startTime");
 
     EntitiesRequest entitiesRequest =
         EntitiesRequest.newBuilder()
             .setEntityType("SERVICE")
-            .setStartTimeMillis(0L)
-            .setEndTimeMillis(1L)
+            .setStartTimeMillis(startTime)
+            .setEndTimeMillis(endTime)
             .setFilter(
                 GatewayExpressionCreator.createFilter(
                     QueryExpressionUtil.getColumnExpression("SERVICE.name"),
@@ -94,8 +96,8 @@ public class RequestPreProcessorTest {
     Assertions.assertEquals(
         EntitiesRequest.newBuilder()
             .setEntityType("SERVICE")
-            .setStartTimeMillis(0L)
-            .setEndTimeMillis(1L)
+            .setStartTimeMillis(startTime)
+            .setEndTimeMillis(endTime)
             .setFilter(
                 Filter.newBuilder()
                     .setOperator(Operator.AND)
@@ -104,8 +106,8 @@ public class RequestPreProcessorTest {
                             QueryExpressionUtil.getColumnExpression("SERVICE.name"),
                             Operator.LIKE,
                             QueryExpressionUtil.getLiteralExpression("log")))
-                    .addChildFilter(EntitiesRequestAndResponseUtils.getTimestampFilter("SERVICE.startTime", Operator.GE, 0L))
-                    .addChildFilter(EntitiesRequestAndResponseUtils.getTimestampFilter("SERVICE.startTime", Operator.LT, 1L))
+                    .addChildFilter(EntitiesRequestAndResponseUtils.getTimestampFilter("SERVICE.startTime", Operator.GE, startTime))
+                    .addChildFilter(EntitiesRequestAndResponseUtils.getTimestampFilter("SERVICE.startTime", Operator.LT, endTime))
             )
             .addSelection(QueryExpressionUtil.getColumnExpression("SERVICE.id"))
             .addSelection(QueryExpressionUtil.getColumnExpression("SERVICE.name"))
@@ -125,16 +127,18 @@ public class RequestPreProcessorTest {
   @Test
   public void testDomainEntitiesRequestWithLikeFilterIsTransformed() {
     initializeDomainObjectConfigs("configs/request-preprocessor-test/domains-config.conf");
+    long endTime = System.currentTimeMillis();
+    long startTime = endTime - 1000L;
     EntitiesRequestContext entitiesRequestContext =
-        new EntitiesRequestContext(TEST_TENANT_ID, 0L, 1L, "EVENT", Map.of());
+        new EntitiesRequestContext(TEST_TENANT_ID, startTime, endTime, "EVENT", "SERVICE.startTime", Map.of());
     // Mock calls into attributeMetadataProvider
     mockAttributeMetadataForDomainAndMappings(entitiesRequestContext);
 
     EntitiesRequest entitiesRequest =
         EntitiesRequest.newBuilder()
             .setEntityType("EVENT")
-            .setStartTimeMillis(0L)
-            .setEndTimeMillis(1L)
+            .setStartTimeMillis(startTime)
+            .setEndTimeMillis(endTime)
             .setFilter(
                 GatewayExpressionCreator.createFilter(
                     QueryExpressionUtil.getColumnExpression("EVENT.name"),
@@ -163,8 +167,8 @@ public class RequestPreProcessorTest {
     Assertions.assertEquals(
         EntitiesRequest.newBuilder()
             .setEntityType("EVENT")
-            .setStartTimeMillis(0L)
-            .setEndTimeMillis(1L)
+            .setStartTimeMillis(startTime)
+            .setEndTimeMillis(endTime)
             .setFilter(
                 Filter.newBuilder()
                     .setOperator(Operator.AND)
@@ -180,8 +184,8 @@ public class RequestPreProcessorTest {
                                 QueryExpressionUtil.getColumnExpression("SERVICE.hostHeader"),
                                 Operator.LIKE,
                                 QueryExpressionUtil.getLiteralExpression("log")))
-                            .addChildFilter(EntitiesRequestAndResponseUtils.getTimestampFilter("SERVICE.startTime", Operator.GE, 0L))
-                            .addChildFilter(EntitiesRequestAndResponseUtils.getTimestampFilter("SERVICE.startTime", Operator.LT, 1L))
+                            .addChildFilter(EntitiesRequestAndResponseUtils.getTimestampFilter("SERVICE.startTime", Operator.GE, startTime))
+                            .addChildFilter(EntitiesRequestAndResponseUtils.getTimestampFilter("SERVICE.startTime", Operator.LT, endTime))
                     )
             )
             .addSelection(QueryExpressionUtil.getColumnExpression("SERVICE.hostHeader"))
@@ -203,16 +207,18 @@ public class RequestPreProcessorTest {
   @Test
   public void testDomainEntitiesRequestWithNeqFilterIsTransformed() {
     initializeDomainObjectConfigs("configs/request-preprocessor-test/domains-config.conf");
+    long endTime = System.currentTimeMillis();
+    long startTime = endTime - 1000L;
     EntitiesRequestContext entitiesRequestContext =
-        new EntitiesRequestContext(TEST_TENANT_ID, 0L, 1L, "EVENT", Map.of());
+        new EntitiesRequestContext(TEST_TENANT_ID, startTime, endTime, "EVENT", "SERVICE.startTime", Map.of());
     // Mock calls into attributeMetadataProvider
     mockAttributeMetadataForDomainAndMappings(entitiesRequestContext);
 
     EntitiesRequest entitiesRequest =
         EntitiesRequest.newBuilder()
             .setEntityType("EVENT")
-            .setStartTimeMillis(0L)
-            .setEndTimeMillis(1L)
+            .setStartTimeMillis(startTime)
+            .setEndTimeMillis(endTime)
             .setFilter(
                 GatewayExpressionCreator.createFilter(
                     QueryExpressionUtil.getColumnExpression("EVENT.name"),
@@ -235,8 +241,8 @@ public class RequestPreProcessorTest {
     EntitiesRequest expectedRequest =
         EntitiesRequest.newBuilder()
             .setEntityType("EVENT")
-            .setStartTimeMillis(0L)
-            .setEndTimeMillis(1L)
+            .setStartTimeMillis(startTime)
+            .setEndTimeMillis(endTime)
             .setFilter(
                 Filter.newBuilder()
                     .setOperator(Operator.AND)
@@ -255,8 +261,8 @@ public class RequestPreProcessorTest {
                                 Operator.NEQ,
                                 QueryExpressionUtil.getLiteralExpression(
                                     "some-entity-name")))
-                            .addChildFilter(EntitiesRequestAndResponseUtils.getTimestampFilter("SERVICE.startTime", Operator.GE, 0L))
-                            .addChildFilter(EntitiesRequestAndResponseUtils.getTimestampFilter("SERVICE.startTime", Operator.LT, 1L))
+                            .addChildFilter(EntitiesRequestAndResponseUtils.getTimestampFilter("SERVICE.startTime", Operator.GE, startTime))
+                            .addChildFilter(EntitiesRequestAndResponseUtils.getTimestampFilter("SERVICE.startTime", Operator.LT, endTime))
                     )
             )
             .addSelection(QueryExpressionUtil.getColumnExpression("SERVICE.hostHeader"))
@@ -275,16 +281,18 @@ public class RequestPreProcessorTest {
   @Test
   public void testDomainEntitiesRequestWithServiceIdFilterIsNotTransformed() {
     initializeDomainObjectConfigs("configs/request-preprocessor-test/domains-config.conf");
+    long endTime = System.currentTimeMillis();
+    long startTime = endTime - 1000L;
     EntitiesRequestContext entitiesRequestContext =
-        new EntitiesRequestContext(TEST_TENANT_ID, 0L, 1L, "SERVICE", Map.of());
+        new EntitiesRequestContext(TEST_TENANT_ID, startTime, endTime, "SERVICE", "SERVICE.startTime", Map.of());
     // Mock calls into attributeMetadataProvider
     mockAttributeMetadataForDomainAndMappings(entitiesRequestContext);
 
     EntitiesRequest entitiesRequest =
         EntitiesRequest.newBuilder()
             .setEntityType("SERVICE")
-            .setStartTimeMillis(0L)
-            .setEndTimeMillis(1L)
+            .setStartTimeMillis(startTime)
+            .setEndTimeMillis(endTime)
             .setFilter(
                 GatewayExpressionCreator.createFilter(
                     QueryExpressionUtil.getColumnExpression("SERVICE.id"),
@@ -299,8 +307,8 @@ public class RequestPreProcessorTest {
     EntitiesRequest expectedRequest =
         EntitiesRequest.newBuilder()
             .setEntityType("SERVICE")
-            .setStartTimeMillis(0L)
-            .setEndTimeMillis(1L)
+            .setStartTimeMillis(startTime)
+            .setEndTimeMillis(endTime)
             .setFilter(
                 Filter.newBuilder()
                     .setOperator(Operator.AND)
@@ -311,8 +319,8 @@ public class RequestPreProcessorTest {
                             createStringArrayLiteralExpressionBuilder(List.of("service1-id", "service2-id"))
                         )
                     )
-                    .addChildFilter(EntitiesRequestAndResponseUtils.getTimestampFilter("SERVICE.startTime", Operator.GE, 0L))
-                    .addChildFilter(EntitiesRequestAndResponseUtils.getTimestampFilter("SERVICE.startTime", Operator.LT, 1L))
+                    .addChildFilter(EntitiesRequestAndResponseUtils.getTimestampFilter("SERVICE.startTime", Operator.GE, startTime))
+                    .addChildFilter(EntitiesRequestAndResponseUtils.getTimestampFilter("SERVICE.startTime", Operator.LT, endTime))
             )
             .addSelection(QueryExpressionUtil.getColumnExpression("SERVICE.id"))
             .build();
@@ -326,16 +334,18 @@ public class RequestPreProcessorTest {
   @Test
   public void testDomainEntitiesRequestWithInFilterIsTransformed() {
     initializeDomainObjectConfigs("configs/request-preprocessor-test/domains-config.conf");
+    long endTime = System.currentTimeMillis();
+    long startTime = endTime - 1000L;
     EntitiesRequestContext entitiesRequestContext =
-        new EntitiesRequestContext(TEST_TENANT_ID, 0L, 1L, "EVENT", Map.of());
+        new EntitiesRequestContext(TEST_TENANT_ID, startTime, endTime, "EVENT", "SERVICE.startTime", Map.of());
     // Mock calls into attributeMetadataProvider
     mockAttributeMetadataForDomainAndMappings(entitiesRequestContext);
 
     EntitiesRequest entitiesRequest =
         EntitiesRequest.newBuilder()
             .setEntityType("SERVICE")
-            .setStartTimeMillis(0L)
-            .setEndTimeMillis(1L)
+            .setStartTimeMillis(startTime)
+            .setEndTimeMillis(endTime)
             .setFilter(
                 GatewayExpressionCreator.createFilter(
                     QueryExpressionUtil.getColumnExpression("SERVICE.mappedAttr1"),
@@ -352,8 +362,8 @@ public class RequestPreProcessorTest {
     Assertions.assertEquals(
         EntitiesRequest.newBuilder()
             .setEntityType("SERVICE")
-            .setStartTimeMillis(0L)
-            .setEndTimeMillis(1L)
+            .setStartTimeMillis(startTime)
+            .setEndTimeMillis(endTime)
             .setFilter(
                 Filter.newBuilder()
                     .setOperator(Operator.AND)
@@ -401,8 +411,8 @@ public class RequestPreProcessorTest {
                                     )
                             )
                     )
-                    .addChildFilter(EntitiesRequestAndResponseUtils.getTimestampFilter("SERVICE.startTime", Operator.GE, 0L))
-                    .addChildFilter(EntitiesRequestAndResponseUtils.getTimestampFilter("SERVICE.startTime", Operator.LT, 1L))
+                    .addChildFilter(EntitiesRequestAndResponseUtils.getTimestampFilter("SERVICE.startTime", Operator.GE, startTime))
+                    .addChildFilter(EntitiesRequestAndResponseUtils.getTimestampFilter("SERVICE.startTime", Operator.LT, endTime))
             )
             .addSelection(QueryExpressionUtil.getColumnExpression("SERVICE.attr1"))
             .addSelection(QueryExpressionUtil.getColumnExpression("SERVICE.attr2"))
@@ -414,16 +424,18 @@ public class RequestPreProcessorTest {
   @Test
   public void testDomainEntitiesRequestWithEqFilterIsTransformed() {
     initializeDomainObjectConfigs("configs/request-preprocessor-test/domains-config.conf");
+    long endTime = System.currentTimeMillis();
+    long startTime = endTime - 1000L;
     EntitiesRequestContext entitiesRequestContext =
-        new EntitiesRequestContext(TEST_TENANT_ID, 0L, 1L, "EVENT", Map.of());
+        new EntitiesRequestContext(TEST_TENANT_ID, startTime, endTime, "EVENT", "SERVICE.startTime", Map.of());
     // Mock calls into attributeMetadataProvider
     mockAttributeMetadataForDomainAndMappings(entitiesRequestContext);
 
     EntitiesRequest entitiesRequest =
         EntitiesRequest.newBuilder()
             .setEntityType("SERVICE")
-            .setStartTimeMillis(0L)
-            .setEndTimeMillis(1L)
+            .setStartTimeMillis(startTime)
+            .setEndTimeMillis(endTime)
             .setFilter(
                 GatewayExpressionCreator.createFilter(
                     QueryExpressionUtil.getColumnExpression("SERVICE.mappedAttr2"),
@@ -442,8 +454,8 @@ public class RequestPreProcessorTest {
     Assertions.assertEquals(
         EntitiesRequest.newBuilder()
             .setEntityType("SERVICE")
-            .setStartTimeMillis(0L)
-            .setEndTimeMillis(1L)
+            .setStartTimeMillis(startTime)
+            .setEndTimeMillis(endTime)
             .setFilter(
                 Filter.newBuilder()
                     .setOperator(Operator.AND)
@@ -464,8 +476,8 @@ public class RequestPreProcessorTest {
                                     GatewayExpressionCreator.createLiteralExpression("attr10_val20")
                                 )
                             )
-                            .addChildFilter(EntitiesRequestAndResponseUtils.getTimestampFilter("SERVICE.startTime", Operator.GE, 0L))
-                            .addChildFilter(EntitiesRequestAndResponseUtils.getTimestampFilter("SERVICE.startTime", Operator.LT, 1L))
+                            .addChildFilter(EntitiesRequestAndResponseUtils.getTimestampFilter("SERVICE.startTime", Operator.GE, startTime))
+                            .addChildFilter(EntitiesRequestAndResponseUtils.getTimestampFilter("SERVICE.startTime", Operator.LT, endTime))
                     )
             )
             .addSelection(QueryExpressionUtil.getColumnExpression("SERVICE.mappedAttr2"))

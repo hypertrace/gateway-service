@@ -70,8 +70,10 @@ public class EntitiesRequestResponseProcessorTest {
 
   @Test
   public void testEntitiesRequestTransform() {
+    EntitiesRequestContext context = mock(EntitiesRequestContext.class);
+    when(context.getTimestampAttributeId()).thenReturn("API.startTime");
     EntitiesRequest transformedRequest =
-        requestPreProcessor.transform(originalRequest, mock(EntitiesRequestContext.class));
+        requestPreProcessor.transform(originalRequest, context);
     List<Expression> expressionList = transformedRequest.getSelectionList();
     Assertions.assertEquals(3, expressionList.size());
     Assertions.assertTrue(
@@ -92,8 +94,12 @@ public class EntitiesRequestResponseProcessorTest {
             .contains("API.apiId"));
 
     Filter filter = transformedRequest.getFilter();
-    Assertions.assertEquals(Operator.EQ, filter.getOperator());
-    Assertions.assertEquals(0, filter.getChildFilterCount());
+    Assertions.assertEquals(Operator.AND, filter.getOperator());
+    Assertions.assertEquals(3, filter.getChildFilterCount());
+
+    // Verify the first filter.
+    Assertions.assertEquals(Operator.EQ, filter.getChildFilter(0).getOperator());
+    Assertions.assertEquals(0, filter.getChildFilter(0).getChildFilterCount());
   }
 
   @Test
@@ -110,8 +116,9 @@ public class EntitiesRequestResponseProcessorTest {
                     "API.metrics.bytes_received", FunctionType.SUM, "SUM_bytes_received", true))
             .build();
 
-    EntitiesRequest transformedRequest =
-        requestPreProcessor.transform(originalRequest, mock(EntitiesRequestContext.class));
+    EntitiesRequestContext context = mock(EntitiesRequestContext.class);
+    when(context.getTimestampAttributeId()).thenReturn("API.startTime");
+    EntitiesRequest transformedRequest = requestPreProcessor.transform(originalRequest, context);
     List<Expression> expressionList = transformedRequest.getSelectionList();
     Assertions.assertEquals(3, expressionList.size());
   }
