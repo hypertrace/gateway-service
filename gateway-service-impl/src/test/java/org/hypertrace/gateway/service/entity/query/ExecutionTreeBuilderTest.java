@@ -780,10 +780,8 @@ public class ExecutionTreeBuilderTest {
     assertTrue(executionTree instanceof SelectionNode);
     assertTrue(((SelectionNode) executionTree).getAggMetricSelectionSources().contains(AttributeSource.QS.name()));
     QueryNode firstChild = ((SelectionNode) executionTree).getChildNode();
-    assertTrue(firstChild instanceof SortAndPaginateNode);
-    QueryNode secondChild = ((SortAndPaginateNode) firstChild).getChildNode();
-    assertTrue(secondChild instanceof DataFetcherNode);
-    assertEquals(AttributeSource.EDS.name(), ((DataFetcherNode) secondChild).getSource());
+    assertTrue(firstChild instanceof DataFetcherNode);
+    assertEquals(AttributeSource.EDS.name(), ((DataFetcherNode) firstChild).getSource());
   }
 
   private void mockDomainObjectConfigs() {

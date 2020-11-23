@@ -28,18 +28,24 @@ import org.hypertrace.core.query.service.api.Row;
 import org.hypertrace.core.query.service.api.Value;
 import org.hypertrace.core.query.service.api.ValueType;
 import org.hypertrace.core.query.service.client.QueryServiceClient;
+import org.hypertrace.core.query.service.util.QueryRequestUtil;
 import org.hypertrace.entity.query.service.client.EntityQueryServiceClient;
 import org.hypertrace.gateway.service.AbstractGatewayServiceTest;
 import org.hypertrace.gateway.service.common.AttributeMetadataProvider;
 import org.hypertrace.gateway.service.common.QueryServiceRequestAndResponseUtils;
 import org.hypertrace.gateway.service.common.RequestContext;
 import org.hypertrace.gateway.service.common.config.ScopeFilterConfigs;
+import org.hypertrace.gateway.service.common.util.QueryExpressionUtil;
 import org.hypertrace.gateway.service.entity.config.DomainObjectConfigs;
 import org.hypertrace.gateway.service.entity.config.LogConfig;
 import org.hypertrace.gateway.service.v1.common.ColumnIdentifier;
 import org.hypertrace.gateway.service.v1.common.Expression;
+import org.hypertrace.gateway.service.v1.common.FunctionExpression;
+import org.hypertrace.gateway.service.v1.common.FunctionType;
 import org.hypertrace.gateway.service.v1.common.LiteralConstant;
 import org.hypertrace.gateway.service.v1.common.Operator;
+import org.hypertrace.gateway.service.v1.common.Period;
+import org.hypertrace.gateway.service.v1.common.TimeAggregation;
 import org.hypertrace.gateway.service.v1.entity.EntitiesRequest;
 import org.hypertrace.gateway.service.v1.entity.EntitiesResponse;
 import org.hypertrace.gateway.service.v1.entity.Entity;
@@ -132,7 +138,19 @@ public class EntityServiceTest extends AbstractGatewayServiceTest {
                     .setType(AttributeType.ATTRIBUTE)
                     .addSources(AttributeSource.EDS)
                     .setId("API.httpMethod")
-                    .build()));
+                    .build(),
+                "API.duration",
+                AttributeMetadata.newBuilder()
+                    .setScopeString(AttributeScope.API.name())
+                    .setId("API.duration")
+                    .setKey("duration")
+                    .setFqn("API.duration")
+                    .setValueKind(AttributeKind.TYPE_DOUBLE)
+                    .setType(AttributeType.METRIC)
+                    .addSources(AttributeSource.QS)
+                    .build()
+            )
+        );
 
     when(
             attributeMetadataProvider.getAttributeMetadata(
@@ -265,6 +283,8 @@ public class EntityServiceTest extends AbstractGatewayServiceTest {
             .addSelection(getExpressionFor("API.apiId", "API Id"))
             .addSelection(getExpressionFor("API.apiName", "API Name"))
             .addSelection(getExpressionFor("API.httpMethod", "API Http method"))
+            .addSelection(getFunctionExpressionFor(FunctionType.AVG, "API.duration", "duration"))
+            .addTimeAggregation(getTimeAggregationFor(getFunctionExpressionFor(FunctionType.AVG, "API.duration", "duration_ts")))
             .build();
     QueryRequest expectedQueryRequest = QueryRequest.newBuilder()
         .setFilter(
@@ -287,6 +307,73 @@ public class EntityServiceTest extends AbstractGatewayServiceTest {
                     .addRow(generateRowFor("apiId2", "/checkout"))
                     .build())
                 .iterator());
+
+    QueryRequest secondQueryRequest = QueryRequest.newBuilder()
+        .setFilter(Filter.newBuilder()
+            .setOperator(org.hypertrace.core.query.service.api.Operator.AND)
+            .addChildFilter(
+                QueryServiceRequestAndResponseUtils.createQsFilter(createQsColumnExpression("API.apiId"),
+                org.hypertrace.core.query.service.api.Operator.NEQ,
+                    QueryServiceRequestAndResponseUtils.createQsStringLiteralExpression("null"))
+            )
+            .addChildFilter(Filter.newBuilder().setOperator(org.hypertrace.core.query.service.api.Operator.IN)
+                .setLhs(createQsColumnExpression("API.apiId", "entityId0"))
+                .setRhs(QueryServiceRequestAndResponseUtils.createQsStringListLiteralExpression(List.of("apiId2", "apiId1")))
+            )
+            .addChildFilter(QueryServiceRequestAndResponseUtils.createQsTimeRangeFilter(
+                "API.startTime", entitiesRequest.getStartTimeMillis(), entitiesRequest.getEndTimeMillis()))
+        )
+        .addSelection(createQsColumnExpression("API.apiId"))
+        .addSelection(createQsAggregationExpression("AVG", "duration", "API.duration", "duration"))
+        .addGroupBy(createQsColumnExpression("API.apiId"))
+        .build();
+    when(queryServiceClient.executeQuery(secondQueryRequest, Map.of(), 500))
+        .thenReturn(
+            List.of(
+                ResultSetChunk.newBuilder()
+                    .setResultSetMetadata(
+                        generateResultSetMetadataFor("API.apiId", "duration"))
+                    .addRow(generateRowFor("apiId1", "10.0"))
+                    .addRow(generateRowFor("apiId2", "20.0"))
+                    .build())
+                .iterator());
+
+    long alignedStartTime =
+        QueryExpressionUtil.alignToPeriodBoundary(entitiesRequest.getStartTimeMillis(), 60, true);
+    long alignedEndTime =
+        QueryExpressionUtil.alignToPeriodBoundary(entitiesRequest.getEndTimeMillis(), 60, false);
+    QueryRequest thirdQueryRequest = QueryRequest.newBuilder()
+        .setFilter(Filter.newBuilder()
+            .setOperator(org.hypertrace.core.query.service.api.Operator.AND)
+            .addChildFilter(
+                QueryServiceRequestAndResponseUtils.createQsFilter(createQsColumnExpression("API.apiId"),
+                    org.hypertrace.core.query.service.api.Operator.NEQ,
+                    QueryServiceRequestAndResponseUtils.createQsStringLiteralExpression("null"))
+            )
+            .addChildFilter(Filter.newBuilder().setOperator(org.hypertrace.core.query.service.api.Operator.IN)
+                .setLhs(createQsColumnExpression("API.apiId", "entityId0"))
+                .setRhs(QueryServiceRequestAndResponseUtils.createQsStringListLiteralExpression(List.of("apiId2", "apiId1")))
+            )
+            .addChildFilter(QueryServiceRequestAndResponseUtils.createQsTimeRangeFilter(
+                "API.startTime", alignedStartTime, alignedEndTime))
+        )
+        .addSelection(createQsAggregationExpression("AVG", "duration_ts", "API.duration", "duration_ts"))
+        .addGroupBy(createQsColumnExpression("API.apiId"))
+        .addGroupBy(org.hypertrace.core.query.service.api.Expression.newBuilder().setFunction(
+            QueryRequestUtil.createTimeColumnGroupByFunction("API.startTime", 60)))
+        .setLimit(10000)
+        .build();
+    when(queryServiceClient.executeQuery(thirdQueryRequest, Map.of(), 500))
+        .thenReturn(
+            List.of(
+                ResultSetChunk.newBuilder()
+                    .setResultSetMetadata(
+                        generateResultSetMetadataFor("API.apiId", "timestamp", "duration_ts"))
+                    .addRow(generateRowFor("apiId1", String.valueOf(alignedStartTime), "10.0"))
+                    .addRow(generateRowFor("apiId2", String.valueOf(alignedStartTime), "20.0"))
+                    .build())
+                .iterator());
+
     EntitiesResponse response = entityService.getEntities(TENANT_ID, entitiesRequest, Map.of());
     Assertions.assertNotNull(response);
     Assertions.assertEquals(2, response.getTotal());
@@ -313,6 +400,21 @@ public class EntityServiceTest extends AbstractGatewayServiceTest {
     return Expression.newBuilder()
         .setColumnIdentifier(
             ColumnIdentifier.newBuilder().setColumnName(columnName).setAlias(alias))
+        .build();
+  }
+
+  private Expression getFunctionExpressionFor(FunctionType type, String columnName, String alias) {
+    return Expression.newBuilder().setFunction(
+        FunctionExpression.newBuilder().setFunction(type).setAlias(alias).addArguments(
+            Expression.newBuilder().setColumnIdentifier(
+                ColumnIdentifier.newBuilder().setColumnName(columnName).setAlias(alias))))
+        .build();
+  }
+
+  private TimeAggregation getTimeAggregationFor(Expression expression) {
+    return TimeAggregation.newBuilder()
+        .setAggregation(expression)
+        .setPeriod(Period.newBuilder().setUnit("SECONDS").setValue(60).build())
         .build();
   }
 

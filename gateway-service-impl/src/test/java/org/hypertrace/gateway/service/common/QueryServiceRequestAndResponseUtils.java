@@ -53,6 +53,16 @@ public class QueryServiceRequestAndResponseUtils {
     return resultSetChunkBuilder.build();
   }
 
+  public static Expression createQsAggregationExpression(String functionName, String functionAlias, String columnName, String columnAlias) {
+    return Expression.newBuilder()
+        .setFunction(Function.newBuilder()
+            .setFunctionName(functionName)
+            .setAlias(functionAlias)
+            .addArguments(createQsColumnExpression(columnName, columnAlias))
+        )
+        .build();
+  }
+
   public static Expression createQsAggregationExpression(String functionName, String columnName, String alias) {
     return Expression.newBuilder()
         .setFunction(Function.newBuilder()
@@ -99,6 +109,19 @@ public class QueryServiceRequestAndResponseUtils {
                     Value.newBuilder()
                         .setString(val)
                         .setValueType(ValueType.STRING)
+                )
+        )
+        .build();
+  }
+
+  public static Expression createQsStringListLiteralExpression(List<String> list) {
+    return Expression.newBuilder()
+        .setLiteral(
+            LiteralConstant.newBuilder()
+                .setValue(
+                    Value.newBuilder()
+                        .addAllStringArray(list)
+                        .setValueType(ValueType.STRING_ARRAY)
                 )
         )
         .build();
@@ -167,7 +190,7 @@ public class QueryServiceRequestAndResponseUtils {
         .build();
   }
 
-  private static Filter createQsTimeRangeFilter(String timestampColumnName, long startTime, long endTime) {
+  public static Filter createQsTimeRangeFilter(String timestampColumnName, long startTime, long endTime) {
     return Filter.newBuilder()
         .setOperator(Operator.AND)
         .addChildFilter(

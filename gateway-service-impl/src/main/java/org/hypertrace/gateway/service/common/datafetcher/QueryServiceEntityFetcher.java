@@ -16,9 +16,11 @@ import java.util.stream.Collectors;
 import java.util.stream.IntStream;
 import org.apache.commons.lang3.StringUtils;
 import org.hypertrace.core.attribute.service.v1.AttributeMetadata;
+import org.hypertrace.core.query.service.api.ColumnIdentifier;
 import org.hypertrace.core.query.service.api.ColumnMetadata;
 import org.hypertrace.core.query.service.api.Expression;
 import org.hypertrace.core.query.service.api.Filter;
+import org.hypertrace.core.query.service.api.LiteralConstant;
 import org.hypertrace.core.query.service.api.Operator;
 import org.hypertrace.core.query.service.api.QueryRequest;
 import org.hypertrace.core.query.service.api.ResultSetChunk;
@@ -408,9 +410,7 @@ public class QueryServiceEntityFetcher implements IEntityFetcher {
     // Pinot's GroupBy queries need at least one aggregate operation in the selection
     // so we add count(*) as a dummy placeholder.
     if (aggregates.isEmpty()) {
-      builder.addSelection(
-          QueryRequestUtil
-              .createCountByColumnSelection(entityIdAttributes.toArray(new String[]{})));
+      builder.addSelection(QueryRequestUtil.createCountByColumnSelection(entityIdAttributes.toArray(new String[]{})));
     }
     return builder;
   }
@@ -746,11 +746,22 @@ public class QueryServiceEntityFetcher implements IEntityFetcher {
 
     // Time range is a mandatory filter for query service, hence add it if it's not already present.
     if (!hasTimeRangeFilter(queryFilter, context.getTimestampAttributeId())) {
-      filterBuilder.addChildFilter(QueryRequestUtil.createBetweenTimesFilter(
-          context.getTimestampAttributeId(), entitiesRequest.getStartTimeMillis(), entitiesRequest.getEndTimeMillis()));
+      filterBuilder.addChildFilter(Filter.newBuilder().setOperator(Operator.AND)
+          .addChildFilter(createTimeFilter(context.getTimestampAttributeId(), Operator.GE, entitiesRequest.getStartTimeMillis()))
+          .addChildFilter(createTimeFilter(context.getTimestampAttributeId(), Operator.LT, entitiesRequest.getEndTimeMillis())));
     }
 
     return filterBuilder;
+  }
+
+  private static Filter createTimeFilter(String columnName, Operator op, long value) {
+    ColumnIdentifier.Builder timeColumn = ColumnIdentifier.newBuilder().setColumnName(columnName);
+    Expression.Builder lhs = Expression.newBuilder().setColumnIdentifier(timeColumn);
+    LiteralConstant.Builder constant = LiteralConstant.newBuilder().setValue(
+        org.hypertrace.core.query.service.api.Value.newBuilder()
+            .setValueType(org.hypertrace.core.query.service.api.ValueType.LONG).setLong(value));
+    Expression.Builder rhs = Expression.newBuilder().setLiteral(constant);
+    return Filter.newBuilder().setLhs(lhs).setOperator(op).setRhs(rhs).build();
   }
 
   private boolean hasTimeRangeFilter(Filter filter, String timestampAttributeId) {

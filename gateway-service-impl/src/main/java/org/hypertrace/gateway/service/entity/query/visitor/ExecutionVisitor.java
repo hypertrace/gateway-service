@@ -156,6 +156,9 @@ public class ExecutionVisitor implements Visitor<EntityFetcherResponse> {
     // Construct the filter from the child nodes result
     final Filter filter = constructFilterFromChildNodesResult(childNodeResponse);
 
+    // Set the total entities count in the execution context
+    executionContext.setTotal(childNodeResponse.getEntityKeyBuilderMap().size());
+
     // Select attributes, metric aggregations and time-series data from corresponding sources
     List<EntityFetcherResponse> resultMapList = new ArrayList<>();
     // if data are coming from multiple sources, then, get entities and aggregated metrics
