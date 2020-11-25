@@ -157,7 +157,6 @@ workflows:
             - dockerhub-read
           requires:
             - build
-            - integration-test
             - validate-charts
             - snyk-scan
           filters:
