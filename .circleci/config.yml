@@ -13,7 +13,7 @@ executors:
           password: $DOCKERHUB_PASSWORD
   helm:
     docker:
-      - image: hypertrace/helm-gcs-packager:0.1.1
+      - image: hypertrace/helm-gcs-packager:0.3.0
         auth:
           username: $DOCKERHUB_USERNAME
           password: $DOCKERHUB_PASSWORD
