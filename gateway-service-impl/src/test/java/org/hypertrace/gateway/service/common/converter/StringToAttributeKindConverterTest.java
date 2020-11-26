@@ -51,7 +51,7 @@ public class StringToAttributeKindConverterTest {
         ).getStringArrayList()
     );
 
-    assertEquals(List.of(),
+    assertEquals(List.of("label1"),
         converter.doConvert(
             "label1",
             AttributeKind.TYPE_STRING_ARRAY,
