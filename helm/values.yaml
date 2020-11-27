@@ -7,6 +7,7 @@ maxUnavailable: 0
 image:
   repository: hypertrace/gateway-service
   pullPolicy: IfNotPresent
+  tagOverride: ""
 
 imagePullSecrets: []
 
