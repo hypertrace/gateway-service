@@ -31,7 +31,7 @@ dependencies {
   implementation("org.hypertrace.core.serviceframework:platform-metrics:0.1.16")
 
   // Config
-  implementation("com.typesafe:config:1.4.0")
+  implementation("com.typesafe:config:1.4.1")
 
   // Common utilities
   implementation("org.apache.commons:commons-lang3:3.10")
@@ -44,8 +44,8 @@ dependencies {
   implementation("com.fasterxml.jackson.core:jackson-annotations:2.11.1")
   implementation("com.fasterxml.jackson.core:jackson-databind:2.11.1")
 
-  testImplementation("org.junit.jupiter:junit-jupiter:5.6.2")
-  testImplementation("org.mockito:mockito-core:3.3.3")
-  testImplementation("org.apache.logging.log4j:log4j-slf4j-impl:2.13.3")
+  testImplementation("org.junit.jupiter:junit-jupiter:5.7.0")
+  testImplementation("org.mockito:mockito-core:3.6.28")
+  testImplementation("org.apache.logging.log4j:log4j-slf4j-impl:2.14.0")
   testImplementation("io.grpc:grpc-netty:1.33.0")
 }
