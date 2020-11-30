@@ -38,3 +38,11 @@ application {
 tasks.run<JavaExec> {
   jvmArgs = listOf("-Dbootstrap.config.uri=file:${projectDir}/src/main/resources/configs", "-Dservice.name=${project.name}")
 }
+
+hypertraceDocker {
+  defaultImage {
+    javaApplication {
+      port.set(50072)
+    }
+  }
+}
