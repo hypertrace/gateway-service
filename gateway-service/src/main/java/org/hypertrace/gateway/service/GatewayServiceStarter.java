@@ -6,7 +6,6 @@ import java.io.IOException;
 import org.hypertrace.core.grpcutils.server.InterceptorUtil;
 import org.hypertrace.core.serviceframework.PlatformService;
 import org.hypertrace.core.serviceframework.config.ConfigClient;
-import org.hypertrace.gateway.service.entity.config.DomainObjectConfigs;
 import org.hypertrace.gateway.service.entity.config.InteractionConfigs;
 import org.hypertrace.gateway.service.entity.config.TimestampConfigs;
 import org.slf4j.Logger;
@@ -34,7 +33,7 @@ public class GatewayServiceStarter extends PlatformService {
             ? getAppConfig().getInt(SERVICE_PORT_CONFIG)
             : DEFAULT_PORT;
 
-    DomainObjectConfigs.init(getAppConfig());
+    //DomainObjectConfigs.init(getAppConfig());
     InteractionConfigs.init(getAppConfig());
     TimestampConfigs.init(getAppConfig());
 

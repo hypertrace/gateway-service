@@ -22,8 +22,8 @@ import org.hypertrace.gateway.service.common.AttributeMetadataProvider;
 import org.hypertrace.gateway.service.common.RequestContext;
 import org.hypertrace.gateway.service.common.config.ScopeFilterConfigs;
 import org.hypertrace.gateway.service.common.converters.QueryAndGatewayDtoConverter;
-import org.hypertrace.gateway.service.common.transformer.RequestPreProcessor;
-import org.hypertrace.gateway.service.common.transformer.ResponsePostProcessor;
+//import org.hypertrace.gateway.service.common.transformer.RequestPreProcessor;
+//import org.hypertrace.gateway.service.common.transformer.ResponsePostProcessor;
 import org.hypertrace.gateway.service.v1.common.OrderByExpression;
 import org.hypertrace.gateway.service.v1.trace.Trace;
 import org.hypertrace.gateway.service.v1.trace.TracesRequest;
@@ -51,8 +51,8 @@ public class TracesService {
   private final int queryServiceReqTimeout;
   private final AttributeMetadataProvider attributeMetadataProvider;
   private final TracesRequestValidator requestValidator;
-  private final RequestPreProcessor requestPreProcessor;
-  private final ResponsePostProcessor responsePostProcessor;
+//  private final RequestPreProcessor requestPreProcessor;
+//  private final ResponsePostProcessor responsePostProcessor;
 
   private Timer queryExecutionTimer;
 
@@ -64,9 +64,9 @@ public class TracesService {
     this.queryServiceReqTimeout = qsRequestTimeout;
     this.attributeMetadataProvider = attributeMetadataProvider;
     this.requestValidator = new TracesRequestValidator();
-    this.requestPreProcessor = new RequestPreProcessor(attributeMetadataProvider,
-        scopeFilterConfigs);
-    this.responsePostProcessor = new ResponsePostProcessor(attributeMetadataProvider);
+//    this.requestPreProcessor = new RequestPreProcessor(attributeMetadataProvider,
+//        scopeFilterConfigs);
+//    this.responsePostProcessor = new ResponsePostProcessor(attributeMetadataProvider);
     initMetrics();
   }
 
@@ -80,27 +80,27 @@ public class TracesService {
     try {
       requestValidator.validateScope(request);
 
-      TracesRequest preProcessedRequest = requestPreProcessor.transform(request, context);
+      //TracesRequest preProcessedRequest = requestPreProcessor.transform(request, context);
 
-      TraceScope scope = TraceScope.valueOf(preProcessedRequest.getScope());
+      TraceScope scope = TraceScope.valueOf(request.getScope());
       Map<String, AttributeMetadata> attributeMap =
-          attributeMetadataProvider.getAttributesMetadata(context, preProcessedRequest.getScope());
+          attributeMetadataProvider.getAttributesMetadata(context, request.getScope());
 
-      requestValidator.validate(preProcessedRequest, attributeMap);
+      requestValidator.validate(request, attributeMap);
 
       TracesResponse.Builder tracesResponseBuilder = TracesResponse.newBuilder();
       // filter traces
 
       Collection<Trace> filteredTraces =
-          filterTraces(context, preProcessedRequest, attributeMap, scope);
+          filterTraces(context, request, attributeMap, scope);
       tracesResponseBuilder.addAllTraces(filteredTraces);
       // Get the total API Traces in a separate query because this will scale better
       // for large data-set
-      tracesResponseBuilder.setTotal(getTotalFilteredTraces(context, preProcessedRequest, scope));
+      tracesResponseBuilder.setTotal(getTotalFilteredTraces(context, request, scope));
 
-      TracesResponse.Builder postProcessedResponse =
-          responsePostProcessor.transform(request, context, tracesResponseBuilder);
-      TracesResponse response = postProcessedResponse.build();
+//      TracesResponse.Builder postProcessedResponse =
+//          responsePostProcessor.transform(request, context, tracesResponseBuilder);
+      TracesResponse response = tracesResponseBuilder.build();
       if (LOG.isDebugEnabled()) {
         LOG.debug("Traces Service Response: {}", response);
       }

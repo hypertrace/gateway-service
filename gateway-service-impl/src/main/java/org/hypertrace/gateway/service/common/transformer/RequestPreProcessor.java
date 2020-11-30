@@ -137,7 +137,6 @@ public class RequestPreProcessor {
    * @return The modified request
    */
   public TracesRequest transform(TracesRequest originalRequest, RequestContext requestContext) {
-
     Map<String, List<DomainObjectMapping>> attributeIdMappings =
         AttributeMetadataUtil.getAttributeIdMappings(
             attributeMetadataProvider, requestContext, originalRequest.getScope());
@@ -204,7 +203,7 @@ public class RequestPreProcessor {
     return transformedExpressions;
   }
 
-  private List<Expression> getUniqueSelections(List<Expression> expressions) {
+  public static List<Expression> getUniqueSelections(List<Expression> expressions) {
     List<Expression> selections = new ArrayList<>();
     Set<String> uniqueColumnNames = new HashSet<>();
 

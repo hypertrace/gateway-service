@@ -12,6 +12,7 @@ import org.hypertrace.gateway.service.common.exp.UnknownScopeAndKeyForAttributeE
 import org.hypertrace.gateway.service.entity.config.DomainObjectConfig;
 import org.hypertrace.gateway.service.entity.config.DomainObjectConfigs;
 import org.hypertrace.gateway.service.entity.config.DomainObjectMapping;
+import org.hypertrace.gateway.service.entity.config.EntityIdColumnsConfigs;
 import org.hypertrace.gateway.service.entity.config.TimestampConfigs;
 
 /** Utility class for fetching AttributeMetadata */
@@ -93,21 +94,30 @@ public class AttributeMetadataUtil {
    */
   public static List<String> getIdAttributeIds(
       AttributeMetadataProvider attributeMetadataProvider,
+      EntityIdColumnsConfigs entityIdColumnsConfigs,
       RequestContext requestContext,
       String entityType) {
-    Optional<DomainObjectConfig> domainObjectConfig =
-        DomainObjectConfigs.getDomainObjectConfig(entityType);
-    if (domainObjectConfig.isEmpty() || domainObjectConfig.get().getIdAttributes() == null) {
-      return Collections.emptyList();
-    }
+//    Optional<DomainObjectConfig> domainObjectConfig =
+//        DomainObjectConfigs.getDomainObjectConfig(entityType);
+//    if (domainObjectConfig.isEmpty() || domainObjectConfig.get().getIdAttributes() == null) {
+//      return Collections.emptyList();
+//    }
+//
+//    // If DomainObjectConfig found for an entity type fetch the id attributes from it
+//    DomainObjectConfig objectConfig = domainObjectConfig.get();
+//    return objectConfig.getIdAttributes().stream()
+//        .map(
+//            domainObjectMapping ->
+//                attributeMetadataProvider.getAttributeMetadata(
+//                    requestContext, domainObjectMapping.getScope(), domainObjectMapping.getKey()))
+//        .filter(Optional::isPresent)
+//        .map(Optional::get)
+//        .map(AttributeMetadata::getId)
+//        .collect(Collectors.toList());
 
-    // If DomainObjectConfig found for an entity type fetch the id attributes from it
-    DomainObjectConfig objectConfig = domainObjectConfig.get();
-    return objectConfig.getIdAttributes().stream()
-        .map(
-            domainObjectMapping ->
-                attributeMetadataProvider.getAttributeMetadata(
-                    requestContext, domainObjectMapping.getScope(), domainObjectMapping.getKey()))
+    return entityIdColumnsConfigs.getIdKey(entityType)
+        .stream()
+        .map(idKey -> attributeMetadataProvider.getAttributeMetadata(requestContext, entityType, idKey))
         .filter(Optional::isPresent)
         .map(Optional::get)
         .map(AttributeMetadata::getId)
@@ -118,22 +128,29 @@ public class AttributeMetadataUtil {
       AttributeMetadataProvider attributeMetadataProvider,
       RequestContext requestContext,
       String attributeScope) {
-    Map<String, List<DomainObjectMapping>> attributeIdMappings =
-        getAttributeIdMappings(attributeMetadataProvider, requestContext, attributeScope);
+//    Map<String, List<DomainObjectMapping>> attributeIdMappings =
+//        getAttributeIdMappings(attributeMetadataProvider, requestContext, attributeScope);
+//
+//    String key = getStartTimeAttributeKeyName(attributeScope);
+//    AttributeMetadata timeId =
+//        attributeMetadataProvider
+//            .getAttributeMetadata(requestContext, attributeScope, key)
+//            .orElseThrow(() -> new UnknownScopeAndKeyForAttributeException(attributeScope, key));
+//    List<DomainObjectMapping> mappedIds = attributeIdMappings.get(timeId.getId());
+//    if (mappedIds != null && mappedIds.size() == 1) {
+//      return AttributeMetadataUtil.getAttributeMetadata(
+//              attributeMetadataProvider, requestContext, mappedIds.get(0))
+//          .getId();
+//    } else {
+//      return timeId.getId();
+//    }
 
     String key = getStartTimeAttributeKeyName(attributeScope);
     AttributeMetadata timeId =
         attributeMetadataProvider
             .getAttributeMetadata(requestContext, attributeScope, key)
             .orElseThrow(() -> new UnknownScopeAndKeyForAttributeException(attributeScope, key));
-    List<DomainObjectMapping> mappedIds = attributeIdMappings.get(timeId.getId());
-    if (mappedIds != null && mappedIds.size() == 1) {
-      return AttributeMetadataUtil.getAttributeMetadata(
-              attributeMetadataProvider, requestContext, mappedIds.get(0))
-          .getId();
-    } else {
-      return timeId.getId();
-    }
+    return timeId.getId();
   }
 
   private static String getStartTimeAttributeKeyName(String attributeScope) {

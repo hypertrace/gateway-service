@@ -16,6 +16,7 @@ import org.hypertrace.gateway.service.common.converters.EntityServiceAndGatewayS
 import org.hypertrace.gateway.service.common.util.AttributeMetadataUtil;
 import org.hypertrace.gateway.service.entity.EntitiesRequestContext;
 import org.hypertrace.gateway.service.entity.EntityKey;
+import org.hypertrace.gateway.service.entity.config.EntityIdColumnsConfigs;
 import org.hypertrace.gateway.service.v1.common.Expression.ValueCase;
 import org.hypertrace.gateway.service.v1.entity.EntitiesRequest;
 import org.hypertrace.gateway.service.v1.entity.Entity;
@@ -31,12 +32,15 @@ public class EntityDataServiceEntityFetcher implements IEntityFetcher {
 
   private final EntityQueryServiceClient entityQueryServiceClient;
   private final AttributeMetadataProvider attributeMetadataProvider;
+  private final EntityIdColumnsConfigs entityIdColumnsConfigs;
 
   public EntityDataServiceEntityFetcher(
       EntityQueryServiceClient entityQueryServiceClient,
-      AttributeMetadataProvider attributeMetadataProvider) {
+      AttributeMetadataProvider attributeMetadataProvider,
+      EntityIdColumnsConfigs entityIdColumnsConfigs) {
     this.entityQueryServiceClient = entityQueryServiceClient;
     this.attributeMetadataProvider = attributeMetadataProvider;
+    this.entityIdColumnsConfigs = entityIdColumnsConfigs;
   }
 
   // TODO: No limit, offset or orderby for this?
@@ -45,7 +49,7 @@ public class EntityDataServiceEntityFetcher implements IEntityFetcher {
       EntitiesRequestContext requestContext, EntitiesRequest entitiesRequest) {
     List<String> mappedEntityIdAttributeIds =
         AttributeMetadataUtil.getIdAttributeIds(
-            attributeMetadataProvider, requestContext, entitiesRequest.getEntityType());
+            attributeMetadataProvider, entityIdColumnsConfigs, requestContext, entitiesRequest.getEntityType());
     EntityQueryRequest.Builder builder =
         EntityQueryRequest.newBuilder()
             .setEntityType(entitiesRequest.getEntityType())
