@@ -75,19 +75,13 @@ public class AttributeMetadataUtil {
   /**
    *  This method will return an empty list for unsupported entities.
    *  If you need to support a new entity type, add it to the
-   *    application.conf eg. For SERVICE id the config under domainobject.config is
+   *    application.conf eg. For SERVICE id the config under entity.idcolumn.config is
    *      {
    *       scope = SERVICE
    *       key = id
-   *       primaryKey = true
-   *       mapping = [
-   *         {
-   *           scope = SERVICE
-   *           key = id
-   *         }
-   *       ]
    *     },
    * @param attributeMetadataProvider
+   * @param entityIdColumnsConfigs
    * @param requestContext
    * @param entityType
    * @return List of columns(AttributeMetadata ids) used to identify the id of the entity.
@@ -97,24 +91,6 @@ public class AttributeMetadataUtil {
       EntityIdColumnsConfigs entityIdColumnsConfigs,
       RequestContext requestContext,
       String entityType) {
-//    Optional<DomainObjectConfig> domainObjectConfig =
-//        DomainObjectConfigs.getDomainObjectConfig(entityType);
-//    if (domainObjectConfig.isEmpty() || domainObjectConfig.get().getIdAttributes() == null) {
-//      return Collections.emptyList();
-//    }
-//
-//    // If DomainObjectConfig found for an entity type fetch the id attributes from it
-//    DomainObjectConfig objectConfig = domainObjectConfig.get();
-//    return objectConfig.getIdAttributes().stream()
-//        .map(
-//            domainObjectMapping ->
-//                attributeMetadataProvider.getAttributeMetadata(
-//                    requestContext, domainObjectMapping.getScope(), domainObjectMapping.getKey()))
-//        .filter(Optional::isPresent)
-//        .map(Optional::get)
-//        .map(AttributeMetadata::getId)
-//        .collect(Collectors.toList());
-
     return entityIdColumnsConfigs.getIdKey(entityType)
         .stream()
         .map(idKey -> attributeMetadataProvider.getAttributeMetadata(requestContext, entityType, idKey))
@@ -128,23 +104,6 @@ public class AttributeMetadataUtil {
       AttributeMetadataProvider attributeMetadataProvider,
       RequestContext requestContext,
       String attributeScope) {
-//    Map<String, List<DomainObjectMapping>> attributeIdMappings =
-//        getAttributeIdMappings(attributeMetadataProvider, requestContext, attributeScope);
-//
-//    String key = getStartTimeAttributeKeyName(attributeScope);
-//    AttributeMetadata timeId =
-//        attributeMetadataProvider
-//            .getAttributeMetadata(requestContext, attributeScope, key)
-//            .orElseThrow(() -> new UnknownScopeAndKeyForAttributeException(attributeScope, key));
-//    List<DomainObjectMapping> mappedIds = attributeIdMappings.get(timeId.getId());
-//    if (mappedIds != null && mappedIds.size() == 1) {
-//      return AttributeMetadataUtil.getAttributeMetadata(
-//              attributeMetadataProvider, requestContext, mappedIds.get(0))
-//          .getId();
-//    } else {
-//      return timeId.getId();
-//    }
-
     String key = getStartTimeAttributeKeyName(attributeScope);
     AttributeMetadata timeId =
         attributeMetadataProvider

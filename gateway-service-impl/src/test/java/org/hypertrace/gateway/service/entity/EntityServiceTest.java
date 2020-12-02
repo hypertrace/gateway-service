@@ -36,7 +36,6 @@ import org.hypertrace.gateway.service.common.QueryServiceRequestAndResponseUtils
 import org.hypertrace.gateway.service.common.RequestContext;
 import org.hypertrace.gateway.service.common.config.ScopeFilterConfigs;
 import org.hypertrace.gateway.service.common.util.QueryExpressionUtil;
-import org.hypertrace.gateway.service.entity.config.DomainObjectConfigs;
 import org.hypertrace.gateway.service.entity.config.EntityIdColumnsConfigs;
 import org.hypertrace.gateway.service.entity.config.LogConfig;
 import org.hypertrace.gateway.service.v1.common.ColumnIdentifier;
@@ -66,7 +65,7 @@ public class EntityServiceTest extends AbstractGatewayServiceTest {
   @BeforeEach
   public void setup() {
     super.setup();
-    mockDomainObjectConfigs();
+    mockEntityIdColumnConfigs();
     queryServiceClient = Mockito.mock(QueryServiceClient.class);
     entityQueryServiceClient = Mockito.mock(EntityQueryServiceClient.class);
     attributeMetadataProvider = Mockito.mock(AttributeMetadataProvider.class);
@@ -75,21 +74,7 @@ public class EntityServiceTest extends AbstractGatewayServiceTest {
     when(logConfig.getQueryThresholdInMillis()).thenReturn(1500L);
   }
 
-  private void mockDomainObjectConfigs() {
-//    String domainObjectConfig =
-//        "domainobject.config = [\n"
-//            + "  {\n"
-//            + "    scope = API\n"
-//            + "    key = apiId\n"
-//            + "    primaryKey = true\n"
-//            + "    mapping = [\n"
-//            + "      {\n"
-//            + "        scope = API\n"
-//            + "        key = apiId\n"
-//            + "      }"
-//            + "    ]\n"
-//            + "  }\n"
-//            + "]";
+  private void mockEntityIdColumnConfigs() {
     String entityIdColumnConfigStr =
         "entity.idcolumn.config = [\n"
             + "  {\n"
@@ -99,9 +84,6 @@ public class EntityServiceTest extends AbstractGatewayServiceTest {
             + "]";
     Config config = ConfigFactory.parseString(entityIdColumnConfigStr);
     entityIdColumnsConfigs = EntityIdColumnsConfigs.fromConfig(config);
-
-//    Config config = ConfigFactory.parseString(domainObjectConfig);
-//    DomainObjectConfigs.init(config);
   }
 
   private void mock(AttributeMetadataProvider attributeMetadataProvider) {

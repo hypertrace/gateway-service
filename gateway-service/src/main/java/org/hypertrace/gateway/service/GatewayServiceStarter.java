@@ -33,7 +33,6 @@ public class GatewayServiceStarter extends PlatformService {
             ? getAppConfig().getInt(SERVICE_PORT_CONFIG)
             : DEFAULT_PORT;
 
-    //DomainObjectConfigs.init(getAppConfig());
     InteractionConfigs.init(getAppConfig());
     TimestampConfigs.init(getAppConfig());
 

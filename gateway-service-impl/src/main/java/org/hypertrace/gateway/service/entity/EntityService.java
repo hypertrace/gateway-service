@@ -22,8 +22,6 @@ import org.hypertrace.gateway.service.common.datafetcher.EntityDataServiceEntity
 import org.hypertrace.gateway.service.common.datafetcher.EntityFetcherResponse;
 import org.hypertrace.gateway.service.common.datafetcher.EntityInteractionsFetcher;
 import org.hypertrace.gateway.service.common.datafetcher.QueryServiceEntityFetcher;
-import org.hypertrace.gateway.service.common.transformer.RequestPreProcessor;
-import org.hypertrace.gateway.service.common.transformer.ResponsePostProcessor;
 import org.hypertrace.gateway.service.common.util.AttributeMetadataUtil;
 import org.hypertrace.gateway.service.common.util.TimeRangeFilterUtil;
 import org.hypertrace.gateway.service.entity.config.EntityIdColumnsConfigs;
@@ -57,9 +55,6 @@ public class EntityService {
   private final AttributeMetadataProvider metadataProvider;
   private final EntityIdColumnsConfigs entityIdColumnsConfigs;
   private final EntityInteractionsFetcher interactionsFetcher;
-  // Request/Response transformers
-//  private final RequestPreProcessor requestPreProcessor;
-//  private final ResponsePostProcessor responsePostProcessor;
   private final EdsEntityUpdater edsEntityUpdater;
   private final LogConfig logConfig;
   // Metrics
@@ -76,8 +71,6 @@ public class EntityService {
     this.metadataProvider = metadataProvider;
     this.entityIdColumnsConfigs = entityIdColumnsConfigs;
     this.interactionsFetcher = new EntityInteractionsFetcher(qsClient, qsRequestTimeout, metadataProvider);
-//    this.requestPreProcessor = new RequestPreProcessor(metadataProvider, scopeFilterConfigs);
-//    this.responsePostProcessor = new ResponsePostProcessor(metadataProvider);
     this.edsEntityUpdater = new EdsEntityUpdater(edsQueryServiceClient);
     this.logConfig = logConfig;
 
@@ -155,8 +148,6 @@ public class EntityService {
     EntitiesResponse.Builder responseBuilder =
         EntitiesResponse.newBuilder().setTotal(executionContext.getTotal());
     results.forEach(e -> responseBuilder.addEntity(e.build()));
-//    EntitiesResponse.Builder postProcessedResponse =
-//        responsePostProcessor.transform(originalRequest, entitiesRequestContext, responseBuilder);
 
     long queryExecutionTime = System.currentTimeMillis() - startTime;
     if (queryExecutionTime > logConfig.getQueryThresholdInMillis()) {

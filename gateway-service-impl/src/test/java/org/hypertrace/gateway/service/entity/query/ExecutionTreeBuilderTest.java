@@ -16,8 +16,6 @@ import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.when;
 
-import com.typesafe.config.Config;
-import com.typesafe.config.ConfigFactory;
 import java.util.Arrays;
 import java.util.HashMap;
 import java.util.HashSet;
@@ -568,7 +566,6 @@ public class ExecutionTreeBuilderTest {
 
   @Test
   public void test_build_selectAttributesWithEntityIdEqFilter_shouldNotCreateTotalNode() {
-    //mockDomainObjectConfigs();
     when(entityIdColumnsConfigs.getIdKey("API")).thenReturn(Optional.of("id"));
     EntitiesRequest entitiesRequest =
         EntitiesRequest.newBuilder()
@@ -787,25 +784,4 @@ public class ExecutionTreeBuilderTest {
     assertTrue(firstChild instanceof DataFetcherNode);
     assertEquals(AttributeSource.EDS.name(), ((DataFetcherNode) firstChild).getSource());
   }
-
-//  private void mockDomainObjectConfigs() {
-//    String domainObjectConfig =
-//        "domainobject.config = [\n"
-//            + "  {\n"
-//            + "    scope = API\n"
-//            + "    key = id\n"
-//            + "    primaryKey = true\n"
-//            + "    mapping = [\n"
-//            + "      {\n"
-//            + "        scope = API\n"
-//            + "        key = id\n"
-//            + "      }"
-//            + "    ]\n"
-//            + "  }\n"
-//            + "]";
-//
-//    Config config = ConfigFactory.parseString(domainObjectConfig);
-//    DomainObjectConfigs.init(config);
-//    when(entityIdColumnsConfigs.getIdKey("API")).thenReturn(Optional.of("id"));
-//  }
 }

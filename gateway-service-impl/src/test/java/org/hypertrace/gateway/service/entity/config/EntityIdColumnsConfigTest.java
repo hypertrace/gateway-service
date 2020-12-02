@@ -8,6 +8,7 @@ import java.util.Optional;
 import org.junit.jupiter.api.Test;
 
 public class EntityIdColumnsConfigTest {
+
   @Test
   public void testOnlyEntityIdColumnsConfigPresent() {
     String appConfigStr =

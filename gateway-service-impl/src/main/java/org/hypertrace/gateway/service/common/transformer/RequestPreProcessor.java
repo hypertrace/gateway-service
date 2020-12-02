@@ -137,6 +137,7 @@ public class RequestPreProcessor {
    * @return The modified request
    */
   public TracesRequest transform(TracesRequest originalRequest, RequestContext requestContext) {
+
     Map<String, List<DomainObjectMapping>> attributeIdMappings =
         AttributeMetadataUtil.getAttributeIdMappings(
             attributeMetadataProvider, requestContext, originalRequest.getScope());
