@@ -34,6 +34,7 @@ import org.hypertrace.gateway.service.common.AttributeMetadataProvider;
 import org.hypertrace.gateway.service.common.RequestContext;
 import org.hypertrace.gateway.service.entity.EntitiesRequestContext;
 import org.hypertrace.gateway.service.entity.config.DomainObjectConfigs;
+import org.hypertrace.gateway.service.entity.config.EntityIdColumnsConfigs;
 import org.hypertrace.gateway.service.entity.query.visitor.OptimizingVisitor;
 import org.hypertrace.gateway.service.v1.common.Filter;
 import org.hypertrace.gateway.service.v1.common.FunctionType;
@@ -98,6 +99,7 @@ public class ExecutionTreeBuilderTest {
       };
 
   @Mock private AttributeMetadataProvider attributeMetadataProvider;
+  @Mock private EntityIdColumnsConfigs entityIdColumnsConfigs;
 
   private static AttributeMetadata buildAttributeMetadataForSources(String attributeId,
                                                                     String scope,
@@ -114,6 +116,7 @@ public class ExecutionTreeBuilderTest {
   @BeforeEach
   public void setup() {
     attributeMetadataProvider = mock(AttributeMetadataProvider.class);
+    entityIdColumnsConfigs = mock(EntityIdColumnsConfigs.class);
     when(attributeMetadataProvider.getAttributesMetadata(
         any(RequestContext.class),
         eq(AttributeScope.API.name()))
@@ -138,7 +141,7 @@ public class ExecutionTreeBuilderTest {
     EntitiesRequestContext entitiesRequestContext =
         new EntitiesRequestContext(TENANT_ID, startTime, endTime, "API", "API.startTime", new HashMap<>());
     ExecutionContext executionContext =
-        ExecutionContext.from(attributeMetadataProvider, entitiesRequest, entitiesRequestContext);
+        ExecutionContext.from(attributeMetadataProvider, entityIdColumnsConfigs, entitiesRequest, entitiesRequestContext);
     return new ExecutionTreeBuilder(executionContext);
   }
 
@@ -403,7 +406,7 @@ public class ExecutionTreeBuilderTest {
       EntitiesRequestContext entitiesRequestContext =
           new EntitiesRequestContext(TENANT_ID, 0L, 10L, "API", "API.startTime", new HashMap<>());
       ExecutionContext executionContext =
-          ExecutionContext.from(attributeMetadataProvider, entitiesRequest, entitiesRequestContext);
+          ExecutionContext.from(attributeMetadataProvider, entityIdColumnsConfigs, entitiesRequest, entitiesRequestContext);
       ExecutionTreeBuilder executionTreeBuilder = new ExecutionTreeBuilder(executionContext);
       QueryNode executionTree = executionTreeBuilder.build();
       assertNotNull(executionTree);
@@ -435,7 +438,7 @@ public class ExecutionTreeBuilderTest {
       EntitiesRequestContext entitiesRequestContext =
           new EntitiesRequestContext(TENANT_ID, startTime, endTime, "API", "API.startTime", new HashMap<>());
       ExecutionContext executionContext =
-          ExecutionContext.from(attributeMetadataProvider, entitiesRequest, entitiesRequestContext);
+          ExecutionContext.from(attributeMetadataProvider, entityIdColumnsConfigs, entitiesRequest, entitiesRequestContext);
       ExecutionTreeBuilder executionTreeBuilder = new ExecutionTreeBuilder(executionContext);
       QueryNode executionTree = executionTreeBuilder.build();
       assertNotNull(executionTree);
@@ -467,7 +470,7 @@ public class ExecutionTreeBuilderTest {
     EntitiesRequestContext entitiesRequestContext =
         new EntitiesRequestContext(TENANT_ID, 0L, 10L, "API", "API.startTime", new HashMap<>());
     ExecutionContext executionContext =
-        ExecutionContext.from(attributeMetadataProvider, entitiesRequest, entitiesRequestContext);
+        ExecutionContext.from(attributeMetadataProvider, entityIdColumnsConfigs, entitiesRequest, entitiesRequestContext);
     ExecutionTreeBuilder executionTreeBuilder = new ExecutionTreeBuilder(executionContext);
     QueryNode executionTree = executionTreeBuilder.build();
     assertNotNull(executionTree);
@@ -499,7 +502,7 @@ public class ExecutionTreeBuilderTest {
     EntitiesRequestContext entitiesRequestContext =
         new EntitiesRequestContext(TENANT_ID, 0L, 10L, "API", "API.startTime", new HashMap<>());
     ExecutionContext executionContext =
-        ExecutionContext.from(attributeMetadataProvider, entitiesRequest, entitiesRequestContext);
+        ExecutionContext.from(attributeMetadataProvider, entityIdColumnsConfigs, entitiesRequest, entitiesRequestContext);
     ExecutionTreeBuilder executionTreeBuilder = new ExecutionTreeBuilder(executionContext);
     QueryNode executionTree = executionTreeBuilder.build();
     assertNotNull(executionTree);
@@ -549,7 +552,7 @@ public class ExecutionTreeBuilderTest {
     EntitiesRequestContext entitiesRequestContext =
         new EntitiesRequestContext(TENANT_ID, 0L, 10L, "API", "API.startTime", new HashMap<>());
     ExecutionContext executionContext =
-        ExecutionContext.from(attributeMetadataProvider, entitiesRequest, entitiesRequestContext);
+        ExecutionContext.from(attributeMetadataProvider, entityIdColumnsConfigs, entitiesRequest, entitiesRequestContext);
     ExecutionTreeBuilder executionTreeBuilder = new ExecutionTreeBuilder(executionContext);
     QueryNode executionTree = executionTreeBuilder.build();
     assertNotNull(executionTree);
@@ -565,7 +568,8 @@ public class ExecutionTreeBuilderTest {
 
   @Test
   public void test_build_selectAttributesWithEntityIdEqFilter_shouldNotCreateTotalNode() {
-    mockDomainObjectConfigs();
+    //mockDomainObjectConfigs();
+    when(entityIdColumnsConfigs.getIdKey("API")).thenReturn(Optional.of("id"));
     EntitiesRequest entitiesRequest =
         EntitiesRequest.newBuilder()
             .setEntityType(AttributeScope.API.name())
@@ -602,7 +606,7 @@ public class ExecutionTreeBuilderTest {
     EntitiesRequestContext entitiesRequestContext =
         new EntitiesRequestContext(TENANT_ID, 0L, 10L, "API", "API.startTime", new HashMap<>());
     ExecutionContext executionContext =
-        ExecutionContext.from(attributeMetadataProvider, entitiesRequest, entitiesRequestContext);
+        ExecutionContext.from(attributeMetadataProvider, entityIdColumnsConfigs, entitiesRequest, entitiesRequestContext);
     ExecutionTreeBuilder executionTreeBuilder = new ExecutionTreeBuilder(executionContext);
     QueryNode executionTree = executionTreeBuilder.build();
     assertNotNull(executionTree);
@@ -657,7 +661,7 @@ public class ExecutionTreeBuilderTest {
     EntitiesRequestContext entitiesRequestContext =
         new EntitiesRequestContext(TENANT_ID, 0L, 10L, "API", "API.startTime", new HashMap<>());
     ExecutionContext executionContext =
-        ExecutionContext.from(attributeMetadataProvider, entitiesRequest, entitiesRequestContext);
+        ExecutionContext.from(attributeMetadataProvider, entityIdColumnsConfigs, entitiesRequest, entitiesRequestContext);
     ExecutionTreeBuilder executionTreeBuilder = new ExecutionTreeBuilder(executionContext);
     QueryNode executionTree = executionTreeBuilder.build();
     assertNotNull(executionTree);
@@ -700,7 +704,7 @@ public class ExecutionTreeBuilderTest {
     EntitiesRequestContext entitiesRequestContext =
         new EntitiesRequestContext(TENANT_ID, 0L, 10L, "API", "API.startTime", new HashMap<>());
     ExecutionContext executionContext =
-        ExecutionContext.from(attributeMetadataProvider, entitiesRequest, entitiesRequestContext);
+        ExecutionContext.from(attributeMetadataProvider, entityIdColumnsConfigs, entitiesRequest, entitiesRequestContext);
     ExecutionTreeBuilder executionTreeBuilder = new ExecutionTreeBuilder(executionContext);
     QueryNode executionTree = executionTreeBuilder.build();
     assertNotNull(executionTree);
@@ -738,7 +742,7 @@ public class ExecutionTreeBuilderTest {
         new EntitiesRequestContext(TENANT_ID, entitiesRequest.getStartTimeMillis(), entitiesRequest.getEndTimeMillis(),
             "API", "API.startTime", new HashMap<>());
     ExecutionContext executionContext =
-        ExecutionContext.from(attributeMetadataProvider, entitiesRequest, entitiesRequestContext);
+        ExecutionContext.from(attributeMetadataProvider, entityIdColumnsConfigs, entitiesRequest, entitiesRequestContext);
     ExecutionTreeBuilder executionTreeBuilder = new ExecutionTreeBuilder(executionContext);
     QueryNode executionTree = executionTreeBuilder.build();
     assertNotNull(executionTree);
@@ -773,7 +777,7 @@ public class ExecutionTreeBuilderTest {
     EntitiesRequestContext entitiesRequestContext =
         new EntitiesRequestContext(TENANT_ID, 0L, 10L, "API", "API.startTime", new HashMap<>());
     ExecutionContext executionContext =
-        ExecutionContext.from(attributeMetadataProvider, entitiesRequest, entitiesRequestContext);
+        ExecutionContext.from(attributeMetadataProvider, entityIdColumnsConfigs, entitiesRequest, entitiesRequestContext);
     ExecutionTreeBuilder executionTreeBuilder = new ExecutionTreeBuilder(executionContext);
     QueryNode executionTree = executionTreeBuilder.build();
     assertNotNull(executionTree);
@@ -784,23 +788,24 @@ public class ExecutionTreeBuilderTest {
     assertEquals(AttributeSource.EDS.name(), ((DataFetcherNode) firstChild).getSource());
   }
 
-  private void mockDomainObjectConfigs() {
-    String domainObjectConfig =
-        "domainobject.config = [\n"
-            + "  {\n"
-            + "    scope = API\n"
-            + "    key = id\n"
-            + "    primaryKey = true\n"
-            + "    mapping = [\n"
-            + "      {\n"
-            + "        scope = API\n"
-            + "        key = id\n"
-            + "      }"
-            + "    ]\n"
-            + "  }\n"
-            + "]";
-
-    Config config = ConfigFactory.parseString(domainObjectConfig);
-    DomainObjectConfigs.init(config);
-  }
+//  private void mockDomainObjectConfigs() {
+//    String domainObjectConfig =
+//        "domainobject.config = [\n"
+//            + "  {\n"
+//            + "    scope = API\n"
+//            + "    key = id\n"
+//            + "    primaryKey = true\n"
+//            + "    mapping = [\n"
+//            + "      {\n"
+//            + "        scope = API\n"
+//            + "        key = id\n"
+//            + "      }"
+//            + "    ]\n"
+//            + "  }\n"
+//            + "]";
+//
+//    Config config = ConfigFactory.parseString(domainObjectConfig);
+//    DomainObjectConfigs.init(config);
+//    when(entityIdColumnsConfigs.getIdKey("API")).thenReturn(Optional.of("id"));
+//  }
 }

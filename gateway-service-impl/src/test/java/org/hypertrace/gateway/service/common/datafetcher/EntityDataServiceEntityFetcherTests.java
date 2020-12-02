@@ -7,6 +7,7 @@ import java.util.Map;
 import org.hypertrace.entity.query.service.client.EntityQueryServiceClient;
 import org.hypertrace.gateway.service.common.AttributeMetadataProvider;
 import org.hypertrace.gateway.service.entity.EntitiesRequestContext;
+import org.hypertrace.gateway.service.entity.config.EntityIdColumnsConfigs;
 import org.hypertrace.gateway.service.v1.entity.EntitiesRequest;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -19,8 +20,9 @@ public class EntityDataServiceEntityFetcherTests {
   public void setup() {
     EntityQueryServiceClient entityQueryServiceClient = mock(EntityQueryServiceClient.class);
     AttributeMetadataProvider attributeMetadataProvider = mock(AttributeMetadataProvider.class);
+    EntityIdColumnsConfigs entityIdColumnsConfigs = mock(EntityIdColumnsConfigs.class);
     entityDataServiceEntityFetcher =
-        new EntityDataServiceEntityFetcher(entityQueryServiceClient, attributeMetadataProvider);
+        new EntityDataServiceEntityFetcher(entityQueryServiceClient, attributeMetadataProvider, entityIdColumnsConfigs);
   }
 
   @Test

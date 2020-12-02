@@ -41,6 +41,7 @@ import org.hypertrace.gateway.service.common.RequestContext;
 import org.hypertrace.gateway.service.entity.EntitiesRequestContext;
 import org.hypertrace.gateway.service.entity.EntityKey;
 import org.hypertrace.gateway.service.entity.config.DomainObjectConfigs;
+import org.hypertrace.gateway.service.entity.config.EntityIdColumnsConfigs;
 import org.hypertrace.gateway.service.v1.common.Filter;
 import org.hypertrace.gateway.service.v1.common.FunctionType;
 import org.hypertrace.gateway.service.v1.common.OrderByExpression;
@@ -64,6 +65,7 @@ public class QueryServiceEntityFetcherTests {
 
   private QueryServiceClient queryServiceClient;
   private AttributeMetadataProvider attributeMetadataProvider;
+  private EntityIdColumnsConfigs entityIdColumnsConfigs;
   private QueryServiceEntityFetcher queryServiceEntityFetcher;
 
   @BeforeEach
@@ -71,9 +73,13 @@ public class QueryServiceEntityFetcherTests {
     queryServiceClient = mock(QueryServiceClient.class);
     attributeMetadataProvider = mock(AttributeMetadataProvider.class);
     mockAttributeMetadataProvider(AttributeScope.API.name());
-    mockDomainObjectConfigs();
+
+    entityIdColumnsConfigs = mock(EntityIdColumnsConfigs.class);
+    when(entityIdColumnsConfigs.getIdKey("API")).thenReturn(Optional.of("id"));
+
+    //mockDomainObjectConfigs();
     queryServiceEntityFetcher = new QueryServiceEntityFetcher(queryServiceClient, 500,
-        attributeMetadataProvider);
+        attributeMetadataProvider, entityIdColumnsConfigs);
   }
 
   @AfterEach
@@ -278,23 +284,23 @@ public class QueryServiceEntityFetcherTests {
     when(attributeMetadataProvider.getAttributeMetadata(any(RequestContext.class), eq(attributeScope), eq("startTime"))).thenReturn(Optional.of(startTimeAttributeMetadata));
   }
 
-  private void mockDomainObjectConfigs() {
-    String domainObjectConfig =
-        "domainobject.config = [\n"
-            + "  {\n"
-            + "    scope = API\n"
-            + "    key = id\n"
-            + "    primaryKey = true\n"
-            + "    mapping = [\n"
-            + "      {\n"
-            + "        scope = API\n"
-            + "        key = id\n"
-            + "      }"
-            + "    ]\n"
-            + "  }\n"
-            + "]";
-
-    Config config = ConfigFactory.parseString(domainObjectConfig);
-    DomainObjectConfigs.init(config);
-  }
+//  private void mockDomainObjectConfigs() {
+//    String domainObjectConfig =
+//        "domainobject.config = [\n"
+//            + "  {\n"
+//            + "    scope = API\n"
+//            + "    key = id\n"
+//            + "    primaryKey = true\n"
+//            + "    mapping = [\n"
+//            + "      {\n"
+//            + "        scope = API\n"
+//            + "        key = id\n"
+//            + "      }"
+//            + "    ]\n"
+//            + "  }\n"
+//            + "]";
+//
+//    Config config = ConfigFactory.parseString(domainObjectConfig);
+//    DomainObjectConfigs.init(config);
+//  }
 }

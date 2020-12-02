@@ -31,15 +31,15 @@ public class AbstractGatewayServiceTest {
 
     Config fileConfig = ConfigFactory.parseFile(new File(configFilePath));
     config = ConfigFactory.load(fileConfig);
-    DomainObjectConfigs.init(config);
+    //DomainObjectConfigs.init(config);
     InteractionConfigs.init(config);
     TimestampConfigs.init(config);
   }
 
-  @AfterEach
-  public void teardown() {
-    DomainObjectConfigs.clearDomainObjectConfigs();
-  }
+//  @AfterEach
+//  public void teardown() {
+//    DomainObjectConfigs.clearDomainObjectConfigs();
+//  }
 
   public Config getConfig() {
     return config;

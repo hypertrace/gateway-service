@@ -25,7 +25,7 @@ public class EntityIdColumnsConfigs {
     }
   }
 
-  public static EntityIdColumnsConfigs fromConfigList(List<? extends Config> configs) {
+  private static EntityIdColumnsConfigs fromConfigList(List<? extends Config> configs) {
     Map<String, String> scopeToKeyMap = new HashMap<>();
     EntityIdColumnsConfigs entityIdColumnsConfigs = new EntityIdColumnsConfigs(scopeToKeyMap);
     for (Config scopeConfig : configs) {
