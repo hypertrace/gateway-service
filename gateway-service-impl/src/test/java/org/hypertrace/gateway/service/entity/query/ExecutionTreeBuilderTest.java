@@ -614,9 +614,6 @@ public class ExecutionTreeBuilderTest {
 
     // Assert that total is set to 1
     assertEquals(1, executionContext.getTotal());
-
-    // Clear domain object configs
-    //DomainObjectConfigs.clearDomainObjectConfigs();
   }
 
   @Test

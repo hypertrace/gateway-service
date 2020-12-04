@@ -1,76 +1,18 @@
 package org.hypertrace.gateway.service.common.util;
 
-import java.util.Collections;
 import java.util.List;
-import java.util.Map;
 import java.util.Optional;
 import java.util.stream.Collectors;
 import org.hypertrace.core.attribute.service.v1.AttributeMetadata;
 import org.hypertrace.gateway.service.common.AttributeMetadataProvider;
 import org.hypertrace.gateway.service.common.RequestContext;
 import org.hypertrace.gateway.service.common.exp.UnknownScopeAndKeyForAttributeException;
-import org.hypertrace.gateway.service.entity.config.DomainObjectConfig;
-import org.hypertrace.gateway.service.entity.config.DomainObjectConfigs;
-import org.hypertrace.gateway.service.entity.config.DomainObjectMapping;
 import org.hypertrace.gateway.service.entity.config.EntityIdColumnsConfigs;
 import org.hypertrace.gateway.service.entity.config.TimestampConfigs;
 
 /** Utility class for fetching AttributeMetadata */
 public class AttributeMetadataUtil {
   private static final String START_TIME_ATTRIBUTE_KEY = "startTime";
-
-  /**
-   * Returns a map of domain object id to DomainObjectMapping with their filter
-   * {
-   *   scope = EVENT
-   *   key = id
-   *   mapping = [
-   *     {
-   *       scope = SERVICE
-   *       key = id
-   *     },
-   *     {
-   *       scope = API
-   *       key = isExternal
-   *       filter {
-   *         value = true
-   *       }
-   *     }
-   *   ]
-   * }
-   *
-   * will return
-   * EVENT.id -> [
-   *    <"SERVICE", "id", null>,
-   *    <"API", "isExternal", DomainObjectFilter{value = true}>
-   * ]
-   */
-//  public static Map<String, List<DomainObjectMapping>> getAttributeIdMappings(
-//      AttributeMetadataProvider attributeMetadataProvider,
-//      RequestContext requestContext,
-//      String entityType) {
-//    Optional<DomainObjectConfig> domainObjectConfig =
-//        DomainObjectConfigs.getDomainObjectConfig(entityType);
-//
-//    // Return a map of source attribute id to target attribute ids by mapping the attribute keys in
-//    // DomainObjectConfig to its corresponding id
-//    return domainObjectConfig
-//        .map(
-//            objectConfig ->
-//                objectConfig.getAttributeMappings().entrySet().stream()
-//                    .collect(
-//                        Collectors.toMap(
-//                            entry ->
-//                                getAttributeMetadata(
-//                                        attributeMetadataProvider,
-//                                        requestContext,
-//                                        entry.getKey().getScope(),
-//                                        entry.getKey().getKey())
-//                                    .getId(),
-//                            Map.Entry::getValue)))
-//        // Return empty map if DomainObjectConfig doesn't exist for the entityType
-//        .orElse(Collections.emptyMap());
-//  }
 
   /**
    *  This method will return an empty list for unsupported entities.
@@ -115,14 +57,6 @@ public class AttributeMetadataUtil {
   private static String getStartTimeAttributeKeyName(String attributeScope) {
     String timestamp = TimestampConfigs.getTimestampColumn(attributeScope);
     return timestamp == null ? START_TIME_ATTRIBUTE_KEY : timestamp;
-  }
-
-  public static AttributeMetadata getAttributeMetadata(
-      AttributeMetadataProvider attributeMetadataProvider,
-      RequestContext requestContext,
-      DomainObjectMapping mapping) {
-    return getAttributeMetadata(
-        attributeMetadataProvider, requestContext, mapping.getScope(), mapping.getKey());
   }
 
   private static AttributeMetadata getAttributeMetadata(
