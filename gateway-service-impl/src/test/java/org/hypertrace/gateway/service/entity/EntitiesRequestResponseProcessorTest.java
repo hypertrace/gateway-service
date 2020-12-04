@@ -19,7 +19,6 @@ import org.hypertrace.gateway.service.common.config.ScopeFilterConfigs;
 import org.hypertrace.gateway.service.common.transformer.RequestPreProcessor;
 import org.hypertrace.gateway.service.common.transformer.ResponsePostProcessor;
 import org.hypertrace.gateway.service.common.util.QueryExpressionUtil;
-import org.hypertrace.gateway.service.entity.config.DomainObjectConfigs;
 import org.hypertrace.gateway.service.v1.common.ColumnIdentifier;
 import org.hypertrace.gateway.service.v1.common.Expression;
 import org.hypertrace.gateway.service.v1.common.Filter;
@@ -32,7 +31,6 @@ import org.hypertrace.gateway.service.v1.common.ValueType;
 import org.hypertrace.gateway.service.v1.entity.EntitiesRequest;
 import org.hypertrace.gateway.service.v1.entity.EntitiesResponse;
 import org.hypertrace.gateway.service.v1.entity.Entity;
-import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -61,11 +59,6 @@ public class EntitiesRequestResponseProcessorTest {
     requestPreProcessor = new RequestPreProcessor(attributeMetadataProvider,
         new ScopeFilterConfigs(ConfigFactory.empty()));
     responsePostProcessor = new ResponsePostProcessor(attributeMetadataProvider);
-  }
-
-  @AfterEach
-  public void teardown() {
-    DomainObjectConfigs.clearDomainObjectConfigs();
   }
 
   @Test

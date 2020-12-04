@@ -38,7 +38,6 @@ import org.hypertrace.gateway.service.common.EntitiesRequestAndResponseUtils;
 import org.hypertrace.gateway.service.common.RequestContext;
 import org.hypertrace.gateway.service.entity.EntitiesRequestContext;
 import org.hypertrace.gateway.service.entity.EntityKey;
-import org.hypertrace.gateway.service.entity.config.DomainObjectConfigs;
 import org.hypertrace.gateway.service.entity.config.EntityIdColumnsConfigs;
 import org.hypertrace.gateway.service.v1.common.Filter;
 import org.hypertrace.gateway.service.v1.common.FunctionType;
@@ -46,7 +45,6 @@ import org.hypertrace.gateway.service.v1.common.OrderByExpression;
 import org.hypertrace.gateway.service.v1.entity.EntitiesRequest;
 import org.hypertrace.gateway.service.v1.entity.Entity;
 import org.hypertrace.gateway.service.v1.entity.Entity.Builder;
-import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 
@@ -77,11 +75,6 @@ public class QueryServiceEntityFetcherTests {
 
     queryServiceEntityFetcher = new QueryServiceEntityFetcher(queryServiceClient, 500,
         attributeMetadataProvider, entityIdColumnsConfigs);
-  }
-
-  @AfterEach
-  public void teardown() {
-    DomainObjectConfigs.clearDomainObjectConfigs();
   }
 
   @Test

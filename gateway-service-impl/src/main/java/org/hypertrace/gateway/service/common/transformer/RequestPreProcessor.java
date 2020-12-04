@@ -134,6 +134,36 @@ public class RequestPreProcessor {
    * This is called once before processing the request.
    *
    * @param originalRequest The original request received
+   * @return The modified request with any additional filters depending on the scope config
+   */
+  public EntitiesRequest transformFilter(
+      EntitiesRequest originalRequest, EntitiesRequestContext context) {
+    EntitiesRequest.Builder entitiesRequestBuilder = EntitiesRequest.newBuilder(originalRequest);
+    // Convert the time range into a filter and set it on the request so that all downstream
+    // components needn't treat it specially.
+    Filter filter = TimeRangeFilterUtil.addTimeRangeFilter(
+        context.getTimestampAttributeId(), originalRequest.getFilter(),
+        originalRequest.getStartTimeMillis(), originalRequest.getEndTimeMillis());
+
+    // Add any additional filters that maybe defined in the scope filters config
+    filter = scopeFilterConfigs.createScopeFilter(
+        originalRequest.getEntityType(),
+        filter,
+        attributeMetadataProvider,
+        context);
+
+    return entitiesRequestBuilder
+        .clearSelection()
+        .setFilter(filter)
+        // Clean out duplicate columns in selections
+        .addAllSelection(getUniqueSelections(originalRequest.getSelectionList()))
+        .build();
+  }
+
+  /**
+   * This is called once before processing the request.
+   *
+   * @param originalRequest The original request received
    * @return The modified request
    */
   public TracesRequest transform(TracesRequest originalRequest, RequestContext requestContext) {
@@ -178,6 +208,27 @@ public class RequestPreProcessor {
     return tracesRequestBuilder.build();
   }
 
+  /**
+   * This is called once before processing the request.
+   *
+   * @param originalRequest The original request received
+   * @return The modified request with any additional filters in scope filters config
+   */
+  public TracesRequest transformFilter(TracesRequest originalRequest, RequestContext requestContext) {
+    TracesRequest.Builder tracesRequestBuilder = TracesRequest.newBuilder(originalRequest);
+
+    // Add any additional filters that maybe defined in the scope filters config
+    TraceScope scope = TraceScope.valueOf(originalRequest.getScope());
+    Filter filter = scopeFilterConfigs.createScopeFilter(
+        scope.name(),
+        originalRequest.getFilter(),
+        attributeMetadataProvider,
+        requestContext);
+    tracesRequestBuilder.setFilter(filter);
+
+    return tracesRequestBuilder.build();
+  }
+
   private boolean doesExpressionNeedRemapping(
       Map<String, List<DomainObjectMapping>> attributeIdMappings, Expression expression) {
     return expression.getValueCase() == ValueCase.COLUMNIDENTIFIER
@@ -204,7 +255,7 @@ public class RequestPreProcessor {
     return transformedExpressions;
   }
 
-  public static List<Expression> getUniqueSelections(List<Expression> expressions) {
+  private List<Expression> getUniqueSelections(List<Expression> expressions) {
     List<Expression> selections = new ArrayList<>();
     Set<String> uniqueColumnNames = new HashSet<>();
 

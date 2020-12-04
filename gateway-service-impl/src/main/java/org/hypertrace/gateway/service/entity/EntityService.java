@@ -1,7 +1,5 @@
 package org.hypertrace.gateway.service.entity;
 
-import static org.hypertrace.gateway.service.common.transformer.RequestPreProcessor.getUniqueSelections;
-
 import com.codahale.metrics.Timer;
 import com.google.common.base.Preconditions;
 import java.util.ArrayList;
@@ -22,8 +20,8 @@ import org.hypertrace.gateway.service.common.datafetcher.EntityDataServiceEntity
 import org.hypertrace.gateway.service.common.datafetcher.EntityFetcherResponse;
 import org.hypertrace.gateway.service.common.datafetcher.EntityInteractionsFetcher;
 import org.hypertrace.gateway.service.common.datafetcher.QueryServiceEntityFetcher;
+import org.hypertrace.gateway.service.common.transformer.RequestPreProcessor;
 import org.hypertrace.gateway.service.common.util.AttributeMetadataUtil;
-import org.hypertrace.gateway.service.common.util.TimeRangeFilterUtil;
 import org.hypertrace.gateway.service.entity.config.EntityIdColumnsConfigs;
 import org.hypertrace.gateway.service.entity.config.LogConfig;
 import org.hypertrace.gateway.service.entity.query.ExecutionContext;
@@ -32,7 +30,6 @@ import org.hypertrace.gateway.service.entity.query.QueryNode;
 import org.hypertrace.gateway.service.entity.query.visitor.ExecutionVisitor;
 import org.hypertrace.gateway.service.entity.update.EdsEntityUpdater;
 import org.hypertrace.gateway.service.entity.update.UpdateExecutionContext;
-import org.hypertrace.gateway.service.v1.common.Filter;
 import org.hypertrace.gateway.service.v1.entity.EntitiesRequest;
 import org.hypertrace.gateway.service.v1.entity.EntitiesResponse;
 import org.hypertrace.gateway.service.v1.entity.Entity.Builder;
@@ -55,6 +52,7 @@ public class EntityService {
   private final AttributeMetadataProvider metadataProvider;
   private final EntityIdColumnsConfigs entityIdColumnsConfigs;
   private final EntityInteractionsFetcher interactionsFetcher;
+  private final RequestPreProcessor requestPreProcessor;
   private final EdsEntityUpdater edsEntityUpdater;
   private final LogConfig logConfig;
   // Metrics
@@ -71,6 +69,7 @@ public class EntityService {
     this.metadataProvider = metadataProvider;
     this.entityIdColumnsConfigs = entityIdColumnsConfigs;
     this.interactionsFetcher = new EntityInteractionsFetcher(qsClient, qsRequestTimeout, metadataProvider);
+    this.requestPreProcessor = new RequestPreProcessor(metadataProvider, scopeFilterConfigs);
     this.edsEntityUpdater = new EdsEntityUpdater(edsQueryServiceClient);
     this.logConfig = logConfig;
 
@@ -123,7 +122,7 @@ public class EntityService {
             originalRequest.getEntityType(),
             timestampAttributeId,
             requestHeaders);
-    EntitiesRequest preProcessedRequest = addTimestampFilterToRequest(originalRequest, entitiesRequestContext);
+    EntitiesRequest preProcessedRequest = requestPreProcessor.transformFilter(originalRequest, entitiesRequestContext);
 
     ExecutionContext executionContext =
         ExecutionContext.from(metadataProvider, entityIdColumnsConfigs, preProcessedRequest, entitiesRequestContext);
@@ -159,23 +158,6 @@ public class EntityService {
 
     queryExecutionTimer.update(queryExecutionTime, TimeUnit.MILLISECONDS);
     return responseBuilder.build();
-  }
-
-  private EntitiesRequest addTimestampFilterToRequest(
-      EntitiesRequest originalRequest, EntitiesRequestContext context) {
-    EntitiesRequest.Builder entitiesRequestBuilder = EntitiesRequest.newBuilder(originalRequest);
-
-    // Convert the time range into a filter and set it on the request so that all downstream
-    // components needn't treat it specially.
-    Filter filter = TimeRangeFilterUtil.addTimeRangeFilter(
-        context.getTimestampAttributeId(), originalRequest.getFilter(),
-        originalRequest.getStartTimeMillis(), originalRequest.getEndTimeMillis());
-    return entitiesRequestBuilder
-        .clearSelection()
-        .setFilter(filter)
-        // Clean out duplicate columns in selections
-        .addAllSelection(getUniqueSelections(originalRequest.getSelectionList()))
-        .build();
   }
 
   public UpdateEntityResponse updateEntity(
