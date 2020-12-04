@@ -23,6 +23,7 @@ import org.hypertrace.gateway.service.v1.trace.Trace;
 import org.hypertrace.gateway.service.v1.trace.TracesRequest;
 import org.hypertrace.gateway.service.v1.trace.TracesResponse;
 
+// TODO: Nuke class
 /**
  * Post processes the {@link EntitiesResponse} before sending the response
  *
@@ -45,44 +46,44 @@ public class ResponsePostProcessor {
    * @param request The original request received.
    * @param responseBuilder Final response that is about to be sent.
    */
-  public EntitiesResponse.Builder transform(
-      EntitiesRequest request,
-      EntitiesRequestContext entitiesRequestContext,
-      EntitiesResponse.Builder responseBuilder) {
-    List<Builder> entityBuilders = responseBuilder.getEntityBuilderList();
-
-    Map<String, List<DomainObjectMapping>> attributeIdMappings =
-        AttributeMetadataUtil.getAttributeIdMappings(
-            attributeMetadataProvider, entitiesRequestContext, request.getEntityType());
-
-    // Get all selected columns that were transformed and reconstruct a single column from the
-    // mapped columns
-    Set<String> selectedColumns = getSelectedColumns(request.getSelectionList());
-
-    Set<String> transformedColumns =
-        Sets.intersection(selectedColumns, attributeIdMappings.keySet());
-    for (String column : transformedColumns) {
-      entityBuilders.forEach(
-          entity ->
-              entity.putAttribute(
-                  column,
-                  buildEntityKeyValueForTransformedColumn(
-                      attributeIdMappings,
-                      column,
-                      entity.getAttributeMap(),
-                      entitiesRequestContext)));
-    }
-
-    // Remove any other attribute columns that were not part of the selection, but are present in
-    // the
-    // response because they were added by the PreProcessor
-    Set<String> transformedColumnSelections =
-        getTransformedColumns(attributeIdMappings, transformedColumns, entitiesRequestContext);
-    Set<String> attributesToRemove = Sets.difference(transformedColumnSelections, selectedColumns);
-    entityBuilders.forEach(entity -> attributesToRemove.forEach(entity::removeAttribute));
-
-    return responseBuilder;
-  }
+//  public EntitiesResponse.Builder transform(
+//      EntitiesRequest request,
+//      EntitiesRequestContext entitiesRequestContext,
+//      EntitiesResponse.Builder responseBuilder) {
+//    List<Builder> entityBuilders = responseBuilder.getEntityBuilderList();
+//
+//    Map<String, List<DomainObjectMapping>> attributeIdMappings =
+//        AttributeMetadataUtil.getAttributeIdMappings(
+//            attributeMetadataProvider, entitiesRequestContext, request.getEntityType());
+//
+//    // Get all selected columns that were transformed and reconstruct a single column from the
+//    // mapped columns
+//    Set<String> selectedColumns = getSelectedColumns(request.getSelectionList());
+//
+//    Set<String> transformedColumns =
+//        Sets.intersection(selectedColumns, attributeIdMappings.keySet());
+//    for (String column : transformedColumns) {
+//      entityBuilders.forEach(
+//          entity ->
+//              entity.putAttribute(
+//                  column,
+//                  buildEntityKeyValueForTransformedColumn(
+//                      attributeIdMappings,
+//                      column,
+//                      entity.getAttributeMap(),
+//                      entitiesRequestContext)));
+//    }
+//
+//    // Remove any other attribute columns that were not part of the selection, but are present in
+//    // the
+//    // response because they were added by the PreProcessor
+//    Set<String> transformedColumnSelections =
+//        getTransformedColumns(attributeIdMappings, transformedColumns, entitiesRequestContext);
+//    Set<String> attributesToRemove = Sets.difference(transformedColumnSelections, selectedColumns);
+//    entityBuilders.forEach(entity -> attributesToRemove.forEach(entity::removeAttribute));
+//
+//    return responseBuilder;
+//  }
 
   /**
    * This is called once the response is almost ready after applying the limits, etc. Any post
@@ -92,41 +93,41 @@ public class ResponsePostProcessor {
    * @param request The original request received.
    * @param responseBuilder Final response that is about to be sent.
    */
-  public TracesResponse.Builder transform(
-      TracesRequest request,
-      RequestContext requestContext,
-      TracesResponse.Builder responseBuilder) {
-    List<Trace.Builder> tracesBuilders = responseBuilder.getTracesBuilderList();
-
-    Map<String, List<DomainObjectMapping>> attributeIdMappings =
-        AttributeMetadataUtil.getAttributeIdMappings(
-            attributeMetadataProvider, requestContext, request.getScope());
-
-    // Get all selected columns that were transformed and reconstruct a single column from the
-    // mapped columns
-    Set<String> selectedColumns = getSelectedColumns(request.getSelectionList());
-
-    Set<String> transformedColumns =
-        Sets.intersection(selectedColumns, attributeIdMappings.keySet());
-    for (String column : transformedColumns) {
-      tracesBuilders.forEach(
-          trace ->
-              trace.putAttributes(
-                  column,
-                  buildEntityKeyValueForTransformedColumn(
-                      attributeIdMappings, column, trace.getAttributesMap(), requestContext)));
-    }
-
-    // Remove any other attribute columns that were not part of the selection, but are present in
-    // the
-    // response because they were added by the PreProcessor
-    Set<String> transformedColumnSelections =
-        getTransformedColumns(attributeIdMappings, transformedColumns, requestContext);
-    Set<String> attributesToRemove = Sets.difference(transformedColumnSelections, selectedColumns);
-    tracesBuilders.forEach(trace -> attributesToRemove.forEach(trace::removeAttributes));
-
-    return responseBuilder;
-  }
+//  public TracesResponse.Builder transform(
+//      TracesRequest request,
+//      RequestContext requestContext,
+//      TracesResponse.Builder responseBuilder) {
+//    List<Trace.Builder> tracesBuilders = responseBuilder.getTracesBuilderList();
+//
+//    Map<String, List<DomainObjectMapping>> attributeIdMappings =
+//        AttributeMetadataUtil.getAttributeIdMappings(
+//            attributeMetadataProvider, requestContext, request.getScope());
+//
+//    // Get all selected columns that were transformed and reconstruct a single column from the
+//    // mapped columns
+//    Set<String> selectedColumns = getSelectedColumns(request.getSelectionList());
+//
+//    Set<String> transformedColumns =
+//        Sets.intersection(selectedColumns, attributeIdMappings.keySet());
+//    for (String column : transformedColumns) {
+//      tracesBuilders.forEach(
+//          trace ->
+//              trace.putAttributes(
+//                  column,
+//                  buildEntityKeyValueForTransformedColumn(
+//                      attributeIdMappings, column, trace.getAttributesMap(), requestContext)));
+//    }
+//
+//    // Remove any other attribute columns that were not part of the selection, but are present in
+//    // the
+//    // response because they were added by the PreProcessor
+//    Set<String> transformedColumnSelections =
+//        getTransformedColumns(attributeIdMappings, transformedColumns, requestContext);
+//    Set<String> attributesToRemove = Sets.difference(transformedColumnSelections, selectedColumns);
+//    tracesBuilders.forEach(trace -> attributesToRemove.forEach(trace::removeAttributes));
+//
+//    return responseBuilder;
+//  }
 
   private Set<String> getSelectedColumns(List<Expression> selections) {
     return selections.stream()

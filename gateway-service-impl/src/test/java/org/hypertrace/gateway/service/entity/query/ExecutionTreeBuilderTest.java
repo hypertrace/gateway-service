@@ -31,7 +31,6 @@ import org.hypertrace.core.attribute.service.v1.AttributeSource;
 import org.hypertrace.gateway.service.common.AttributeMetadataProvider;
 import org.hypertrace.gateway.service.common.RequestContext;
 import org.hypertrace.gateway.service.entity.EntitiesRequestContext;
-import org.hypertrace.gateway.service.entity.config.DomainObjectConfigs;
 import org.hypertrace.gateway.service.entity.config.EntityIdColumnsConfigs;
 import org.hypertrace.gateway.service.entity.query.visitor.OptimizingVisitor;
 import org.hypertrace.gateway.service.v1.common.Filter;
@@ -617,7 +616,7 @@ public class ExecutionTreeBuilderTest {
     assertEquals(1, executionContext.getTotal());
 
     // Clear domain object configs
-    DomainObjectConfigs.clearDomainObjectConfigs();
+    //DomainObjectConfigs.clearDomainObjectConfigs();
   }
 
   @Test

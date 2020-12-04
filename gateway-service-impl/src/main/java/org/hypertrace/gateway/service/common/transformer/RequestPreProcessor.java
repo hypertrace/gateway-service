@@ -70,65 +70,65 @@ public class RequestPreProcessor {
    * @param originalRequest The original request received
    * @return The modified request
    */
-  public EntitiesRequest transform(
-      EntitiesRequest originalRequest, EntitiesRequestContext context) {
-    Map<String, List<DomainObjectMapping>> attributeIdMappings =
-        AttributeMetadataUtil.getAttributeIdMappings(
-            attributeMetadataProvider, context, originalRequest.getEntityType());
-    EntitiesRequest.Builder entitiesRequestBuilder = EntitiesRequest.newBuilder(originalRequest);
-
-    // Convert the time range into a filter and set it on the request so that all downstream
-    // components needn't treat it specially.
-    Filter filter = TimeRangeFilterUtil.addTimeRangeFilter(
-        context.getTimestampAttributeId(), originalRequest.getFilter(),
-        originalRequest.getStartTimeMillis(), originalRequest.getEndTimeMillis());
-
-    if (attributeIdMappings.isEmpty()) {
-      LOGGER.debug(
-          "No attribute id mappings found for entityType:{}", originalRequest.getEntityType());
-      return entitiesRequestBuilder
-          .clearSelection()
-          .setFilter(filter)
-          // Clean out duplicate columns in selections
-          .addAllSelection(getUniqueSelections(originalRequest.getSelectionList()))
-          .build();
-    }
-
-    // Handle mappings in selection expressions
-    entitiesRequestBuilder.clearSelection();
-    List<Expression> selections =
-        transformSelection(attributeIdMappings, originalRequest.getSelectionList(), context);
-    entitiesRequestBuilder.addAllSelection(getUniqueSelections(selections));
-
-    entitiesRequestBuilder.clearTimeAggregation();
-    entitiesRequestBuilder.addAllTimeAggregation(
-        transformTimeAggregation(
-            attributeIdMappings, originalRequest.getTimeAggregationList(), context));
-
-    // Handle mappings in order by
-    entitiesRequestBuilder.clearOrderBy();
-    entitiesRequestBuilder.addAllOrderBy(
-        transformOrderBy(attributeIdMappings, originalRequest.getOrderByList(), context));
-
-    // Handle mappings in filter
-    entitiesRequestBuilder.clearFilter();
-    Filter filterToInject =
-        injectIdFilter(attributeIdMappings, originalRequest.getSelectionList(), context);
-
-    Filter transformedFilter = transformFilter(attributeIdMappings, filter, context);
-    filter = mergeFilters(filterToInject, transformedFilter);
-
-    // Apply the scope filter at the end.
-    filter = scopeFilterConfigs.createScopeFilter(
-            originalRequest.getEntityType(),
-            filter,
-            attributeMetadataProvider,
-            context);
-
-    entitiesRequestBuilder.setFilter(filter);
-
-    return entitiesRequestBuilder.build();
-  }
+//  public EntitiesRequest transform(
+//      EntitiesRequest originalRequest, EntitiesRequestContext context) {
+//    Map<String, List<DomainObjectMapping>> attributeIdMappings =
+//        AttributeMetadataUtil.getAttributeIdMappings(
+//            attributeMetadataProvider, context, originalRequest.getEntityType());
+//    EntitiesRequest.Builder entitiesRequestBuilder = EntitiesRequest.newBuilder(originalRequest);
+//
+//    // Convert the time range into a filter and set it on the request so that all downstream
+//    // components needn't treat it specially.
+//    Filter filter = TimeRangeFilterUtil.addTimeRangeFilter(
+//        context.getTimestampAttributeId(), originalRequest.getFilter(),
+//        originalRequest.getStartTimeMillis(), originalRequest.getEndTimeMillis());
+//
+//    if (attributeIdMappings.isEmpty()) {
+//      LOGGER.debug(
+//          "No attribute id mappings found for entityType:{}", originalRequest.getEntityType());
+//      return entitiesRequestBuilder
+//          .clearSelection()
+//          .setFilter(filter)
+//          // Clean out duplicate columns in selections
+//          .addAllSelection(getUniqueSelections(originalRequest.getSelectionList()))
+//          .build();
+//    }
+//
+//    // Handle mappings in selection expressions
+//    entitiesRequestBuilder.clearSelection();
+//    List<Expression> selections =
+//        transformSelection(attributeIdMappings, originalRequest.getSelectionList(), context);
+//    entitiesRequestBuilder.addAllSelection(getUniqueSelections(selections));
+//
+//    entitiesRequestBuilder.clearTimeAggregation();
+//    entitiesRequestBuilder.addAllTimeAggregation(
+//        transformTimeAggregation(
+//            attributeIdMappings, originalRequest.getTimeAggregationList(), context));
+//
+//    // Handle mappings in order by
+//    entitiesRequestBuilder.clearOrderBy();
+//    entitiesRequestBuilder.addAllOrderBy(
+//        transformOrderBy(attributeIdMappings, originalRequest.getOrderByList(), context));
+//
+//    // Handle mappings in filter
+//    entitiesRequestBuilder.clearFilter();
+//    Filter filterToInject =
+//        injectIdFilter(attributeIdMappings, originalRequest.getSelectionList(), context);
+//
+//    Filter transformedFilter = transformFilter(attributeIdMappings, filter, context);
+//    filter = mergeFilters(filterToInject, transformedFilter);
+//
+//    // Apply the scope filter at the end.
+//    filter = scopeFilterConfigs.createScopeFilter(
+//            originalRequest.getEntityType(),
+//            filter,
+//            attributeMetadataProvider,
+//            context);
+//
+//    entitiesRequestBuilder.setFilter(filter);
+//
+//    return entitiesRequestBuilder.build();
+//  }
 
   /**
    * This is called once before processing the request.
@@ -166,47 +166,47 @@ public class RequestPreProcessor {
    * @param originalRequest The original request received
    * @return The modified request
    */
-  public TracesRequest transform(TracesRequest originalRequest, RequestContext requestContext) {
-
-    Map<String, List<DomainObjectMapping>> attributeIdMappings =
-        AttributeMetadataUtil.getAttributeIdMappings(
-            attributeMetadataProvider, requestContext, originalRequest.getScope());
-    if (attributeIdMappings.isEmpty()) {
-      LOGGER.debug("No attribute id mappings found for scope:{}", originalRequest.getScope());
-      return originalRequest;
-    }
-
-    TracesRequest.Builder tracesRequestBuilder = TracesRequest.newBuilder(originalRequest);
-
-    // Handle mappings in selection expressions
-    tracesRequestBuilder.clearSelection();
-    tracesRequestBuilder.addAllSelection(
-        transformSelection(
-            attributeIdMappings, originalRequest.getSelectionList(), requestContext));
-
-    // Handle mappings in order by
-    tracesRequestBuilder.clearOrderBy();
-    tracesRequestBuilder.addAllOrderBy(
-        transformOrderBy(attributeIdMappings, originalRequest.getOrderByList(), requestContext));
-
-    // Handle mappings in filter
-    tracesRequestBuilder.clearFilter();
-    Filter filterToInject =
-        injectIdFilter(attributeIdMappings, originalRequest.getSelectionList(), requestContext);
-    Filter transformedFilter =
-        transformFilter(attributeIdMappings, originalRequest.getFilter(), requestContext);
-    Filter filter = mergeFilters(filterToInject, transformedFilter);
-
-    TraceScope scope = TraceScope.valueOf(originalRequest.getScope());
-    filter = scopeFilterConfigs.createScopeFilter(
-            scope.name(),
-            filter,
-            attributeMetadataProvider,
-            requestContext);
-    tracesRequestBuilder.setFilter(filter);
-
-    return tracesRequestBuilder.build();
-  }
+//  public TracesRequest transform(TracesRequest originalRequest, RequestContext requestContext) {
+//
+//    Map<String, List<DomainObjectMapping>> attributeIdMappings =
+//        AttributeMetadataUtil.getAttributeIdMappings(
+//            attributeMetadataProvider, requestContext, originalRequest.getScope());
+//    if (attributeIdMappings.isEmpty()) {
+//      LOGGER.debug("No attribute id mappings found for scope:{}", originalRequest.getScope());
+//      return originalRequest;
+//    }
+//
+//    TracesRequest.Builder tracesRequestBuilder = TracesRequest.newBuilder(originalRequest);
+//
+//    // Handle mappings in selection expressions
+//    tracesRequestBuilder.clearSelection();
+//    tracesRequestBuilder.addAllSelection(
+//        transformSelection(
+//            attributeIdMappings, originalRequest.getSelectionList(), requestContext));
+//
+//    // Handle mappings in order by
+//    tracesRequestBuilder.clearOrderBy();
+//    tracesRequestBuilder.addAllOrderBy(
+//        transformOrderBy(attributeIdMappings, originalRequest.getOrderByList(), requestContext));
+//
+//    // Handle mappings in filter
+//    tracesRequestBuilder.clearFilter();
+//    Filter filterToInject =
+//        injectIdFilter(attributeIdMappings, originalRequest.getSelectionList(), requestContext);
+//    Filter transformedFilter =
+//        transformFilter(attributeIdMappings, originalRequest.getFilter(), requestContext);
+//    Filter filter = mergeFilters(filterToInject, transformedFilter);
+//
+//    TraceScope scope = TraceScope.valueOf(originalRequest.getScope());
+//    filter = scopeFilterConfigs.createScopeFilter(
+//            scope.name(),
+//            filter,
+//            attributeMetadataProvider,
+//            requestContext);
+//    tracesRequestBuilder.setFilter(filter);
+//
+//    return tracesRequestBuilder.build();
+//  }
 
   /**
    * This is called once before processing the request.

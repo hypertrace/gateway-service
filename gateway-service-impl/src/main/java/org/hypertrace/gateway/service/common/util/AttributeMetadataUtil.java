@@ -45,32 +45,32 @@ public class AttributeMetadataUtil {
    *    <"API", "isExternal", DomainObjectFilter{value = true}>
    * ]
    */
-  public static Map<String, List<DomainObjectMapping>> getAttributeIdMappings(
-      AttributeMetadataProvider attributeMetadataProvider,
-      RequestContext requestContext,
-      String entityType) {
-    Optional<DomainObjectConfig> domainObjectConfig =
-        DomainObjectConfigs.getDomainObjectConfig(entityType);
-
-    // Return a map of source attribute id to target attribute ids by mapping the attribute keys in
-    // DomainObjectConfig to its corresponding id
-    return domainObjectConfig
-        .map(
-            objectConfig ->
-                objectConfig.getAttributeMappings().entrySet().stream()
-                    .collect(
-                        Collectors.toMap(
-                            entry ->
-                                getAttributeMetadata(
-                                        attributeMetadataProvider,
-                                        requestContext,
-                                        entry.getKey().getScope(),
-                                        entry.getKey().getKey())
-                                    .getId(),
-                            Map.Entry::getValue)))
-        // Return empty map if DomainObjectConfig doesn't exist for the entityType
-        .orElse(Collections.emptyMap());
-  }
+//  public static Map<String, List<DomainObjectMapping>> getAttributeIdMappings(
+//      AttributeMetadataProvider attributeMetadataProvider,
+//      RequestContext requestContext,
+//      String entityType) {
+//    Optional<DomainObjectConfig> domainObjectConfig =
+//        DomainObjectConfigs.getDomainObjectConfig(entityType);
+//
+//    // Return a map of source attribute id to target attribute ids by mapping the attribute keys in
+//    // DomainObjectConfig to its corresponding id
+//    return domainObjectConfig
+//        .map(
+//            objectConfig ->
+//                objectConfig.getAttributeMappings().entrySet().stream()
+//                    .collect(
+//                        Collectors.toMap(
+//                            entry ->
+//                                getAttributeMetadata(
+//                                        attributeMetadataProvider,
+//                                        requestContext,
+//                                        entry.getKey().getScope(),
+//                                        entry.getKey().getKey())
+//                                    .getId(),
+//                            Map.Entry::getValue)))
+//        // Return empty map if DomainObjectConfig doesn't exist for the entityType
+//        .orElse(Collections.emptyMap());
+//  }
 
   /**
    *  This method will return an empty list for unsupported entities.
