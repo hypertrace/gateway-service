@@ -17,6 +17,7 @@ import org.hypertrace.gateway.service.common.AttributeMetadataProvider;
 import org.hypertrace.gateway.service.common.util.AttributeMetadataUtil;
 import org.hypertrace.gateway.service.common.util.OrderByUtil;
 import org.hypertrace.gateway.service.entity.EntitiesRequestContext;
+import org.hypertrace.gateway.service.entity.config.EntityIdColumnsConfigs;
 import org.hypertrace.gateway.service.v1.common.ColumnIdentifier;
 import org.hypertrace.gateway.service.v1.common.Expression;
 import org.hypertrace.gateway.service.v1.common.Expression.ValueCase;
@@ -36,6 +37,7 @@ public class ExecutionContext {
 
   /** Following fields are immutable and set in the constructor * */
   private final AttributeMetadataProvider attributeMetadataProvider;
+  private final EntityIdColumnsConfigs entityIdColumnsConfigs;
 
   private final EntitiesRequest entitiesRequest;
   private final EntitiesRequestContext entitiesRequestContext;
@@ -62,9 +64,11 @@ public class ExecutionContext {
 
   private ExecutionContext(
       AttributeMetadataProvider attributeMetadataProvider,
+      EntityIdColumnsConfigs entityIdColumnsConfigs,
       EntitiesRequest entitiesRequest,
       EntitiesRequestContext entitiesRequestContext) {
     this.attributeMetadataProvider = attributeMetadataProvider;
+    this.entityIdColumnsConfigs = entityIdColumnsConfigs;
     this.entitiesRequest = entitiesRequest;
     this.entitiesRequestContext = entitiesRequestContext;
     buildSourceToExpressionMaps();
@@ -72,9 +76,10 @@ public class ExecutionContext {
 
   public static ExecutionContext from(
       AttributeMetadataProvider metadataProvider,
+      EntityIdColumnsConfigs entityIdColumnsConfigs,
       EntitiesRequest entitiesRequest,
       EntitiesRequestContext entitiesRequestContext) {
-    return new ExecutionContext(metadataProvider, entitiesRequest, entitiesRequestContext);
+    return new ExecutionContext(metadataProvider, entityIdColumnsConfigs, entitiesRequest, entitiesRequestContext);
   }
 
   public String getTenantId() {
@@ -157,6 +162,7 @@ public class ExecutionContext {
     List<String> entityIdAttributeNames =
         AttributeMetadataUtil.getIdAttributeIds(
             attributeMetadataProvider,
+            entityIdColumnsConfigs,
             this.entitiesRequestContext,
             entitiesRequest.getEntityType());
     return IntStream.range(0, entityIdAttributeNames.size())

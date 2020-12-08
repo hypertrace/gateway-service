@@ -22,8 +22,6 @@ import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.when;
 
-import com.typesafe.config.Config;
-import com.typesafe.config.ConfigFactory;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
@@ -40,14 +38,13 @@ import org.hypertrace.gateway.service.common.EntitiesRequestAndResponseUtils;
 import org.hypertrace.gateway.service.common.RequestContext;
 import org.hypertrace.gateway.service.entity.EntitiesRequestContext;
 import org.hypertrace.gateway.service.entity.EntityKey;
-import org.hypertrace.gateway.service.entity.config.DomainObjectConfigs;
+import org.hypertrace.gateway.service.entity.config.EntityIdColumnsConfigs;
 import org.hypertrace.gateway.service.v1.common.Filter;
 import org.hypertrace.gateway.service.v1.common.FunctionType;
 import org.hypertrace.gateway.service.v1.common.OrderByExpression;
 import org.hypertrace.gateway.service.v1.entity.EntitiesRequest;
 import org.hypertrace.gateway.service.v1.entity.Entity;
 import org.hypertrace.gateway.service.v1.entity.Entity.Builder;
-import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 
@@ -64,6 +61,7 @@ public class QueryServiceEntityFetcherTests {
 
   private QueryServiceClient queryServiceClient;
   private AttributeMetadataProvider attributeMetadataProvider;
+  private EntityIdColumnsConfigs entityIdColumnsConfigs;
   private QueryServiceEntityFetcher queryServiceEntityFetcher;
 
   @BeforeEach
@@ -71,14 +69,12 @@ public class QueryServiceEntityFetcherTests {
     queryServiceClient = mock(QueryServiceClient.class);
     attributeMetadataProvider = mock(AttributeMetadataProvider.class);
     mockAttributeMetadataProvider(AttributeScope.API.name());
-    mockDomainObjectConfigs();
-    queryServiceEntityFetcher = new QueryServiceEntityFetcher(queryServiceClient, 500,
-        attributeMetadataProvider);
-  }
 
-  @AfterEach
-  public void teardown() {
-    DomainObjectConfigs.clearDomainObjectConfigs();
+    entityIdColumnsConfigs = mock(EntityIdColumnsConfigs.class);
+    when(entityIdColumnsConfigs.getIdKey("API")).thenReturn(Optional.of("id"));
+
+    queryServiceEntityFetcher = new QueryServiceEntityFetcher(queryServiceClient, 500,
+        attributeMetadataProvider, entityIdColumnsConfigs);
   }
 
   @Test
@@ -276,25 +272,5 @@ public class QueryServiceEntityFetcherTests {
         ));
     when(attributeMetadataProvider.getAttributeMetadata(any(RequestContext.class), eq(attributeScope), eq("id"))).thenReturn(Optional.of(idAttributeMetadata));
     when(attributeMetadataProvider.getAttributeMetadata(any(RequestContext.class), eq(attributeScope), eq("startTime"))).thenReturn(Optional.of(startTimeAttributeMetadata));
-  }
-
-  private void mockDomainObjectConfigs() {
-    String domainObjectConfig =
-        "domainobject.config = [\n"
-            + "  {\n"
-            + "    scope = API\n"
-            + "    key = id\n"
-            + "    primaryKey = true\n"
-            + "    mapping = [\n"
-            + "      {\n"
-            + "        scope = API\n"
-            + "        key = id\n"
-            + "      }"
-            + "    ]\n"
-            + "  }\n"
-            + "]";
-
-    Config config = ConfigFactory.parseString(domainObjectConfig);
-    DomainObjectConfigs.init(config);
   }
 }

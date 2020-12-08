@@ -18,6 +18,7 @@ import org.hypertrace.gateway.service.common.AttributeMetadataProvider;
 import org.hypertrace.gateway.service.common.RequestContext;
 import org.hypertrace.gateway.service.common.config.ScopeFilterConfigs;
 import org.hypertrace.gateway.service.entity.EntityService;
+import org.hypertrace.gateway.service.entity.config.EntityIdColumnsConfigs;
 import org.hypertrace.gateway.service.entity.config.LogConfig;
 import org.hypertrace.gateway.service.explore.ExploreService;
 import org.hypertrace.gateway.service.span.SpanService;
@@ -58,6 +59,7 @@ public class GatewayServiceImpl extends GatewayServiceGrpc.GatewayServiceImplBas
             .usePlaintext().build();
     AttributeServiceClient asClient = new AttributeServiceClient(attributeServiceChannel);
     AttributeMetadataProvider attributeMetadataProvider = new AttributeMetadataProvider(asClient);
+    EntityIdColumnsConfigs entityIdColumnsConfigs = EntityIdColumnsConfigs.fromConfig(appConfig);
 
     Config qsConfig = appConfig.getConfig(QUERY_SERVICE_CONFIG_KEY);
     QueryServiceClient queryServiceClient = new QueryServiceClient(new QueryServiceConfig(qsConfig));
@@ -77,7 +79,7 @@ public class GatewayServiceImpl extends GatewayServiceGrpc.GatewayServiceImplBas
         attributeMetadataProvider);
     this.entityService =
         new EntityService(queryServiceClient, qsRequestTimeout,
-            eqsClient, attributeMetadataProvider, scopeFilterConfigs, logConfig);
+            eqsClient, attributeMetadataProvider, entityIdColumnsConfigs, scopeFilterConfigs, logConfig);
     this.exploreService =
         new ExploreService(queryServiceClient, qsRequestTimeout,
             attributeMetadataProvider, scopeFilterConfigs);

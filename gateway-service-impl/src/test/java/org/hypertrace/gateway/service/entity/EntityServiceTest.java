@@ -36,7 +36,7 @@ import org.hypertrace.gateway.service.common.QueryServiceRequestAndResponseUtils
 import org.hypertrace.gateway.service.common.RequestContext;
 import org.hypertrace.gateway.service.common.config.ScopeFilterConfigs;
 import org.hypertrace.gateway.service.common.util.QueryExpressionUtil;
-import org.hypertrace.gateway.service.entity.config.DomainObjectConfigs;
+import org.hypertrace.gateway.service.entity.config.EntityIdColumnsConfigs;
 import org.hypertrace.gateway.service.entity.config.LogConfig;
 import org.hypertrace.gateway.service.v1.common.ColumnIdentifier;
 import org.hypertrace.gateway.service.v1.common.Expression;
@@ -59,12 +59,13 @@ public class EntityServiceTest extends AbstractGatewayServiceTest {
   private QueryServiceClient queryServiceClient;
   private EntityQueryServiceClient entityQueryServiceClient;
   private AttributeMetadataProvider attributeMetadataProvider;
+  private EntityIdColumnsConfigs entityIdColumnsConfigs;
   private LogConfig logConfig;
 
   @BeforeEach
   public void setup() {
     super.setup();
-    mockDomainObjectConfigs();
+    mockEntityIdColumnConfigs();
     queryServiceClient = Mockito.mock(QueryServiceClient.class);
     entityQueryServiceClient = Mockito.mock(EntityQueryServiceClient.class);
     attributeMetadataProvider = Mockito.mock(AttributeMetadataProvider.class);
@@ -73,24 +74,16 @@ public class EntityServiceTest extends AbstractGatewayServiceTest {
     when(logConfig.getQueryThresholdInMillis()).thenReturn(1500L);
   }
 
-  private void mockDomainObjectConfigs() {
-    String domainObjectConfig =
-        "domainobject.config = [\n"
+  private void mockEntityIdColumnConfigs() {
+    String entityIdColumnConfigStr =
+        "entity.idcolumn.config = [\n"
             + "  {\n"
             + "    scope = API\n"
             + "    key = apiId\n"
-            + "    primaryKey = true\n"
-            + "    mapping = [\n"
-            + "      {\n"
-            + "        scope = API\n"
-            + "        key = apiId\n"
-            + "      }"
-            + "    ]\n"
             + "  }\n"
             + "]";
-
-    Config config = ConfigFactory.parseString(domainObjectConfig);
-    DomainObjectConfigs.init(config);
+    Config config = ConfigFactory.parseString(entityIdColumnConfigStr);
+    entityIdColumnsConfigs = EntityIdColumnsConfigs.fromConfig(config);
   }
 
   private void mock(AttributeMetadataProvider attributeMetadataProvider) {
@@ -242,7 +235,7 @@ public class EntityServiceTest extends AbstractGatewayServiceTest {
 
     ScopeFilterConfigs scopeFilterConfigs = new ScopeFilterConfigs(ConfigFactory.empty());
     EntityService entityService = new EntityService(queryServiceClient, 500,
-        entityQueryServiceClient, attributeMetadataProvider, scopeFilterConfigs, logConfig);
+        entityQueryServiceClient, attributeMetadataProvider, entityIdColumnsConfigs, scopeFilterConfigs, logConfig);
     EntitiesResponse response = entityService.getEntities(TENANT_ID, entitiesRequest, Map.of());
     Assertions.assertNotNull(response);
     Assertions.assertEquals(2, response.getTotal());
@@ -269,7 +262,7 @@ public class EntityServiceTest extends AbstractGatewayServiceTest {
                 .iterator());
     ScopeFilterConfigs scopeFilterConfigs = new ScopeFilterConfigs(ConfigFactory.empty());
     EntityService entityService = new EntityService(queryServiceClient, 500,
-        entityQueryServiceClient, attributeMetadataProvider, scopeFilterConfigs, logConfig);
+        entityQueryServiceClient, attributeMetadataProvider, entityIdColumnsConfigs, scopeFilterConfigs, logConfig);
     EntitiesRequest entitiesRequest =
         EntitiesRequest.newBuilder()
             .setEntityType("API")
