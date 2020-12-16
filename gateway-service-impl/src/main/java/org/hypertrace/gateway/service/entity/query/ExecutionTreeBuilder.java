@@ -18,6 +18,7 @@ import org.hypertrace.gateway.service.entity.query.visitor.PrintVisitor;
 import org.hypertrace.gateway.service.v1.common.Filter;
 import org.hypertrace.gateway.service.v1.common.Operator;
 import org.hypertrace.gateway.service.v1.common.OrderByExpression;
+import org.hypertrace.gateway.service.v1.entity.EntitiesRequest;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -53,6 +54,18 @@ public class ExecutionTreeBuilder {
     // All expressions' attributes from the same source. Will only need one downstream query.
     Optional<String> singleSourceForAllAttributes = ExecutionTreeUtils.getSingleSourceForAllAttributes(executionContext);
 
+    EntitiesRequest entitiesRequest = executionContext.getEntitiesRequest();
+
+    // TODO: If there is a filter on a data source, other than EDS, then the flag is a no-op
+    if (!entitiesRequest.getQueryLiveEntitiesOnly()) {
+      QueryNode rootNode =
+          new DataFetcherNode(EDS.name(), entitiesRequest.getFilter());
+      executionContext.removePendingSelectionSource(EDS.name());
+      executionContext.removePendingSelectionSourceForOrderBy(EDS.name());
+
+      return buildExecutionTree(executionContext, rootNode);
+    }
+
     if (singleSourceForAllAttributes.isPresent()) {
       String source = singleSourceForAllAttributes.get();
       QueryNode selectionAndFilterNode = buildExecutionTreeForSameSourceFilterAndSelection(source);
@@ -63,7 +76,7 @@ public class ExecutionTreeBuilder {
       return selectionAndFilterNode;
     }
 
-    QueryNode filterTree = buildFilterTree(executionContext.getEntitiesRequest().getFilter());
+    QueryNode filterTree = buildFilterTree(entitiesRequest.getFilter());
     if (LOG.isDebugEnabled()) {
       LOG.debug("Filter Tree:{}", filterTree.acceptVisitor(new PrintVisitor()));
     }
