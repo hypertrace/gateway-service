@@ -43,20 +43,10 @@ public class RequestPreProcessor {
   public EntitiesRequest transformFilter(
       EntitiesRequest originalRequest, EntitiesRequestContext context) {
     EntitiesRequest.Builder entitiesRequestBuilder = EntitiesRequest.newBuilder(originalRequest);
-    // Convert the time range into a filter and set it on the request so that all downstream
-    // components needn't treat it specially.
-    Filter filter = originalRequest.getFilter();
-    if (originalRequest.getQueryLiveEntitiesOnly()) {
-      filter =
-          TimeRangeFilterUtil.addTimeRangeFilter(
-              context.getTimestampAttributeId(), filter,
-              originalRequest.getStartTimeMillis(), originalRequest.getEndTimeMillis());
-    }
-
     // Add any additional filters that maybe defined in the scope filters config
-    filter = scopeFilterConfigs.createScopeFilter(
+    Filter filter = scopeFilterConfigs.createScopeFilter(
         originalRequest.getEntityType(),
-        filter,
+        originalRequest.getFilter(),
         attributeMetadataProvider,
         context);
 

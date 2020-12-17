@@ -12,6 +12,7 @@ import java.util.Set;
 import java.util.stream.Collectors;
 import org.hypertrace.core.attribute.service.v1.AttributeMetadata;
 import org.hypertrace.core.attribute.service.v1.AttributeSource;
+import org.hypertrace.gateway.service.common.util.TimeRangeFilterUtil;
 import org.hypertrace.gateway.service.entity.query.visitor.ExecutionContextBuilderVisitor;
 import org.hypertrace.gateway.service.entity.query.visitor.OptimizingVisitor;
 import org.hypertrace.gateway.service.entity.query.visitor.PrintVisitor;
@@ -57,9 +58,8 @@ public class ExecutionTreeBuilder {
     EntitiesRequest entitiesRequest = executionContext.getEntitiesRequest();
 
     // TODO: If there is a filter on a data source, other than EDS, then the flag is a no-op
-    if (!entitiesRequest.getQueryLiveEntitiesOnly()) {
-      QueryNode rootNode =
-          new DataFetcherNode(EDS.name(), entitiesRequest.getFilter());
+    if (entitiesRequest.getIncludeResultsOutsideTimeRange()) {
+      QueryNode rootNode = new DataFetcherNode(EDS.name(), entitiesRequest.getFilter());
       executionContext.removePendingSelectionSource(EDS.name());
       executionContext.removePendingSelectionSourceForOrderBy(EDS.name());
 
@@ -76,7 +76,7 @@ public class ExecutionTreeBuilder {
       return selectionAndFilterNode;
     }
 
-    QueryNode filterTree = buildFilterTree(entitiesRequest.getFilter());
+    QueryNode filterTree = buildFilterTree(executionContext, entitiesRequest.getFilter());
     if (LOG.isDebugEnabled()) {
       LOG.debug("Filter Tree:{}", filterTree.acceptVisitor(new PrintVisitor()));
     }
@@ -206,6 +206,25 @@ public class ExecutionTreeBuilder {
       rootNode = checkAndAddSortAndPaginationNode(rootNode, executionContext);
     }
     return rootNode;
+  }
+
+  @VisibleForTesting
+  QueryNode buildFilterTree(ExecutionContext context, Filter filter) {
+    // Convert the time range into a filter and set it on the request so that all downstream
+    // components needn't treat it specially
+    Filter timeRangeFilter =
+        TimeRangeFilterUtil.addTimeRangeFilter(
+            context.getTimestampAttributeId(),
+            filter,
+            context.getEntitiesRequest().getStartTimeMillis(),
+            context.getEntitiesRequest().getEndTimeMillis());
+
+    return buildFilterTree(
+        Filter.newBuilder()
+            .setOperator(Operator.AND)
+            .addChildFilter(timeRangeFilter)
+            .addChildFilter(filter)
+            .build());
   }
 
   @VisibleForTesting

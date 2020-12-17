@@ -44,7 +44,7 @@ message EntitiesRequest {
 
   int32 limit = 20;
   int32 offset = 21;
-  bool query_live_entities_only = 22;
+  bool include_results_outside_time_range = 22;
 }
 
 message EntitiesResponse {
