@@ -58,13 +58,20 @@ public class ExecutionTreeBuilder {
     EntitiesRequest entitiesRequest = executionContext.getEntitiesRequest();
 
     // TODO: If there is a filter on a data source, other than EDS, then the flag is a no-op
-    if (entitiesRequest.getIncludeResultsOutsideTimeRange()) {
+    // EDS source has all the entities (live + non live). In order to fetch all non live the
+    // entities, along with live entities,
+    // the query needs to be anchored around EDS. Hence, EDS is treated as a DataFetcherNode
+    if (entitiesRequest.getIncludeNonLiveEntities()) {
       QueryNode rootNode = new DataFetcherNode(EDS.name(), entitiesRequest.getFilter());
       rootNode.acceptVisitor(new ExecutionContextBuilderVisitor(executionContext));
 
       return buildExecutionTree(executionContext, rootNode);
     }
 
+    // If all the attributes, filters, order by and sort are requested from a single source, there
+    // can be source specification
+    // optimization where all projections, filters, order by, sort and limit can be pushed down to
+    // the data store
     if (singleSourceForAllAttributes.isPresent()) {
       String source = singleSourceForAllAttributes.get();
       QueryNode selectionAndFilterNode = buildExecutionTreeForSameSourceFilterAndSelection(source);

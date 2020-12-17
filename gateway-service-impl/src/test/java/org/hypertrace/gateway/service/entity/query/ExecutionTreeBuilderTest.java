@@ -801,7 +801,7 @@ public class ExecutionTreeBuilderTest {
                     FunctionType.SUM,
                     "SUM_numCalls",
                     List.of()))
-            .setIncludeResultsOutsideTimeRange(true)
+            .setIncludeNonLiveEntities(true)
             .build();
     EntitiesRequestContext entitiesRequestContext =
         new EntitiesRequestContext(TENANT_ID, 0L, 10L, "API", "API.startTime", new HashMap<>());
