@@ -60,8 +60,7 @@ public class ExecutionTreeBuilder {
     // TODO: If there is a filter on a data source, other than EDS, then the flag is a no-op
     if (entitiesRequest.getIncludeResultsOutsideTimeRange()) {
       QueryNode rootNode = new DataFetcherNode(EDS.name(), entitiesRequest.getFilter());
-      executionContext.removePendingSelectionSource(EDS.name());
-      executionContext.removePendingSelectionSourceForOrderBy(EDS.name());
+      rootNode.acceptVisitor(new ExecutionContextBuilderVisitor(executionContext));
 
       return buildExecutionTree(executionContext, rootNode);
     }
