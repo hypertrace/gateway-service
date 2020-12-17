@@ -218,12 +218,7 @@ public class ExecutionTreeBuilder {
             context.getEntitiesRequest().getStartTimeMillis(),
             context.getEntitiesRequest().getEndTimeMillis());
 
-    return buildFilterTree(
-        Filter.newBuilder()
-            .setOperator(Operator.AND)
-            .addChildFilter(timeRangeFilter)
-            .addChildFilter(filter)
-            .build());
+    return buildFilterTree(timeRangeFilter);
   }
 
   @VisibleForTesting
