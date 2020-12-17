@@ -58,9 +58,13 @@ public class ExecutionTreeBuilder {
     EntitiesRequest entitiesRequest = executionContext.getEntitiesRequest();
 
     // TODO: If there is a filter on a data source, other than EDS, then the flag is a no-op
-    // EDS source has all the entities (live + non live). In order to fetch all non live the
+
+    // EDS source has all the entities (live + non live). In order to fetch all the non live
     // entities, along with live entities,
-    // the query needs to be anchored around EDS. Hence, EDS is treated as a DataFetcherNode
+    // the query needs to be anchored around EDS.
+    // Hence, EDS is treated as a DataFetcherNode, so that first all the entities are fetched from
+    // EDS, irrespective of the time range. And, then the remaining data can be fetched from other
+    // sources
     if (entitiesRequest.getIncludeNonLiveEntities()) {
       QueryNode rootNode = new DataFetcherNode(EDS.name(), entitiesRequest.getFilter());
       rootNode.acceptVisitor(new ExecutionContextBuilderVisitor(executionContext));
