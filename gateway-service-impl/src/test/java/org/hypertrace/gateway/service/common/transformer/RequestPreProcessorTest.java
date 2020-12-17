@@ -93,14 +93,10 @@ public class RequestPreProcessorTest {
                 Filter.newBuilder()
                     .setOperator(Operator.AND)
                     .addChildFilter(
-                        Filter.newBuilder().setOperator(Operator.AND)
-                            .addChildFilter(
-                                GatewayExpressionCreator.createFilter(
-                                    QueryExpressionUtil.getColumnExpression("SERVICE.name"),
-                                    Operator.LIKE,
-                                    QueryExpressionUtil.getLiteralExpression("log")))
-                            .addChildFilter(EntitiesRequestAndResponseUtils.getTimestampFilter("SERVICE.startTime", Operator.GE, startTime))
-                            .addChildFilter(EntitiesRequestAndResponseUtils.getTimestampFilter("SERVICE.startTime", Operator.LT, endTime))
+                      GatewayExpressionCreator.createFilter(
+                          QueryExpressionUtil.getColumnExpression("SERVICE.name"),
+                          Operator.LIKE,
+                          QueryExpressionUtil.getLiteralExpression("log"))
                     )
                     .addChildFilter(
                         Filter.newBuilder()

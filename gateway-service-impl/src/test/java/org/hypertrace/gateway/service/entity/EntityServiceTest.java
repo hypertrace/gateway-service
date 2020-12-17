@@ -119,7 +119,7 @@ public class EntityServiceTest extends AbstractGatewayServiceTest {
                     .setFqn("API.name")
                     .setValueKind(AttributeKind.TYPE_STRING)
                     .setType(AttributeType.ATTRIBUTE)
-                    .addSources(AttributeSource.QS).addSources(AttributeSource.EDS)
+                    .addSources(AttributeSource.QS)
                     .setId("API.name")
                     .build(),
                 "API.httpMethod",
