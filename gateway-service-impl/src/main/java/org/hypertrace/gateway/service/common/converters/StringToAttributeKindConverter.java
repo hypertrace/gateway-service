@@ -1,5 +1,6 @@
 package org.hypertrace.gateway.service.common.converters;
 
+import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.core.type.TypeReference;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import java.io.IOException;
@@ -26,7 +27,7 @@ public class StringToAttributeKindConverter extends ToAttributeKindConverter<Str
     switch (attributeKind) {
       case TYPE_BOOL:
         valueBuilder.setValueType(ValueType.BOOL);
-        valueBuilder.setBoolean(Boolean.valueOf(value));
+        valueBuilder.setBoolean(Boolean.parseBoolean(value));
         return valueBuilder.build();
 
       case TYPE_DOUBLE:
@@ -86,12 +87,13 @@ public class StringToAttributeKindConverter extends ToAttributeKindConverter<Str
       return List.of();
     }
 
+    // Check if the string is already in a list format.
     try {
       return objectMapper.readValue(jsonString, LIST_TYPE_REFERENCE);
-    } catch (IOException e) {
-      LOGGER.warn("Unable to read List JSON String data from: {}. Setting data as empty list instead. With error:", jsonString, e);
+    } catch (JsonProcessingException e) {
+      // If not, it might be a single string, so return a list with one element.
+      return List.of(jsonString);
     }
-    return List.of();
   }
 
   private Map<String, String> convertToMap(String jsonString) {

@@ -42,6 +42,7 @@ import org.hypertrace.gateway.service.common.util.QueryExpressionUtil;
 import org.hypertrace.gateway.service.entity.EntitiesRequestContext;
 import org.hypertrace.gateway.service.entity.EntitiesRequestValidator;
 import org.hypertrace.gateway.service.entity.EntityKey;
+import org.hypertrace.gateway.service.entity.config.EntityIdColumnsConfigs;
 import org.hypertrace.gateway.service.v1.common.AggregatedMetricValue;
 import org.hypertrace.gateway.service.v1.common.Expression.ValueCase;
 import org.hypertrace.gateway.service.v1.common.FunctionExpression;
@@ -71,13 +72,16 @@ public class QueryServiceEntityFetcher implements IEntityFetcher {
   private final QueryServiceClient queryServiceClient;
   private final int requestTimeout;
   private final AttributeMetadataProvider attributeMetadataProvider;
+  private final EntityIdColumnsConfigs entityIdColumnsConfigs;
 
   public QueryServiceEntityFetcher(
       QueryServiceClient queryServiceClient, int qsRequestTimeout,
-      AttributeMetadataProvider attributeMetadataProvider) {
+      AttributeMetadataProvider attributeMetadataProvider,
+      EntityIdColumnsConfigs entityIdColumnsConfigs) {
     this.queryServiceClient = queryServiceClient;
     this.requestTimeout = qsRequestTimeout;
     this.attributeMetadataProvider = attributeMetadataProvider;
+    this.entityIdColumnsConfigs = entityIdColumnsConfigs;
   }
 
   @Override
@@ -91,7 +95,7 @@ public class QueryServiceEntityFetcher implements IEntityFetcher {
 
     List<String> entityIdAttributes =
         AttributeMetadataUtil.getIdAttributeIds(
-            attributeMetadataProvider, requestContext, entitiesRequest.getEntityType());
+            attributeMetadataProvider, entityIdColumnsConfigs, requestContext, entitiesRequest.getEntityType());
     List<org.hypertrace.gateway.service.v1.common.Expression> aggregates =
         ExpressionReader.getFunctionExpressions(entitiesRequest.getSelectionList().stream());
 
@@ -179,7 +183,7 @@ public class QueryServiceEntityFetcher implements IEntityFetcher {
 
     List<String> entityIdAttributes =
         AttributeMetadataUtil.getIdAttributeIds(
-            attributeMetadataProvider, requestContext, entitiesRequest.getEntityType());
+            attributeMetadataProvider, entityIdColumnsConfigs, requestContext, entitiesRequest.getEntityType());
 
     QueryRequest.Builder builder =
         constructSelectionQuery(requestContext, entitiesRequest, entityIdAttributes, aggregates);
@@ -263,7 +267,7 @@ public class QueryServiceEntityFetcher implements IEntityFetcher {
     entitiesRequestValidator.validate(entitiesRequest, attributeMetadataMap);
     List<String> entityIdAttributes =
         AttributeMetadataUtil.getIdAttributeIds(
-            attributeMetadataProvider, requestContext, entitiesRequest.getEntityType());
+            attributeMetadataProvider, entityIdColumnsConfigs, requestContext, entitiesRequest.getEntityType());
 
     List<org.hypertrace.gateway.service.v1.common.Expression> aggregates =
         ExpressionReader.getFunctionExpressions(entitiesRequest.getSelectionList().stream());
@@ -500,7 +504,7 @@ public class QueryServiceEntityFetcher implements IEntityFetcher {
     // Only supported filter is entityIds IN ["id1", "id2", "id3"]
     List<String> idColumns =
         AttributeMetadataUtil.getIdAttributeIds(
-            attributeMetadataProvider, requestContext, entitiesRequest.getEntityType());
+            attributeMetadataProvider, entityIdColumnsConfigs, requestContext, entitiesRequest.getEntityType());
     String timeColumn =
         AttributeMetadataUtil.getTimestampAttributeId(
             attributeMetadataProvider, requestContext, entitiesRequest.getEntityType());

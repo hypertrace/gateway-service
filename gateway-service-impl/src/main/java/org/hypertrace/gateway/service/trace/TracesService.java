@@ -26,7 +26,6 @@ import org.hypertrace.gateway.service.common.RequestContext;
 import org.hypertrace.gateway.service.common.config.ScopeFilterConfigs;
 import org.hypertrace.gateway.service.common.converters.QueryAndGatewayDtoConverter;
 import org.hypertrace.gateway.service.common.transformer.RequestPreProcessor;
-import org.hypertrace.gateway.service.common.transformer.ResponsePostProcessor;
 import org.hypertrace.gateway.service.v1.common.OrderByExpression;
 import org.hypertrace.gateway.service.v1.trace.Trace;
 import org.hypertrace.gateway.service.v1.trace.TracesRequest;
@@ -53,7 +52,6 @@ public class TracesService {
   private final AttributeMetadataProvider attributeMetadataProvider;
   private final TracesRequestValidator requestValidator;
   private final RequestPreProcessor requestPreProcessor;
-  private final ResponsePostProcessor responsePostProcessor;
 
   private Timer queryExecutionTimer;
 
@@ -65,9 +63,7 @@ public class TracesService {
     this.queryServiceReqTimeout = qsRequestTimeout;
     this.attributeMetadataProvider = attributeMetadataProvider;
     this.requestValidator = new TracesRequestValidator();
-    this.requestPreProcessor = new RequestPreProcessor(attributeMetadataProvider,
-        scopeFilterConfigs);
-    this.responsePostProcessor = new ResponsePostProcessor(attributeMetadataProvider);
+    this.requestPreProcessor = new RequestPreProcessor(attributeMetadataProvider, scopeFilterConfigs);
     initMetrics();
   }
 
@@ -81,7 +77,7 @@ public class TracesService {
     try {
       requestValidator.validateScope(request);
 
-      TracesRequest preProcessedRequest = requestPreProcessor.transform(request, context);
+      TracesRequest preProcessedRequest = requestPreProcessor.transformFilter(request, context);
 
       TraceScope scope = TraceScope.valueOf(preProcessedRequest.getScope());
       Map<String, AttributeMetadata> attributeMap =
@@ -99,9 +95,7 @@ public class TracesService {
       // for large data-set
       tracesResponseBuilder.setTotal(getTotalFilteredTraces(context, preProcessedRequest, scope));
 
-      TracesResponse.Builder postProcessedResponse =
-          responsePostProcessor.transform(request, context, tracesResponseBuilder);
-      TracesResponse response = postProcessedResponse.build();
+      TracesResponse response = tracesResponseBuilder.build();
       if (LOG.isDebugEnabled()) {
         LOG.debug("Traces Service Response: {}", response);
       }
