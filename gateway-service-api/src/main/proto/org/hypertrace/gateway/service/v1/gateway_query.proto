@@ -107,8 +107,7 @@ message Expression {
 }
 
 message HealthExpression {
-  // Currently this is empty since there is nothing additional to provide.
-  // Presence of this expression itself indicates that the health of metric is required.
+  FunctionExpression function = 1;
 }
 
 message FunctionExpression {
@@ -155,10 +154,17 @@ message Period {
   string unit = 2;
 }
 
+message Baseline {
+  Value value = 1;
+  Value lowerBound = 2;
+  Value upperBound = 3;
+}
+
 message AggregatedMetricValue {
   FunctionType function = 1;
   Value value = 2;
   Health health = 3;
+  Baseline baseline = 4;
 }
 
 // A series of Intervals for a given metric, aggregation type and period.
@@ -170,6 +176,11 @@ message MetricSeries {
 
   // The Period which was used to time aggregate these metrics.
   Period period = 3;
+}
+
+message BaselineMetricSeries {
+  Baseline baseline = 2;
+  // later interval specific values will be added.
 }
 
 message TimeAggregation {

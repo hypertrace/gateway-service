@@ -146,7 +146,9 @@ public class EntityService {
 
     EntitiesResponse.Builder responseBuilder =
         EntitiesResponse.newBuilder().setTotal(executionContext.getTotal());
-    results.forEach(e -> responseBuilder.addEntity(e.build()));
+    results.forEach(e -> {
+      responseBuilder.addEntity(e.build());
+    });
 
     long queryExecutionTime = System.currentTimeMillis() - startTime;
     if (queryExecutionTime > logConfig.getQueryThresholdInMillis()) {

@@ -118,6 +118,7 @@ public class EntityDataServiceEntityFetcher implements IEntityFetcher {
                     .toArray(String[]::new));
         Builder entityBuilder = entityBuilders.computeIfAbsent(entityKey, k -> Entity.newBuilder());
         entityBuilder.setEntityType(entitiesRequest.getEntityType());
+        entityBuilder.setId(entityKey.toString());
 
         // Always include the id in entity since that's needed to make follow up queries in
         // optimal fashion. If this wasn't really requested by the client, it should be removed

@@ -9,12 +9,15 @@ import "org/hypertrace/gateway/service/v1/entities.proto";
 import "org/hypertrace/gateway/service/v1/explore.proto";
 import "org/hypertrace/gateway/service/v1/spans.proto";
 import "org/hypertrace/gateway/service/v1/traces.proto";
+import "org/hypertrace/gateway/service/v1/baseline.proto";
 
 service GatewayService {
   rpc getEntities (org.hypertrace.gateway.service.v1.entity.EntitiesRequest)
     returns (org.hypertrace.gateway.service.v1.entity.EntitiesResponse) {}
   rpc updateEntity (org.hypertrace.gateway.service.v1.entity.UpdateEntityRequest)
     returns (org.hypertrace.gateway.service.v1.entity.UpdateEntityResponse) {}
+  rpc getBaselineForEntities(org.hypertrace.gateway.service.v1.health.BaselineEntitiesRequest)
+    returns (org.hypertrace.gateway.service.v1.health.BaselineEntitiesResponse) {}
   rpc explore (org.hypertrace.gateway.service.v1.explore.ExploreRequest)
     returns (org.hypertrace.gateway.service.v1.explore.ExploreResponse) {}
   rpc getTraces (org.hypertrace.gateway.service.v1.trace.TracesRequest)

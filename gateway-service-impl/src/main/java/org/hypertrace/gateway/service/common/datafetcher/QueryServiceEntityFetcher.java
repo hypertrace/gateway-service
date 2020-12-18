@@ -132,7 +132,7 @@ public class QueryServiceEntityFetcher implements IEntityFetcher {
                     .toArray(String[]::new));
         Builder entityBuilder = entityBuilders.computeIfAbsent(entityKey, k -> Entity.newBuilder());
         entityBuilder.setEntityType(entitiesRequest.getEntityType());
-
+        entityBuilder.setId(entityKey.toString());
         // Always include the id in entity since that's needed to make follow up queries in
         // optimal fashion. If this wasn't really requested by the client, it should be removed
         // as post processing.
@@ -223,7 +223,7 @@ public class QueryServiceEntityFetcher implements IEntityFetcher {
                     .toArray(String[]::new));
         Builder entityBuilder = entityMap.computeIfAbsent(entityKey, k -> Entity.newBuilder());
         entityBuilder.setEntityType(entitiesRequest.getEntityType());
-
+        entityBuilder.setId(entityKey.toString());
         // Always include the id in entity since that's needed to make follow up queries in
         // optimal fashion. If this wasn't really requested by the client, it should be removed
         // as post processing.
@@ -308,6 +308,7 @@ public class QueryServiceEntityFetcher implements IEntityFetcher {
                     .toArray(String[]::new));
         Builder entityBuilder = entityBuilders.computeIfAbsent(entityKey, k -> Entity.newBuilder());
         entityBuilder.setEntityType(entitiesRequest.getEntityType());
+        entityBuilder.setId(entityKey.toString());
 
         // Always include the id in entity since that's needed to make follow up queries in
         // optimal fashion. If this wasn't really requested by the client, it should be removed
@@ -632,6 +633,7 @@ public class QueryServiceEntityFetcher implements IEntityFetcher {
       Entity.Builder entityBuilder =
           Entity.newBuilder()
               .setEntityType(entitiesRequest.getEntityType())
+              .setId(entry.getKey().toString())
               .putAllMetricSeries(
                   entry.getValue().entrySet().stream()
                       .collect(
