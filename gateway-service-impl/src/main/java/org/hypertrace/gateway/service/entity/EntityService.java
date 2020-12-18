@@ -21,6 +21,7 @@ import org.hypertrace.gateway.service.common.datafetcher.EntityFetcherResponse;
 import org.hypertrace.gateway.service.common.datafetcher.EntityInteractionsFetcher;
 import org.hypertrace.gateway.service.common.datafetcher.QueryServiceEntityFetcher;
 import org.hypertrace.gateway.service.common.transformer.RequestPreProcessor;
+import org.hypertrace.gateway.service.common.transformer.ResponsePostProcessor;
 import org.hypertrace.gateway.service.common.util.AttributeMetadataUtil;
 import org.hypertrace.gateway.service.entity.config.EntityIdColumnsConfigs;
 import org.hypertrace.gateway.service.entity.config.LogConfig;
@@ -32,6 +33,7 @@ import org.hypertrace.gateway.service.entity.update.EdsEntityUpdater;
 import org.hypertrace.gateway.service.entity.update.UpdateExecutionContext;
 import org.hypertrace.gateway.service.v1.entity.EntitiesRequest;
 import org.hypertrace.gateway.service.v1.entity.EntitiesResponse;
+import org.hypertrace.gateway.service.v1.entity.Entity;
 import org.hypertrace.gateway.service.v1.entity.Entity.Builder;
 import org.hypertrace.gateway.service.v1.entity.InteractionsRequest;
 import org.hypertrace.gateway.service.v1.entity.UpdateEntityRequest;
@@ -53,6 +55,7 @@ public class EntityService {
   private final EntityIdColumnsConfigs entityIdColumnsConfigs;
   private final EntityInteractionsFetcher interactionsFetcher;
   private final RequestPreProcessor requestPreProcessor;
+  private final ResponsePostProcessor responsePostProcessor;
   private final EdsEntityUpdater edsEntityUpdater;
   private final LogConfig logConfig;
   // Metrics
@@ -70,6 +73,7 @@ public class EntityService {
     this.entityIdColumnsConfigs = entityIdColumnsConfigs;
     this.interactionsFetcher = new EntityInteractionsFetcher(qsClient, qsRequestTimeout, metadataProvider);
     this.requestPreProcessor = new RequestPreProcessor(metadataProvider, scopeFilterConfigs);
+    this.responsePostProcessor = new ResponsePostProcessor();
     this.edsEntityUpdater = new EdsEntityUpdater(edsQueryServiceClient);
     this.logConfig = logConfig;
 
@@ -136,7 +140,10 @@ public class EntityService {
     */
     EntityFetcherResponse response =
         executionTree.acceptVisitor(new ExecutionVisitor(executionContext, EntityQueryHandlerRegistry.get()));
-    List<Builder> results = new ArrayList<>(response.getEntityKeyBuilderMap().values());
+
+    List<Entity.Builder> results =
+        this.responsePostProcessor.transform(
+            executionContext, new ArrayList<>(response.getEntityKeyBuilderMap().values()));
 
     // Add interactions.
     if (!results.isEmpty()) {
