@@ -1,5 +1,9 @@
 package org.hypertrace.gateway.service.trace;
 
+import static org.hypertrace.gateway.service.common.converters.QueryRequestUtil.createCountByColumnSelection;
+import static org.hypertrace.gateway.service.common.util.AttributeMetadataUtil.getSpaceAttributeId;
+import static org.hypertrace.gateway.service.common.util.AttributeMetadataUtil.getTimestampAttributeId;
+
 import com.codahale.metrics.Timer;
 import com.codahale.metrics.Timer.Context;
 import com.google.common.annotations.VisibleForTesting;
@@ -16,7 +20,6 @@ import org.hypertrace.core.query.service.api.QueryRequest.Builder;
 import org.hypertrace.core.query.service.api.ResultSetChunk;
 import org.hypertrace.core.query.service.api.Row;
 import org.hypertrace.core.query.service.client.QueryServiceClient;
-import org.hypertrace.core.query.service.util.QueryRequestUtil;
 import org.hypertrace.core.serviceframework.metrics.PlatformMetricsRegistry;
 import org.hypertrace.gateway.service.common.AttributeMetadataProvider;
 import org.hypertrace.gateway.service.common.RequestContext;
@@ -43,9 +46,7 @@ import org.slf4j.LoggerFactory;
  * <p>Trace will not have independent attributes.
  */
 public class TracesService {
-
   private static final Logger LOG = LoggerFactory.getLogger(TracesService.class);
-  private static final String START_TIMESTAMP_KEY_NAME = "startTime";
 
   private final QueryServiceClient queryServiceClient;
   private final int queryServiceReqTimeout;
@@ -172,7 +173,7 @@ public class TracesService {
     }
 
     String columnName = request.getSelection(0).getColumnIdentifier().getColumnName();
-    queryBuilder.addSelection(QueryRequestUtil.createCountByColumnSelection(columnName));
+    queryBuilder.addSelection(createCountByColumnSelection(columnName));
     QueryRequest queryRequest = queryBuilder.build();
     Iterator<ResultSetChunk> resultSetChunkIterator =
         queryServiceClient.executeQuery(queryRequest, context.getHeaders(), queryServiceReqTimeout);
@@ -210,19 +211,16 @@ public class TracesService {
 
   private Builder createQueryWithFilter(
       TracesRequest request, TraceScope scope, RequestContext requestContext) {
-    Builder queryBuilder = QueryRequest.newBuilder();
 
-    Filter.Builder filterBuilder =
-        QueryAndGatewayDtoConverter.addTimeFilterAndConvertToQueryFilter(
+    Filter filter =
+        QueryAndGatewayDtoConverter.addTimeAndSpaceFiltersAndConvertToQueryFilter(
             request.getStartTimeMillis(),
             request.getEndTimeMillis(),
-            attributeMetadataProvider
-                .getAttributeMetadata(requestContext, scope.name(), START_TIMESTAMP_KEY_NAME)
-                .get()
-                .getId(),
+            request.getSpaceId(),
+            getTimestampAttributeId(this.attributeMetadataProvider, requestContext, scope.name()),
+            getSpaceAttributeId(this.attributeMetadataProvider, requestContext, scope.name()),
             request.getFilter());
-    queryBuilder.setFilter(filterBuilder);
-    return queryBuilder;
+    return QueryRequest.newBuilder().setFilter(filter);
   }
 
   // Adds the sort, limit and offset information to the QueryService if it is requested

@@ -30,6 +30,8 @@ message ExploreRequest {
   // by the order by expression.
   int32 limit = 20;
   int32 offset = 21;
+
+  string space_id = 25;
 }
 
 message ExploreResponse {

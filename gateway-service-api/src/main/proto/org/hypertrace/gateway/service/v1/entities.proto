@@ -44,6 +44,7 @@ message EntitiesRequest {
 
   int32 limit = 20;
   int32 offset = 21;
+  string space_id = 25;
 }
 
 message EntitiesResponse {

@@ -1,5 +1,6 @@
 package org.hypertrace.gateway.service.common.converters;
 
+import com.google.common.base.Strings;
 import java.util.List;
 import java.util.Map;
 import java.util.stream.Collectors;
@@ -17,7 +18,6 @@ import org.hypertrace.core.query.service.api.OrderByExpression;
 import org.hypertrace.core.query.service.api.SortOrder;
 import org.hypertrace.core.query.service.api.Value;
 import org.hypertrace.core.query.service.api.ValueType;
-import org.hypertrace.core.query.service.util.QueryRequestUtil;
 import org.hypertrace.gateway.service.v1.common.FunctionType;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -342,52 +342,55 @@ public class QueryAndGatewayDtoConverter {
     // AVGRATE is adding a specific implementation because Pinot does not directly support this
     // function
     switch (function.getFunction()) {
-      case AVGRATE: {
-        builder.setFunctionName(FunctionType.SUM.name()).setAlias(function.getAlias());
+      case AVGRATE:
+        {
+          builder.setFunctionName(FunctionType.SUM.name()).setAlias(function.getAlias());
 
-        // Adds only the argument that is a column identifier for now.
-        List<org.hypertrace.gateway.service.v1.common.Expression> columns =
-            function.getArgumentsList().stream()
-                .filter(org.hypertrace.gateway.service.v1.common.Expression::hasColumnIdentifier)
-                .collect(Collectors.toList());
-        columns.forEach(e -> builder.addArguments(convertToQueryExpression(e)));
-        break;
-      }
-      case PERCENTILE: {
-        org.hypertrace.gateway.service.v1.common.Expression percentileExp =
-            function.getArgumentsList().stream()
-                .filter(org.hypertrace.gateway.service.v1.common.Expression::hasLiteral)
-                .findFirst()
-                .orElseThrow(); // Should have validated arguments using PercentileValidator
-
-        long percentile = percentileExp.getLiteral().getValue().getLong();
-        String functionName = function.getFunction().name() + percentile;
-        builder.setFunctionName(functionName).setAlias(function.getAlias());
-
-        // Adds only the argument that is a literal identifier. This will bring the required nth
-        // percentile.
-        List<org.hypertrace.gateway.service.v1.common.Expression> columns =
-            function.getArgumentsList().stream()
-                .filter(org.hypertrace.gateway.service.v1.common.Expression::hasColumnIdentifier)
-                .collect(Collectors.toList());
-        columns.forEach(e -> builder.addArguments(convertToQueryExpression(e)));
-        break;
-      }
-      default: {
-        builder.setFunctionName(function.getFunction().name()).setAlias(function.getAlias());
-
-        if (function.getArgumentsCount() > 0) {
-          function
-              .getArgumentsList()
-              .forEach(
-                  e -> {
-                    // Health expressions are treated differently so ignore them.
-                    if (!e.hasHealth()) {
-                      builder.addArguments(convertToQueryExpression(e));
-                    }
-                  });
+          // Adds only the argument that is a column identifier for now.
+          List<org.hypertrace.gateway.service.v1.common.Expression> columns =
+              function.getArgumentsList().stream()
+                  .filter(org.hypertrace.gateway.service.v1.common.Expression::hasColumnIdentifier)
+                  .collect(Collectors.toList());
+          columns.forEach(e -> builder.addArguments(convertToQueryExpression(e)));
+          break;
         }
-      }
+      case PERCENTILE:
+        {
+          org.hypertrace.gateway.service.v1.common.Expression percentileExp =
+              function.getArgumentsList().stream()
+                  .filter(org.hypertrace.gateway.service.v1.common.Expression::hasLiteral)
+                  .findFirst()
+                  .orElseThrow(); // Should have validated arguments using PercentileValidator
+
+          long percentile = percentileExp.getLiteral().getValue().getLong();
+          String functionName = function.getFunction().name() + percentile;
+          builder.setFunctionName(functionName).setAlias(function.getAlias());
+
+          // Adds only the argument that is a literal identifier. This will bring the required nth
+          // percentile.
+          List<org.hypertrace.gateway.service.v1.common.Expression> columns =
+              function.getArgumentsList().stream()
+                  .filter(org.hypertrace.gateway.service.v1.common.Expression::hasColumnIdentifier)
+                  .collect(Collectors.toList());
+          columns.forEach(e -> builder.addArguments(convertToQueryExpression(e)));
+          break;
+        }
+      default:
+        {
+          builder.setFunctionName(function.getFunction().name()).setAlias(function.getAlias());
+
+          if (function.getArgumentsCount() > 0) {
+            function
+                .getArgumentsList()
+                .forEach(
+                    e -> {
+                      // Health expressions are treated differently so ignore them.
+                      if (!e.hasHealth()) {
+                        builder.addArguments(convertToQueryExpression(e));
+                      }
+                    });
+          }
+        }
     }
     return builder.build();
   }
@@ -413,24 +416,36 @@ public class QueryAndGatewayDtoConverter {
     return builder;
   }
 
-  public static Filter.Builder addTimeFilterAndConvertToQueryFilter(
+  public static Filter addTimeAndSpaceFiltersAndConvertToQueryFilter(
       long startTimeMillis,
       long endTimeMillis,
-      String timestampAttributeName,
-      org.hypertrace.gateway.service.v1.common.Filter filter) {
-    Filter.Builder timeFilter =
-        QueryRequestUtil.createBetweenTimesFilter(
-            timestampAttributeName, startTimeMillis, endTimeMillis);
+      String spaceId,
+      String timestampAttributeId,
+      String spacesAttributeId,
+      org.hypertrace.gateway.service.v1.common.Filter providedFilter) {
+    // Always at least a time range filter, add others if applicable
+    Filter.Builder compositeFilter =
+        Filter.newBuilder()
+            .setOperator(Operator.AND)
+            .addChildFilter(
+                QueryRequestUtil.createBetweenTimesFilter(
+                    timestampAttributeId, startTimeMillis, endTimeMillis));
 
-    if (filter != null
-        && !org.hypertrace.gateway.service.v1.common.Filter.getDefaultInstance().equals(filter)) {
-      // If there are more filters, combine them with time filter.
-      return Filter.newBuilder()
-          .setOperator(Operator.AND)
-          .addChildFilter(timeFilter)
-          .addChildFilter(convertToQueryFilter(filter));
+    if (!Strings.isNullOrEmpty(spaceId)) {
+      compositeFilter.addChildFilter(
+          QueryRequestUtil.createStringFilter(spacesAttributeId, Operator.EQ, spaceId));
     }
-    return timeFilter;
+
+    if (providedFilter != null
+        && !org.hypertrace.gateway.service.v1.common.Filter.getDefaultInstance()
+            .equals(providedFilter)) {
+      compositeFilter.addChildFilter(convertToQueryFilter(providedFilter));
+    }
+
+    // If no others were added, unwrap the one child filter and use that
+    return compositeFilter.getChildFilterCount() == 1
+        ? compositeFilter.getChildFilter(0)
+        : compositeFilter.build();
   }
 
   public static List<OrderByExpression> convertToQueryOrderByExpressions(

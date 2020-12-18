@@ -4,6 +4,7 @@ import static org.hypertrace.gateway.service.common.QueryServiceRequestAndRespon
 import static org.hypertrace.gateway.service.common.QueryServiceRequestAndResponseUtils.createQsColumnExpression;
 import static org.hypertrace.gateway.service.common.QueryServiceRequestAndResponseUtils.createQsDefaultRequestFilter;
 import static org.hypertrace.gateway.service.common.QueryServiceRequestAndResponseUtils.getResultSetChunk;
+import static org.hypertrace.gateway.service.common.converters.QueryRequestUtil.createTimeColumnGroupByExpression;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.when;
@@ -28,7 +29,6 @@ import org.hypertrace.core.query.service.api.Row;
 import org.hypertrace.core.query.service.api.Value;
 import org.hypertrace.core.query.service.api.ValueType;
 import org.hypertrace.core.query.service.client.QueryServiceClient;
-import org.hypertrace.core.query.service.util.QueryRequestUtil;
 import org.hypertrace.entity.query.service.client.EntityQueryServiceClient;
 import org.hypertrace.gateway.service.AbstractGatewayServiceTest;
 import org.hypertrace.gateway.service.common.AttributeMetadataProvider;
@@ -359,8 +359,7 @@ public class EntityServiceTest extends AbstractGatewayServiceTest {
         )
         .addSelection(createQsAggregationExpression("AVG", "duration_ts", "API.duration", "duration_ts"))
         .addGroupBy(createQsColumnExpression("API.apiId"))
-        .addGroupBy(org.hypertrace.core.query.service.api.Expression.newBuilder().setFunction(
-            QueryRequestUtil.createTimeColumnGroupByFunction("API.startTime", 60)))
+        .addGroupBy(createTimeColumnGroupByExpression("API.startTime", 60))
         .setLimit(10000)
         .build();
     when(queryServiceClient.executeQuery(thirdQueryRequest, Map.of(), 500))

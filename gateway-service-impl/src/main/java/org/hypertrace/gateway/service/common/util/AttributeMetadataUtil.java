@@ -6,6 +6,7 @@ import java.util.Map;
 import java.util.Optional;
 import java.util.stream.Collectors;
 import org.hypertrace.core.attribute.service.v1.AttributeMetadata;
+import org.hypertrace.core.attribute.service.v1.AttributeScope;
 import org.hypertrace.gateway.service.common.AttributeMetadataProvider;
 import org.hypertrace.gateway.service.common.RequestContext;
 import org.hypertrace.gateway.service.common.exp.UnknownScopeAndKeyForAttributeException;
@@ -17,6 +18,7 @@ import org.hypertrace.gateway.service.entity.config.TimestampConfigs;
 /** Utility class for fetching AttributeMetadata */
 public class AttributeMetadataUtil {
   private static final String START_TIME_ATTRIBUTE_KEY = "startTime";
+  private static final String SPACE_IDS_ATTRIBUTE_KEY = "spaceIds";
 
   /**
    * Returns a map of domain object id to DomainObjectMapping with their filter
@@ -137,8 +139,34 @@ public class AttributeMetadataUtil {
   }
 
   private static String getStartTimeAttributeKeyName(String attributeScope) {
-    String timestamp = TimestampConfigs.getTimestampColumn(attributeScope);
-    return timestamp == null ? START_TIME_ATTRIBUTE_KEY : timestamp;
+    return Optional.ofNullable(TimestampConfigs.getTimestampColumn(attributeScope))
+        .orElse(START_TIME_ATTRIBUTE_KEY);
+  }
+
+
+  public static String getSpaceAttributeId(
+      AttributeMetadataProvider attributeMetadataProvider,
+      RequestContext requestContext,
+      String attributeScope) {
+    // Trace types have a space ID attribute
+    if (List.of(
+            AttributeScope.TRACE.name(),
+            AttributeScope.API_TRACE.name(),
+            AttributeScope.BACKEND_TRACE.name())
+        .contains(attributeScope)) {
+      return attributeMetadataProvider
+          .getAttributeMetadata(requestContext, attributeScope, SPACE_IDS_ATTRIBUTE_KEY)
+          .orElseThrow()
+          .getId();
+    }
+    if (AttributeScope.INTERACTION.equals(attributeScope)) {
+      throw new RuntimeException("Interaction space attribute must disambiguate between caller and callee");
+    }
+    // Everything else is based off the span space
+    return attributeMetadataProvider
+        .getAttributeMetadata(requestContext, AttributeScope.EVENT.name(), SPACE_IDS_ATTRIBUTE_KEY)
+        .orElseThrow()
+        .getId();
   }
 
   public static AttributeMetadata getAttributeMetadata(

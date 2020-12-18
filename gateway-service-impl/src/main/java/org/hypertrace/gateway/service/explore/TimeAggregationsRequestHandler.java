@@ -1,5 +1,7 @@
 package org.hypertrace.gateway.service.explore;
 
+import static org.hypertrace.gateway.service.common.converters.QueryRequestUtil.createTimeColumnGroupByExpression;
+
 import java.time.Duration;
 import java.time.temporal.ChronoUnit;
 import java.util.ArrayList;
@@ -13,7 +15,6 @@ import org.hypertrace.core.query.service.api.ResultSetMetadata;
 import org.hypertrace.core.query.service.api.Row;
 import org.hypertrace.core.query.service.api.Value;
 import org.hypertrace.core.query.service.client.QueryServiceClient;
-import org.hypertrace.core.query.service.util.QueryRequestUtil;
 import org.hypertrace.gateway.service.common.AttributeMetadataProvider;
 import org.hypertrace.gateway.service.common.converters.QueryAndGatewayDtoConverter;
 import org.hypertrace.gateway.service.common.util.AttributeMetadataUtil;
@@ -122,9 +123,7 @@ public class TimeAggregationsRequestHandler extends RequestHandler {
         AttributeMetadataUtil.getTimestampAttributeId(
             attributeMetadataProvider, requestContext, request.getContext());
     long periodSecs = getPeriodSecsFromTimeAggregations(request.getTimeAggregationList());
-    builder.addGroupBy(
-        org.hypertrace.core.query.service.api.Expression.newBuilder()
-            .setFunction(QueryRequestUtil.createTimeColumnGroupByFunction(timeColumn, periodSecs)));
+    builder.addGroupBy(createTimeColumnGroupByExpression(timeColumn, periodSecs));
   }
 
   private void addTimeAggregationToRequest(
