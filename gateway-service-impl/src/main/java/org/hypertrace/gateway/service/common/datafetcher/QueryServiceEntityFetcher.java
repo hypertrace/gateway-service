@@ -20,11 +20,9 @@ import java.util.stream.Collectors;
 import java.util.stream.IntStream;
 import org.apache.commons.lang3.StringUtils;
 import org.hypertrace.core.attribute.service.v1.AttributeMetadata;
-import org.hypertrace.core.query.service.api.ColumnIdentifier;
 import org.hypertrace.core.query.service.api.ColumnMetadata;
 import org.hypertrace.core.query.service.api.Expression;
 import org.hypertrace.core.query.service.api.Filter;
-import org.hypertrace.core.query.service.api.LiteralConstant;
 import org.hypertrace.core.query.service.api.Operator;
 import org.hypertrace.core.query.service.api.QueryRequest;
 import org.hypertrace.core.query.service.api.ResultSetChunk;
@@ -66,7 +64,7 @@ import org.slf4j.LoggerFactory;
 public class QueryServiceEntityFetcher implements IEntityFetcher {
 
   private static final Logger LOG = LoggerFactory.getLogger(QueryServiceEntityFetcher.class);
-  private static final String COUNT_COLUMN_NAME = "Count";
+  private static final String COUNT_COLUMN_NAME = "COUNT";
 
   private final EntitiesRequestValidator entitiesRequestValidator = new EntitiesRequestValidator();
   private final QueryServiceClient queryServiceClient;
@@ -432,7 +430,7 @@ public class QueryServiceEntityFetcher implements IEntityFetcher {
 
     // Ignore the count column since we introduced that ourselves into the query
     if (isSkipCountColumn &&
-        StringUtils.equals(COUNT_COLUMN_NAME, metadata.getColumnName())) {
+        StringUtils.equalsIgnoreCase(COUNT_COLUMN_NAME, metadata.getColumnName())) {
       return;
     }
 
@@ -728,23 +726,28 @@ public class QueryServiceEntityFetcher implements IEntityFetcher {
   }
 
   /**
-   * Converts the filter in the given request to the query service filter and adds a non null filter on entity id.
+   * Converts the filter in the given request to the query service filter and adds a non null filter
+   * on entity id.
    */
-  private Filter.Builder constructQueryServiceFilter(EntitiesRequest entitiesRequest, EntitiesRequestContext context,
-                                                     List<String> entityIdAttributes) {
+  private Filter.Builder constructQueryServiceFilter(
+      EntitiesRequest entitiesRequest,
+      EntitiesRequestContext context,
+      List<String> entityIdAttributes) {
     // adds the Id != "null" filter to remove null entities.
-    Filter.Builder filterBuilder = Filter.newBuilder()
-        .setOperator(Operator.AND)
-        .addAllChildFilter(
-            entityIdAttributes.stream()
-                .map(
-                    entityIdAttribute ->
-                        createFilter(
-                            entityIdAttribute, Operator.NEQ, createStringNullLiteralExpression()))
-                .collect(Collectors.toList()));
+    Filter.Builder filterBuilder =
+        Filter.newBuilder()
+            .setOperator(Operator.AND)
+            .addAllChildFilter(
+                entityIdAttributes.stream()
+                    .map(
+                        entityIdAttribute ->
+                            createFilter(
+                                entityIdAttribute,
+                                Operator.NEQ,
+                                createStringNullLiteralExpression()))
+                    .collect(Collectors.toList()));
 
-    // TODO - verify there's no reason this wasn't reused before
-    filterBuilder.addChildFilter(
+    Filter timeSpaceAndProvidedFilter =
         QueryAndGatewayDtoConverter.addTimeAndSpaceFiltersAndConvertToQueryFilter(
             entitiesRequest.getStartTimeMillis(),
             entitiesRequest.getEndTimeMillis(),
@@ -752,9 +755,15 @@ public class QueryServiceEntityFetcher implements IEntityFetcher {
             context.getTimestampAttributeId(),
             AttributeMetadataUtil.getSpaceAttributeId(
                 attributeMetadataProvider, context, entitiesRequest.getEntityType()),
-            entitiesRequest.getFilter()));
+            entitiesRequest.getFilter());
 
-    return filterBuilder;
+    if (timeSpaceAndProvidedFilter.equals(Filter.getDefaultInstance())) {
+      return filterBuilder;
+    }
+    if (timeSpaceAndProvidedFilter.getOperator().equals(Operator.AND)) {
+      return filterBuilder.addAllChildFilter(timeSpaceAndProvidedFilter.getChildFilterList());
+    }
+    return filterBuilder.addChildFilter(timeSpaceAndProvidedFilter);
   }
 
   private MetricSeries.Builder getMetricSeriesBuilder(

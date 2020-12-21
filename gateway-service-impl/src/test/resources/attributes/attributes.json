@@ -415,6 +415,15 @@
     ]
   },
   {
+    "fqn": "Span.space_ids",
+    "value_kind": "TYPE_STRING_ARRAY",
+    "key": "spaceIds",
+    "display_name": "Space IDs",
+    "scopeString": "EVENT",
+    "type": "ATTRIBUTE",
+    "sources": ["QS"]
+  },
+  {
     "fqn": "Api.Trace.id",
     "valueKind": "TYPE_STRING",
     "key": "apiTraceId",
@@ -560,6 +569,15 @@
     "sources": [
       "QS"
     ]
+  },
+  {
+    "fqn": "Api.TRACE.space_ids",
+    "value_kind": "TYPE_STRING_ARRAY",
+    "key": "spaceIds",
+    "display_name": "Space IDs",
+    "scopeString": "API_TRACE",
+    "type": "ATTRIBUTE",
+    "sources": ["QS"]
   },
   {
     "fqn": "API.id",

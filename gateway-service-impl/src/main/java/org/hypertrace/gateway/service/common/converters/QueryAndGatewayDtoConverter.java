@@ -395,10 +395,10 @@ public class QueryAndGatewayDtoConverter {
     return builder.build();
   }
 
-  public static Filter.Builder convertToQueryFilter(
+  public static Filter convertToQueryFilter(
       org.hypertrace.gateway.service.v1.common.Filter filter) {
     if (filter.equals(org.hypertrace.gateway.service.v1.common.Filter.getDefaultInstance())) {
-      return Filter.newBuilder();
+      return Filter.getDefaultInstance();
     }
     Filter.Builder builder = Filter.newBuilder();
     builder.setOperator(convertOperator(filter.getOperator()));
@@ -413,7 +413,7 @@ public class QueryAndGatewayDtoConverter {
       builder.setRhs(convertToQueryExpression(filter.getRhs()));
     }
 
-    return builder;
+    return builder.build();
   }
 
   public static Filter addTimeAndSpaceFiltersAndConvertToQueryFilter(
@@ -423,29 +423,52 @@ public class QueryAndGatewayDtoConverter {
       String timestampAttributeId,
       String spacesAttributeId,
       org.hypertrace.gateway.service.v1.common.Filter providedFilter) {
-    // Always at least a time range filter, add others if applicable
-    Filter.Builder compositeFilter =
-        Filter.newBuilder()
-            .setOperator(Operator.AND)
-            .addChildFilter(
-                QueryRequestUtil.createBetweenTimesFilter(
-                    timestampAttributeId, startTimeMillis, endTimeMillis));
+
+    Filter.Builder compositeFilter = Filter.newBuilder().setOperator(Operator.AND);
+    Filter convertedProvidedFilter =
+        isNonDefaultFilter(providedFilter)
+            ? convertToQueryFilter(providedFilter)
+            : Filter.getDefaultInstance();
+
+    if (!hasTimeRangeFilter(convertedProvidedFilter, timestampAttributeId)) {
+      compositeFilter.addChildFilter(
+          QueryRequestUtil.createBetweenTimesFilter(
+              timestampAttributeId, startTimeMillis, endTimeMillis));
+    }
+
+    if (isNonDefaultFilter(convertedProvidedFilter)) {
+      compositeFilter.addChildFilter(convertedProvidedFilter);
+    }
 
     if (!Strings.isNullOrEmpty(spaceId)) {
       compositeFilter.addChildFilter(
           QueryRequestUtil.createStringFilter(spacesAttributeId, Operator.EQ, spaceId));
     }
 
-    if (providedFilter != null
-        && !org.hypertrace.gateway.service.v1.common.Filter.getDefaultInstance()
-            .equals(providedFilter)) {
-      compositeFilter.addChildFilter(convertToQueryFilter(providedFilter));
-    }
-
-    // If no others were added, unwrap the one child filter and use that
+    // If only one filter was added, unwrap the one child filter and use that
     return compositeFilter.getChildFilterCount() == 1
         ? compositeFilter.getChildFilter(0)
         : compositeFilter.build();
+  }
+
+  private static boolean hasTimeRangeFilter(Filter filter, String timestampAttributeId) {
+    // Used to prevent duplicate time ranges added from different locations
+    if (filter.getOperator() == Operator.AND || filter.getOperator() == Operator.OR) {
+      return filter.getChildFilterList().stream()
+          .anyMatch(f -> hasTimeRangeFilter(f, timestampAttributeId));
+    }
+    return filter.getLhs().getValueCase() == Expression.ValueCase.COLUMNIDENTIFIER
+        && filter.getLhs().getColumnIdentifier().getColumnName().equals(timestampAttributeId);
+  }
+
+  private static boolean isNonDefaultFilter(org.hypertrace.gateway.service.v1.common.Filter filter) {
+    return filter != null
+        && !org.hypertrace.gateway.service.v1.common.Filter.getDefaultInstance()
+                                                           .equals(filter);
+  }
+
+  private static boolean isNonDefaultFilter(Filter filter) {
+    return filter != null && !Filter.getDefaultInstance().equals(filter);
   }
 
   public static List<OrderByExpression> convertToQueryOrderByExpressions(

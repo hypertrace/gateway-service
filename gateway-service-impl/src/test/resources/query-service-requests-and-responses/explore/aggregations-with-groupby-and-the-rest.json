@@ -15,7 +15,8 @@
                 "rhs": {
                   "literal": {
                     "value": {
-                      "string": "1575300533196"
+                      "valueType": "LONG",
+                      "long": "1575300533196"
                     }
                   }
                 }
@@ -30,7 +31,8 @@
                 "rhs": {
                   "literal": {
                     "value": {
-                      "string": "1575304133196"
+                      "valueType": "LONG",
+                      "long": "1575304133196"
                     }
                   }
                 }
@@ -408,7 +410,8 @@
                 "rhs": {
                   "literal": {
                     "value": {
-                      "string": "1575300533196"
+                      "valueType": "LONG",
+                      "long": "1575300533196"
                     }
                   }
                 }
@@ -423,7 +426,8 @@
                 "rhs": {
                   "literal": {
                     "value": {
-                      "string": "1575304133196"
+                      "valueType": "LONG",
+                      "long": "1575304133196"
                     }
                   }
                 }

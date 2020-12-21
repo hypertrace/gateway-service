@@ -1,9 +1,17 @@
 package org.hypertrace.gateway.service.entity;
 
+import static org.hypertrace.core.query.service.api.Operator.AND;
+import static org.hypertrace.core.query.service.api.Operator.IN;
+import static org.hypertrace.core.query.service.api.Operator.NEQ;
 import static org.hypertrace.gateway.service.common.QueryServiceRequestAndResponseUtils.createQsAggregationExpression;
-import static org.hypertrace.gateway.service.common.QueryServiceRequestAndResponseUtils.createQsColumnExpression;
 import static org.hypertrace.gateway.service.common.QueryServiceRequestAndResponseUtils.createQsDefaultRequestFilter;
 import static org.hypertrace.gateway.service.common.QueryServiceRequestAndResponseUtils.getResultSetChunk;
+import static org.hypertrace.gateway.service.common.converters.QueryRequestUtil.createBetweenTimesFilter;
+import static org.hypertrace.gateway.service.common.converters.QueryRequestUtil.createColumnExpression;
+import static org.hypertrace.gateway.service.common.converters.QueryRequestUtil.createCompositeFilter;
+import static org.hypertrace.gateway.service.common.converters.QueryRequestUtil.createFilter;
+import static org.hypertrace.gateway.service.common.converters.QueryRequestUtil.createStringArrayLiteralExpression;
+import static org.hypertrace.gateway.service.common.converters.QueryRequestUtil.createStringNullLiteralExpression;
 import static org.hypertrace.gateway.service.common.converters.QueryRequestUtil.createTimeColumnGroupByExpression;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.eq;
@@ -87,9 +95,8 @@ public class EntityServiceTest extends AbstractGatewayServiceTest {
   }
 
   private void mock(AttributeMetadataProvider attributeMetadataProvider) {
-    when(
-            attributeMetadataProvider.getAttributesMetadata(
-                any(RequestContext.class), eq(AttributeScope.API.name())))
+    when(attributeMetadataProvider.getAttributesMetadata(
+            any(RequestContext.class), eq(AttributeScope.API.name())))
         .thenReturn(
             Map.of(
                 "API.startTime",
@@ -109,7 +116,8 @@ public class EntityServiceTest extends AbstractGatewayServiceTest {
                     .setFqn("API.apiId")
                     .setValueKind(AttributeKind.TYPE_STRING)
                     .setType(AttributeType.ATTRIBUTE)
-                    .addSources(AttributeSource.QS).addSources(AttributeSource.EDS)
+                    .addSources(AttributeSource.QS)
+                    .addSources(AttributeSource.EDS)
                     .setId("API.apiId")
                     .build(),
                 "API.apiName",
@@ -173,6 +181,20 @@ public class EntityServiceTest extends AbstractGatewayServiceTest {
                     .addSources(AttributeSource.QS)
                     .setId("API.startTime")
                     .build()));
+
+    when(attributeMetadataProvider.getAttributeMetadata(
+            any(RequestContext.class), eq(AttributeScope.EVENT.name()), eq("spaceIds")))
+        .thenReturn(
+            Optional.of(
+                AttributeMetadata.newBuilder()
+                    .setScopeString(AttributeScope.EVENT.name())
+                    .setId("EVENT.spaceIds")
+                    .setKey("spaceIds")
+                    .setFqn("EVENT.spaceIds")
+                    .setValueKind(AttributeKind.TYPE_STRING_ARRAY)
+                    .setType(AttributeType.ATTRIBUTE)
+                    .addSources(AttributeSource.QS)
+                    .build()));
   }
 
   @Test
@@ -194,15 +216,15 @@ public class EntityServiceTest extends AbstractGatewayServiceTest {
         "API.apiId", startTime, endTime);
 
     QueryRequest expectedQueryRequest = QueryRequest.newBuilder()
-        .addSelection(createQsColumnExpression("API.apiId")) // Added implicitly in the getEntitiesAndAggregatedMetrics() in order to do GroupBy on the entity id
-        .addSelection(createQsColumnExpression("API.apiName", "API Name"))
+        .addSelection(createColumnExpression("API.apiId")) // Added implicitly in the getEntitiesAndAggregatedMetrics() in order to do GroupBy on the entity id
+        .addSelection(createColumnExpression("API.apiName", "API Name"))
         // QueryServiceEntityFetcher adds Count(entityId) to the request for one that does not have an aggregation.
         // This is because internally a GroupBy request is created out of the entities request and
         // an aggregation is needed.
-        .addSelection(createQsAggregationExpression("Count", "API.apiId"))
+        .addSelection(createQsAggregationExpression("COUNT", "API.apiId"))
         .setFilter(queryServiceFilter)
-        .addGroupBy(createQsColumnExpression("API.apiId"))
-        .addGroupBy(createQsColumnExpression("API.apiName", "API Name"))
+        .addGroupBy(createColumnExpression("API.apiId"))
+        .addGroupBy(createColumnExpression("API.apiName", "API Name"))
         .setLimit(QueryServiceClient.DEFAULT_QUERY_SERVICE_GROUP_BY_LIMIT)
         .build();
     when(queryServiceClient.executeQuery(eq(expectedQueryRequest), any(), Mockito.anyInt()))
@@ -219,13 +241,13 @@ public class EntityServiceTest extends AbstractGatewayServiceTest {
 
     // get total request.
     expectedQueryRequest = QueryRequest.newBuilder()
-        .addSelection(createQsColumnExpression("API.apiId")) // Added implicitly in the getEntitiesAndAggregatedMetrics() in order to do GroupBy on the entity id
+        .addSelection(createColumnExpression("API.apiId")) // Added implicitly in the getEntitiesAndAggregatedMetrics() in order to do GroupBy on the entity id
         // QueryServiceEntityFetcher adds Count(entityId) to the request for one that does not have an aggregation.
         // This is because internally a GroupBy request is created out of the entities request and
         // an aggregation is needed.
-        .addSelection(createQsAggregationExpression("Count", "API.apiId"))
+        .addSelection(createQsAggregationExpression("COUNT", "API.apiId"))
         .setFilter(queryServiceFilter)
-        .addGroupBy(createQsColumnExpression("API.apiId"))
+        .addGroupBy(createColumnExpression("API.apiId"))
         .setLimit(QueryServiceClient.DEFAULT_QUERY_SERVICE_GROUP_BY_LIMIT)
         .build();
 
@@ -283,11 +305,11 @@ public class EntityServiceTest extends AbstractGatewayServiceTest {
         .setFilter(
             QueryServiceRequestAndResponseUtils.createQsDefaultRequestFilter("API.startTime",
                 "API.apiId", entitiesRequest.getStartTimeMillis(), entitiesRequest.getEndTimeMillis()))
-        .addSelection(QueryServiceRequestAndResponseUtils.createQsColumnExpression("API.apiId"))
-        .addSelection(QueryServiceRequestAndResponseUtils.createQsColumnExpression("API.apiName", "API Name"))
-        .addSelection(QueryServiceRequestAndResponseUtils.createQsAggregationExpression("Count", "API.apiId"))
-        .addGroupBy(QueryServiceRequestAndResponseUtils.createQsColumnExpression("API.apiId"))
-        .addGroupBy(QueryServiceRequestAndResponseUtils.createQsColumnExpression("API.apiName", "API Name"))
+        .addSelection(createColumnExpression("API.apiId"))
+        .addSelection(createColumnExpression("API.apiName", "API Name"))
+        .addSelection(QueryServiceRequestAndResponseUtils.createQsAggregationExpression("COUNT", "API.apiId"))
+        .addGroupBy(createColumnExpression("API.apiId"))
+        .addGroupBy(createColumnExpression("API.apiName", "API Name"))
         .setLimit(10000)
         .build();
     when(queryServiceClient.executeQuery(expectedQueryRequest, Map.of(), 500))
@@ -301,25 +323,26 @@ public class EntityServiceTest extends AbstractGatewayServiceTest {
                     .build())
                 .iterator());
 
-    QueryRequest secondQueryRequest = QueryRequest.newBuilder()
-        .setFilter(Filter.newBuilder()
-            .setOperator(org.hypertrace.core.query.service.api.Operator.AND)
-            .addChildFilter(
-                QueryServiceRequestAndResponseUtils.createQsFilter(createQsColumnExpression("API.apiId"),
-                org.hypertrace.core.query.service.api.Operator.NEQ,
-                    QueryServiceRequestAndResponseUtils.createQsStringLiteralExpression("null"))
-            )
-            .addChildFilter(Filter.newBuilder().setOperator(org.hypertrace.core.query.service.api.Operator.IN)
-                .setLhs(createQsColumnExpression("API.apiId", "entityId0"))
-                .setRhs(QueryServiceRequestAndResponseUtils.createQsStringListLiteralExpression(List.of("apiId2", "apiId1")))
-            )
-            .addChildFilter(QueryServiceRequestAndResponseUtils.createQsTimeRangeFilter(
-                "API.startTime", entitiesRequest.getStartTimeMillis(), entitiesRequest.getEndTimeMillis()))
-        )
-        .addSelection(createQsColumnExpression("API.apiId"))
-        .addSelection(createQsAggregationExpression("AVG", "duration", "API.duration", "duration"))
-        .addGroupBy(createQsColumnExpression("API.apiId"))
-        .build();
+    QueryRequest secondQueryRequest =
+        QueryRequest.newBuilder()
+            .setFilter(
+                createCompositeFilter(
+                    AND,
+                    List.of(
+                        createFilter("API.apiId", NEQ, createStringNullLiteralExpression()),
+                        createBetweenTimesFilter(
+                            "API.startTime",
+                            entitiesRequest.getStartTimeMillis(),
+                            entitiesRequest.getEndTimeMillis()),
+                        createFilter(
+                            createColumnExpression("API.apiId", "entityId0"),
+                            IN,
+                            createStringArrayLiteralExpression(List.of("apiId2", "apiId1"))))))
+            .addSelection(createColumnExpression("API.apiId"))
+            .addSelection(
+                createQsAggregationExpression("AVG", "duration", "API.duration", "duration"))
+            .addGroupBy(createColumnExpression("API.apiId"))
+            .build();
     when(queryServiceClient.executeQuery(secondQueryRequest, Map.of(), 500))
         .thenReturn(
             List.of(
@@ -335,26 +358,24 @@ public class EntityServiceTest extends AbstractGatewayServiceTest {
         QueryExpressionUtil.alignToPeriodBoundary(entitiesRequest.getStartTimeMillis(), 60, true);
     long alignedEndTime =
         QueryExpressionUtil.alignToPeriodBoundary(entitiesRequest.getEndTimeMillis(), 60, false);
-    QueryRequest thirdQueryRequest = QueryRequest.newBuilder()
-        .setFilter(Filter.newBuilder()
-            .setOperator(org.hypertrace.core.query.service.api.Operator.AND)
-            .addChildFilter(
-                QueryServiceRequestAndResponseUtils.createQsFilter(createQsColumnExpression("API.apiId"),
-                    org.hypertrace.core.query.service.api.Operator.NEQ,
-                    QueryServiceRequestAndResponseUtils.createQsStringLiteralExpression("null"))
-            )
-            .addChildFilter(Filter.newBuilder().setOperator(org.hypertrace.core.query.service.api.Operator.IN)
-                .setLhs(createQsColumnExpression("API.apiId", "entityId0"))
-                .setRhs(QueryServiceRequestAndResponseUtils.createQsStringListLiteralExpression(List.of("apiId2", "apiId1")))
-            )
-            .addChildFilter(QueryServiceRequestAndResponseUtils.createQsTimeRangeFilter(
-                "API.startTime", alignedStartTime, alignedEndTime))
-        )
-        .addSelection(createQsAggregationExpression("AVG", "duration_ts", "API.duration", "duration_ts"))
-        .addGroupBy(createQsColumnExpression("API.apiId"))
-        .addGroupBy(createTimeColumnGroupByExpression("API.startTime", 60))
-        .setLimit(10000)
-        .build();
+    QueryRequest thirdQueryRequest =
+        QueryRequest.newBuilder()
+            .setFilter(
+                createCompositeFilter(
+                    AND,
+                    List.of(
+                        createFilter("API.apiId", NEQ, createStringNullLiteralExpression()),
+                        createBetweenTimesFilter("API.startTime", alignedStartTime, alignedEndTime),
+                        createFilter(
+                            createColumnExpression("API.apiId", "entityId0"),
+                            IN,
+                            createStringArrayLiteralExpression(List.of("apiId2", "apiId1"))))))
+            .addSelection(
+                createQsAggregationExpression("AVG", "duration_ts", "API.duration", "duration_ts"))
+            .addGroupBy(createColumnExpression("API.apiId"))
+            .addGroupBy(createTimeColumnGroupByExpression("API.startTime", 60))
+            .setLimit(10000)
+            .build();
     when(queryServiceClient.executeQuery(thirdQueryRequest, Map.of(), 500))
         .thenReturn(
             List.of(

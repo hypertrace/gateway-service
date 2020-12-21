@@ -82,7 +82,7 @@ public class EntityInteractionsFetcher {
           TO_ENTITY_ID_ATTRIBUTE_ID,
           TO_ENTITY_TYPE_ATTRIBUTE_ID);
 
-  private static final String COUNT_COLUMN_NAME = "Count";
+  private static final String COUNT_COLUMN_NAME = "COUNT";
 
   private final QueryServiceClient queryServiceClient;
   private final int queryServiceRequestTimeout;
@@ -494,7 +494,7 @@ public class EntityInteractionsFetcher {
           ColumnMetadata metadata = chunk.getResultSetMetadata().getColumnMetadata(i);
 
           // Ignore the count column since we introduced that ourselves into the query.
-          if (StringUtils.equals(COUNT_COLUMN_NAME, metadata.getColumnName())) {
+          if (StringUtils.equalsIgnoreCase(COUNT_COLUMN_NAME, metadata.getColumnName())) {
             continue;
           }
 

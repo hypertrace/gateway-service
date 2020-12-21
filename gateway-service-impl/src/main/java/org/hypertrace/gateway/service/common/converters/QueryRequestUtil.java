@@ -30,6 +30,13 @@ public class QueryRequestUtil {
         .build();
   }
 
+  public static Expression createColumnExpression(String columnName, String alias) {
+    return Expression.newBuilder()
+        .setColumnIdentifier(
+            ColumnIdentifier.newBuilder().setColumnName(columnName).setAlias(alias))
+        .build();
+  }
+
   public static Filter createStringFilter(String columnName, Operator op, String value) {
     return createFilter(columnName, op, createStringLiteralExpression(value));
   }
@@ -39,11 +46,15 @@ public class QueryRequestUtil {
   }
 
   public static Filter createFilter(String columnName, Operator op, Expression value) {
+    return createFilter(createColumnExpression(columnName), op, value);
+  }
+
+  public static Filter createFilter(Expression columnExpression, Operator op, Expression value) {
     return Filter.newBuilder()
-        .setLhs(createColumnExpression(columnName))
-        .setOperator(op)
-        .setRhs(value)
-        .build();
+                 .setLhs(columnExpression)
+                 .setOperator(op)
+                 .setRhs(value)
+                 .build();
   }
 
   public static Filter createCompositeFilter(Operator operator, List<Filter> childFilters) {
