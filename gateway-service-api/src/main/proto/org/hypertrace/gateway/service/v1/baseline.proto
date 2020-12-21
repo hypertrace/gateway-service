@@ -7,27 +7,46 @@ package org.hypertrace.gateway.service.v1.health;
 
 import "org/hypertrace/gateway/service/v1/gateway_query.proto";
 
-message BaselineEntity {
-  string id = 1;
-  string entity_type = 2;
-  map<string, org.hypertrace.gateway.service.v1.common.Value> attribute = 4;
-  map<string, org.hypertrace.gateway.service.v1.common.Baseline> baseline = 5;
-  map<string, org.hypertrace.gateway.service.v1.common.BaselineMetricSeries> baseline_metric_series = 6;
-}
-
 message BaselineEntitiesRequest {
   string entity_type = 1;
   sfixed64 start_time_millis = 2;
   sfixed64 end_time_millis = 3;
 
-  // Filters using which the entities need to be filtered.
-  org.hypertrace.gateway.service.v1.common.Filter filter = 4;
-
-  // Selections
-  repeated org.hypertrace.gateway.service.v1.common.Expression selection = 5;
-  repeated org.hypertrace.gateway.service.v1.common.TimeAggregation time_aggregation = 6;
+  repeated string entity_ids = 4;
+  repeated org.hypertrace.gateway.service.v1.common.FunctionExpression baseline_aggregate = 7;
+  repeated BaselineTimeAggregation baseline_time_series = 8;
 }
 
 message BaselineEntitiesResponse {
   repeated BaselineEntity baselineEntity = 1;
+}
+
+message BaselineEntity {
+  string id = 1;
+  string entity_type = 2;
+  map<string, Baseline> baseline = 5;
+  map<string, BaselineMetricSeries> baseline_metric_series = 6;
+}
+
+message BaselineTimeAggregation {
+  org.hypertrace.gateway.service.v1.common.Period period = 1;
+  org.hypertrace.gateway.service.v1.common.FunctionExpression aggregation = 2;
+}
+
+message Baseline {
+  org.hypertrace.gateway.service.v1.common.Value value = 1;
+  org.hypertrace.gateway.service.v1.common.Value lowerBound = 2;
+  org.hypertrace.gateway.service.v1.common.Value upperBound = 3;
+}
+
+message BaselineMetricSeries {
+  repeated BaselineInterval baselineValue = 1;
+  string aggregation = 2;
+  org.hypertrace.gateway.service.v1.common.Period period = 3;
+}
+
+message BaselineInterval {
+  sfixed64 start_time_millis = 1;
+  sfixed64 end_time_millis = 2;
+  Baseline baseline = 3;
 }
