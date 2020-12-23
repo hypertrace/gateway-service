@@ -14,7 +14,8 @@ import org.hypertrace.core.query.service.client.QueryServiceClient;
 import org.hypertrace.core.query.service.client.QueryServiceConfig;
 import org.hypertrace.entity.query.service.client.EntityQueryServiceClient;
 import org.hypertrace.entity.service.client.config.EntityServiceClientConfig;
-import org.hypertrace.gateway.service.baseline.QueryServiceBaselineHelper;
+import org.hypertrace.gateway.service.baseline.BaselineServiceQueryExecutor;
+import org.hypertrace.gateway.service.baseline.BaselineServiceQueryParser;
 import org.hypertrace.gateway.service.common.AttributeMetadataProvider;
 import org.hypertrace.gateway.service.common.RequestContext;
 import org.hypertrace.gateway.service.common.config.ScopeFilterConfigs;
@@ -89,9 +90,9 @@ public class GatewayServiceImpl extends GatewayServiceGrpc.GatewayServiceImplBas
     this.exploreService =
         new ExploreService(queryServiceClient, qsRequestTimeout,
             attributeMetadataProvider, scopeFilterConfigs);
-    QueryServiceBaselineHelper queryServiceBaselineHelper = new QueryServiceBaselineHelper(attributeMetadataProvider,
-            qsRequestTimeout, queryServiceClient);
-    this.baselineService = new BaselineServiceImpl(attributeMetadataProvider, queryServiceBaselineHelper);
+    BaselineServiceQueryParser baselineServiceQueryParser = new BaselineServiceQueryParser(attributeMetadataProvider);
+    BaselineServiceQueryExecutor baselineServiceQueryExecutor = new BaselineServiceQueryExecutor(qsRequestTimeout, queryServiceClient);
+    this.baselineService = new BaselineServiceImpl(attributeMetadataProvider, baselineServiceQueryParser, baselineServiceQueryExecutor);
   }
 
   private static int getRequestTimeoutMillis(Config config) {
@@ -254,7 +255,13 @@ public class GatewayServiceImpl extends GatewayServiceGrpc.GatewayServiceImplBas
           "EntityType is mandatory in the request.");
 
       Preconditions.checkArgument(
-          request.getBaselineAggregateRequestCount() > 0, "Selection list can't be empty in the request.");
+              request.getEntityIdsCount() > 0,
+              "EntityIds cannot be empty"
+      );
+
+      Preconditions.checkArgument(
+              (request.getBaselineAggregateRequestCount() > 0 || request.getBaselineMetricSeriesRequestCount() > 0),
+              "Both Selection list and TimeSeries list can't be empty in the request.");
 
       Preconditions.checkArgument(
           request.getStartTimeMillis() > 0

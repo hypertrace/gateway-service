@@ -9,7 +9,6 @@ import org.hypertrace.core.query.service.api.Operator;
 import org.hypertrace.core.query.service.api.QueryRequest;
 import org.hypertrace.core.query.service.api.ResultSetChunk;
 import org.hypertrace.core.query.service.api.Row;
-import org.hypertrace.core.query.service.client.QueryServiceClient;
 import org.hypertrace.core.query.service.util.QueryRequestUtil;
 import org.hypertrace.gateway.service.common.AttributeMetadataProvider;
 import org.hypertrace.gateway.service.common.converters.QueryAndGatewayDtoConverter;
@@ -37,20 +36,14 @@ import java.util.concurrent.TimeUnit;
 import java.util.stream.Collectors;
 import java.util.stream.IntStream;
 
-public class QueryServiceBaselineHelper {
+public class BaselineServiceQueryParser {
   private static final String QUERY_SERVICE_NULL = "null";
-  private static final Logger LOG = LoggerFactory.getLogger(QueryServiceBaselineHelper.class);
+  private static final Logger LOG = LoggerFactory.getLogger(BaselineServiceQueryParser.class);
   private final AttributeMetadataProvider attributeMetadataProvider;
-  private final int qsRequestTimeout;
-  private final QueryServiceClient queryServiceClient;
 
-  public QueryServiceBaselineHelper(
-      AttributeMetadataProvider attributeMetadataProvider,
-      int qsRequestTimeout,
-      QueryServiceClient queryServiceClient) {
+  public BaselineServiceQueryParser(
+      AttributeMetadataProvider attributeMetadataProvider) {
     this.attributeMetadataProvider = attributeMetadataProvider;
-    this.qsRequestTimeout = qsRequestTimeout;
-    this.queryServiceClient = queryServiceClient;
   }
 
   public QueryRequest getQueryRequest(
@@ -107,11 +100,6 @@ public class QueryServiceBaselineHelper {
             .addChildFilter(createTimeFilter(timeColumn, Operator.LT, endTimeInMillis)));
 
     return filterBuilder;
-  }
-
-  public Iterator<ResultSetChunk> executeQuery(
-      Map<String, String> requestHeaders, QueryRequest aggQueryRequest) {
-    return queryServiceClient.executeQuery(aggQueryRequest, requestHeaders, qsRequestTimeout);
   }
 
   private static Filter createTimeFilter(String columnName, Operator op, long value) {

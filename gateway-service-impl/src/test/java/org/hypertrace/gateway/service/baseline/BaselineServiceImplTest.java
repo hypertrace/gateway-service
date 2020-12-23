@@ -1,126 +1,164 @@
-//package org.hypertrace.gateway.service.baseline;
-//
-//import org.apache.commons.lang3.RandomStringUtils;
-//import org.hypertrace.gateway.service.entity.EntityService;
-//import org.hypertrace.gateway.service.v1.common.ColumnIdentifier;
-//import org.hypertrace.gateway.service.v1.common.Expression;
-//import org.hypertrace.gateway.service.v1.common.FunctionExpression;
-//import org.hypertrace.gateway.service.v1.common.FunctionType;
-//import org.hypertrace.gateway.service.v1.common.HealthExpression;
-//import org.hypertrace.gateway.service.v1.common.Interval;
-//import org.hypertrace.gateway.service.v1.common.MetricSeries;
-//import org.hypertrace.gateway.service.v1.common.Period;
-//import org.hypertrace.gateway.service.v1.common.TimeAggregation;
-//import org.hypertrace.gateway.service.v1.common.Value;
-//import org.hypertrace.gateway.service.v1.entity.EntitiesRequest;
-//import org.hypertrace.gateway.service.v1.entity.EntitiesResponse;
-//import org.hypertrace.gateway.service.v1.entity.Entity;
-//import org.hypertrace.gateway.service.v1.baseline.BaselineEntitiesRequest;
-//import org.hypertrace.gateway.service.v1.baseline.BaselineEntitiesResponse;
-//import org.junit.jupiter.api.Assertions;
-//import org.junit.jupiter.api.Test;
-//import org.mockito.Mockito;
-//import org.mockito.stubbing.Answer;
-//
-//import java.util.ArrayList;
-//import java.util.List;
-//import java.util.Map;
-//
-//public class BaselineServiceImplTest {
-//
-//  protected static final String TENANT_ID = "tenant1";
-//  private final EntityService entityService = Mockito.mock(EntityService.class);
-//
-//  @Test
-//  public void testBaselineForEntities() {
-//    long endTime = System.currentTimeMillis();
-//    long startTime = endTime - 1000 * 60 * 5;
-//    BaselineEntitiesRequest baselineEntitiesRequest =
-//        BaselineEntitiesRequest.newBuilder()
-//            .setEntityType("API")
-//            .setStartTimeMillis(startTime)
-//            .setEndTimeMillis(endTime)
-//            .addSelection(getExpressionFor("API.apiId", "API Id"))
-//            .addSelection(getExpressionFor("API.apiName", "API Name"))
-//            .addSelection(getFunctionExpressionFor(FunctionType.AVG, "API.duration", "duration"))
-//            .addTimeAggregation(
-//                getTimeAggregationFor(
-//                    getFunctionExpressionFor(FunctionType.AVG, "API.duration", "duration_ts")))
-//            .build();
-//    EntitiesResponse response = getEntitiesResponse(baselineEntitiesRequest, "duration");
-//    EntitiesResponse aggResponse = getEntitiesResponse(baselineEntitiesRequest, "duration_ts");
-//    Mockito.when(
-//            entityService.getEntities(
-//                Mockito.anyString(), Mockito.any(EntitiesRequest.class), Mockito.anyMap()))
-//            .thenAnswer((Answer) invocation -> {
-//              if (((EntitiesRequest)invocation.getArgument(1)).getTimeAggregation(0)
-//                      .getAggregation().getFunction().getAlias().equals("duration")) {
-//                return response;
-//              }
-//              return aggResponse;
-//            });
-//    BaselineService baselineService = new BaselineServiceImpl(entityService, queryServiceClient, qsRequestTimeout);
-//    BaselineEntitiesResponse baselineResponse =
-//        baselineService.getBaselineForEntities(TENANT_ID, baselineEntitiesRequest, Map.of());
-//    Assertions.assertTrue(baselineResponse.getBaselineEntityCount() > 0);
-//    Assertions.assertTrue(baselineResponse.getBaselineEntityList().get(0).getBaselineCount() > 0);
-//  }
-//
-//  private EntitiesResponse getEntitiesResponse(
-//      BaselineEntitiesRequest baselineEntitiesRequest, String alias) {
-//    List<Interval> intervals = new ArrayList<>();
-//    for (int i = 0; i < 5; i++) {
-//      Interval interval =
-//          Interval.newBuilder()
-//              .setValue(
-//                  Value.newBuilder()
-//                      .setDouble(Double.valueOf(RandomStringUtils.randomNumeric(2)))
-//                      .build())
-//              .setStartTimeMillis(System.currentTimeMillis() - i * 60000)
-//              .setEndTimeMillis(System.currentTimeMillis())
-//              .build();
-//      intervals.add(interval);
-//    }
-//
-//    MetricSeries metricSeries = MetricSeries.newBuilder().addAllValue(intervals).build();
-//    Entity entity =
-//        Entity.newBuilder()
-//            .setEntityType("API")
-//            .setId("a2nbc42srgdd4256")
-//            .putMetricSeries(alias, metricSeries)
-//            .build();
-//    return EntitiesResponse.newBuilder().addEntity(entity).build();
-//  }
-//
-//  private TimeAggregation getTimeAggregationFor(Expression expression) {
-//    return TimeAggregation.newBuilder()
-//        .setAggregation(expression)
-//        .setPeriod(Period.newBuilder().setUnit("SECONDS").setValue(60).build())
-//        .build();
-//  }
-//
-//  private Expression getExpressionFor(String columnName, String alias) {
-//    return Expression.newBuilder()
-//        .setColumnIdentifier(
-//            ColumnIdentifier.newBuilder().setColumnName(columnName).setAlias(alias))
-//        .build();
-//  }
-//
-//  private Expression getFunctionExpressionFor(FunctionType type, String columnName, String alias) {
-//    return Expression.newBuilder()
-//        .setHealth(
-//            HealthExpression.newBuilder()
-//                .setFunction(
-//                    FunctionExpression.newBuilder()
-//                        .setFunction(type)
-//                        .setAlias(alias)
-//                        .addArguments(
-//                            Expression.newBuilder()
-//                                .setColumnIdentifier(
-//                                    ColumnIdentifier.newBuilder()
-//                                        .setColumnName(columnName)
-//                                        .setAlias(alias))))
-//                .build())
-//        .build();
-//  }
-//}
+package org.hypertrace.gateway.service.baseline;
+
+import org.hypertrace.core.attribute.service.v1.AttributeMetadata;
+import org.hypertrace.core.query.service.api.QueryRequest;
+import org.hypertrace.core.query.service.api.ResultSetChunk;
+import org.hypertrace.gateway.service.common.AttributeMetadataProvider;
+import org.hypertrace.gateway.service.common.RequestContext;
+import org.hypertrace.gateway.service.v1.baseline.BaselineTimeAggregation;
+import org.hypertrace.gateway.service.v1.common.ColumnIdentifier;
+import org.hypertrace.gateway.service.v1.common.Expression;
+import org.hypertrace.gateway.service.v1.common.FunctionExpression;
+import org.hypertrace.gateway.service.v1.common.FunctionType;
+import org.hypertrace.gateway.service.v1.baseline.BaselineEntitiesRequest;
+import org.hypertrace.gateway.service.v1.baseline.BaselineEntitiesResponse;
+import org.hypertrace.gateway.service.v1.common.Period;
+import org.junit.jupiter.api.Assertions;
+import org.junit.jupiter.api.Test;
+import org.mockito.Mockito;
+
+import java.util.HashMap;
+import java.util.List;
+import java.util.Map;
+import java.util.Optional;
+
+import static org.hypertrace.gateway.service.common.QueryServiceRequestAndResponseUtils.getResultSetChunk;
+
+public class BaselineServiceImplTest {
+
+  protected static final String TENANT_ID = "tenant1";
+  private final AttributeMetadataProvider attributeMetadataProvider =
+      Mockito.mock(AttributeMetadataProvider.class);
+  private final BaselineServiceQueryExecutor baselineServiceQueryExecutor =
+      Mockito.mock(BaselineServiceQueryExecutor.class);
+  private final BaselineServiceQueryParser baselineServiceQueryParser =
+      new BaselineServiceQueryParser(attributeMetadataProvider);
+
+  @Test
+  public void testBaselineForEntitiesForAggregates() {
+    long endTime = System.currentTimeMillis();
+    long startTime = endTime - 1000 * 60 * 5;
+    BaselineEntitiesRequest baselineEntitiesRequest =
+        BaselineEntitiesRequest.newBuilder()
+            .setEntityType("SERVICE")
+            .setStartTimeMillis(startTime)
+            .setEndTimeMillis(endTime)
+            .addEntityIds("entity-1")
+            .addBaselineAggregateRequest(
+                getFunctionExpressionFor(FunctionType.AVG, "SERVICE.duration", "duration_ts"))
+            .build();
+
+    // Mock section
+    AttributeMetadata attributeMetadata =
+        AttributeMetadata.newBuilder().setFqn("Service.Latency").setId("Service.StartTime").build();
+    Mockito.when(
+            attributeMetadataProvider.getAttributeMetadata(
+                Mockito.any(RequestContext.class), Mockito.anyString(), Mockito.anyString()))
+        .thenReturn(Optional.of(attributeMetadata));
+    Mockito.when(
+            baselineServiceQueryExecutor.executeQuery(
+                Mockito.anyMap(), Mockito.any(QueryRequest.class)))
+        .thenReturn(getResultSet().iterator());
+    Map<String, AttributeMetadata> attributeMap = new HashMap<>();
+    attributeMap.put(
+        "duration_ts",
+        AttributeMetadata.newBuilder().setFqn("Service.Latency").setId("Service.Id").build());
+    attributeMap.put(
+        "SERVICE.duration",
+        AttributeMetadata.newBuilder().setFqn("Service.Latency").setId("Service.Id").build());
+    Mockito.when(
+            attributeMetadataProvider.getAttributesMetadata(
+                Mockito.any(RequestContext.class), Mockito.anyString()))
+        .thenReturn(attributeMap);
+
+    BaselineService baselineService =
+        new BaselineServiceImpl(
+            attributeMetadataProvider, baselineServiceQueryParser, baselineServiceQueryExecutor);
+    BaselineEntitiesResponse baselineResponse =
+        baselineService.getBaselineForEntities(TENANT_ID, baselineEntitiesRequest, Map.of());
+    Assertions.assertTrue(baselineResponse.getBaselineEntityCount() > 0);
+    Assertions.assertTrue(
+        baselineResponse.getBaselineEntityList().get(0).getBaselineAggregateMetricCount() > 0);
+  }
+
+  @Test
+  public void testBaselineEntitiesForMetricSeries() {
+    long endTime = System.currentTimeMillis();
+    long startTime = endTime - 100000 * 60 * 5;
+    BaselineEntitiesRequest baselineEntitiesRequest =
+        BaselineEntitiesRequest.newBuilder()
+            .setEntityType("SERVICE")
+            .setStartTimeMillis(startTime)
+            .setEndTimeMillis(endTime)
+            .addEntityIds("entity-1")
+            .addBaselineMetricSeriesRequest(getBaselineTimeSeriesRequest())
+            .build();
+    // Mock section
+    AttributeMetadata attributeMetadata =
+        AttributeMetadata.newBuilder().setFqn("Service.Latency").setId("Service.StartTime").build();
+    Mockito.when(
+            attributeMetadataProvider.getAttributeMetadata(
+                Mockito.any(RequestContext.class), Mockito.anyString(), Mockito.anyString()))
+        .thenReturn(Optional.of(attributeMetadata));
+    Mockito.when(
+            baselineServiceQueryExecutor.executeQuery(
+                Mockito.anyMap(), Mockito.any(QueryRequest.class)))
+        .thenReturn(getResultSet().iterator());
+    Map<String, AttributeMetadata> attributeMap = new HashMap<>();
+    attributeMap.put(
+        "duration_ts",
+        AttributeMetadata.newBuilder().setFqn("Service.Latency").setId("Service.Id").build());
+    attributeMap.put(
+        "SERVICE.duration",
+        AttributeMetadata.newBuilder().setFqn("Service.Latency").setId("Service.Id").build());
+    Mockito.when(
+            attributeMetadataProvider.getAttributesMetadata(
+                Mockito.any(RequestContext.class), Mockito.anyString()))
+        .thenReturn(attributeMap);
+
+    BaselineService baselineService =
+        new BaselineServiceImpl(
+            attributeMetadataProvider, baselineServiceQueryParser, baselineServiceQueryExecutor);
+    BaselineEntitiesResponse baselineResponse =
+        baselineService.getBaselineForEntities(TENANT_ID, baselineEntitiesRequest, Map.of());
+    Assertions.assertTrue(baselineResponse.getBaselineEntityCount() > 0);
+    Assertions.assertTrue(
+        baselineResponse.getBaselineEntityList().get(0).getBaselineMetricSeriesCount() > 0);
+  }
+
+  private BaselineTimeAggregation getBaselineTimeSeriesRequest() {
+    return BaselineTimeAggregation.newBuilder()
+        .setAggregation(
+            getFunctionExpressionFor(FunctionType.AVG, "SERVICE.duration", "duration_ts"))
+        .setPeriod(Period.newBuilder().setUnit("MINUTES").setValue(1).build())
+        .build();
+  }
+
+  private FunctionExpression getFunctionExpressionFor(
+      FunctionType type, String columnName, String alias) {
+    return FunctionExpression.newBuilder()
+        .setFunction(type)
+        .setAlias(alias)
+        .addArguments(
+            Expression.newBuilder()
+                .setColumnIdentifier(
+                    ColumnIdentifier.newBuilder().setColumnName(columnName).setAlias(alias)))
+        .build();
+  }
+
+  public List<ResultSetChunk> getResultSet() {
+    long time = System.currentTimeMillis();
+
+    List<ResultSetChunk> resultSetChunks =
+        List.of(
+            getResultSetChunk(
+                List.of("SERVICE.id", "dateTimeConvert", "duration_ts"),
+                new String[][] {
+                  {"entity-1", String.valueOf(time), "14.0"},
+                  {"entity-1", String.valueOf(time - 60000), "15.0"},
+                  {"entity-1", String.valueOf(time - 120000), "16.0"},
+                  {"entity-1", String.valueOf(time - 180000), "17.0"}
+                }));
+    return resultSetChunks;
+  }
+}
