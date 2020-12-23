@@ -31,7 +31,7 @@ message ExploreRequest {
   int32 limit = 20;
   int32 offset = 21;
 
-  string space_id = 25;
+  string space_id = 22;
 }
 
 message ExploreResponse {

@@ -72,9 +72,7 @@ public class SpanService {
       spanResponseBuilder.setTotal(getTotalFilteredSpans(context, request));
 
       SpansResponse response = spanResponseBuilder.build();
-      if (LOG.isDebugEnabled()) {
-        LOG.debug("Span Service Response: {}", response);
-      }
+      LOG.debug("Span Service Response: {}", response);
 
       return response;
     } finally {
@@ -111,18 +109,13 @@ public class SpanService {
 
     List<SpanEvent> spanEventsResult = new ArrayList<>();
     QueryRequest queryRequest = queryBuilder.build();
-    // FIXME remove
-    LOG.info("Span Request {}", queryRequest);
 
     Iterator<ResultSetChunk> resultSetChunkIterator =
         queryServiceClient.executeQuery(queryRequest, context.getHeaders(), requestTimeout);
 
     while (resultSetChunkIterator.hasNext()) {
       ResultSetChunk chunk = resultSetChunkIterator.next();
-      //      if (LOG.isDebugEnabled()) {
-      // FIXME switch back to debug
-      LOG.info("Received chunk: " + chunk.toString());
-      //      }
+      LOG.debug("Received chunk: {}", chunk);
 
       if (chunk.getRowCount() < 1) {
         break;

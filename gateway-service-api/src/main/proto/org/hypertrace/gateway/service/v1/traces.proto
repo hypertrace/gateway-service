@@ -22,7 +22,7 @@ message TracesRequest {
 
   int32 offset = 6;
   int32 limit = 7;
-  string space_id = 9;
+  string space_id = 8;
 }
 
 message TracesResponse {
