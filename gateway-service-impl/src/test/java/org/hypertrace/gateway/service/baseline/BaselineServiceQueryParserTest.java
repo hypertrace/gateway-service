@@ -101,7 +101,7 @@ public class BaselineServiceQueryParserTest {
         baselineServiceQueryParser.parseQueryResponse(
             resultSetChunks.iterator(), baselineRequestContext, 1, "SERVICE", ONE_HOUR_SECONDS);
     Assertions.assertNotNull(response);
-    Assertions.assertEquals(4, response.getBaselineEntity(0).getBaselineMetricSeriesCount());
+    Assertions.assertEquals(1, response.getBaselineEntity(0).getBaselineMetricSeriesCount());
   }
 
   private TimeAggregation getTimeAggregationFor(Expression expression) {
