@@ -36,6 +36,7 @@ dependencies {
   // Common utilities
   implementation("org.apache.commons:commons-lang3:3.10")
   implementation("org.apache.commons:commons-math:2.2")
+  implementation("org.apache.commons:commons-collections4:4.0")
   implementation("com.google.protobuf:protobuf-java-util:3.13.0")
 
   // Metrics
