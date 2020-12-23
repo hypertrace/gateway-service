@@ -1,0 +1,66 @@
+{
+  "context": "API_TRACE",
+  "startTimeMillis": "1575307733196",
+  "endTimeMillis": "1575308333196",
+  "filter": {
+  },
+  "timeAggregation": [
+    {
+      "period": {
+        "value": 60,
+        "unit": "SECONDS"
+      },
+      "aggregation": {
+        "function": {
+          "function": "AVG",
+          "arguments": [
+            {
+              "columnIdentifier": {
+                "columnName": "API_TRACE.duration"
+              }
+            }
+          ],
+          "alias": "AVG#results/avgLatency:API_TRACE|duration"
+        }
+      }
+    },
+    {
+      "period": {
+        "value": 60,
+        "unit": "SECONDS"
+      },
+      "aggregation": {
+        "function": {
+          "function": "COUNT",
+          "arguments": [
+            {
+              "columnIdentifier": {
+                "columnName": "API_TRACE.traceId"
+              }
+            }
+          ],
+          "alias": "COUNT#results/countTraces:API_TRACE|traceId"
+        }
+      }
+    }
+  ],
+  "orderBy": [
+    {
+      "expression": {
+        "function": {
+          "function": "AVG",
+          "arguments": [
+            {
+              "columnIdentifier": {
+                "columnName": "API_TRACE.duration"
+              }
+            }
+          ],
+          "alias": "AVG#AVG:API_TRACE|duration"
+        }
+      }
+    }
+  ],
+  "limit": 10,
+  "space_id": "test-space"
+}

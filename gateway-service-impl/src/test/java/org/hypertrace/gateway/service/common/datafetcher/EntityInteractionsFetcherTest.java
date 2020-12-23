@@ -1,5 +1,8 @@
 package org.hypertrace.gateway.service.common.datafetcher;
 
+import static org.hypertrace.gateway.service.common.converters.QueryRequestUtil.createBetweenTimesFilter;
+import static org.hypertrace.gateway.service.common.converters.QueryRequestUtil.createFilter;
+import static org.hypertrace.gateway.service.common.converters.QueryRequestUtil.createStringNullLiteralExpression;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.junit.jupiter.api.Assertions.fail;
@@ -142,6 +145,7 @@ public class EntityInteractionsFetcherTest extends AbstractGatewayServiceTest {
         aggregator.buildQueryRequests(
             request.getStartTimeMillis(),
             request.getEndTimeMillis(),
+            request.getSpaceId(),
             request.getEntityType(),
             request.getIncomingInteractions(),
             Collections.singleton(EntityKey.from("test_id1")),
@@ -158,6 +162,7 @@ public class EntityInteractionsFetcherTest extends AbstractGatewayServiceTest {
         aggregator.buildQueryRequests(
             request.getStartTimeMillis(),
             request.getEndTimeMillis(),
+            request.getSpaceId(),
             request.getEntityType(),
             request.getOutgoingInteractions(),
             Collections.singleton(EntityKey.from("test_id1")),
@@ -255,6 +260,7 @@ public class EntityInteractionsFetcherTest extends AbstractGatewayServiceTest {
         aggregator.buildQueryRequests(
             request.getStartTimeMillis(),
             request.getEndTimeMillis(),
+            request.getSpaceId(),
             request.getEntityType(),
             request.getIncomingInteractions(),
             Collections.singleton(EntityKey.from("test_id1")),
@@ -321,6 +327,7 @@ public class EntityInteractionsFetcherTest extends AbstractGatewayServiceTest {
         aggregator.buildQueryRequests(
             request.getStartTimeMillis(),
             request.getEndTimeMillis(),
+            request.getSpaceId(),
             request.getEntityType(),
             request.getOutgoingInteractions(),
             Collections.singleton(EntityKey.from("test_id1")),
@@ -342,22 +349,24 @@ public class EntityInteractionsFetcherTest extends AbstractGatewayServiceTest {
     org.hypertrace.core.query.service.api.Filter expectedFilter =
         org.hypertrace.core.query.service.api.Filter.newBuilder()
             .setOperator(org.hypertrace.core.query.service.api.Operator.AND)
-            .addChildFilter(timeFilter(request.getStartTimeMillis(), request.getEndTimeMillis()))
+            .addChildFilter(
+                createBetweenTimesFilter(
+                    "INTERACTION.startTime",
+                    request.getStartTimeMillis(),
+                    request.getEndTimeMillis()))
             .addChildFilter(
                 createStringArrayFilter(
                     org.hypertrace.core.query.service.api.Operator.IN,
                     "INTERACTION.fromServiceId",
-                    List.of("test_id1")
-                    )
-            )
+                    List.of("test_id1")))
             .addChildFilter(
                 org.hypertrace.core.query.service.api.Filter.newBuilder()
                     .setOperator(org.hypertrace.core.query.service.api.Operator.AND)
                     .addChildFilter(
-                        QueryRequestUtil.createColumnValueFilter(
+                        createFilter(
                             "INTERACTION.toServiceId",
                             org.hypertrace.core.query.service.api.Operator.NEQ,
-                            "null")))
+                            createStringNullLiteralExpression())))
             .build();
     assertEquals(expectedFilter, filter);
 
@@ -366,22 +375,24 @@ public class EntityInteractionsFetcherTest extends AbstractGatewayServiceTest {
     expectedFilter =
         org.hypertrace.core.query.service.api.Filter.newBuilder()
             .setOperator(org.hypertrace.core.query.service.api.Operator.AND)
-            .addChildFilter(timeFilter(request.getStartTimeMillis(), request.getEndTimeMillis()))
+            .addChildFilter(
+                createBetweenTimesFilter(
+                    "INTERACTION.startTime",
+                    request.getStartTimeMillis(),
+                    request.getEndTimeMillis()))
             .addChildFilter(
                 createStringArrayFilter(
                     org.hypertrace.core.query.service.api.Operator.IN,
                     "INTERACTION.fromServiceId",
-                    List.of("test_id1")
-                )
-            )
+                    List.of("test_id1")))
             .addChildFilter(
                 org.hypertrace.core.query.service.api.Filter.newBuilder()
                     .setOperator(org.hypertrace.core.query.service.api.Operator.AND)
                     .addChildFilter(
-                        QueryRequestUtil.createColumnValueFilter(
+                        createFilter(
                             "INTERACTION.toBackendId",
                             org.hypertrace.core.query.service.api.Operator.NEQ,
-                            "null")))
+                            createStringNullLiteralExpression())))
             .build();
     assertEquals(expectedFilter, filter);
   }
@@ -437,6 +448,7 @@ public class EntityInteractionsFetcherTest extends AbstractGatewayServiceTest {
         aggregator.buildQueryRequests(
             request.getStartTimeMillis(),
             request.getEndTimeMillis(),
+            request.getSpaceId(),
             request.getEntityType(),
             request.getOutgoingInteractions(),
             entityKeys,
@@ -459,25 +471,28 @@ public class EntityInteractionsFetcherTest extends AbstractGatewayServiceTest {
     org.hypertrace.core.query.service.api.Filter expectedFilter =
         org.hypertrace.core.query.service.api.Filter.newBuilder()
             .setOperator(org.hypertrace.core.query.service.api.Operator.AND)
-            .addChildFilter(timeFilter(request.getStartTimeMillis(), request.getEndTimeMillis()))
+            .addChildFilter(
+                createBetweenTimesFilter(
+                    "INTERACTION.startTime",
+                    request.getStartTimeMillis(),
+                    request.getEndTimeMillis()))
             .addChildFilter(
                 org.hypertrace.core.query.service.api.Filter.newBuilder()
                     .setOperator(org.hypertrace.core.query.service.api.Operator.OR)
                     .addChildFilter(
-                        QueryRequestUtil.createValueEQFilter(entityIdInteractionMappings, List.of("test_name1", "test_type1"))
-                    )
+                        QueryRequestUtil.createValueEQFilter(
+                            entityIdInteractionMappings, List.of("test_name1", "test_type1")))
                     .addChildFilter(
-                        QueryRequestUtil.createValueEQFilter(entityIdInteractionMappings, List.of("test_name2", "test_type2"))
-                    )
-            )
+                        QueryRequestUtil.createValueEQFilter(
+                            entityIdInteractionMappings, List.of("test_name2", "test_type2"))))
             .addChildFilter(
                 org.hypertrace.core.query.service.api.Filter.newBuilder()
                     .setOperator(org.hypertrace.core.query.service.api.Operator.AND)
                     .addChildFilter(
-                        QueryRequestUtil.createColumnValueFilter(
+                        createFilter(
                             "INTERACTION.toServiceId",
                             org.hypertrace.core.query.service.api.Operator.NEQ,
-                            "null")))
+                            createStringNullLiteralExpression())))
             .build();
     assertEquals(expectedFilter, filter);
   }
@@ -504,18 +519,6 @@ public class EntityInteractionsFetcherTest extends AbstractGatewayServiceTest {
                         )
                 )
         ).build();
-  }
-
-  private org.hypertrace.core.query.service.api.Filter timeFilter(long start, long end) {
-    return org.hypertrace.core.query.service.api.Filter.newBuilder()
-        .setOperator(org.hypertrace.core.query.service.api.Operator.AND)
-        .addChildFilter(
-            QueryRequestUtil.createTimeFilter(
-                "INTERACTION.startTime", org.hypertrace.core.query.service.api.Operator.GE, start))
-        .addChildFilter(
-            QueryRequestUtil.createTimeFilter(
-                "INTERACTION.startTime", org.hypertrace.core.query.service.api.Operator.LT, end))
-        .build();
   }
 
   private EntitiesRequest.Builder getValidServiceEntitiesRequest() {
@@ -556,6 +559,7 @@ public class EntityInteractionsFetcherTest extends AbstractGatewayServiceTest {
         aggregator.buildQueryRequests(
             request.getStartTimeMillis(),
             request.getEndTimeMillis(),
+            request.getSpaceId(),
             request.getEntityType(),
             request.getIncomingInteractions(),
             Collections.singleton(EntityKey.from("test_id1")),

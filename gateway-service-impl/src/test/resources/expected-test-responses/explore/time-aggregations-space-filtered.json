@@ -1,0 +1,148 @@
+{
+  "row": [
+    {
+      "columns": {
+        "INTERVAL_START_TIME": {
+          "valueType": "LONG",
+          "long": "1575307740000"
+        },
+        "AVG#results/avgLatency:API_TRACE|duration": {
+          "valueType": "DOUBLE",
+          "double": 9.30238
+        },
+        "COUNT#results/countTraces:API_TRACE|traceId": {
+          "valueType": "LONG",
+          "long": "926"
+        }
+      }
+    },
+    {
+      "columns": {
+        "INTERVAL_START_TIME": {
+          "valueType": "LONG",
+          "long": "1575307800000"
+        },
+        "AVG#results/avgLatency:API_TRACE|duration": {
+          "valueType": "DOUBLE",
+          "double": 8.02764
+        },
+        "COUNT#results/countTraces:API_TRACE|traceId": {
+          "valueType": "LONG",
+          "long": "832"
+        }
+      }
+    },
+    {
+      "columns": {
+        "INTERVAL_START_TIME": {
+          "valueType": "LONG",
+          "long": "1575307860000"
+        },
+        "AVG#results/avgLatency:API_TRACE|duration": {
+          "valueType": "DOUBLE",
+          "double": 29.40891
+        },
+        "COUNT#results/countTraces:API_TRACE|traceId": {
+          "valueType": "LONG",
+          "long": "1526"
+        }
+      }
+    },
+    {
+      "columns": {
+        "INTERVAL_START_TIME": {
+          "valueType": "LONG",
+          "long": "1575307920000"
+        },
+        "AVG#results/avgLatency:API_TRACE|duration": {
+          "valueType": "DOUBLE",
+          "double": 8.49306
+        },
+        "COUNT#results/countTraces:API_TRACE|traceId": {
+          "valueType": "LONG",
+          "long": "720"
+        }
+      }
+    },
+    {
+      "columns": {
+        "INTERVAL_START_TIME": {
+          "valueType": "LONG",
+          "long": "1575307980000"
+        },
+        "AVG#results/avgLatency:API_TRACE|duration": {
+          "valueType": "DOUBLE",
+          "double": 26.25162
+        },
+        "COUNT#results/countTraces:API_TRACE|traceId": {
+          "valueType": "LONG",
+          "long": "1546"
+        }
+      }
+    },
+    {
+      "columns": {
+        "INTERVAL_START_TIME": {
+          "valueType": "LONG",
+          "long": "1575308040000"
+        },
+        "AVG#results/avgLatency:API_TRACE|duration": {
+          "valueType": "DOUBLE",
+          "double": 376.31333
+        },
+        "COUNT#results/countTraces:API_TRACE|traceId": {
+          "valueType": "LONG",
+          "long": "900"
+        }
+      }
+    },
+    {
+      "columns": {
+        "INTERVAL_START_TIME": {
+          "valueType": "LONG",
+          "long": "1575308100000"
+        },
+        "AVG#results/avgLatency:API_TRACE|duration": {
+          "valueType": "DOUBLE",
+          "double": 13.99868
+        },
+        "COUNT#results/countTraces:API_TRACE|traceId": {
+          "valueType": "LONG",
+          "long": "759"
+        }
+      }
+    },
+    {
+      "columns": {
+        "INTERVAL_START_TIME": {
+          "valueType": "LONG",
+          "long": "1575308160000"
+        },
+        "AVG#results/avgLatency:API_TRACE|duration": {
+          "valueType": "DOUBLE",
+          "double": 14.57841
+        },
+        "COUNT#results/countTraces:API_TRACE|traceId": {
+          "valueType": "LONG",
+          "long": "491"
+        }
+      }
+    },
+    {
+      "columns": {
+        "INTERVAL_START_TIME": {
+          "valueType": "LONG",
+          "long": "1575308220000"
+        },
+        "AVG#results/avgLatency:API_TRACE|duration": {
+          "valueType": "DOUBLE",
+          "double": 25.01376
+        },
+        "COUNT#results/countTraces:API_TRACE|traceId": {
+          "valueType": "LONG",
+          "long": "1599"
+        }
+      }
+    }
+  ]
+}

@@ -1,5 +1,10 @@
 package org.hypertrace.gateway.service.common;
 
+import static org.hypertrace.gateway.service.common.converters.QueryRequestUtil.createBetweenTimesFilter;
+import static org.hypertrace.gateway.service.common.converters.QueryRequestUtil.createColumnExpression;
+import static org.hypertrace.gateway.service.common.converters.QueryRequestUtil.createFilter;
+import static org.hypertrace.gateway.service.common.converters.QueryRequestUtil.createStringNullLiteralExpression;
+
 import java.util.List;
 import java.util.stream.Collectors;
 import org.hypertrace.core.query.service.api.ColumnIdentifier;
@@ -9,6 +14,7 @@ import org.hypertrace.core.query.service.api.Filter;
 import org.hypertrace.core.query.service.api.Function;
 import org.hypertrace.core.query.service.api.LiteralConstant;
 import org.hypertrace.core.query.service.api.Operator;
+import org.hypertrace.core.query.service.api.OrderByExpression;
 import org.hypertrace.core.query.service.api.ResultSetChunk;
 import org.hypertrace.core.query.service.api.ResultSetMetadata;
 import org.hypertrace.core.query.service.api.Row;
@@ -58,7 +64,7 @@ public class QueryServiceRequestAndResponseUtils {
         .setFunction(Function.newBuilder()
             .setFunctionName(functionName)
             .setAlias(functionAlias)
-            .addArguments(createQsColumnExpression(columnName, columnAlias))
+            .addArguments(createColumnExpression(columnName, columnAlias))
         )
         .build();
   }
@@ -68,7 +74,7 @@ public class QueryServiceRequestAndResponseUtils {
         .setFunction(Function.newBuilder()
             .setFunctionName(functionName)
             .setAlias(alias)
-            .addArguments(createQsColumnExpression(columnName))
+            .addArguments(createColumnExpression(columnName))
         )
         .build();
   }
@@ -77,79 +83,13 @@ public class QueryServiceRequestAndResponseUtils {
     return Expression.newBuilder()
         .setFunction(Function.newBuilder()
             .setFunctionName(functionName)
-            .addArguments(createQsColumnExpression(columnName))
+            .addArguments(createColumnExpression(columnName))
         )
         .build();
   }
 
-  public static Expression createQsColumnExpression(String columnName) {
-    return Expression.newBuilder()
-        .setColumnIdentifier(
-            ColumnIdentifier.newBuilder()
-                .setColumnName(columnName)
-        )
-        .build();
-  }
-
-  public static Expression createQsColumnExpression(String columnName, String alias) {
-    return Expression.newBuilder()
-        .setColumnIdentifier(
-            ColumnIdentifier.newBuilder()
-                .setColumnName(columnName)
-                .setAlias(alias)
-        )
-        .build();
-  }
-
-  public static Expression createQsStringLiteralExpression(String val) {
-    return Expression.newBuilder()
-        .setLiteral(
-            LiteralConstant.newBuilder()
-                .setValue(
-                    Value.newBuilder()
-                        .setString(val)
-                        .setValueType(ValueType.STRING)
-                )
-        )
-        .build();
-  }
-
-  public static Expression createQsStringListLiteralExpression(List<String> list) {
-    return Expression.newBuilder()
-        .setLiteral(
-            LiteralConstant.newBuilder()
-                .setValue(
-                    Value.newBuilder()
-                        .addAllStringArray(list)
-                        .setValueType(ValueType.STRING_ARRAY)
-                )
-        )
-        .build();
-  }
-
-  public static Expression createQsLongLiteralExpression(long val) {
-    return Expression.newBuilder()
-        .setLiteral(
-            LiteralConstant.newBuilder()
-                .setValue(
-                    Value.newBuilder()
-                        .setLong(val)
-                        .setValueType(ValueType.LONG)
-                )
-        )
-        .build();
-  }
-
-  public static Filter createQsFilter(Expression lhs, Operator operator, Expression rhs) {
-    return Filter.newBuilder()
-        .setLhs(lhs)
-        .setOperator(operator)
-        .setRhs(rhs)
-        .build();
-  }
-
-  public static org.hypertrace.core.query.service.api.OrderByExpression createQsOrderBy(Expression expression, SortOrder sortOrder) {
-    return org.hypertrace.core.query.service.api.OrderByExpression.newBuilder()
+  public static OrderByExpression createQsOrderBy(Expression expression, SortOrder sortOrder) {
+    return OrderByExpression.newBuilder()
         .setOrder(sortOrder)
         .setExpression(expression)
         .build();
@@ -163,13 +103,12 @@ public class QueryServiceRequestAndResponseUtils {
     return Filter.newBuilder()
         .setOperator(Operator.AND)
         .addChildFilter(
-            createQsFilter(createQsColumnExpression(entityIdColumnName),
+            createFilter(
+                createColumnExpression(entityIdColumnName),
                 Operator.NEQ,
-                createQsStringLiteralExpression("null"))
-        )
-        .addChildFilter(Filter.newBuilder().setOperator(Operator.AND)
-            .addChildFilter(createQsTimeRangeFilter(timestampColumnName, startTime, endTime))
-            .addChildFilter(requestFilter))
+                createStringNullLiteralExpression()))
+        .addChildFilter(createBetweenTimesFilter(timestampColumnName, startTime, endTime))
+        .addChildFilter(requestFilter)
         .build();
   }
 
@@ -180,33 +119,13 @@ public class QueryServiceRequestAndResponseUtils {
     return Filter.newBuilder()
         .setOperator(Operator.AND)
         .addChildFilter(
-            createQsFilter(
-                createQsColumnExpression(entityIdColumnName),
+            createFilter(
+                createColumnExpression(entityIdColumnName),
                 Operator.NEQ,
-                createQsStringLiteralExpression("null")
+                createStringNullLiteralExpression()
             )
         )
-        .addChildFilter(createQsTimeRangeFilter(timestampColumnName, startTime, endTime))
-        .build();
-  }
-
-  public static Filter createQsTimeRangeFilter(String timestampColumnName, long startTime, long endTime) {
-    return Filter.newBuilder()
-        .setOperator(Operator.AND)
-        .addChildFilter(
-            createQsFilter(
-                createQsColumnExpression(timestampColumnName),
-                Operator.GE,
-                createQsLongLiteralExpression(startTime)
-            )
-        )
-        .addChildFilter(
-            createQsFilter(
-                createQsColumnExpression(timestampColumnName),
-                Operator.LT,
-                createQsLongLiteralExpression(endTime)
-            )
-        )
+        .addAllChildFilter(createBetweenTimesFilter(timestampColumnName, startTime, endTime).getChildFilterList())
         .build();
   }
 }

@@ -1,7 +1,12 @@
 package org.hypertrace.gateway.service.common.datafetcher;
 
+import static org.hypertrace.gateway.service.common.converters.QueryRequestUtil.createFilter;
+import static org.hypertrace.gateway.service.common.converters.QueryRequestUtil.createStringArrayLiteralExpression;
+import static org.hypertrace.gateway.service.common.converters.QueryRequestUtil.createStringNullLiteralExpression;
+
 import com.google.common.annotations.VisibleForTesting;
 import com.google.common.base.Preconditions;
+import com.google.common.base.Strings;
 import com.google.common.collect.ImmutableSet;
 import java.util.ArrayList;
 import java.util.Collection;
@@ -11,6 +16,7 @@ import java.util.HashSet;
 import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
+import java.util.Optional;
 import java.util.Set;
 import java.util.stream.Collectors;
 import java.util.stream.IntStream;
@@ -20,16 +26,16 @@ import org.hypertrace.core.attribute.service.v1.AttributeMetadata;
 import org.hypertrace.core.attribute.service.v1.AttributeScope;
 import org.hypertrace.core.query.service.api.ColumnMetadata;
 import org.hypertrace.core.query.service.api.Filter;
-import org.hypertrace.core.query.service.api.LiteralConstant;
 import org.hypertrace.core.query.service.api.Operator;
 import org.hypertrace.core.query.service.api.QueryRequest;
 import org.hypertrace.core.query.service.api.ResultSetChunk;
 import org.hypertrace.core.query.service.api.Row;
 import org.hypertrace.core.query.service.client.QueryServiceClient;
-import org.hypertrace.core.query.service.util.QueryRequestUtil;
 import org.hypertrace.gateway.service.common.AttributeMetadataProvider;
 import org.hypertrace.gateway.service.common.RequestContext;
 import org.hypertrace.gateway.service.common.converters.QueryAndGatewayDtoConverter;
+import org.hypertrace.gateway.service.common.converters.QueryRequestUtil;
+import org.hypertrace.gateway.service.common.util.AttributeMetadataUtil;
 import org.hypertrace.gateway.service.common.util.MetricAggregationFunctionUtil;
 import org.hypertrace.gateway.service.entity.EntityKey;
 import org.hypertrace.gateway.service.entity.config.InteractionConfig;
@@ -61,7 +67,10 @@ public class EntityInteractionsFetcher {
   private static final boolean INCOMING = true;
   private static final boolean OUTGOING = false;
 
-  private static final String TIMESTAMP_COLUMN_KEY = "startTime";
+  private static final String SCOPE = AttributeScope.INTERACTION.name();
+  private static final String FROM_SPACE_ATTRIBUTE_KEY = "fromSpaceIds";
+  private static final String TO_SPACE_ATTRIBUTE_KEY = "toSpaceIds";
+  // TODO reference by key instead of ID
   private static final String FROM_ENTITY_TYPE_ATTRIBUTE_ID = "INTERACTION.fromEntityType";
   private static final String TO_ENTITY_TYPE_ATTRIBUTE_ID = "INTERACTION.toEntityType";
   private static final String FROM_ENTITY_ID_ATTRIBUTE_ID = "INTERACTION.fromEntityId";
@@ -73,7 +82,7 @@ public class EntityInteractionsFetcher {
           TO_ENTITY_ID_ATTRIBUTE_ID,
           TO_ENTITY_TYPE_ATTRIBUTE_ID);
 
-  private static final String COUNT_COLUMN_NAME = "Count";
+  private static final String COUNT_COLUMN_NAME = "COUNT";
 
   private final QueryServiceClient queryServiceClient;
   private final int queryServiceRequestTimeout;
@@ -94,7 +103,7 @@ public class EntityInteractionsFetcher {
       throw new IllegalArgumentException("Unhandled entityType: " + entityType);
     }
     List<String> columnNames =
-        (incoming)
+        incoming
             ? interactionConfig.getCallerSideAttributeIds()
             : interactionConfig.getCalleeSideAttributeIds();
     if (columnNames.isEmpty()) {
@@ -141,7 +150,8 @@ public class EntityInteractionsFetcher {
 
     if (!interactionsRequest.hasFilter()) {
       throw new IllegalArgumentException(errorMsg);
-    } else if (interactionsRequest.getSelectionCount() == 0) {
+    }
+    if (interactionsRequest.getSelectionCount() == 0) {
       throw new IllegalArgumentException("Interactions request should have non-empty selections.");
     }
 
@@ -149,6 +159,7 @@ public class EntityInteractionsFetcher {
         buildQueryRequests(
             request.getStartTimeMillis(),
             request.getEndTimeMillis(),
+            request.getSpaceId(),
             request.getEntityType(),
             interactionsRequest,
             entityIdToBuilders.keySet(),
@@ -206,7 +217,7 @@ public class EntityInteractionsFetcher {
     return Collections.emptySet();
   }
 
-  private Filter.Builder convertToQueryFilter(
+  private Filter convertToQueryFilter(
       org.hypertrace.gateway.service.v1.common.Filter filter, DomainEntityType otherEntityType) {
     Filter.Builder builder = Filter.newBuilder();
     builder.setOperator(QueryAndGatewayDtoConverter.convertOperator(filter.getOperator()));
@@ -218,49 +229,37 @@ public class EntityInteractionsFetcher {
       if (filter.getLhs().getValueCase() == ValueCase.COLUMNIDENTIFIER) {
         String columnName = filter.getLhs().getColumnIdentifier().getColumnName();
 
-        Filter.Builder entityFilter = null;
         switch (columnName) {
           case FROM_ENTITY_TYPE_ATTRIBUTE_ID:
-            entityFilter =
-                QueryRequestUtil.createBooleanFilter(
+            return QueryRequestUtil.createCompositeFilter(
                     Operator.AND,
                     getEntityIdColumnsFromInteraction(otherEntityType, INCOMING).stream()
                         .map(
-                            fromEntityIdColumn ->
-                                QueryRequestUtil.createColumnValueFilter(
-                                    fromEntityIdColumn, Operator.NEQ, "null"))
-                        .map(Filter.Builder::build)
+                            fromEntityIdColumn -> createFilter(
+                                fromEntityIdColumn, Operator.NEQ, createStringNullLiteralExpression()))
                         .collect(Collectors.toList()));
-            break;
           case TO_ENTITY_TYPE_ATTRIBUTE_ID:
-            entityFilter =
-                QueryRequestUtil.createBooleanFilter(
+            return QueryRequestUtil.createCompositeFilter(
                     Operator.AND,
                     getEntityIdColumnsFromInteraction(otherEntityType, OUTGOING).stream()
                         .map(
                             fromEntityIdColumn ->
-                                QueryRequestUtil.createColumnValueFilter(
-                                    fromEntityIdColumn, Operator.NEQ, "null"))
-                        .map(Filter.Builder::build)
+                                createFilter(
+                                    fromEntityIdColumn,
+                                    Operator.NEQ,
+                                    createStringNullLiteralExpression()))
                         .collect(Collectors.toList()));
-            break;
           case FROM_ENTITY_ID_ATTRIBUTE_ID:
-            entityFilter =
-                createFilterForEntityKeys(
+            return createFilterForEntityKeys(
                     getEntityIdColumnsFromInteraction(otherEntityType, INCOMING),
                     getEntityKeyValues(filter.getRhs()));
-            break;
           case TO_ENTITY_ID_ATTRIBUTE_ID:
-            entityFilter =
-                createFilterForEntityKeys(
+            return createFilterForEntityKeys(
                     getEntityIdColumnsFromInteraction(otherEntityType, OUTGOING),
                     getEntityKeyValues(filter.getRhs()));
-            break;
           default:
-            // Do nothing.
+            // Do nothing, fall through to default case
         }
-
-        return entityFilter;
       }
 
       // Default case.
@@ -268,7 +267,7 @@ public class EntityInteractionsFetcher {
       builder.setRhs(QueryAndGatewayDtoConverter.convertToQueryExpression(filter.getRhs()));
     }
 
-    return builder;
+    return builder.build();
   }
 
   private Set<EntityKey> getEntityKeyValues(Expression expression) {
@@ -277,7 +276,8 @@ public class EntityInteractionsFetcher {
     Value value = expression.getLiteral().getValue();
     if (value.getValueType() == ValueType.STRING) {
       return Collections.singleton(EntityKey.from(value.getString()));
-    } else if (value.getValueType() == ValueType.STRING_ARRAY) {
+    }
+    if (value.getValueType() == ValueType.STRING_ARRAY) {
       return value.getStringArrayList().stream().map(EntityKey::from).collect(Collectors.toSet());
     }
     throw new IllegalArgumentException(
@@ -290,53 +290,42 @@ public class EntityInteractionsFetcher {
     Value value = expression.getLiteral().getValue();
     if (value.getValueType() == ValueType.STRING) {
       return Collections.singleton(value.getString());
-    } else if (value.getValueType() == ValueType.STRING_ARRAY) {
+    }
+    if (value.getValueType() == ValueType.STRING_ARRAY) {
       return new HashSet<>(value.getStringArrayList());
     }
     throw new IllegalArgumentException(
         "Expected STRING value but received unhandled type: " + value.getValueType());
   }
 
-  private Filter.Builder createFilterForEntityKeys(
+  private Filter createFilterForEntityKeys(
       List<String> idColumns, Collection<EntityKey> entityKeys) {
     // if only 1 id column use an IN list
     if (idColumns.size() == 1) {
-      return Filter.newBuilder()
-          .setOperator(Operator.IN)
-          .setLhs(
-              org.hypertrace.core.query.service.api.Expression.newBuilder()
-                  .setColumnIdentifier(
-                      org.hypertrace.core.query.service.api.ColumnIdentifier.newBuilder()
-                          .setColumnName(idColumns.get(0))
-                      )
-          )
-          .setRhs(
-              org.hypertrace.core.query.service.api.Expression.newBuilder()
-                  .setLiteral(
-                      LiteralConstant.newBuilder()
-                          .setValue(
-                              org.hypertrace.core.query.service.api.Value.newBuilder()
-                                  .setValueType(org.hypertrace.core.query.service.api.ValueType.STRING_ARRAY)
-                                  .addAllStringArray(entityKeys.stream().flatMap(entityKey -> entityKey.getAttributes().stream()).collect(Collectors.toList()))
-                          )
-                  )
-          );
-    } else { // otherwise use an OR chain of ANDed EQ filters.
-      return Filter.newBuilder()
-          .setOperator(Operator.OR)
-          .addAllChildFilter(
-              entityKeys.stream()
-                  .map(
-                      entityKey ->
-                          QueryRequestUtil.createValueEQFilter(idColumns, entityKey.getAttributes()))
-                  .collect(Collectors.toList()));
+      return QueryRequestUtil.createFilter(
+          idColumns.get(0),
+          Operator.IN,
+          createStringArrayLiteralExpression(
+              entityKeys.stream().map(EntityKey::toString).collect(Collectors.toList())));
     }
+    // TODO this shouldn't be reachable, remove concept of composite IDs separately
+    // otherwise use an OR chain of ANDed EQ filters.
+    return Filter.newBuilder()
+        .setOperator(Operator.OR)
+        .addAllChildFilter(
+            entityKeys.stream()
+                .map(
+                    entityKey ->
+                        org.hypertrace.core.query.service.util.QueryRequestUtil.createValueEQFilter(idColumns, entityKey.getAttributes()))
+                .collect(Collectors.toList()))
+        .build();
   }
 
   @VisibleForTesting
   Map<String, QueryRequest> buildQueryRequests(
       long startTime,
       long endTime,
+      String spaceId,
       String entityType,
       InteractionsRequest interactionsRequest,
       Set<EntityKey> entityIds,
@@ -356,13 +345,12 @@ public class EntityInteractionsFetcher {
             .setOperator(Operator.AND)
             .addChildFilter(
                 QueryRequestUtil.createBetweenTimesFilter(
-                    metadataProvider
-                        .getAttributeMetadata(
-                            requestContext, AttributeScope.INTERACTION.name(), TIMESTAMP_COLUMN_KEY)
-                        .get()
-                        .getId(),
+                    AttributeMetadataUtil.getTimestampAttributeId(metadataProvider, requestContext, SCOPE),
                     startTime,
                     endTime));
+
+    this.buildSpaceQueryFilterIfNeeded(requestContext, spaceId)
+        .ifPresent(filterBuilder::addChildFilter);
 
     List<String> idColumns =
         getEntityIdColumnsFromInteraction(DomainEntityType.valueOf(entityType), !incoming);
@@ -374,11 +362,10 @@ public class EntityInteractionsFetcher {
     List<org.hypertrace.core.query.service.api.Expression> idExpressions =
         idColumns.stream()
             .map(QueryRequestUtil::createColumnExpression)
-            .map(org.hypertrace.core.query.service.api.Expression.Builder::build)
             .collect(Collectors.toList());
     builder.addAllGroupBy(idExpressions);
 
-    List<org.hypertrace.core.query.service.api.Expression.Builder> selections = new ArrayList<>();
+    List<org.hypertrace.core.query.service.api.Expression> selections = new ArrayList<>();
     for (Expression expression : interactionsRequest.getSelectionList()) {
       // Ignore the predefined selections because they're handled specially.
       if (expression.getValueCase() == ValueCase.COLUMNIDENTIFIER
@@ -387,14 +374,15 @@ public class EntityInteractionsFetcher {
       }
 
       // Selection should have metrics and attributes that were requested
-      selections.add(QueryAndGatewayDtoConverter.convertToQueryExpression(expression));
+      selections.add(QueryAndGatewayDtoConverter.convertToQueryExpression(expression).build());
     }
 
     // Pinot's GroupBy queries need at least one aggregate operation in the selection
     // so we add count(*) as a dummy placeholder if there are no explicit selectors.
     if (selections.isEmpty()) {
       selections.add(
-          QueryRequestUtil.createCountByColumnSelection(idColumns.toArray(new String[] {})));
+          QueryRequestUtil.createCountByColumnSelection(Optional.ofNullable(idColumns.get(0)).orElseThrow())
+      );
     }
 
     QueryRequest protoType = builder.build();
@@ -420,7 +408,6 @@ public class EntityInteractionsFetcher {
       List<org.hypertrace.core.query.service.api.Expression> otherIdExpressions =
           otherEntityIdColumns.stream()
               .map(QueryRequestUtil::createColumnExpression)
-              .map(org.hypertrace.core.query.service.api.Expression.Builder::build)
               .collect(Collectors.toList());
       builderCopy.addAllGroupBy(otherIdExpressions);
 
@@ -454,7 +441,7 @@ public class EntityInteractionsFetcher {
       RequestContext requestContext) {
 
     Map<String, AttributeMetadata> attributeMetadataMap =
-        metadataProvider.getAttributesMetadata(requestContext, AttributeScope.INTERACTION.name());
+        metadataProvider.getAttributesMetadata(requestContext, SCOPE);
 
     Map<String, AttributeKind> aliasToAttributeKind =
         MetricAggregationFunctionUtil.getValueTypeFromFunction(
@@ -507,7 +494,7 @@ public class EntityInteractionsFetcher {
           ColumnMetadata metadata = chunk.getResultSetMetadata().getColumnMetadata(i);
 
           // Ignore the count column since we introduced that ourselves into the query.
-          if (StringUtils.equals(COUNT_COLUMN_NAME, metadata.getColumnName())) {
+          if (StringUtils.equalsIgnoreCase(COUNT_COLUMN_NAME, metadata.getColumnName())) {
             continue;
           }
 
@@ -578,5 +565,27 @@ public class EntityInteractionsFetcher {
           TO_ENTITY_TYPE_ATTRIBUTE_ID,
           Value.newBuilder().setString(toEntityType).setValueType(ValueType.STRING).build());
     }
+  }
+
+  private Optional<Filter> buildSpaceQueryFilterIfNeeded(RequestContext requestContext, String spaceId) {
+    if (Strings.isNullOrEmpty(spaceId)) {
+      return Optional.empty();
+    }
+
+    String fromSpaceId = this.metadataProvider
+        .getAttributeMetadata(requestContext, SCOPE, FROM_SPACE_ATTRIBUTE_KEY)
+        .orElseThrow()
+        .getId();
+    String toSpaceId = this.metadataProvider
+        .getAttributeMetadata(requestContext, SCOPE, TO_SPACE_ATTRIBUTE_KEY)
+        .orElseThrow()
+        .getId();
+    // For interactions, consider it in space only if both incoming and outgoing event spaces match
+    return Optional.of(
+        QueryRequestUtil.createCompositeFilter(
+            Operator.AND,
+            List.of(
+                QueryRequestUtil.createStringFilter(fromSpaceId, Operator.EQ, spaceId),
+                QueryRequestUtil.createStringFilter(toSpaceId, Operator.EQ, spaceId))));
   }
 }

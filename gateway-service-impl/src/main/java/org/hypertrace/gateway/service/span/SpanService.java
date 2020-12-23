@@ -1,5 +1,9 @@
 package org.hypertrace.gateway.service.span;
 
+import static org.hypertrace.gateway.service.common.converters.QueryRequestUtil.createCountByColumnSelection;
+import static org.hypertrace.gateway.service.common.util.AttributeMetadataUtil.getSpaceAttributeId;
+import static org.hypertrace.gateway.service.common.util.AttributeMetadataUtil.getTimestampAttributeId;
+
 import com.codahale.metrics.Timer;
 import com.codahale.metrics.Timer.Context;
 import com.google.common.annotations.VisibleForTesting;
@@ -16,7 +20,6 @@ import org.hypertrace.core.query.service.api.QueryRequest;
 import org.hypertrace.core.query.service.api.ResultSetChunk;
 import org.hypertrace.core.query.service.api.Row;
 import org.hypertrace.core.query.service.client.QueryServiceClient;
-import org.hypertrace.core.query.service.util.QueryRequestUtil;
 import org.hypertrace.core.serviceframework.metrics.PlatformMetricsRegistry;
 import org.hypertrace.gateway.service.common.AttributeMetadataProvider;
 import org.hypertrace.gateway.service.common.RequestContext;
@@ -35,7 +38,6 @@ import org.slf4j.LoggerFactory;
 public class SpanService {
 
   private static final Logger LOG = LoggerFactory.getLogger(SpanService.class);
-  private static final String SPAN_TIMESTAMP_ATTRIBUTE_NAME_KEY = "startTime";
   private final QueryServiceClient queryServiceClient;
   private final int requestTimeout;
   private final AttributeMetadataProvider attributeMetadataProvider;
@@ -43,7 +45,8 @@ public class SpanService {
   private Timer queryExecutionTimer;
 
   public SpanService(
-      QueryServiceClient queryServiceClient, int requestTimeout,
+      QueryServiceClient queryServiceClient,
+      int requestTimeout,
       AttributeMetadataProvider attributeMetadataProvider) {
     this.queryServiceClient = queryServiceClient;
     this.requestTimeout = requestTimeout;
@@ -69,9 +72,7 @@ public class SpanService {
       spanResponseBuilder.setTotal(getTotalFilteredSpans(context, request));
 
       SpansResponse response = spanResponseBuilder.build();
-      if (LOG.isDebugEnabled()) {
-        LOG.debug("Span Service Response: {}", response);
-      }
+      LOG.debug("Span Service Response: {}", response);
 
       return response;
     } finally {
@@ -114,9 +115,7 @@ public class SpanService {
 
     while (resultSetChunkIterator.hasNext()) {
       ResultSetChunk chunk = resultSetChunkIterator.next();
-      if (LOG.isDebugEnabled()) {
-        LOG.debug("Received chunk: " + chunk.toString());
-      }
+      LOG.debug("Received chunk: {}", chunk);
 
       if (chunk.getRowCount() < 1) {
         break;
@@ -160,34 +159,29 @@ public class SpanService {
 
   private QueryRequest.Builder createQueryWithFilter(
       SpansRequest request, RequestContext requestContext) {
-    QueryRequest.Builder queryBuilder = QueryRequest.newBuilder();
-
-    Filter.Builder filterBuilder =
-        QueryAndGatewayDtoConverter.addTimeFilterAndConvertToQueryFilter(
+    Filter filter =
+        QueryAndGatewayDtoConverter.addTimeAndSpaceFiltersAndConvertToQueryFilter(
             request.getStartTimeMillis(),
             request.getEndTimeMillis(),
-            attributeMetadataProvider
-                .getAttributeMetadata(
-                    requestContext, AttributeScope.EVENT.name(), SPAN_TIMESTAMP_ATTRIBUTE_NAME_KEY)
-                .get()
-                .getId(),
+            request.getSpaceId(),
+            getTimestampAttributeId(
+                this.attributeMetadataProvider, requestContext, AttributeScope.EVENT.name()),
+            getSpaceAttributeId(
+                this.attributeMetadataProvider, requestContext, AttributeScope.EVENT.name()),
             request.getFilter());
-    queryBuilder.setFilter(filterBuilder.build());
-    return queryBuilder;
+    return QueryRequest.newBuilder().setFilter(filter);
   }
 
   private int getTotalFilteredSpans(RequestContext context, SpansRequest request) {
     int total = 0;
+    String timestampAttributeId =
+        getTimestampAttributeId(
+            this.attributeMetadataProvider, context, AttributeScope.EVENT.name());
 
-    QueryRequest.Builder queryBuilder = createQueryWithFilter(request, context);
-    queryBuilder.addSelection(
-        QueryRequestUtil.createCountByColumnSelection(
-            attributeMetadataProvider
-                .getAttributeMetadata(
-                    context, AttributeScope.EVENT.name(), SPAN_TIMESTAMP_ATTRIBUTE_NAME_KEY)
-                .get()
-                .getId()));
-    QueryRequest queryRequest = queryBuilder.build();
+    QueryRequest queryRequest =
+        createQueryWithFilter(request, context)
+            .addSelection(createCountByColumnSelection(timestampAttributeId))
+            .build();
 
     Iterator<ResultSetChunk> resultSetChunkIterator =
         queryServiceClient.executeQuery(queryRequest, context.getHeaders(), requestTimeout);

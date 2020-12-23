@@ -15,7 +15,8 @@
                 "rhs": {
                   "literal": {
                     "value": {
-                      "string": "1574702933196"
+                      "valueType": "LONG",
+                      "long": "1574702933196"
                     }
                   }
                 }
@@ -30,7 +31,8 @@
                 "rhs": {
                   "literal": {
                     "value": {
-                      "string": "1574703533196"
+                      "valueType": "LONG",
+                      "long": "1574703533196"
                     }
                   }
                 }
