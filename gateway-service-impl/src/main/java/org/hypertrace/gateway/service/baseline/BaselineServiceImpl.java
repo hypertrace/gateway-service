@@ -4,6 +4,7 @@ import org.hypertrace.core.query.service.api.QueryRequest;
 import org.hypertrace.core.query.service.api.ResultSetChunk;
 import org.hypertrace.gateway.service.common.AttributeMetadataProvider;
 import org.hypertrace.gateway.service.common.util.AttributeMetadataUtil;
+import org.hypertrace.gateway.service.entity.config.EntityIdColumnsConfigs;
 import org.hypertrace.gateway.service.v1.baseline.Baseline;
 import org.hypertrace.gateway.service.v1.baseline.BaselineInterval;
 import org.hypertrace.gateway.service.v1.baseline.BaselineMetricSeries;
@@ -41,14 +42,17 @@ public class BaselineServiceImpl implements BaselineService {
   private final AttributeMetadataProvider attributeMetadataProvider;
   private final BaselineServiceQueryParser baselineServiceQueryParser;
   private final BaselineServiceQueryExecutor baselineServiceQueryExecutor;
+  private final EntityIdColumnsConfigs entityIdColumnsConfigs;
 
   public BaselineServiceImpl(
-      AttributeMetadataProvider attributeMetadataProvider,
-      BaselineServiceQueryParser baselineServiceQueryParser,
-      BaselineServiceQueryExecutor baselineServiceQueryExecutor) {
+          AttributeMetadataProvider attributeMetadataProvider,
+          BaselineServiceQueryParser baselineServiceQueryParser,
+          BaselineServiceQueryExecutor baselineServiceQueryExecutor,
+          EntityIdColumnsConfigs entityIdColumnsConfigs) {
     this.attributeMetadataProvider = attributeMetadataProvider;
     this.baselineServiceQueryParser = baselineServiceQueryParser;
     this.baselineServiceQueryExecutor = baselineServiceQueryExecutor;
+    this.entityIdColumnsConfigs = entityIdColumnsConfigs;
   }
 
   public BaselineEntitiesResponse getBaselineForEntities(
@@ -74,6 +78,10 @@ public class BaselineServiceImpl implements BaselineService {
       long seriesStartTime =
           getUpdatedStartTimeForAggregations(
               originalRequest.getStartTimeMillis(), originalRequest.getEndTimeMillis());
+      List<String> entityIdAttributes =
+              AttributeMetadataUtil.getIdAttributeIds(
+                      attributeMetadataProvider, entityIdColumnsConfigs, requestContext,
+                      originalRequest.getEntityType());
       QueryRequest aggQueryRequest =
           baselineServiceQueryParser.getQueryRequest(
               seriesStartTime,
@@ -81,14 +89,14 @@ public class BaselineServiceImpl implements BaselineService {
               originalRequest.getEntityIdsList(),
               timeColumn,
               timeAggregations,
-              periodSecs);
+              periodSecs, entityIdAttributes);
       Iterator<ResultSetChunk> aggResponseChunkIterator =
           baselineServiceQueryExecutor.executeQuery(requestHeaders, aggQueryRequest);
       BaselineEntitiesResponse aggEntitiesResponse =
           baselineServiceQueryParser.parseQueryResponse(
               aggResponseChunkIterator,
               requestContext,
-              originalRequest.getEntityIdsCount(),
+              entityIdAttributes.size(),
               originalRequest.getEntityType(),
               periodSecs);
       baselineEntityAggregatedMetricsMap = getEntitiesMapFromAggResponse(aggEntitiesResponse);
@@ -104,6 +112,10 @@ public class BaselineServiceImpl implements BaselineService {
       long seriesStartTime =
           getUpdatedStartTimeForSeriesRequests(
               originalRequest.getStartTimeMillis(), originalRequest.getEndTimeMillis());
+      List<String> entityIdAttributes =
+              AttributeMetadataUtil.getIdAttributeIds(
+                      attributeMetadataProvider, entityIdColumnsConfigs, requestContext,
+                      originalRequest.getEntityType());
       QueryRequest timeSeriesQueryRequest =
           baselineServiceQueryParser.getQueryRequest(
               seriesStartTime,
@@ -111,14 +123,14 @@ public class BaselineServiceImpl implements BaselineService {
               originalRequest.getEntityIdsList(),
               timeColumn,
               timeAggregations,
-              periodSecs);
+              periodSecs, entityIdAttributes);
       Iterator<ResultSetChunk> timeSeriesChunkIterator =
           baselineServiceQueryExecutor.executeQuery(requestHeaders, timeSeriesQueryRequest);
       BaselineEntitiesResponse timeSeriesEntitiesResponse =
           baselineServiceQueryParser.parseQueryResponse(
               timeSeriesChunkIterator,
               requestContext,
-              originalRequest.getEntityIdsCount(),
+              entityIdAttributes.size(),
               originalRequest.getEntityType(),
               periodSecs);
       baselineEntityTimeSeriesMap =

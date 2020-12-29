@@ -9,11 +9,13 @@ import org.hypertrace.core.query.service.api.Operator;
 import org.hypertrace.core.query.service.api.QueryRequest;
 import org.hypertrace.core.query.service.api.ResultSetChunk;
 import org.hypertrace.core.query.service.api.Row;
+import org.hypertrace.core.query.service.client.QueryServiceClient;
 import org.hypertrace.core.query.service.util.QueryRequestUtil;
 import org.hypertrace.gateway.service.common.AttributeMetadataProvider;
 import org.hypertrace.gateway.service.common.converters.QueryAndGatewayDtoConverter;
 import org.hypertrace.gateway.service.common.util.MetricAggregationFunctionUtil;
 import org.hypertrace.gateway.service.entity.EntityKey;
+import org.hypertrace.gateway.service.entity.config.EntityIdColumnsConfigs;
 import org.hypertrace.gateway.service.v1.baseline.Baseline;
 import org.hypertrace.gateway.service.v1.baseline.BaselineEntitiesResponse;
 import org.hypertrace.gateway.service.v1.baseline.BaselineEntity;
@@ -41,8 +43,7 @@ public class BaselineServiceQueryParser {
   private static final Logger LOG = LoggerFactory.getLogger(BaselineServiceQueryParser.class);
   private final AttributeMetadataProvider attributeMetadataProvider;
 
-  public BaselineServiceQueryParser(
-      AttributeMetadataProvider attributeMetadataProvider) {
+  public BaselineServiceQueryParser(AttributeMetadataProvider attributeMetadataProvider) {
     this.attributeMetadataProvider = attributeMetadataProvider;
   }
 
@@ -52,17 +53,20 @@ public class BaselineServiceQueryParser {
       List<String> entityIds,
       String timeColumn,
       List<TimeAggregation> timeAggregationList,
-      long periodSecs) {
+      long periodSecs,
+      List<String> entityIdAttributes) {
     QueryRequest.Builder builder = QueryRequest.newBuilder();
     timeAggregationList.forEach(
         e ->
             builder.addSelection(
                 QueryAndGatewayDtoConverter.convertToQueryExpression(e.getAggregation())));
+
     Filter.Builder queryFilter =
-        constructQueryServiceFilter(startTimeInMillis, endTimeInMillis, entityIds, timeColumn);
+        constructQueryServiceFilter(
+            startTimeInMillis, endTimeInMillis, entityIdAttributes, timeColumn, entityIds);
     builder.setFilter(queryFilter);
     builder.addAllGroupBy(
-        entityIds.stream()
+        entityIdAttributes.stream()
             .map(QueryRequestUtil::createColumnExpression)
             .map(org.hypertrace.core.query.service.api.Expression.Builder::build)
             .collect(Collectors.toList()));
@@ -71,6 +75,8 @@ public class BaselineServiceQueryParser {
         org.hypertrace.core.query.service.api.Expression.newBuilder()
             .setFunction(QueryRequestUtil.createTimeColumnGroupByFunction(timeColumn, periodSecs)));
 
+    builder.setLimit(QueryServiceClient.DEFAULT_QUERY_SERVICE_GROUP_BY_LIMIT);
+
     return builder.build();
   }
 
@@ -78,7 +84,8 @@ public class BaselineServiceQueryParser {
       long startTimeInMillis,
       long endTimeInMillis,
       List<String> entityIdAttributes,
-      String timeColumn) {
+      String timeColumn,
+      List<String> entityIds) {
     // adds the Id != "null" filter to remove null entities.
     Filter.Builder filterBuilder =
         Filter.newBuilder()
@@ -91,6 +98,14 @@ public class BaselineServiceQueryParser {
                                 entityIdAttribute, Operator.NEQ, QUERY_SERVICE_NULL))
                     .map(Filter.Builder::build)
                     .collect(Collectors.toList()));
+
+    filterBuilder.addAllChildFilter(
+        entityIdAttributes.stream()
+            .map(
+                entityIdAttribute ->
+                    QueryRequestUtil.createValueInFilter(entityIdAttribute, entityIds))
+            .map(Filter.Builder::build)
+            .collect(Collectors.toList()));
 
     // Time range is a mandatory filter for query service, hence add it if it's not already present.
     filterBuilder.addChildFilter(
@@ -214,9 +229,7 @@ public class BaselineServiceQueryParser {
   BaselineMetricSeries getSortedMetricSeries(BaselineMetricSeries.Builder builder) {
     List<BaselineInterval> sortedIntervals = new ArrayList<>(builder.getBaselineValueList());
     sortedIntervals.sort(Comparator.comparingLong(BaselineInterval::getStartTimeMillis));
-    return BaselineMetricSeries.newBuilder()
-        .addAllBaselineValue(sortedIntervals)
-        .build();
+    return BaselineMetricSeries.newBuilder().addAllBaselineValue(sortedIntervals).build();
   }
 
   private BaselineMetricSeries.Builder getMetricSeriesBuilder(

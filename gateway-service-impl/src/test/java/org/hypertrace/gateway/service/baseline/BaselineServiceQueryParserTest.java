@@ -54,7 +54,8 @@ public class BaselineServiceQueryParserTest {
             Collections.singletonList("entity-1"),
             "Service.StartTime",
             timeAggregationList,
-            periodInSecs);
+            periodInSecs,
+            Collections.singletonList("SERVICE.id"));
     Assertions.assertNotNull(request);
     Assertions.assertEquals(2, request.getGroupByCount());
     Assertions.assertEquals(2, request.getFilter().getChildFilterCount());

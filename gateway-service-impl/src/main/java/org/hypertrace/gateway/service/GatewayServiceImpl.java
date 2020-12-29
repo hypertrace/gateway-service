@@ -92,7 +92,7 @@ public class GatewayServiceImpl extends GatewayServiceGrpc.GatewayServiceImplBas
             attributeMetadataProvider, scopeFilterConfigs);
     BaselineServiceQueryParser baselineServiceQueryParser = new BaselineServiceQueryParser(attributeMetadataProvider);
     BaselineServiceQueryExecutor baselineServiceQueryExecutor = new BaselineServiceQueryExecutor(qsRequestTimeout, queryServiceClient);
-    this.baselineService = new BaselineServiceImpl(attributeMetadataProvider, baselineServiceQueryParser, baselineServiceQueryExecutor);
+    this.baselineService = new BaselineServiceImpl(attributeMetadataProvider, baselineServiceQueryParser, baselineServiceQueryExecutor, entityIdColumnsConfigs);
   }
 
   private static int getRequestTimeoutMillis(Config config) {
