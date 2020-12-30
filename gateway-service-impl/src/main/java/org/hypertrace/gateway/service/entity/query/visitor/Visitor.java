@@ -6,7 +6,6 @@ import org.hypertrace.gateway.service.entity.query.NoOpNode;
 import org.hypertrace.gateway.service.entity.query.OrNode;
 import org.hypertrace.gateway.service.entity.query.PaginateOnlyNode;
 import org.hypertrace.gateway.service.entity.query.QueryNode;
-import org.hypertrace.gateway.service.entity.query.SelectionAndFilterNode;
 import org.hypertrace.gateway.service.entity.query.SelectionNode;
 import org.hypertrace.gateway.service.entity.query.SortAndPaginateNode;
 import org.hypertrace.gateway.service.entity.query.TotalFetcherNode;
@@ -28,8 +27,6 @@ public interface Visitor<R> {
   R visit(SortAndPaginateNode sortAndPaginateNode);
 
   R visit(NoOpNode noOpNode);
-
-  R visit(SelectionAndFilterNode selectionAndFilterNode);
 
   R visit(PaginateOnlyNode paginateOnlyNode);
 

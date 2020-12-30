@@ -78,12 +78,13 @@ public class ExecutionTreeBuilder {
     // the data store
     if (singleSourceForAllAttributes.isPresent()) {
       String source = singleSourceForAllAttributes.get();
-      QueryNode selectionAndFilterNode = buildExecutionTreeForSameSourceFilterAndSelection(source);
+      QueryNode rootNode = buildExecutionTreeForSameSourceFilterAndSelection(source);
       if (LOG.isDebugEnabled()) {
-        LOG.debug("Execution Tree:{}", selectionAndFilterNode.acceptVisitor(new PrintVisitor()));
+        LOG.debug("Execution Tree:{}", rootNode.acceptVisitor(new PrintVisitor()));
       }
 
-      return selectionAndFilterNode;
+      rootNode.acceptVisitor(new ExecutionContextBuilderVisitor(executionContext));
+      return buildExecutionTree(executionContext, rootNode);
     }
 
     QueryNode filterTree = buildFilterTree(executionContext, entitiesRequest.getFilter());
@@ -120,26 +121,34 @@ public class ExecutionTreeBuilder {
   }
 
   private QueryNode buildExecutionTreeForQsFilterAndSelection(String source) {
-    int selectionLimit = executionContext.getEntitiesRequest().getLimit();
-    int selectionOffset = executionContext.getEntitiesRequest().getOffset();
+    EntitiesRequest entitiesRequest = executionContext.getEntitiesRequest();
+    Filter filter = entitiesRequest.getFilter();
+    int selectionLimit = entitiesRequest.getLimit();
+    int selectionOffset = entitiesRequest.getOffset();
+    List<OrderByExpression> orderBys = entitiesRequest.getOrderByList();
 
     // query-service/Pinot does not support offset when group by is specified. Since we will be
     // grouping by at least the entity id, we will compute the non zero pagination ourselves. This
     // means that we need to request for offset + limit rows so that we can paginate appropriately.
     // Pinot will do the ordering for us.
+    // https://github.com/apache/incubator-pinot/issues/111#issuecomment-214810551
     if (selectionOffset > 0) {
       selectionLimit = selectionOffset + selectionLimit;
       selectionOffset = 0;
     }
 
-    QueryNode rootNode = new SelectionAndFilterNode(source, selectionLimit, selectionOffset);
+    QueryNode rootNode =
+        new DataFetcherNode(source, filter, selectionLimit, selectionOffset, orderBys);
+
     if (executionContext.getEntitiesRequest().getOffset() > 0) {
-      rootNode = new PaginateOnlyNode(
-          rootNode,
-          executionContext.getEntitiesRequest().getLimit(),
-          executionContext.getEntitiesRequest().getOffset()
-      );
+      rootNode =
+          new PaginateOnlyNode(
+              rootNode,
+              executionContext.getEntitiesRequest().getLimit(),
+              executionContext.getEntitiesRequest().getOffset());
     }
+
+    executionContext.setSortAndPaginationNodeAdded(true);
 
     // If the request has an EntityId EQ filter then there's no need for the 2nd request to get the
     // total entities. So no need to set the TotalFetcherNode
@@ -153,14 +162,13 @@ public class ExecutionTreeBuilder {
   }
 
   private QueryNode buildExecutionTreeForEdsFilterAndSelection(String source) {
+    Filter filter = executionContext.getEntitiesRequest().getFilter();
     int selectionLimit = executionContext.getEntitiesRequest().getLimit();
     int selectionOffset = executionContext.getEntitiesRequest().getOffset();
     List<OrderByExpression> orderBys = executionContext.getEntitiesRequest().getOrderByList();
 
-    QueryNode rootNode = new SelectionAndFilterNode(source, selectionLimit, selectionOffset);
-    // EDS does not seem to do orderby, limiting and offsetting. We will have to do it ourselves.
-    rootNode = new SortAndPaginateNode(rootNode, selectionLimit, selectionOffset, orderBys);
-
+    QueryNode rootNode = new DataFetcherNode(source, filter, selectionLimit, selectionOffset, orderBys);
+    executionContext.setSortAndPaginationNodeAdded(true);
     return rootNode;
   }
 

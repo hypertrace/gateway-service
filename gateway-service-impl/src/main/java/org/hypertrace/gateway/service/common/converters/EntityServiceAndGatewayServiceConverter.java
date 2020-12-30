@@ -226,6 +226,13 @@ public class EntityServiceAndGatewayServiceConverter {
         .build();
   }
 
+  public static List<OrderByExpression> convertToOrderByExpressions(
+      List<org.hypertrace.gateway.service.v1.common.OrderByExpression> gatewayOrderBy) {
+    return gatewayOrderBy.stream()
+        .map(EntityServiceAndGatewayServiceConverter::convertToQueryOrderBy)
+        .collect(Collectors.toList());
+  }
+
   private static Value convertGatewayValueToEntityServiceApiValue(
       org.hypertrace.gateway.service.v1.common.Value value) {
     Value.Builder builder = Value.newBuilder();

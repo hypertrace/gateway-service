@@ -90,6 +90,20 @@ public class EntityDataServiceEntityFetcher implements IEntityFetcher {
                     EntityServiceAndGatewayServiceConverter.convertToEntityServiceExpression(
                         expression)));
 
+    if (requestContext.canApplyLimit()) {
+      builder.setLimit(entitiesRequest.getLimit());
+    }
+
+    if (requestContext.canApplyOffset()) {
+      builder.setOffset(entitiesRequest.getOffset());
+    }
+
+    if (!entitiesRequest.getOrderByList().isEmpty()) {
+      builder.addAllOrderBy(
+          EntityServiceAndGatewayServiceConverter.convertToOrderByExpressions(
+              entitiesRequest.getOrderByList()));
+    }
+
     EntityQueryRequest entityQueryRequest = builder.build();
     if (LOG.isDebugEnabled()) {
       LOG.debug("Sending Query to EDS  ======== \n {}", entityQueryRequest);
@@ -168,12 +182,5 @@ public class EntityDataServiceEntityFetcher implements IEntityFetcher {
   @Override
   public int getTotalEntities(EntitiesRequestContext requestContext, EntitiesRequest entitiesRequest) {
     throw new UnsupportedOperationException("Fetching total entities not supported by EDS");
-  }
-
-  @Override
-  public EntityFetcherResponse getEntitiesAndAggregatedMetrics(
-      EntitiesRequestContext requestContext, EntitiesRequest entitiesRequest) {
-    throw new UnsupportedOperationException("Fetching entities and aggregated metric data"
-        + " not supported by EDS");
   }
 }

@@ -100,7 +100,19 @@ public class QueryServiceEntityFetcher implements IEntityFetcher {
     QueryRequest.Builder builder =
         constructSelectionQuery(requestContext, entitiesRequest, entityIdAttributes, aggregates);
 
-    adjustLimitAndOffset(builder, entitiesRequest.getLimit(), entitiesRequest.getOffset());
+    adjustLimitAndOffset(
+        builder,
+        entitiesRequest.getLimit(),
+        entitiesRequest.getOffset(),
+        requestContext.canApplyLimit(),
+        requestContext.canApplyOffset());
+
+    if (!entitiesRequest.getOrderByList().isEmpty()) {
+      // Order by from the request.
+      builder.addAllOrderBy(
+          QueryAndGatewayDtoConverter.convertToQueryOrderByExpressions(
+              entitiesRequest.getOrderByList()));
+    }
 
     QueryRequest queryRequest = builder.build();
 
@@ -185,7 +197,12 @@ public class QueryServiceEntityFetcher implements IEntityFetcher {
 
     QueryRequest.Builder builder =
         constructSelectionQuery(requestContext, entitiesRequest, entityIdAttributes, aggregates);
-    adjustLimitAndOffset(builder, entitiesRequest.getLimit(), entitiesRequest.getOffset());
+    adjustLimitAndOffset(
+        builder,
+        entitiesRequest.getLimit(),
+        entitiesRequest.getOffset(),
+        requestContext.canApplyLimit(),
+        requestContext.canApplyOffset());
 
     QueryRequest request = builder.build();
 
@@ -255,106 +272,12 @@ public class QueryServiceEntityFetcher implements IEntityFetcher {
     return new EntityFetcherResponse(entityMap);
   }
 
-  @Override
-  public EntityFetcherResponse getEntitiesAndAggregatedMetrics(
-      EntitiesRequestContext requestContext, EntitiesRequest entitiesRequest) {
-    // Validate EntitiesRequest
-    Map<String, AttributeMetadata> attributeMetadataMap =
-        attributeMetadataProvider.getAttributesMetadata(
-            requestContext, entitiesRequest.getEntityType());
-    entitiesRequestValidator.validate(entitiesRequest, attributeMetadataMap);
-    List<String> entityIdAttributes =
-        AttributeMetadataUtil.getIdAttributeIds(
-            attributeMetadataProvider, entityIdColumnsConfigs, requestContext, entitiesRequest.getEntityType());
-
-    List<org.hypertrace.gateway.service.v1.common.Expression> aggregates =
-        ExpressionReader.getFunctionExpressions(entitiesRequest.getSelectionList().stream());
-
-    QueryRequest.Builder builder =
-        constructSelectionQuery(requestContext, entitiesRequest, entityIdAttributes, aggregates);
-
-    adjustLimitAndOffset(builder, entitiesRequest.getLimit(), entitiesRequest.getOffset());
-
-    // Order by from the request.
-    builder.addAllOrderBy(
-            QueryAndGatewayDtoConverter.convertToQueryOrderByExpressions(entitiesRequest.getOrderByList()));
-
-    QueryRequest queryRequest = builder.build();
-
-    if (LOG.isDebugEnabled()) {
-      LOG.debug("Sending Query to Query Service ======== \n {}", queryRequest);
-    }
-
-    Iterator<ResultSetChunk> resultSetChunkIterator =
-        queryServiceClient.executeQuery(queryRequest, requestContext.getHeaders(), requestTimeout);
-
-    // We want to retain the order as returned from the respective source. Hence using a
-    // LinkedHashMap
-    Map<EntityKey, Entity.Builder> entityBuilders = new LinkedHashMap<>();
-    while (resultSetChunkIterator.hasNext()) {
-      ResultSetChunk chunk = resultSetChunkIterator.next();
-      if (LOG.isDebugEnabled()) {
-        LOG.debug("Received chunk: " + chunk.toString());
-      }
-
-      if (chunk.getRowCount() < 1) {
-        break;
-      }
-
-      for (Row row : chunk.getRowList()) {
-        // Construct the entity id from the entityIdAttributes columns
-        EntityKey entityKey =
-            EntityKey.of(
-                IntStream.range(0, entityIdAttributes.size())
-                    .mapToObj(value -> row.getColumn(value).getString())
-                    .toArray(String[]::new));
-        Builder entityBuilder = entityBuilders.computeIfAbsent(entityKey, k -> Entity.newBuilder());
-        entityBuilder.setEntityType(entitiesRequest.getEntityType());
-
-        // Always include the id in entity since that's needed to make follow up queries in
-        // optimal fashion. If this wasn't really requested by the client, it should be removed
-        // as post processing.
-        for (int i = 0; i < entityIdAttributes.size(); i++) {
-          entityBuilder.putAttribute(
-              entityIdAttributes.get(i),
-              Value.newBuilder()
-                  .setString(entityKey.getAttributes().get(i))
-                  .setValueType(ValueType.STRING)
-                  .build());
-        }
-
-        for (int i = entityIdAttributes.size();
-            i < chunk.getResultSetMetadata().getColumnMetadataCount();
-            i++) {
-          ColumnMetadata metadata = chunk.getResultSetMetadata().getColumnMetadata(i);
-          org.hypertrace.core.query.service.api.Value columnValue = row.getColumn(i);
-          // add entity attributes from selections
-
-          FunctionExpression function =
-              requestContext.getFunctionExpressionByAlias(metadata.getColumnName());
-          /* this is aggregated metric column*/
-          if (function != null) {
-            addAggregateMetric(entityBuilder,
-                requestContext,
-                entitiesRequest,
-                metadata,
-                columnValue,
-                attributeMetadataMap);
-          } else { // A simple column selection
-            addEntityAttribute(entityBuilder,
-                metadata,
-                columnValue,
-                attributeMetadataMap,
-                aggregates.isEmpty());
-          }
-
-        }
-      }
-    }
-    return new EntityFetcherResponse(entityBuilders);
-  }
-
-  private void adjustLimitAndOffset(QueryRequest.Builder builder, int limit, int offset) {
+  private void adjustLimitAndOffset(
+      QueryRequest.Builder builder,
+      int limit,
+      int offset,
+      boolean canApplyLimit,
+      boolean canApplyOffset) {
     // If there is more than one groupBy column, we cannot set the same limit that came
     // in the request since that might return less entities than needed when the same
     // entity has different values for the other group by columns. Example: A service entity's
@@ -362,10 +285,15 @@ public class QueryServiceEntityFetcher implements IEntityFetcher {
     // For now, we pass a high value of limit in this case so that we get all the entities.
     // Limit has to be applied post the query in this case. Setting offset also might be wrong
     // here, hence not setting it.
-    if (builder.getGroupByCount() > 1) {
+
+    // If we cannot apply limit, limit the number of results to a default limit
+    if (!canApplyLimit || builder.getGroupByCount() > 1) {
       builder.setLimit(QueryServiceClient.DEFAULT_QUERY_SERVICE_GROUP_BY_LIMIT);
     } else {
       builder.setLimit(limit);
+    }
+
+    if (canApplyOffset) {
       builder.setOffset(offset);
     }
   }

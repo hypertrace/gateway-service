@@ -3,6 +3,7 @@ package org.hypertrace.gateway.service.entity.query.visitor;
 import com.google.common.annotations.VisibleForTesting;
 import com.google.common.collect.MapDifference;
 import com.google.common.collect.Maps;
+
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collections;
@@ -17,6 +18,7 @@ import java.util.concurrent.Executors;
 import java.util.concurrent.Future;
 import java.util.stream.Collectors;
 import java.util.stream.IntStream;
+
 import org.hypertrace.gateway.service.common.datafetcher.EntityFetcherResponse;
 import org.hypertrace.gateway.service.common.datafetcher.IEntityFetcher;
 import org.hypertrace.gateway.service.common.util.DataCollectionUtil;
@@ -31,7 +33,6 @@ import org.hypertrace.gateway.service.entity.query.ExecutionContext;
 import org.hypertrace.gateway.service.entity.query.NoOpNode;
 import org.hypertrace.gateway.service.entity.query.OrNode;
 import org.hypertrace.gateway.service.entity.query.PaginateOnlyNode;
-import org.hypertrace.gateway.service.entity.query.SelectionAndFilterNode;
 import org.hypertrace.gateway.service.entity.query.SelectionNode;
 import org.hypertrace.gateway.service.entity.query.SortAndPaginateNode;
 import org.hypertrace.gateway.service.entity.query.TotalFetcherNode;
@@ -60,7 +61,7 @@ public class ExecutionVisitor implements Visitor<EntityFetcherResponse> {
   private static final Logger LOG = LoggerFactory.getLogger(ExecutionVisitor.class);
 
   public ExecutionVisitor(ExecutionContext executionContext,
-      EntityQueryHandlerRegistry queryHandlerRegistry) {
+                          EntityQueryHandlerRegistry queryHandlerRegistry) {
     this.executionContext = executionContext;
     this.queryHandlerRegistry = queryHandlerRegistry;
   }
@@ -103,25 +104,45 @@ public class ExecutionVisitor implements Visitor<EntityFetcherResponse> {
   @Override
   public EntityFetcherResponse visit(DataFetcherNode dataFetcherNode) {
     String source = dataFetcherNode.getSource();
-    EntitiesRequest request =
-        EntitiesRequest.newBuilder(executionContext.getEntitiesRequest())
+    EntitiesRequest entitiesRequest = executionContext.getEntitiesRequest();
+    EntitiesRequestContext context =
+        new EntitiesRequestContext(
+            executionContext.getTenantId(),
+            entitiesRequest.getStartTimeMillis(),
+            entitiesRequest.getEndTimeMillis(),
+            entitiesRequest.getEntityType(),
+            executionContext.getTimestampAttributeId(),
+            executionContext.getRequestHeaders());
+
+    EntitiesRequest.Builder requestBuilder =
+        EntitiesRequest.newBuilder(entitiesRequest)
             .clearSelection()
             .clearFilter()
+            .clearOrderBy()
+            .clearLimit()
+            .clearOffset()
             .addAllSelection(
                 executionContext
                     .getSourceToSelectionExpressionMap()
                     .getOrDefault(source, executionContext.getEntityIdExpressions()))
-            .setFilter(dataFetcherNode.getFilter())
-            .build();
+            .setFilter(dataFetcherNode.getFilter());
+
+    if (dataFetcherNode.getLimit() != null) {
+      requestBuilder.setLimit(dataFetcherNode.getLimit());
+      context.canApplyLimit(true);
+    }
+
+    if (dataFetcherNode.getOffset() != null) {
+      requestBuilder.setOffset(dataFetcherNode.getOffset());
+      context.canApplyOffset(true);
+    }
+
+    if (!dataFetcherNode.getOrderByExpressionList().isEmpty()) {
+      requestBuilder.addAllOrderBy(dataFetcherNode.getOrderByExpressionList());
+    }
+
+    EntitiesRequest request = requestBuilder.build();
     IEntityFetcher entityFetcher = queryHandlerRegistry.getEntityFetcher(source);
-    EntitiesRequestContext context =
-        new EntitiesRequestContext(
-            executionContext.getTenantId(),
-            request.getStartTimeMillis(),
-            request.getEndTimeMillis(),
-            request.getEntityType(),
-            executionContext.getTimestampAttributeId(),
-            executionContext.getRequestHeaders());
     return entityFetcher.getEntities(context, request);
   }
 
@@ -170,6 +191,12 @@ public class ExecutionVisitor implements Visitor<EntityFetcherResponse> {
                   EntitiesRequest.newBuilder(executionContext.getEntitiesRequest())
                       .clearSelection()
                       .clearFilter()
+                      // TODO: Should we push order by, limit and offet down to the data source?
+                      // If we want to push the order by down, we would also have to divide order by into
+                      // sourceToOrderBySelectionExpressionMap, sourceToOrderByMetricExpressionMap, sourceToOrderByTimeAggregationMap
+                      .clearOrderBy()
+                      .clearLimit()
+                      .clearOffset()
                       .addAllSelection(
                           executionContext.getSourceToSelectionExpressionMap().get(source))
                       .setFilter(filter)
@@ -194,6 +221,9 @@ public class ExecutionVisitor implements Visitor<EntityFetcherResponse> {
                       EntitiesRequest.newBuilder(executionContext.getEntitiesRequest())
                           .clearSelection()
                           .clearFilter()
+                          .clearOrderBy()
+                          .clearOffset()
+                          .clearLimit()
                           .addAllSelection(
                               executionContext.getSourceToMetricExpressionMap().get(source))
                           .setFilter(filter)
@@ -218,6 +248,9 @@ public class ExecutionVisitor implements Visitor<EntityFetcherResponse> {
                       EntitiesRequest.newBuilder(executionContext.getEntitiesRequest())
                           .clearTimeAggregation()
                           .clearFilter()
+                          .clearOrderBy()
+                          .clearOffset()
+                          .clearLimit()
                           .addAllTimeAggregation(
                               executionContext.getSourceToTimeAggregationMap().get(source))
                           .setFilter(filter)
@@ -320,38 +353,6 @@ public class ExecutionVisitor implements Visitor<EntityFetcherResponse> {
   }
 
   @Override
-  public EntityFetcherResponse visit(SelectionAndFilterNode selectionAndFilterNode) {
-    List<EntityFetcherResponse> resultMapList = new ArrayList<>();
-    EntitiesRequest request =
-        EntitiesRequest.newBuilder(executionContext.getEntitiesRequest())
-            .setOffset(selectionAndFilterNode.getOffset())
-            .setLimit(selectionAndFilterNode.getLimit())
-            .build();
-    EntitiesRequestContext context =
-        new EntitiesRequestContext(
-            executionContext.getTenantId(),
-            request.getStartTimeMillis(),
-            request.getEndTimeMillis(),
-            request.getEntityType(),
-            executionContext.getTimestampAttributeId(),
-            executionContext.getRequestHeaders());
-
-    String source = selectionAndFilterNode.getSource();
-    if (source.equals("QS")) {
-      // TODO: Make these queries parallel
-      IEntityFetcher entityFetcher = queryHandlerRegistry.getEntityFetcher(source);
-      // Entities Attributes and aggregations request
-      resultMapList.add(entityFetcher.getEntitiesAndAggregatedMetrics(context, request));
-      // Time Series request
-      resultMapList.add(entityFetcher.getTimeAggregatedMetrics(context, request));
-      return resultMapList.stream().reduce(new EntityFetcherResponse(), (r1, r2) -> union(Arrays.asList(r1, r2)));
-    } else { // EDS - can only get Entities, not Entity aggregations or time aggregations
-      IEntityFetcher entityFetcher = queryHandlerRegistry.getEntityFetcher(source);
-      return entityFetcher.getEntities(context, request);
-    }
-  }
-
-  @Override
   public EntityFetcherResponse visit(PaginateOnlyNode paginateOnlyNode) {
     EntityFetcherResponse result = paginateOnlyNode.getChildNode().acceptVisitor(this);
 
@@ -377,7 +378,7 @@ public class ExecutionVisitor implements Visitor<EntityFetcherResponse> {
     Future<EntityFetcherResponse> resultFuture = executorService.submit(() -> totalFetcherNode.getChildNode().acceptVisitor(this));
     IEntityFetcher totalEntitiesFetcher = queryHandlerRegistry.getEntityFetcher(totalFetcherNode.getSource());
 
-    Future<Integer> totalFuture = executorService.submit(()->
+    Future<Integer> totalFuture = executorService.submit(() ->
         totalEntitiesFetcher.getTotalEntities(
             executionContext.getEntitiesRequestContext(),
             executionContext.getEntitiesRequest()

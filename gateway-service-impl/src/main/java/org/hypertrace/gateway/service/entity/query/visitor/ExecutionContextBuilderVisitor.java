@@ -6,7 +6,6 @@ import org.hypertrace.gateway.service.entity.query.ExecutionContext;
 import org.hypertrace.gateway.service.entity.query.NoOpNode;
 import org.hypertrace.gateway.service.entity.query.OrNode;
 import org.hypertrace.gateway.service.entity.query.PaginateOnlyNode;
-import org.hypertrace.gateway.service.entity.query.SelectionAndFilterNode;
 import org.hypertrace.gateway.service.entity.query.SelectionNode;
 import org.hypertrace.gateway.service.entity.query.SortAndPaginateNode;
 import org.hypertrace.gateway.service.entity.query.TotalFetcherNode;
@@ -53,11 +52,6 @@ public class ExecutionContextBuilderVisitor implements Visitor<Void> {
 
   @Override
   public Void visit(NoOpNode noOpNode) {
-    return null;
-  }
-
-  @Override
-  public Void visit(SelectionAndFilterNode selectionAndFilterNode) {
     return null;
   }
 
