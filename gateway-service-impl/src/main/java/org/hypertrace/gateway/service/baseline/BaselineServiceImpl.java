@@ -16,13 +16,10 @@ import org.hypertrace.gateway.service.v1.common.TimeAggregation;
 import org.hypertrace.gateway.service.v1.baseline.BaselineEntity;
 import org.hypertrace.gateway.service.v1.baseline.BaselineEntitiesRequest;
 import org.hypertrace.gateway.service.v1.baseline.BaselineEntitiesResponse;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
 
 import java.time.Duration;
 import java.time.temporal.ChronoUnit;
 import java.util.ArrayList;
-import java.util.Collections;
 import java.util.HashMap;
 import java.util.Iterator;
 import java.util.List;
@@ -35,10 +32,9 @@ import java.util.stream.Collectors;
  * It also changes Time aggregation requests to get more data points for proper baseline calculation
  */
 public class BaselineServiceImpl implements BaselineService {
-  private static long DAY_IN_MILLIS = 86400000L;
-  private static long SIX_HOURS_IN_MILLIS = 21600000L;
+  private static final long DAY_IN_MILLIS = 86400000L;
+  private static final long SIX_HOURS_IN_MILLIS = 21600000L;
 
-  private static final Logger LOG = LoggerFactory.getLogger(BaselineServiceImpl.class);
   private final AttributeMetadataProvider attributeMetadataProvider;
   private final BaselineServiceQueryParser baselineServiceQueryParser;
   private final BaselineServiceQueryExecutor baselineServiceQueryExecutor;
@@ -64,8 +60,8 @@ public class BaselineServiceImpl implements BaselineService {
     String timeColumn =
         AttributeMetadataUtil.getTimestampAttributeId(
             attributeMetadataProvider, requestContext, originalRequest.getEntityType());
-    Map<String, BaselineEntity> baselineEntityAggregatedMetricsMap = Collections.EMPTY_MAP;
-    Map<String, BaselineEntity> baselineEntityTimeSeriesMap = Collections.EMPTY_MAP;
+    Map<String, BaselineEntity> baselineEntityAggregatedMetricsMap = new HashMap<>();
+    Map<String, BaselineEntity> baselineEntityTimeSeriesMap = new HashMap<>();
 
     if (originalRequest.getBaselineAggregateRequestCount() > 0) {
       // Aggregated Functions data
@@ -138,9 +134,7 @@ public class BaselineServiceImpl implements BaselineService {
               timeSeriesEntitiesResponse, originalRequest.getStartTimeMillis());
     }
 
-    BaselineEntitiesResponse mergedResponse =
-        mergeEntities(baselineEntityAggregatedMetricsMap, baselineEntityTimeSeriesMap);
-    return mergedResponse;
+    return mergeEntities(baselineEntityAggregatedMetricsMap, baselineEntityTimeSeriesMap);
   }
 
   private void updateAliasMap(
@@ -153,12 +147,10 @@ public class BaselineServiceImpl implements BaselineService {
   }
 
   private BaselineTimeAggregation getBaselineAggregation(TimeAggregation timeAggregation) {
-    BaselineTimeAggregation baselineTimeAggregation =
-        BaselineTimeAggregation.newBuilder()
-            .setPeriod(timeAggregation.getPeriod())
-            .setAggregation(timeAggregation.getAggregation().getFunction())
-            .build();
-    return baselineTimeAggregation;
+    return BaselineTimeAggregation.newBuilder()
+        .setPeriod(timeAggregation.getPeriod())
+        .setAggregation(timeAggregation.getAggregation().getFunction())
+        .build();
   }
 
   private BaselineRequestContext getRequestContext(
@@ -185,9 +177,7 @@ public class BaselineServiceImpl implements BaselineService {
       baselineEntityAggregatedMetricsMap.forEach(
           (key, value) -> {
             BaselineEntity.Builder baselineEntityBuilder =
-                BaselineEntity.newBuilder()
-                    .setEntityType(value.getEntityType())
-                    .setId(value.getId())
+                getBaselineEntityBuilder(value)
                     .putAllBaselineAggregateMetric(value.getBaselineAggregateMetricMap());
             if (!baselineEntityTimeSeriesMap.isEmpty()) {
               baselineEntityBuilder.putAllBaselineMetricSeries(
@@ -200,9 +190,7 @@ public class BaselineServiceImpl implements BaselineService {
       baselineEntityTimeSeriesMap.forEach(
           (key, value) -> {
             BaselineEntity baselineEntity =
-                BaselineEntity.newBuilder()
-                    .setEntityType(value.getEntityType())
-                    .setId(value.getId())
+                getBaselineEntityBuilder(value)
                     .putAllBaselineMetricSeries(value.getBaselineMetricSeriesMap())
                     .build();
             baselineEntityList.add(baselineEntity);
@@ -219,9 +207,7 @@ public class BaselineServiceImpl implements BaselineService {
           baselineEntity.getBaselineMetricSeriesMap();
       Map<String, Baseline> baselineMap = new HashMap<>();
       BaselineEntity.Builder baselineEntityBuilder =
-          BaselineEntity.newBuilder()
-              .setEntityType(baselineEntity.getEntityType())
-              .setId(baselineEntity.getId());
+              getBaselineEntityBuilder(baselineEntity);
       Map<String, BaselineMetricSeries> revisedMetricSeriesMap = new HashMap<>();
       // Calculate baseline
       metricSeriesMap.forEach(
@@ -253,8 +239,6 @@ public class BaselineServiceImpl implements BaselineService {
             }
             BaselineMetricSeries baselineMetricSeries =
                 BaselineMetricSeries.newBuilder()
-                    .setAggregation(value.getAggregation())
-                    .setPeriod(value.getPeriod())
                     .addAllBaselineValue(revisedList)
                     .build();
             revisedMetricSeriesMap.put(key, baselineMetricSeries);
@@ -263,6 +247,12 @@ public class BaselineServiceImpl implements BaselineService {
       baselineEntityMap.put(baselineEntity.getId(), baselineEntityBuilder.build());
     }
     return baselineEntityMap;
+  }
+
+  private BaselineEntity.Builder getBaselineEntityBuilder(BaselineEntity baselineEntity) {
+    return BaselineEntity.newBuilder()
+            .setEntityType(baselineEntity.getEntityType())
+            .setId(baselineEntity.getId());
   }
 
   private Map<String, BaselineEntity> getEntitiesMapFromAggResponse(
@@ -274,10 +264,7 @@ public class BaselineServiceImpl implements BaselineService {
             baselineEntity.getBaselineMetricSeriesMap();
         Map<String, Baseline> baselineMap = new HashMap<>();
         BaselineEntity.Builder baselineEntityBuilder =
-            BaselineEntity.newBuilder()
-                .setEntityType(baselineEntity.getEntityType())
-                .setId(baselineEntity.getId());
-
+                getBaselineEntityBuilder(baselineEntity);
         metricSeriesMap.forEach(
             (key, value) -> {
               List<Double> metricValues =
@@ -330,24 +317,15 @@ public class BaselineServiceImpl implements BaselineService {
   private TimeAggregation getAggregationFunction(
       FunctionExpression function, long startTimeMillis, long endTimeMillis) {
     Period period = getPeriod(startTimeMillis, endTimeMillis);
-    TimeAggregation timeAggregation =
-        TimeAggregation.newBuilder()
-            .setPeriod(period)
-            .setAggregation(Expression.newBuilder().setFunction(function).build())
-            .build();
-    return timeAggregation;
+    return TimeAggregation.newBuilder()
+        .setPeriod(period)
+        .setAggregation(Expression.newBuilder().setFunction(function).build())
+        .build();
   }
 
   private Period getPeriod(long startTimeInMillis, long endTimeMillis) {
-    Period period;
-    if ((endTimeMillis - startTimeInMillis) < DAY_IN_MILLIS) {
-      long timePeriod = (endTimeMillis - startTimeInMillis) / (1000 * 60);
-      period = Period.newBuilder().setUnit("MINUTES").setValue((int) timePeriod).build();
-    } else {
-      long timePeriod = (endTimeMillis - startTimeInMillis) / (1000 * 60 * 60 * 24);
-      period = Period.newBuilder().setUnit("HOURS").setValue((int) timePeriod).build();
-    }
-    return period;
+    long timePeriod = (endTimeMillis - startTimeInMillis) / (1000 * 60);
+    return Period.newBuilder().setUnit("MINUTES").setValue((int) timePeriod).build();
   }
 
   private Period getTimeSeriesPeriod(List<BaselineTimeAggregation> baselineTimeSeriesList) {
@@ -356,17 +334,13 @@ public class BaselineServiceImpl implements BaselineService {
 
   private long getPeriodInSecs(Period period) {
     ChronoUnit unit = ChronoUnit.valueOf(period.getUnit());
-    long periodSecs = Duration.of(period.getValue(), unit).getSeconds();
-    return periodSecs;
+    return Duration.of(period.getValue(), unit).getSeconds();
   }
 
   /**
    * If user selected time range is less than 24 hrs then choose last 24hrs of data for baseline if
    * it is gt 24hours then choose 2X time range for baseline calculation.
    *
-   * @param startTimeMillis
-   * @param endTimeMillis
-   * @return
    */
   private long getUpdatedStartTimeForAggregations(long startTimeMillis, long endTimeMillis) {
     if ((endTimeMillis - startTimeMillis) < DAY_IN_MILLIS) {
@@ -378,18 +352,9 @@ public class BaselineServiceImpl implements BaselineService {
   }
 
   /**
-   * If user selected time range < 6 hours then 3X time range if it is > 6 hours the 2X time range.
-   *
-   * @param startTimeMillis
-   * @param endTimeMillis
-   * @return
+   * It returns 2X user selected time range.
    */
   private long getUpdatedStartTimeForSeriesRequests(long startTimeMillis, long endTimeMillis) {
-    if ((endTimeMillis - startTimeMillis) < SIX_HOURS_IN_MILLIS) {
-      startTimeMillis = endTimeMillis - (3 * (endTimeMillis - startTimeMillis));
-    } else {
-      startTimeMillis = endTimeMillis - (2 * (endTimeMillis - startTimeMillis));
-    }
-    return startTimeMillis;
+    return (endTimeMillis - (2 * (endTimeMillis - startTimeMillis)));
   }
 }

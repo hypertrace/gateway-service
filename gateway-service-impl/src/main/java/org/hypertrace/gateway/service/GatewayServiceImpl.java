@@ -194,9 +194,7 @@ public class GatewayServiceImpl extends GatewayServiceGrpc.GatewayServiceImplBas
               org.hypertrace.core.grpcutils.context.RequestContext.CURRENT.get()
                   .getRequestHeaders());
 
-      if (LOG.isDebugEnabled()) {
-        LOG.debug("Received response: {}", response);
-      }
+      LOG.debug("Received response: {}", response);
 
       responseObserver.onNext(response);
       responseObserver.onCompleted();

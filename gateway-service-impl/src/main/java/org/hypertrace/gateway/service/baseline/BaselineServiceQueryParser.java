@@ -15,7 +15,6 @@ import org.hypertrace.gateway.service.common.AttributeMetadataProvider;
 import org.hypertrace.gateway.service.common.converters.QueryAndGatewayDtoConverter;
 import org.hypertrace.gateway.service.common.util.MetricAggregationFunctionUtil;
 import org.hypertrace.gateway.service.entity.EntityKey;
-import org.hypertrace.gateway.service.entity.config.EntityIdColumnsConfigs;
 import org.hypertrace.gateway.service.v1.baseline.Baseline;
 import org.hypertrace.gateway.service.v1.baseline.BaselineEntitiesResponse;
 import org.hypertrace.gateway.service.v1.baseline.BaselineEntity;
@@ -145,9 +144,7 @@ public class BaselineServiceQueryParser {
         new LinkedHashMap<>();
     while (resultSetChunkIterator.hasNext()) {
       ResultSetChunk chunk = resultSetChunkIterator.next();
-      if (LOG.isDebugEnabled()) {
-        LOG.debug("Received chunk: " + chunk.toString());
-      }
+      LOG.debug("Received chunk: {} ", chunk.toString());
 
       if (chunk.getRowCount() < 1) {
         break;
@@ -196,7 +193,7 @@ public class BaselineServiceQueryParser {
 
             BaselineMetricSeries.Builder seriesBuilder =
                 metricSeriesMap.computeIfAbsent(
-                    metadata.getColumnName(), k -> getMetricSeriesBuilder(timeAggregation));
+                    metadata.getColumnName(), k -> BaselineMetricSeries.newBuilder());
             seriesBuilder.addBaselineValue(
                 BaselineInterval.newBuilder(intervalBuilder.build())
                     .setBaseline(Baseline.newBuilder().setValue(convertedValue).build())
@@ -232,11 +229,4 @@ public class BaselineServiceQueryParser {
     return BaselineMetricSeries.newBuilder().addAllBaselineValue(sortedIntervals).build();
   }
 
-  private BaselineMetricSeries.Builder getMetricSeriesBuilder(
-      BaselineTimeAggregation timeAggregation) {
-    BaselineMetricSeries.Builder series = BaselineMetricSeries.newBuilder();
-    series.setAggregation(timeAggregation.getAggregation().getFunction().name());
-    series.setPeriod(timeAggregation.getPeriod());
-    return series;
-  }
 }

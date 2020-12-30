@@ -41,8 +41,6 @@ message Baseline {
 
 message BaselineMetricSeries {
   repeated BaselineInterval baselineValue = 1;
-  string aggregation = 2;
-  org.hypertrace.gateway.service.v1.common.Period period = 3;
 }
 
 message BaselineInterval {
