@@ -57,6 +57,21 @@
                 }
               }
             ]
+          },
+          {
+            "lhs": {
+              "columnIdentifier": {
+                "columnName": "API_TRACE.spaceIds"
+              }
+            },
+            "operator": "EQ",
+            "rhs": {
+              "literal": {
+                "value": {
+                  "string": "test-space"
+                }
+              }
+            }
           }
         ]
       },

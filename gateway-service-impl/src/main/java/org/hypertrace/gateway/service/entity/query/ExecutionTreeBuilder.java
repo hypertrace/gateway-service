@@ -12,12 +12,14 @@ import java.util.Set;
 import java.util.stream.Collectors;
 import org.hypertrace.core.attribute.service.v1.AttributeMetadata;
 import org.hypertrace.core.attribute.service.v1.AttributeSource;
+import org.hypertrace.gateway.service.common.util.TimeRangeFilterUtil;
 import org.hypertrace.gateway.service.entity.query.visitor.ExecutionContextBuilderVisitor;
 import org.hypertrace.gateway.service.entity.query.visitor.OptimizingVisitor;
 import org.hypertrace.gateway.service.entity.query.visitor.PrintVisitor;
 import org.hypertrace.gateway.service.v1.common.Filter;
 import org.hypertrace.gateway.service.v1.common.Operator;
 import org.hypertrace.gateway.service.v1.common.OrderByExpression;
+import org.hypertrace.gateway.service.v1.entity.EntitiesRequest;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -53,6 +55,27 @@ public class ExecutionTreeBuilder {
     // All expressions' attributes from the same source. Will only need one downstream query.
     Optional<String> singleSourceForAllAttributes = ExecutionTreeUtils.getSingleSourceForAllAttributes(executionContext);
 
+    EntitiesRequest entitiesRequest = executionContext.getEntitiesRequest();
+
+    // TODO: If there is a filter on a data source, other than EDS, then the flag is a no-op
+
+    // EDS source has all the entities (live + non live). In order to fetch all the non live
+    // entities, along with live entities,
+    // the query needs to be anchored around EDS.
+    // Hence, EDS is treated as a DataFetcherNode, so that first all the entities are fetched from
+    // EDS, irrespective of the time range. And, then the remaining data can be fetched from other
+    // sources
+    if (entitiesRequest.getIncludeNonLiveEntities()) {
+      QueryNode rootNode = new DataFetcherNode(EDS.name(), entitiesRequest.getFilter());
+      rootNode.acceptVisitor(new ExecutionContextBuilderVisitor(executionContext));
+
+      return buildExecutionTree(executionContext, rootNode);
+    }
+
+    // If all the attributes, filters, order by and sort are requested from a single source, there
+    // can be source specification
+    // optimization where all projections, filters, order by, sort and limit can be pushed down to
+    // the data store
     if (singleSourceForAllAttributes.isPresent()) {
       String source = singleSourceForAllAttributes.get();
       QueryNode selectionAndFilterNode = buildExecutionTreeForSameSourceFilterAndSelection(source);
@@ -63,7 +86,7 @@ public class ExecutionTreeBuilder {
       return selectionAndFilterNode;
     }
 
-    QueryNode filterTree = buildFilterTree(executionContext.getEntitiesRequest().getFilter());
+    QueryNode filterTree = buildFilterTree(executionContext, entitiesRequest.getFilter());
     if (LOG.isDebugEnabled()) {
       LOG.debug("Filter Tree:{}", filterTree.acceptVisitor(new PrintVisitor()));
     }
@@ -193,6 +216,20 @@ public class ExecutionTreeBuilder {
       rootNode = checkAndAddSortAndPaginationNode(rootNode, executionContext);
     }
     return rootNode;
+  }
+
+  @VisibleForTesting
+  QueryNode buildFilterTree(ExecutionContext context, Filter filter) {
+    // Convert the time range into a filter and set it on the request so that all downstream
+    // components needn't treat it specially
+    Filter timeRangeFilter =
+        TimeRangeFilterUtil.addTimeRangeFilter(
+            context.getTimestampAttributeId(),
+            filter,
+            context.getEntitiesRequest().getStartTimeMillis(),
+            context.getEntitiesRequest().getEndTimeMillis());
+
+    return buildFilterTree(timeRangeFilter);
   }
 
   @VisibleForTesting

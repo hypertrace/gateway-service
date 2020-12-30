@@ -45,6 +45,8 @@ message EntitiesRequest {
 
   int32 limit = 20;
   int32 offset = 21;
+  bool include_non_live_entities = 22;
+  string space_id = 23;
 }
 
 message EntitiesResponse {

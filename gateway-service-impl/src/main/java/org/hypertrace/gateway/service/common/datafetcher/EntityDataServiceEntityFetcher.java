@@ -18,6 +18,8 @@ import org.hypertrace.gateway.service.entity.EntitiesRequestContext;
 import org.hypertrace.gateway.service.entity.EntityKey;
 import org.hypertrace.gateway.service.entity.config.EntityIdColumnsConfigs;
 import org.hypertrace.gateway.service.v1.common.Expression.ValueCase;
+import org.hypertrace.gateway.service.v1.common.Value;
+import org.hypertrace.gateway.service.v1.common.ValueType;
 import org.hypertrace.gateway.service.v1.entity.EntitiesRequest;
 import org.hypertrace.gateway.service.v1.entity.Entity;
 import org.hypertrace.gateway.service.v1.entity.Entity.Builder;
@@ -126,9 +128,9 @@ public class EntityDataServiceEntityFetcher implements IEntityFetcher {
         for (int i = 0; i < mappedEntityIdAttributeIds.size(); i++) {
           entityBuilder.putAttribute(
               mappedEntityIdAttributeIds.get(i),
-              org.hypertrace.gateway.service.v1.common.Value.newBuilder()
+              Value.newBuilder()
                   .setString(entityKey.getAttributes().get(i))
-                  .setValueType(org.hypertrace.gateway.service.v1.common.ValueType.STRING)
+                  .setValueType(ValueType.STRING)
                   .build());
         }
 

@@ -133,15 +133,17 @@ public class RequestHandler implements RequestHandlerWithSorting {
     return queryServiceClient.executeQuery(queryRequest, context.getHeaders(), requestTimeout);
   }
 
-  Filter.Builder constructQueryServiceFilter(
+  Filter constructQueryServiceFilter(
       ExploreRequest request,
       ExploreRequestContext exploreRequestContext,
       AttributeMetadataProvider attributeMetadataProvider) {
-    return QueryAndGatewayDtoConverter.addTimeFilterAndConvertToQueryFilter(
+    return QueryAndGatewayDtoConverter.addTimeAndSpaceFiltersAndConvertToQueryFilter(
         request.getStartTimeMillis(),
         request.getEndTimeMillis(),
+        request.getSpaceId(),
         AttributeMetadataUtil.getTimestampAttributeId(
             attributeMetadataProvider, exploreRequestContext, request.getContext()),
+        AttributeMetadataUtil.getSpaceAttributeId(attributeMetadataProvider, exploreRequestContext, request.getContext()),
         request.getFilter());
   }
 

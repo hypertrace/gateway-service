@@ -1,7 +1,10 @@
 package org.hypertrace.gateway.service.common.datafetcher;
 
 import static org.hypertrace.gateway.service.common.converters.QueryAndGatewayDtoConverter.convertToQueryExpression;
-import static org.hypertrace.gateway.service.common.converters.QueryAndGatewayDtoConverter.convertToQueryFilter;
+import static org.hypertrace.gateway.service.common.converters.QueryRequestUtil.createCountByColumnSelection;
+import static org.hypertrace.gateway.service.common.converters.QueryRequestUtil.createFilter;
+import static org.hypertrace.gateway.service.common.converters.QueryRequestUtil.createStringNullLiteralExpression;
+import static org.hypertrace.gateway.service.common.converters.QueryRequestUtil.createTimeColumnGroupByExpression;
 
 import com.google.common.base.Preconditions;
 import java.time.Duration;
@@ -11,25 +14,24 @@ import java.util.Iterator;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.Optional;
 import java.util.concurrent.TimeUnit;
 import java.util.stream.Collectors;
 import java.util.stream.IntStream;
 import org.apache.commons.lang3.StringUtils;
 import org.hypertrace.core.attribute.service.v1.AttributeMetadata;
-import org.hypertrace.core.query.service.api.ColumnIdentifier;
 import org.hypertrace.core.query.service.api.ColumnMetadata;
 import org.hypertrace.core.query.service.api.Expression;
 import org.hypertrace.core.query.service.api.Filter;
-import org.hypertrace.core.query.service.api.LiteralConstant;
 import org.hypertrace.core.query.service.api.Operator;
 import org.hypertrace.core.query.service.api.QueryRequest;
 import org.hypertrace.core.query.service.api.ResultSetChunk;
 import org.hypertrace.core.query.service.api.Row;
 import org.hypertrace.core.query.service.client.QueryServiceClient;
-import org.hypertrace.core.query.service.util.QueryRequestUtil;
 import org.hypertrace.gateway.service.common.AttributeMetadataProvider;
 import org.hypertrace.gateway.service.common.QueryRequestContext;
 import org.hypertrace.gateway.service.common.converters.QueryAndGatewayDtoConverter;
+import org.hypertrace.gateway.service.common.converters.QueryRequestUtil;
 import org.hypertrace.gateway.service.common.util.ArithmeticValueUtil;
 import org.hypertrace.gateway.service.common.util.AttributeMetadataUtil;
 import org.hypertrace.gateway.service.common.util.ExpressionReader;
@@ -41,6 +43,7 @@ import org.hypertrace.gateway.service.entity.EntityKey;
 import org.hypertrace.gateway.service.entity.config.EntityIdColumnsConfigs;
 import org.hypertrace.gateway.service.v1.common.AggregatedMetricValue;
 import org.hypertrace.gateway.service.v1.common.Expression.ValueCase;
+import org.hypertrace.gateway.service.v1.common.FunctionExpression;
 import org.hypertrace.gateway.service.v1.common.FunctionType;
 import org.hypertrace.gateway.service.v1.common.Health;
 import org.hypertrace.gateway.service.v1.common.Interval;
@@ -61,8 +64,7 @@ import org.slf4j.LoggerFactory;
 public class QueryServiceEntityFetcher implements IEntityFetcher {
 
   private static final Logger LOG = LoggerFactory.getLogger(QueryServiceEntityFetcher.class);
-  private static final String COUNT_COLUMN_NAME = "Count";
-  private static final String QUERY_SERVICE_NULL = "null";
+  private static final String COUNT_COLUMN_NAME = "COUNT";
 
   private final EntitiesRequestValidator entitiesRequestValidator = new EntitiesRequestValidator();
   private final QueryServiceClient queryServiceClient;
@@ -139,9 +141,9 @@ public class QueryServiceEntityFetcher implements IEntityFetcher {
         for (int i = 0; i < entityIdAttributes.size(); i++) {
           entityBuilder.putAttribute(
               entityIdAttributes.get(i),
-              org.hypertrace.gateway.service.v1.common.Value.newBuilder()
+              Value.newBuilder()
                   .setString(entityKey.getAttributes().get(i))
-                  .setValueType(org.hypertrace.gateway.service.v1.common.ValueType.STRING)
+                  .setValueType(ValueType.STRING)
                   .build());
         }
 
@@ -230,9 +232,9 @@ public class QueryServiceEntityFetcher implements IEntityFetcher {
         for (int i = 0; i < entityIdAttributes.size(); i++) {
           entityBuilder.putAttribute(
               entityIdAttributes.get(i),
-              org.hypertrace.gateway.service.v1.common.Value.newBuilder()
+              Value.newBuilder()
                   .setString(entityKey.getAttributes().get(i))
-                  .setValueType(org.hypertrace.gateway.service.v1.common.ValueType.STRING)
+                  .setValueType(ValueType.STRING)
                   .build());
         }
 
@@ -316,9 +318,9 @@ public class QueryServiceEntityFetcher implements IEntityFetcher {
         for (int i = 0; i < entityIdAttributes.size(); i++) {
           entityBuilder.putAttribute(
               entityIdAttributes.get(i),
-              org.hypertrace.gateway.service.v1.common.Value.newBuilder()
+              Value.newBuilder()
                   .setString(entityKey.getAttributes().get(i))
-                  .setValueType(org.hypertrace.gateway.service.v1.common.ValueType.STRING)
+                  .setValueType(ValueType.STRING)
                   .build());
         }
 
@@ -329,7 +331,7 @@ public class QueryServiceEntityFetcher implements IEntityFetcher {
           org.hypertrace.core.query.service.api.Value columnValue = row.getColumn(i);
           // add entity attributes from selections
 
-          org.hypertrace.gateway.service.v1.common.FunctionExpression function =
+          FunctionExpression function =
               requestContext.getFunctionExpressionByAlias(metadata.getColumnName());
           /* this is aggregated metric column*/
           if (function != null) {
@@ -376,7 +378,6 @@ public class QueryServiceEntityFetcher implements IEntityFetcher {
     List<Expression> idExpressions =
         entityIdAttributes.stream()
             .map(QueryRequestUtil::createColumnExpression)
-            .map(Expression.Builder::build)
             .collect(Collectors.toList());
     Filter.Builder filterBuilder =
         constructQueryServiceFilter(entitiesRequest, requestContext, entityIdAttributes);
@@ -415,7 +416,9 @@ public class QueryServiceEntityFetcher implements IEntityFetcher {
     // Pinot's GroupBy queries need at least one aggregate operation in the selection
     // so we add count(*) as a dummy placeholder.
     if (aggregates.isEmpty()) {
-      builder.addSelection(QueryRequestUtil.createCountByColumnSelection(entityIdAttributes.toArray(new String[]{})));
+      builder.addSelection(
+          createCountByColumnSelection(
+              Optional.ofNullable(entityIdAttributes.get(0)).orElseThrow()));
     }
     return builder;
   }
@@ -428,7 +431,7 @@ public class QueryServiceEntityFetcher implements IEntityFetcher {
 
     // Ignore the count column since we introduced that ourselves into the query
     if (isSkipCountColumn &&
-        StringUtils.equals(COUNT_COLUMN_NAME, metadata.getColumnName())) {
+        StringUtils.equalsIgnoreCase(COUNT_COLUMN_NAME, metadata.getColumnName())) {
       return;
     }
 
@@ -448,7 +451,7 @@ public class QueryServiceEntityFetcher implements IEntityFetcher {
       org.hypertrace.core.query.service.api.Value columnValue,
       Map<String, AttributeMetadata> attributeMetadataMap) {
 
-    org.hypertrace.gateway.service.v1.common.FunctionExpression function =
+    FunctionExpression function =
         requestContext.getFunctionExpressionByAlias(metadata.getColumnName());
     List<org.hypertrace.gateway.service.v1.common.Expression> healthExpressions =
         function.getArgumentsList().stream()
@@ -513,13 +516,13 @@ public class QueryServiceEntityFetcher implements IEntityFetcher {
     entitiesRequest
         .getTimeAggregationList()
         .forEach(
-            (timeAggregation ->
+            timeAggregation ->
                 requestContext.mapAliasToTimeAggregation(
                     timeAggregation
                         .getAggregation()
                         .getFunction()
                         .getAlias(), // Required to be set by the validators
-                    timeAggregation)));
+                    timeAggregation));
 
     // First group the Aggregations based on the period so that we can issue separate queries
     // to QueryService for each different Period.
@@ -587,7 +590,7 @@ public class QueryServiceEntityFetcher implements IEntityFetcher {
                 i < chunk.getResultSetMetadata().getColumnMetadataCount();
                 i++) {
               ColumnMetadata metadata = chunk.getResultSetMetadata().getColumnMetadata(i);
-              org.hypertrace.gateway.service.v1.common.TimeAggregation timeAggregation =
+              TimeAggregation timeAggregation =
                   requestContext.getTimeAggregationByAlias(metadata.getColumnName());
 
               if (timeAggregation == null) {
@@ -642,9 +645,9 @@ public class QueryServiceEntityFetcher implements IEntityFetcher {
       for (int i = 0; i < idColumns.size(); i++) {
         entityBuilder.putAttribute(
             idColumns.get(i),
-            org.hypertrace.gateway.service.v1.common.Value.newBuilder()
+            Value.newBuilder()
                 .setString(entry.getKey().getAttributes().get(i))
-                .setValueType(org.hypertrace.gateway.service.v1.common.ValueType.STRING)
+                .setValueType(ValueType.STRING)
                 .build());
       }
       resultMap.put(entry.getKey(), entityBuilder);
@@ -709,13 +712,10 @@ public class QueryServiceEntityFetcher implements IEntityFetcher {
     builder.addAllGroupBy(
         idColumns.stream()
             .map(QueryRequestUtil::createColumnExpression)
-            .map(Expression.Builder::build)
             .collect(Collectors.toList()));
 
     // Secondary grouping is on time.
-    builder.addGroupBy(
-        Expression.newBuilder()
-            .setFunction(QueryRequestUtil.createTimeColumnGroupByFunction(timeColumn, periodSecs)));
+    builder.addGroupBy(createTimeColumnGroupByExpression(timeColumn, periodSecs));
 
     // Pinot truncates the GroupBy results to 10 when there is no limit explicitly but
     // here we neither want the results to be truncated nor apply the limit coming from client.
@@ -728,60 +728,48 @@ public class QueryServiceEntityFetcher implements IEntityFetcher {
   }
 
   /**
-   * Converts the filter in the given request to the query service filter and adds a non null filter on entity id.
+   * Converts the filter in the given request to the query service filter and adds a non null filter
+   * on entity id.
    */
-  private Filter.Builder constructQueryServiceFilter(EntitiesRequest entitiesRequest, EntitiesRequestContext context,
-                                                     List<String> entityIdAttributes) {
+  private Filter.Builder constructQueryServiceFilter(
+      EntitiesRequest entitiesRequest,
+      EntitiesRequestContext context,
+      List<String> entityIdAttributes) {
     // adds the Id != "null" filter to remove null entities.
-    Filter.Builder filterBuilder = Filter.newBuilder()
-        .setOperator(Operator.AND)
-        .addAllChildFilter(
-            entityIdAttributes.stream()
-                .map(
-                    entityIdAttribute ->
-                        QueryRequestUtil.createColumnValueFilter(
-                            entityIdAttribute, Operator.NEQ, QUERY_SERVICE_NULL))
-                .map(Filter.Builder::build)
-                .collect(Collectors.toList()));
+    Filter.Builder filterBuilder =
+        Filter.newBuilder()
+            .setOperator(Operator.AND)
+            .addAllChildFilter(
+                entityIdAttributes.stream()
+                    .map(
+                        entityIdAttribute ->
+                            createFilter(
+                                entityIdAttribute,
+                                Operator.NEQ,
+                                createStringNullLiteralExpression()))
+                    .collect(Collectors.toList()));
 
-    // Convert the existing filter into query service filter.
-    Filter queryFilter = convertToQueryFilter(entitiesRequest.getFilter()).build();
-    if (!Filter.getDefaultInstance().equals(queryFilter)) {
-      filterBuilder.addChildFilter(queryFilter);
+    Filter timeSpaceAndProvidedFilter =
+        QueryAndGatewayDtoConverter.addTimeAndSpaceFiltersAndConvertToQueryFilter(
+            entitiesRequest.getStartTimeMillis(),
+            entitiesRequest.getEndTimeMillis(),
+            entitiesRequest.getSpaceId(),
+            context.getTimestampAttributeId(),
+            AttributeMetadataUtil.getSpaceAttributeId(
+                attributeMetadataProvider, context, entitiesRequest.getEntityType()),
+            entitiesRequest.getFilter());
+
+    if (timeSpaceAndProvidedFilter.equals(Filter.getDefaultInstance())) {
+      return filterBuilder;
     }
-
-    // Time range is a mandatory filter for query service, hence add it if it's not already present.
-    if (!hasTimeRangeFilter(queryFilter, context.getTimestampAttributeId())) {
-      filterBuilder.addChildFilter(Filter.newBuilder().setOperator(Operator.AND)
-          .addChildFilter(createTimeFilter(context.getTimestampAttributeId(), Operator.GE, entitiesRequest.getStartTimeMillis()))
-          .addChildFilter(createTimeFilter(context.getTimestampAttributeId(), Operator.LT, entitiesRequest.getEndTimeMillis())));
+    if (timeSpaceAndProvidedFilter.getOperator().equals(Operator.AND)) {
+      return filterBuilder.addAllChildFilter(timeSpaceAndProvidedFilter.getChildFilterList());
     }
-
-    return filterBuilder;
-  }
-
-  private static Filter createTimeFilter(String columnName, Operator op, long value) {
-    ColumnIdentifier.Builder timeColumn = ColumnIdentifier.newBuilder().setColumnName(columnName);
-    Expression.Builder lhs = Expression.newBuilder().setColumnIdentifier(timeColumn);
-    LiteralConstant.Builder constant = LiteralConstant.newBuilder().setValue(
-        org.hypertrace.core.query.service.api.Value.newBuilder()
-            .setValueType(org.hypertrace.core.query.service.api.ValueType.LONG).setLong(value));
-    Expression.Builder rhs = Expression.newBuilder().setLiteral(constant);
-    return Filter.newBuilder().setLhs(lhs).setOperator(op).setRhs(rhs).build();
-  }
-
-  private boolean hasTimeRangeFilter(Filter filter, String timestampAttributeId) {
-    if (filter.getOperator() == Operator.AND || filter.getOperator() == Operator.OR) {
-      return filter.getChildFilterList().stream()
-          .anyMatch(f -> hasTimeRangeFilter(f, timestampAttributeId));
-    } else {
-      return filter.getLhs().getValueCase() == Expression.ValueCase.COLUMNIDENTIFIER &&
-          filter.getLhs().getColumnIdentifier().getColumnName().equals(timestampAttributeId);
-    }
+    return filterBuilder.addChildFilter(timeSpaceAndProvidedFilter);
   }
 
   private MetricSeries.Builder getMetricSeriesBuilder(
-      org.hypertrace.gateway.service.v1.common.TimeAggregation timeAggregation) {
+      TimeAggregation timeAggregation) {
     MetricSeries.Builder series = MetricSeries.newBuilder();
     series.setAggregation(timeAggregation.getAggregation().getFunction().getFunction().name());
     series.setPeriod(timeAggregation.getPeriod());

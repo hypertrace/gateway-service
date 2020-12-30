@@ -23,7 +23,7 @@ dependencies {
     }
   }
 
-  implementation("org.hypertrace.core.query.service:query-service-client:0.3.4")
+  implementation("org.hypertrace.core.query.service:query-service-client:0.5.1")
   implementation("org.hypertrace.core.attribute.service:attribute-service-client:0.6.0")
   implementation("org.hypertrace.entity.service:entity-service-client:0.1.27")
   implementation("org.hypertrace.entity.service:entity-service-api:0.1.27")

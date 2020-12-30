@@ -777,6 +777,42 @@ public class ExecutionTreeBuilderTest {
     assertTrue(executionTree instanceof SelectionNode);
     assertTrue(((SelectionNode) executionTree).getAggMetricSelectionSources().contains(AttributeSource.QS.name()));
     QueryNode firstChild = ((SelectionNode) executionTree).getChildNode();
+    assertTrue(firstChild instanceof AndNode);
+    List<QueryNode> childNodes = ((AndNode) firstChild).getChildNodes();
+    assertEquals(2, childNodes.size());
+    QueryNode firstChildNode = childNodes.get(0);
+    assertTrue(firstChildNode instanceof DataFetcherNode);
+    assertEquals(AttributeSource.QS.name(), ((DataFetcherNode) firstChildNode).getSource());
+
+    QueryNode secondChildNode = childNodes.get(1);
+    assertTrue(secondChildNode instanceof DataFetcherNode);
+    assertEquals(AttributeSource.EDS.name(), ((DataFetcherNode) secondChildNode).getSource());
+  }
+
+  @Test
+  public void test_build_includeResultsOutsideTimeRange() {
+    EntitiesRequest entitiesRequest =
+        EntitiesRequest.newBuilder()
+            .setEntityType(AttributeScope.API.name())
+            .setFilter(generateEQFilter(API_PATTERN_ATTR, "/login"))
+            .addSelection(buildExpression(API_NAME_ATTR))
+            .addSelection(
+                buildAggregateExpression(API_NUM_CALLS_ATTR,
+                    FunctionType.SUM,
+                    "SUM_numCalls",
+                    List.of()))
+            .setIncludeNonLiveEntities(true)
+            .build();
+    EntitiesRequestContext entitiesRequestContext =
+        new EntitiesRequestContext(TENANT_ID, 0L, 10L, "API", "API.startTime", new HashMap<>());
+    ExecutionContext executionContext =
+        ExecutionContext.from(attributeMetadataProvider, entityIdColumnsConfigs, entitiesRequest, entitiesRequestContext);
+    ExecutionTreeBuilder executionTreeBuilder = new ExecutionTreeBuilder(executionContext);
+    QueryNode executionTree = executionTreeBuilder.build();
+    assertNotNull(executionTree);
+    assertTrue(executionTree instanceof SelectionNode);
+    assertTrue(((SelectionNode) executionTree).getAggMetricSelectionSources().contains(AttributeSource.QS.name()));
+    QueryNode firstChild = ((SelectionNode) executionTree).getChildNode();
     assertTrue(firstChild instanceof DataFetcherNode);
     assertEquals(AttributeSource.EDS.name(), ((DataFetcherNode) firstChild).getSource());
   }
