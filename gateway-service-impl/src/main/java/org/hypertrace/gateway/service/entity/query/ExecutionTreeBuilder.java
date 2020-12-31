@@ -69,7 +69,13 @@ public class ExecutionTreeBuilder {
       QueryNode rootNode = new DataFetcherNode(EDS.name(), entitiesRequest.getFilter());
       rootNode.acceptVisitor(new ExecutionContextBuilderVisitor(executionContext));
 
-      return buildExecutionTree(executionContext, rootNode);
+      QueryNode executionTree = buildExecutionTree(executionContext, rootNode);
+
+      if (LOG.isDebugEnabled()) {
+        LOG.debug("Execution Tree:{}", executionTree.acceptVisitor(new PrintVisitor()));
+      }
+
+      return executionTree;
     }
 
     // If all the attributes, filters, order by and sort are requested from a single source, there
@@ -79,12 +85,16 @@ public class ExecutionTreeBuilder {
     if (singleSourceForAllAttributes.isPresent()) {
       String source = singleSourceForAllAttributes.get();
       QueryNode rootNode = buildExecutionTreeForSameSourceFilterAndSelection(source);
-      if (LOG.isDebugEnabled()) {
-        LOG.debug("Execution Tree:{}", rootNode.acceptVisitor(new PrintVisitor()));
-      }
+
 
       rootNode.acceptVisitor(new ExecutionContextBuilderVisitor(executionContext));
-      return buildExecutionTree(executionContext, rootNode);
+      QueryNode executionTree = buildExecutionTree(executionContext, rootNode);
+
+      if (LOG.isDebugEnabled()) {
+        LOG.debug("Execution Tree:{}", executionTree.acceptVisitor(new PrintVisitor()));
+      }
+
+      return executionTree;
     }
 
     QueryNode filterTree = buildFilterTree(executionContext, entitiesRequest.getFilter());
@@ -97,6 +107,11 @@ public class ExecutionTreeBuilder {
       LOG.debug("ExecutionContext: {}", executionContext);
     }
 
+    /**
+     * {@link OptimizingVisitor} is needed to merge filters corresponding to the same source into
+     * one {@link DataFetcherNode}, instead of having multiple {@link DataFetcherNode}s for each
+     * filter
+     */
     QueryNode optimizedFilterTree = filterTree.acceptVisitor(new OptimizingVisitor());
     if (LOG.isDebugEnabled()) {
       LOG.debug("Optimized Filter Tree:{}", optimizedFilterTree.acceptVisitor(new PrintVisitor()));
