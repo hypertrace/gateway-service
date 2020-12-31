@@ -26,16 +26,6 @@ public class EntityDataServiceEntityFetcherTests {
   }
 
   @Test
-  public void test_getEntitiesAndAggregatedMetrics() {
-    assertThrows(UnsupportedOperationException.class, () -> {
-      entityDataServiceEntityFetcher.getEntitiesAndAggregatedMetrics(
-          new EntitiesRequestContext(TENANT_ID, 0, 1, "API", "API.startTime", Map.of()),
-          EntitiesRequest.newBuilder().build()
-      );
-    });
-  }
-
-  @Test
   public void test_getTotalEntities() {
     assertThrows(UnsupportedOperationException.class, () -> {
       entityDataServiceEntityFetcher.getTotalEntities(

@@ -42,12 +42,12 @@ public class ExecutionContextBuilderVisitor implements Visitor<Void> {
 
   @Override
   public Void visit(SelectionNode selectionNode) {
-    return null;
+    return selectionNode.getChildNode().acceptVisitor(this);
   }
 
   @Override
   public Void visit(SortAndPaginateNode sortAndPaginateNode) {
-    return null;
+    return sortAndPaginateNode.getChildNode().acceptVisitor(this);
   }
 
   @Override
@@ -57,11 +57,11 @@ public class ExecutionContextBuilderVisitor implements Visitor<Void> {
 
   @Override
   public Void visit(PaginateOnlyNode paginateOnlyNode) {
-    return null;
+    return paginateOnlyNode.getChildNode().acceptVisitor(this);
   }
 
   @Override
   public Void visit(TotalFetcherNode totalFetcherNode) {
-    return null;
+    return totalFetcherNode.getChildNode().acceptVisitor(this);
   }
 }
