@@ -305,6 +305,7 @@ public class QueryServiceEntityFetcherTests {
     Map<EntityKey, Builder> expectedEntityKeyBuilderResponseMap = Map.of(
         EntityKey.of("api-id-0"), Entity.newBuilder()
                                         .setEntityType(AttributeScope.API.name())
+                                        .setId("api-id-0")
                                         .putAttribute(API_NAME_ATTR, getStringValue("api-0"))
                                         .putAttribute(API_ID_ATTR, getStringValue("api-id-0"))
                                         .putMetric("AVG_API.duration", getAggregatedMetricValue(FunctionType.AVG, 14.0))

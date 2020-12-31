@@ -1,16 +1,14 @@
 package org.hypertrace.gateway.service.baseline;
 
 import org.hypertrace.core.attribute.service.v1.AttributeMetadata;
-import org.hypertrace.core.query.service.api.ColumnIdentifier;
 import org.hypertrace.core.query.service.api.ColumnMetadata;
 import org.hypertrace.core.query.service.api.Filter;
-import org.hypertrace.core.query.service.api.LiteralConstant;
 import org.hypertrace.core.query.service.api.Operator;
 import org.hypertrace.core.query.service.api.QueryRequest;
 import org.hypertrace.core.query.service.api.ResultSetChunk;
 import org.hypertrace.core.query.service.api.Row;
 import org.hypertrace.core.query.service.client.QueryServiceClient;
-import org.hypertrace.core.query.service.util.QueryRequestUtil;
+import org.hypertrace.gateway.service.common.converters.QueryRequestUtil;
 import org.hypertrace.gateway.service.common.AttributeMetadataProvider;
 import org.hypertrace.gateway.service.common.converters.QueryAndGatewayDtoConverter;
 import org.hypertrace.gateway.service.common.util.MetricAggregationFunctionUtil;
@@ -37,8 +35,12 @@ import java.util.concurrent.TimeUnit;
 import java.util.stream.Collectors;
 import java.util.stream.IntStream;
 
+import static org.hypertrace.gateway.service.common.converters.QueryRequestUtil.createFilter;
+import static org.hypertrace.gateway.service.common.converters.QueryRequestUtil.createStringArrayLiteralExpression;
+import static org.hypertrace.gateway.service.common.converters.QueryRequestUtil.createStringNullLiteralExpression;
+import static org.hypertrace.gateway.service.common.converters.QueryRequestUtil.createTimeColumnGroupByExpression;
+
 public class BaselineServiceQueryParser {
-  private static final String QUERY_SERVICE_NULL = "null";
   private static final Logger LOG = LoggerFactory.getLogger(BaselineServiceQueryParser.class);
   private final AttributeMetadataProvider attributeMetadataProvider;
 
@@ -64,15 +66,13 @@ public class BaselineServiceQueryParser {
         constructQueryServiceFilter(
             startTimeInMillis, endTimeInMillis, entityIdAttributes, timeColumn, entityIds);
     builder.setFilter(queryFilter);
-    builder.addAllGroupBy(
-        entityIdAttributes.stream()
-            .map(QueryRequestUtil::createColumnExpression)
-            .map(org.hypertrace.core.query.service.api.Expression.Builder::build)
-            .collect(Collectors.toList()));
 
-    builder.addGroupBy(
-        org.hypertrace.core.query.service.api.Expression.newBuilder()
-            .setFunction(QueryRequestUtil.createTimeColumnGroupByFunction(timeColumn, periodSecs)));
+    builder.addAllGroupBy(
+            entityIdAttributes.stream()
+                    .map(QueryRequestUtil::createColumnExpression)
+                    .collect(Collectors.toList()));
+
+    builder.addGroupBy(createTimeColumnGroupByExpression(timeColumn, periodSecs));
 
     builder.setLimit(QueryServiceClient.DEFAULT_QUERY_SERVICE_GROUP_BY_LIMIT);
 
@@ -93,44 +93,30 @@ public class BaselineServiceQueryParser {
                 entityIdAttributes.stream()
                     .map(
                         entityIdAttribute ->
-                            QueryRequestUtil.createColumnValueFilter(
-                                entityIdAttribute, Operator.NEQ, QUERY_SERVICE_NULL))
-                    .map(Filter.Builder::build)
+                            createFilter(
+                                entityIdAttribute,
+                                Operator.NEQ,
+                                createStringNullLiteralExpression()))
                     .collect(Collectors.toList()));
 
     filterBuilder.addAllChildFilter(
         entityIdAttributes.stream()
             .map(
                 entityIdAttribute ->
-                    QueryRequestUtil.createValueInFilter(entityIdAttribute, entityIds))
-            .map(Filter.Builder::build)
+                    QueryRequestUtil.createFilter(
+                        entityIdAttribute,
+                        Operator.IN,
+                        createStringArrayLiteralExpression(
+                                new ArrayList<>(entityIds))))
             .collect(Collectors.toList()));
 
     // Time range is a mandatory filter for query service, hence add it if it's not already present.
     filterBuilder.addChildFilter(
-        Filter.newBuilder()
-            .setOperator(Operator.AND)
-            .addChildFilter(createTimeFilter(timeColumn, Operator.GE, startTimeInMillis))
-            .addChildFilter(createTimeFilter(timeColumn, Operator.LT, endTimeInMillis)));
+            QueryRequestUtil.createBetweenTimesFilter(timeColumn, startTimeInMillis, endTimeInMillis));
 
     return filterBuilder;
   }
 
-  private static Filter createTimeFilter(String columnName, Operator op, long value) {
-    ColumnIdentifier.Builder timeColumn = ColumnIdentifier.newBuilder().setColumnName(columnName);
-    org.hypertrace.core.query.service.api.Expression.Builder lhs =
-        org.hypertrace.core.query.service.api.Expression.newBuilder()
-            .setColumnIdentifier(timeColumn);
-    LiteralConstant.Builder constant =
-        LiteralConstant.newBuilder()
-            .setValue(
-                org.hypertrace.core.query.service.api.Value.newBuilder()
-                    .setValueType(org.hypertrace.core.query.service.api.ValueType.LONG)
-                    .setLong(value));
-    org.hypertrace.core.query.service.api.Expression.Builder rhs =
-        org.hypertrace.core.query.service.api.Expression.newBuilder().setLiteral(constant);
-    return Filter.newBuilder().setLhs(lhs).setOperator(op).setRhs(rhs).build();
-  }
 
   public BaselineEntitiesResponse parseQueryResponse(
       Iterator<ResultSetChunk> resultSetChunkIterator,
@@ -144,7 +130,7 @@ public class BaselineServiceQueryParser {
         new LinkedHashMap<>();
     while (resultSetChunkIterator.hasNext()) {
       ResultSetChunk chunk = resultSetChunkIterator.next();
-      LOG.debug("Received chunk: {} ", chunk.toString());
+      LOG.debug("Received chunk: {} ", chunk);
 
       if (chunk.getRowCount() < 1) {
         break;

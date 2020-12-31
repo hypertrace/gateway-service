@@ -113,16 +113,22 @@ public class BaselineServiceImplTest {
                 Mockito.anyMap(), Mockito.any(QueryRequest.class)))
         .thenReturn(getResultSet().iterator());
     Map<String, AttributeMetadata> attributeMap = new HashMap<>();
+    AttributeMetadata attribute = AttributeMetadata.newBuilder().setFqn("Service.Latency").setId("Service.Id").build();
     attributeMap.put(
         "duration_ts",
-        AttributeMetadata.newBuilder().setFqn("Service.Latency").setId("Service.Id").build());
+            attribute);
     attributeMap.put(
         "SERVICE.duration",
-        AttributeMetadata.newBuilder().setFqn("Service.Latency").setId("Service.Id").build());
+            attribute);
     Mockito.when(
             attributeMetadataProvider.getAttributesMetadata(
                 Mockito.any(RequestContext.class), Mockito.anyString()))
         .thenReturn(attributeMap);
+    Mockito.when(
+            attributeMetadataProvider.getAttributeMetadata(
+                    Mockito.any(RequestContext.class), Mockito.anyString(), Mockito.anyString()))
+            .thenReturn(Optional.of(attribute));
+    when(entityIdColumnsConfigs.getIdKey("SERVICE")).thenReturn(Optional.of("id"));
 
     BaselineService baselineService =
         new BaselineServiceImpl(

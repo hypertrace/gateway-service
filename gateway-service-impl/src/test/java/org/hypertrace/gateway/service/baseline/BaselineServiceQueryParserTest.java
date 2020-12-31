@@ -28,10 +28,10 @@ import static org.hypertrace.gateway.service.common.QueryServiceRequestAndRespon
 
 public class BaselineServiceQueryParserTest {
 
-  private QueryServiceClient queryServiceClient = Mockito.mock(QueryServiceClient.class);
-  private int qsRequestTimeout = 1000;
-  private static long ONE_HOUR_SECONDS = 60 * 60L;
-  private AttributeMetadataProvider attributeMetadataProvider =
+  private final QueryServiceClient queryServiceClient = Mockito.mock(QueryServiceClient.class);
+  private final int qsRequestTimeout = 1000;
+  private static final long ONE_HOUR_SECONDS = 60 * 60L;
+  private final AttributeMetadataProvider attributeMetadataProvider =
       Mockito.mock(AttributeMetadataProvider.class);
   protected static final String TENANT_ID = "tenant1";
 
@@ -58,7 +58,7 @@ public class BaselineServiceQueryParserTest {
             Collections.singletonList("SERVICE.id"));
     Assertions.assertNotNull(request);
     Assertions.assertEquals(2, request.getGroupByCount());
-    Assertions.assertEquals(2, request.getFilter().getChildFilterCount());
+    Assertions.assertEquals(3, request.getFilter().getChildFilterCount());
   }
 
   @Test

@@ -27,13 +27,12 @@ import java.util.Map;
 import java.util.stream.Collectors;
 
 /**
- * This service calculates baseline values for an Entity across time range. This converts Functions
- * in selection expression to time series data and generate baseline, lower bound and upper bound.
- * It also changes Time aggregation requests to get more data points for proper baseline calculation
+ * This service calculates baseline values for an Entity across time range. This converts both aggregate functions
+ * and time series functions in selection expression to time series data and generate baseline, lower bound and upper bound.
+ * It also changes Time series requests to get more data points for proper baseline calculation
  */
 public class BaselineServiceImpl implements BaselineService {
   private static final long DAY_IN_MILLIS = 86400000L;
-  private static final long SIX_HOURS_IN_MILLIS = 21600000L;
 
   private final AttributeMetadataProvider attributeMetadataProvider;
   private final BaselineServiceQueryParser baselineServiceQueryParser;
