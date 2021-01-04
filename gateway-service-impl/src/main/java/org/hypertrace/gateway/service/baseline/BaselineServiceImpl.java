@@ -16,6 +16,7 @@ import org.hypertrace.gateway.service.v1.common.TimeAggregation;
 import org.hypertrace.gateway.service.v1.baseline.BaselineEntity;
 import org.hypertrace.gateway.service.v1.baseline.BaselineEntitiesRequest;
 import org.hypertrace.gateway.service.v1.baseline.BaselineEntitiesResponse;
+import org.hypertrace.gateway.service.v1.common.Value;
 
 import java.time.Duration;
 import java.time.temporal.ChronoUnit;
@@ -221,13 +222,11 @@ public class BaselineServiceImpl implements BaselineService {
       // Calculate baseline
       metricSeriesMap.forEach(
           (key, value) -> {
-            List<Double> metricValues =
+            List<Value> metricValues =
                 value.getBaselineValueList().stream()
-                    .map(x -> x.getBaseline().getValue().getDouble())
+                    .map(x -> x.getBaseline().getValue())
                     .collect(Collectors.toList());
-            double[] metricValueArray =
-                metricValues.stream().mapToDouble(Double::doubleValue).toArray();
-            Baseline baseline = BaselineCalculator.getBaseline(metricValueArray);
+            Baseline baseline = BaselineCalculator.getBaseline(metricValues);
             baselineMap.put(key, baseline);
           });
       // Update intervals
@@ -273,13 +272,11 @@ public class BaselineServiceImpl implements BaselineService {
         BaselineEntity.Builder baselineEntityBuilder = getBaselineEntityBuilder(baselineEntity);
         metricSeriesMap.forEach(
             (key, value) -> {
-              List<Double> metricValues =
+              List<Value> metricValues =
                   value.getBaselineValueList().stream()
-                      .map(x -> x.getBaseline().getValue().getDouble())
+                      .map(x -> x.getBaseline().getValue())
                       .collect(Collectors.toList());
-              double[] metricValueArray =
-                  metricValues.stream().mapToDouble(Double::doubleValue).toArray();
-              Baseline baseline = BaselineCalculator.getBaseline(metricValueArray);
+              Baseline baseline = BaselineCalculator.getBaseline(metricValues);
               baselineMap.put(key, baseline);
             });
         baselineEntityBuilder.putAllBaselineAggregateMetric(baselineMap);

@@ -1,14 +1,22 @@
 package org.hypertrace.gateway.service.baseline;
 
+import com.google.common.base.Preconditions;
 import org.apache.commons.math.stat.descriptive.moment.StandardDeviation;
 import org.apache.commons.math.stat.descriptive.rank.Median;
 import org.hypertrace.gateway.service.v1.baseline.Baseline;
 import org.hypertrace.gateway.service.v1.common.Value;
 import org.hypertrace.gateway.service.v1.common.ValueType;
 
+import java.util.List;
+
 public class BaselineCalculator {
 
-  public static Baseline getBaseline(double[] metricValueArray) {
+  public static Baseline getBaseline(List<Value> metricValues) {
+    double[] values = getValuesInDouble(metricValues);
+    return getBaseline(values);
+  }
+
+  private static Baseline getBaseline(double[] metricValueArray) {
     Median median = new Median();
     StandardDeviation standardDeviation = new StandardDeviation();
     double medianValue = median.evaluate(metricValueArray);
@@ -28,5 +36,19 @@ public class BaselineCalculator {
                 Value.newBuilder().setValueType(ValueType.DOUBLE).setDouble(medianValue).build())
             .build();
     return baseline;
+  }
+
+  private static double[] getValuesInDouble(List<Value> metricValues) {
+    Preconditions.checkArgument(metricValues.size() > 0,
+            "baseline cannot be calculated for empty list");
+    ValueType valueType = metricValues.get(0).getValueType();
+    switch (valueType) {
+      case LONG:
+        return metricValues.stream().mapToDouble(value -> (double) value.getLong()).toArray();
+      case DOUBLE:
+        return metricValues.stream().mapToDouble(value -> value.getDouble()).toArray();
+      default:
+        throw new IllegalArgumentException("Unsupported valueType " + valueType);
+    }
   }
 }

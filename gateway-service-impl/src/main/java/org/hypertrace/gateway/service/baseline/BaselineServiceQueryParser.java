@@ -179,7 +179,6 @@ public class BaselineServiceQueryParser {
                   ArithmeticValueUtil.computeAvgRate(
                       timeAggregation.getAggregation(), row.getColumn(i), startTime, endTime);
             } else {
-
               convertedValue =
                   QueryAndGatewayDtoConverter.convertToGatewayValueForMetricValue(
                       MetricAggregationFunctionUtil.getValueTypeFromFunction(
