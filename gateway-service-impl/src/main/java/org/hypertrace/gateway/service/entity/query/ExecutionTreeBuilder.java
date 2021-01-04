@@ -32,6 +32,7 @@ public class ExecutionTreeBuilder {
 
   private final Map<String, AttributeMetadata> attributeMetadataMap;
   private final ExecutionContext executionContext;
+  private final Set<String> sourceSetsIfFilterAndOrderByAreFromSameSourceSets;
 
   public ExecutionTreeBuilder(ExecutionContext executionContext) {
     this.executionContext = executionContext;
@@ -41,6 +42,9 @@ public class ExecutionTreeBuilder {
             .getAttributesMetadata(
                 executionContext.getEntitiesRequestContext(),
                 executionContext.getEntitiesRequest().getEntityType());
+
+    this.sourceSetsIfFilterAndOrderByAreFromSameSourceSets =
+        ExecutionTreeUtils.getSourceSetsIfFilterAndOrderByAreFromSameSourceSets(executionContext);
   }
 
   /**
@@ -53,8 +57,8 @@ public class ExecutionTreeBuilder {
    */
   public QueryNode build() {
     // All expressions' attributes from the same source. Will only need one downstream query.
-    Optional<String> singleSourceForAllAttributes = ExecutionTreeUtils.getSingleSourceForAllAttributes(executionContext);
-
+    Optional<String> singleSourceForAllAttributes =
+        ExecutionTreeUtils.getSingleSourceForAllAttributes(executionContext);
     EntitiesRequest entitiesRequest = executionContext.getEntitiesRequest();
 
     // TODO: If there is a filter on a data source, other than EDS, then the flag is a no-op
@@ -67,6 +71,18 @@ public class ExecutionTreeBuilder {
     // sources
     if (entitiesRequest.getIncludeNonLiveEntities()) {
       QueryNode rootNode = new DataFetcherNode(EDS.name(), entitiesRequest.getFilter());
+      // if the filter by and order by are from the same source, pagination can be pushed down to EDS
+      if (sourceSetsIfFilterAndOrderByAreFromSameSourceSets.contains(EDS.name())) {
+        rootNode =
+            new DataFetcherNode(
+                EDS.name(),
+                entitiesRequest.getFilter(),
+                entitiesRequest.getLimit(),
+                entitiesRequest.getOffset(),
+                entitiesRequest.getOrderByList());
+        executionContext.setSortAndPaginationNodeAdded(true);
+      }
+
       rootNode.acceptVisitor(new ExecutionContextBuilderVisitor(executionContext));
 
       QueryNode executionTree = buildExecutionTree(executionContext, rootNode);
@@ -85,7 +101,6 @@ public class ExecutionTreeBuilder {
     if (singleSourceForAllAttributes.isPresent()) {
       String source = singleSourceForAllAttributes.get();
       QueryNode rootNode = buildExecutionTreeForSameSourceFilterAndSelection(source);
-
 
       rootNode.acceptVisitor(new ExecutionContextBuilderVisitor(executionContext));
       QueryNode executionTree = buildExecutionTree(executionContext, rootNode);
@@ -137,32 +152,7 @@ public class ExecutionTreeBuilder {
 
   private QueryNode buildExecutionTreeForQsFilterAndSelection(String source) {
     EntitiesRequest entitiesRequest = executionContext.getEntitiesRequest();
-    Filter filter = entitiesRequest.getFilter();
-    int selectionLimit = entitiesRequest.getLimit();
-    int selectionOffset = entitiesRequest.getOffset();
-    List<OrderByExpression> orderBys = entitiesRequest.getOrderByList();
-
-    // query-service/Pinot does not support offset when group by is specified. Since we will be
-    // grouping by at least the entity id, we will compute the non zero pagination ourselves. This
-    // means that we need to request for offset + limit rows so that we can paginate appropriately.
-    // Pinot will do the ordering for us.
-    // https://github.com/apache/incubator-pinot/issues/111#issuecomment-214810551
-    if (selectionOffset > 0) {
-      selectionLimit = selectionOffset + selectionLimit;
-      selectionOffset = 0;
-    }
-
-    QueryNode rootNode =
-        new DataFetcherNode(source, filter, selectionLimit, selectionOffset, orderBys);
-
-    if (executionContext.getEntitiesRequest().getOffset() > 0) {
-      rootNode =
-          new PaginateOnlyNode(
-              rootNode,
-              executionContext.getEntitiesRequest().getLimit(),
-              executionContext.getEntitiesRequest().getOffset());
-    }
-
+    QueryNode rootNode = createQsDataFetcherNodeWithPagination(entitiesRequest);
     executionContext.setSortAndPaginationNodeAdded(true);
 
     // If the request has an EntityId EQ filter then there's no need for the 2nd request to get the
@@ -252,11 +242,11 @@ public class ExecutionTreeBuilder {
             context.getEntitiesRequest().getStartTimeMillis(),
             context.getEntitiesRequest().getEndTimeMillis());
 
-    return buildFilterTree(timeRangeFilter);
+    return buildFilterTree(context.getEntitiesRequest(), timeRangeFilter);
   }
 
   @VisibleForTesting
-  QueryNode buildFilterTree(Filter filter) {
+  QueryNode buildFilterTree(EntitiesRequest entitiesRequest, Filter filter) {
     if (filter.equals(Filter.getDefaultInstance())) {
       return new NoOpNode();
     }
@@ -264,19 +254,38 @@ public class ExecutionTreeBuilder {
     if (operator == Operator.AND) {
       return new AndNode(
           filter.getChildFilterList().stream()
-              .map(this::buildFilterTree)
+              .map(childFilter -> buildFilterTree(entitiesRequest, childFilter))
               .collect(Collectors.toList()));
     } else if (operator == Operator.OR) {
       return new OrNode(
           filter.getChildFilterList().stream()
-              .map(this::buildFilterTree)
+              .map(childFilter -> buildFilterTree(entitiesRequest, childFilter))
               .collect(Collectors.toList()));
     } else {
       List<AttributeSource> sources =
           attributeMetadataMap
               .get(filter.getLhs().getColumnIdentifier().getColumnName())
               .getSourcesList();
-      return new DataFetcherNode(sources.contains(QS) ? QS.name() : sources.get(0).name(), filter);
+      String preferredSource = sources.contains(QS) ? QS.name() : sources.get(0).name();
+
+      // if the filter by and order by are from the same source, pagination can be pushed down to
+      // the data fetcher node
+      if (sourceSetsIfFilterAndOrderByAreFromSameSourceSets.contains(preferredSource)) {
+        executionContext.setSortAndPaginationNodeAdded(true);
+
+        if (preferredSource.equals(QS.name())) {
+          return createQsDataFetcherNodeWithPagination(entitiesRequest);
+        } else {
+          return new DataFetcherNode(
+              preferredSource,
+              filter,
+              entitiesRequest.getLimit(),
+              entitiesRequest.getOffset(),
+              entitiesRequest.getOrderByList());
+        }
+      }
+
+      return new DataFetcherNode(preferredSource, filter);
     }
   }
 
@@ -301,5 +310,35 @@ public class ExecutionTreeBuilder {
         executionContext.getEntitiesRequest().getLimit(),
         executionContext.getEntitiesRequest().getOffset(),
         orderByExpressions);
+  }
+
+  private QueryNode createQsDataFetcherNodeWithPagination(EntitiesRequest entitiesRequest) {
+    Filter filter = entitiesRequest.getFilter();
+    int selectionLimit = entitiesRequest.getLimit();
+    int selectionOffset = entitiesRequest.getOffset();
+    List<OrderByExpression> orderBys = entitiesRequest.getOrderByList();
+
+    // query-service/Pinot does not support offset when group by is specified. Since we will be
+    // grouping by at least the entity id, we will compute the non zero pagination ourselves. This
+    // means that we need to request for offset + limit rows so that we can paginate appropriately.
+    // Pinot will do the ordering for us.
+    // https://github.com/apache/incubator-pinot/issues/111#issuecomment-214810551
+    if (selectionOffset > 0) {
+      selectionLimit = selectionOffset + selectionLimit;
+      selectionOffset = 0;
+    }
+
+    QueryNode rootNode =
+        new DataFetcherNode(QS.name(), filter, selectionLimit, selectionOffset, orderBys);
+
+    if (executionContext.getEntitiesRequest().getOffset() > 0) {
+      rootNode =
+          new PaginateOnlyNode(
+              rootNode,
+              executionContext.getEntitiesRequest().getLimit(),
+              executionContext.getEntitiesRequest().getOffset());
+    }
+
+    return rootNode;
   }
 }

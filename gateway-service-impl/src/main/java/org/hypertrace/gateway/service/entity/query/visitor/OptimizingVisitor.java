@@ -155,7 +155,20 @@ public class OptimizingVisitor implements Visitor<QueryNode> {
                               .addAllChildFilter(filterList)
                               .build();
                     }
-                    return new DataFetcherNode(stringListEntry.getKey(), filter);
+                    // There should always be at least one entry
+                    if (!stringListEntry.getValue().isEmpty()) {
+                      String source = stringListEntry.getKey();
+                      DataFetcherNode dataFetcherNode = (DataFetcherNode) stringListEntry.getValue().get(0);
+                      return
+                          new DataFetcherNode(
+                              source,
+                              filter,
+                              dataFetcherNode.getLimit(),
+                              dataFetcherNode.getOffset(),
+                              dataFetcherNode.getOrderByExpressionList());
+                    } else {
+                      return new NoOpNode();
+                    }
                   }
                 }));
   }

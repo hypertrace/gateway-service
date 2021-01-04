@@ -15,6 +15,7 @@ import org.hypertrace.core.attribute.service.v1.AttributeMetadata;
 import org.hypertrace.core.attribute.service.v1.AttributeSource;
 import org.hypertrace.gateway.service.common.AttributeMetadataProvider;
 import org.hypertrace.gateway.service.common.util.AttributeMetadataUtil;
+import org.hypertrace.gateway.service.common.util.ExpressionReader;
 import org.hypertrace.gateway.service.common.util.OrderByUtil;
 import org.hypertrace.gateway.service.entity.EntitiesRequestContext;
 import org.hypertrace.gateway.service.entity.config.EntityIdColumnsConfigs;
@@ -72,6 +73,7 @@ public class ExecutionContext {
     this.entitiesRequest = entitiesRequest;
     this.entitiesRequestContext = entitiesRequestContext;
     buildSourceToExpressionMaps();
+    areFiltersAndOrderBysFromSameSourceSet();
   }
 
   public static ExecutionContext from(
@@ -232,10 +234,12 @@ public class ExecutionContext {
       Expression expression = orderByExpression.getExpression();
       Map<String, List<Expression>> map =
           getDataSourceToExpressionMap(Collections.singletonList(expression));
-      // There should only be one element in the map.
-      result
-          .computeIfAbsent(map.keySet().iterator().next(), k -> new ArrayList<>())
-          .add(orderByExpression);
+      for (String source: map.keySet()) {
+        result
+            .computeIfAbsent(source, k -> new ArrayList<>())
+            .add(orderByExpression);
+      }
+
       if (expression.getValueCase().equals(ValueCase.COLUMNIDENTIFIER)) {
         pendingSelectionSourcesForOrderBy.addAll(map.keySet());
       }
@@ -296,8 +300,7 @@ public class ExecutionContext {
         attributeMetadataProvider.getAttributesMetadata(
             this.entitiesRequestContext, entitiesRequest.getEntityType());
     for (Expression expression : expressions) {
-      Set<String> columnNames = new HashSet<>();
-      extractColumn(columnNames, expression);
+      Set<String> columnNames = ExpressionReader.extractColumns(expression);
       Set<AttributeSource> sources =
           Arrays.stream(AttributeSource.values()).collect(Collectors.toSet());
       for (String columnName : columnNames) {
@@ -318,23 +321,8 @@ public class ExecutionContext {
     return ImmutableMap.<String, List<Expression>>builder().putAll(sourceToExpressionMap).build();
   }
 
-  private void extractColumn(Set<String> columns, Expression expression) {
-    switch (expression.getValueCase()) {
-      case COLUMNIDENTIFIER:
-        String columnName = expression.getColumnIdentifier().getColumnName();
-        columns.add(columnName);
-        break;
-      case FUNCTION:
-        for (Expression exp : expression.getFunction().getArgumentsList()) {
-          extractColumn(columns, exp);
-        }
-        break;
-      case ORDERBY:
-        extractColumn(columns, expression.getOrderBy().getExpression());
-      case LITERAL:
-      case VALUE_NOT_SET:
-        break;
-    }
+  private void areFiltersAndOrderBysFromSameSourceSet() {
+
   }
 
   @Override
