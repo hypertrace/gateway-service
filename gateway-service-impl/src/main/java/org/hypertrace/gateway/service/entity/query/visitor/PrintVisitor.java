@@ -8,7 +8,6 @@ import org.hypertrace.gateway.service.entity.query.OrNode;
 import org.hypertrace.gateway.service.entity.query.PaginateOnlyNode;
 import org.hypertrace.gateway.service.entity.query.SelectionNode;
 import org.hypertrace.gateway.service.entity.query.SortAndPaginateNode;
-import org.hypertrace.gateway.service.entity.query.TotalFetcherNode;
 
 /**
  * Visitor that prints debug information of every QueryNode. Used primarily for logging and
@@ -66,13 +65,5 @@ public class PrintVisitor implements Visitor<String> {
         + paginateOnlyNode
         + ") --> \n"
         + paginateOnlyNode.getChildNode().acceptVisitor(this);
-  }
-
-  @Override
-  public String visit(TotalFetcherNode totalFetcherNode) {
-    return "TOTAL_FETCHER_NODE("
-        + totalFetcherNode
-        + ") --> \n"
-        + totalFetcherNode.getChildNode().acceptVisitor(this);
   }
 }

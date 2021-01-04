@@ -8,7 +8,6 @@ import org.hypertrace.gateway.service.entity.query.OrNode;
 import org.hypertrace.gateway.service.entity.query.PaginateOnlyNode;
 import org.hypertrace.gateway.service.entity.query.SelectionNode;
 import org.hypertrace.gateway.service.entity.query.SortAndPaginateNode;
-import org.hypertrace.gateway.service.entity.query.TotalFetcherNode;
 
 /**
  * Visitor for capturing the different sources corresponding to the expressions in the filter tree
@@ -58,10 +57,5 @@ public class ExecutionContextBuilderVisitor implements Visitor<Void> {
   @Override
   public Void visit(PaginateOnlyNode paginateOnlyNode) {
     return paginateOnlyNode.getChildNode().acceptVisitor(this);
-  }
-
-  @Override
-  public Void visit(TotalFetcherNode totalFetcherNode) {
-    return totalFetcherNode.getChildNode().acceptVisitor(this);
   }
 }

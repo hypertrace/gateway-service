@@ -42,7 +42,6 @@ import org.hypertrace.gateway.service.entity.query.ExecutionContext;
 import org.hypertrace.gateway.service.entity.query.NoOpNode;
 import org.hypertrace.gateway.service.entity.query.PaginateOnlyNode;
 import org.hypertrace.gateway.service.entity.query.SelectionNode;
-import org.hypertrace.gateway.service.entity.query.TotalFetcherNode;
 import org.hypertrace.gateway.service.v1.common.ColumnIdentifier;
 import org.hypertrace.gateway.service.v1.common.DomainEntityType;
 import org.hypertrace.gateway.service.v1.common.Expression;
@@ -132,7 +131,7 @@ public class ExecutionVisitorTest {
   public void testIntersect() {
     {
       Map<EntityKey, Builder> finalResult =
-          ExecutionVisitor.intersect(Arrays.asList(result1, result2, result3))
+          ExecutionVisitor.intersectEntities(Arrays.asList(result1, result2, result3))
               .getEntityKeyBuilderMap();
       Assertions.assertEquals(1, finalResult.size());
       Entity.Builder builder = finalResult.get(EntityKey.of("id1"));
@@ -143,7 +142,7 @@ public class ExecutionVisitorTest {
     }
     {
       Map<EntityKey, Builder> finalResult =
-          ExecutionVisitor.intersect(Arrays.asList(result1, result2, result4))
+          ExecutionVisitor.intersectEntities(Arrays.asList(result1, result2, result4))
               .getEntityKeyBuilderMap();
       assertTrue(finalResult.isEmpty());
     }
@@ -153,7 +152,7 @@ public class ExecutionVisitorTest {
   public void testUnion() {
     {
       Map<EntityKey, Builder> finalResult =
-          ExecutionVisitor.union(Arrays.asList(result1, result4)).getEntityKeyBuilderMap();
+          ExecutionVisitor.unionEntities(Arrays.asList(result1, result4)).getEntityKeyBuilderMap();
       Assertions.assertEquals(4, finalResult.size());
       assertTrue(
           finalResult

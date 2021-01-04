@@ -19,7 +19,9 @@ import java.util.concurrent.Future;
 import java.util.stream.Collectors;
 import java.util.stream.IntStream;
 
+import com.google.common.collect.Sets;
 import org.hypertrace.gateway.service.common.datafetcher.EntityFetcherResponse;
+import org.hypertrace.gateway.service.common.datafetcher.EntityResponse;
 import org.hypertrace.gateway.service.common.datafetcher.IEntityFetcher;
 import org.hypertrace.gateway.service.common.util.DataCollectionUtil;
 import org.hypertrace.gateway.service.common.util.QueryExpressionUtil;
@@ -35,7 +37,6 @@ import org.hypertrace.gateway.service.entity.query.OrNode;
 import org.hypertrace.gateway.service.entity.query.PaginateOnlyNode;
 import org.hypertrace.gateway.service.entity.query.SelectionNode;
 import org.hypertrace.gateway.service.entity.query.SortAndPaginateNode;
-import org.hypertrace.gateway.service.entity.query.TotalFetcherNode;
 import org.hypertrace.gateway.service.v1.common.Expression;
 import org.hypertrace.gateway.service.v1.common.Filter;
 import org.hypertrace.gateway.service.v1.common.LiteralConstant;
@@ -51,7 +52,7 @@ import org.slf4j.LoggerFactory;
 /**
  * Visitor that executes each QueryNode in the execution tree.
  */
-public class ExecutionVisitor implements Visitor<EntityFetcherResponse> {
+public class ExecutionVisitor implements Visitor<EntityResponse> {
 
   private static final int THREAD_COUNT = 20;
   private static final ExecutorService executorService = Executors.newFixedThreadPool(THREAD_COUNT);
@@ -67,7 +68,7 @@ public class ExecutionVisitor implements Visitor<EntityFetcherResponse> {
   }
 
   @VisibleForTesting
-  protected static EntityFetcherResponse intersect(List<EntityFetcherResponse> builders) {
+  protected static EntityFetcherResponse intersectEntities(List<EntityFetcherResponse> builders) {
     return new EntityFetcherResponse(
         builders.stream()
             .map(EntityFetcherResponse::getEntityKeyBuilderMap)
@@ -85,8 +86,23 @@ public class ExecutionVisitor implements Visitor<EntityFetcherResponse> {
             .orElse(Collections.emptyMap()));
   }
 
+  protected static EntityResponse intersect(List<EntityResponse> entityResponses) {
+    EntityFetcherResponse entityFetcherResponse =
+        intersectEntities(
+            entityResponses.parallelStream()
+                .map(EntityResponse::getEntityFetcherResponse)
+                .collect(Collectors.toList()));
+    Set<EntityKey> entityKeys =
+        entityResponses.parallelStream()
+            .map(EntityResponse::getEntityKeys)
+            .reduce(Sets::intersection)
+            .orElse(Collections.emptySet());
+
+    return new EntityResponse(entityFetcherResponse, entityKeys);
+  }
+
   @VisibleForTesting
-  protected static EntityFetcherResponse union(List<EntityFetcherResponse> builders) {
+  protected static EntityFetcherResponse unionEntities(List<EntityFetcherResponse> builders) {
     return new EntityFetcherResponse(
         builders.stream()
             .map(EntityFetcherResponse::getEntityKeyBuilderMap)
@@ -101,8 +117,23 @@ public class ExecutionVisitor implements Visitor<EntityFetcherResponse> {
                 }));
   }
 
+  protected static EntityResponse union(List<EntityResponse> entityResponses) {
+    EntityFetcherResponse entityFetcherResponse =
+        unionEntities(
+            entityResponses.parallelStream()
+                .map(EntityResponse::getEntityFetcherResponse)
+                .collect(Collectors.toList()));
+    Set<EntityKey> entityKeys =
+        entityResponses.parallelStream()
+            .map(EntityResponse::getEntityKeys)
+            .reduce(Sets::union)
+            .orElse(Collections.emptySet());
+
+    return new EntityResponse(entityFetcherResponse, entityKeys);
+  }
+
   @Override
-  public EntityFetcherResponse visit(DataFetcherNode dataFetcherNode) {
+  public EntityResponse visit(DataFetcherNode dataFetcherNode) {
     String source = dataFetcherNode.getSource();
     EntitiesRequest entitiesRequest = executionContext.getEntitiesRequest();
     EntitiesRequestContext context =
@@ -143,11 +174,24 @@ public class ExecutionVisitor implements Visitor<EntityFetcherResponse> {
 
     EntitiesRequest request = requestBuilder.build();
     IEntityFetcher entityFetcher = queryHandlerRegistry.getEntityFetcher(source);
-    return entityFetcher.getEntities(context, request);
+
+    EntitiesRequest totalEntitiesRequest =
+        EntitiesRequest.newBuilder(executionContext.getEntitiesRequest())
+            .clearSelection()
+            .clearTimeAggregation()
+            .clearOrderBy()
+            .clearLimit()
+            .setOffset(0)
+            .setFilter(dataFetcherNode.getFilter())
+            .build();
+
+    return new EntityResponse(
+        entityFetcher.getEntities(context, request),
+        entityFetcher.getTotalEntities(context, totalEntitiesRequest));
   }
 
   @Override
-  public EntityFetcherResponse visit(AndNode andNode) {
+  public EntityResponse visit(AndNode andNode) {
     return intersect(
         andNode.getChildNodes().parallelStream()
             .map(n -> n.acceptVisitor(this))
@@ -155,7 +199,7 @@ public class ExecutionVisitor implements Visitor<EntityFetcherResponse> {
   }
 
   @Override
-  public EntityFetcherResponse visit(OrNode orNode) {
+  public EntityResponse visit(OrNode orNode) {
     return union(
         orNode.getChildNodes().parallelStream()
             .map(n -> n.acceptVisitor(this))
@@ -163,22 +207,21 @@ public class ExecutionVisitor implements Visitor<EntityFetcherResponse> {
   }
 
   @Override
-  public EntityFetcherResponse visit(SelectionNode selectionNode) {
-    EntityFetcherResponse childNodeResponse = selectionNode.getChildNode().acceptVisitor(this);
+  public EntityResponse visit(SelectionNode selectionNode) {
+    EntityResponse childNodeResponse = selectionNode.getChildNode().acceptVisitor(this);
+
+    EntityFetcherResponse childEntityFetcherResponse = childNodeResponse.getEntityFetcherResponse();
 
     // If the result was empty when the filter is non-empty, it means no entities matched the filter
     // and hence no need to do any more follow up calls.
-    if (childNodeResponse.isEmpty()
+    if (childEntityFetcherResponse.isEmpty()
         && !Filter.getDefaultInstance().equals(executionContext.getEntitiesRequest().getFilter())) {
       LOG.debug("No results matched the filter so not fetching aggregate/timeseries metrics.");
       return childNodeResponse;
     }
 
     // Construct the filter from the child nodes result
-    final Filter filter = constructFilterFromChildNodesResult(childNodeResponse);
-
-    // Set the total entities count in the execution context
-    executionContext.setTotal(childNodeResponse.getEntityKeyBuilderMap().size());
+    final Filter filter = constructFilterFromChildNodesResult(childEntityFetcherResponse);
 
     // Select attributes, metric aggregations and time-series data from corresponding sources
     List<EntityFetcherResponse> resultMapList = new ArrayList<>();
@@ -267,7 +310,12 @@ public class ExecutionVisitor implements Visitor<EntityFetcherResponse> {
                   return entityFetcher.getTimeAggregatedMetrics(requestContext, request);
                 })
             .collect(Collectors.toList()));
-    return resultMapList.stream().reduce(childNodeResponse, (r1, r2) -> union(Arrays.asList(r1, r2)));
+
+    EntityFetcherResponse response =
+        resultMapList.stream()
+            .reduce(childEntityFetcherResponse, (r1, r2) -> unionEntities(Arrays.asList(r1, r2)));
+
+    return new EntityResponse(response, childNodeResponse.getEntityKeys());
   }
 
   Filter constructFilterFromChildNodesResult(EntityFetcherResponse result) {
@@ -322,14 +370,13 @@ public class ExecutionVisitor implements Visitor<EntityFetcherResponse> {
   }
 
   @Override
-  public EntityFetcherResponse visit(SortAndPaginateNode sortAndPaginateNode) {
-    EntityFetcherResponse result = sortAndPaginateNode.getChildNode().acceptVisitor(this);
-    // Set the total entities count in the execution context before pagination
-    executionContext.setTotal(result.size());
+  public EntityResponse visit(SortAndPaginateNode sortAndPaginateNode) {
+    EntityResponse childNodeResponse = sortAndPaginateNode.getChildNode().acceptVisitor(this);
 
     // Create a list from elements of HashMap
     List<Map.Entry<EntityKey, Builder>> list =
-        new LinkedList<>(result.getEntityKeyBuilderMap().entrySet());
+        new LinkedList<>(
+            childNodeResponse.getEntityFetcherResponse().getEntityKeyBuilderMap().entrySet());
 
     // Sort the list
     List<Map.Entry<EntityKey, Entity.Builder>> sortedList =
@@ -344,21 +391,23 @@ public class ExecutionVisitor implements Visitor<EntityFetcherResponse> {
     // put data from sorted list to a linked hashmap
     Map<EntityKey, Builder> linkedHashMap = new LinkedHashMap<>();
     sortedList.forEach(entry -> linkedHashMap.put(entry.getKey(), entry.getValue()));
-    return new EntityFetcherResponse(linkedHashMap);
+    return new EntityResponse(
+        new EntityFetcherResponse(linkedHashMap), childNodeResponse.getEntityKeys());
   }
 
   @Override
-  public EntityFetcherResponse visit(NoOpNode noOpNode) {
-    return new EntityFetcherResponse();
+  public EntityResponse visit(NoOpNode noOpNode) {
+    return new EntityResponse();
   }
 
   @Override
-  public EntityFetcherResponse visit(PaginateOnlyNode paginateOnlyNode) {
-    EntityFetcherResponse result = paginateOnlyNode.getChildNode().acceptVisitor(this);
+  public EntityResponse visit(PaginateOnlyNode paginateOnlyNode) {
+    EntityResponse childNodeResponse = paginateOnlyNode.getChildNode().acceptVisitor(this);
 
     // Create a list from elements of HashMap
     List<Map.Entry<EntityKey, Builder>> list =
-        new LinkedList<>(result.getEntityKeyBuilderMap().entrySet());
+        new LinkedList<>(
+            childNodeResponse.getEntityFetcherResponse().getEntityKeyBuilderMap().entrySet());
 
     // Sort the list
     List<Map.Entry<EntityKey, Entity.Builder>> sortedList =
@@ -370,23 +419,9 @@ public class ExecutionVisitor implements Visitor<EntityFetcherResponse> {
     // put data from sorted list to a linked hashmap
     Map<EntityKey, Builder> linkedHashMap = new LinkedHashMap<>();
     sortedList.forEach(entry -> linkedHashMap.put(entry.getKey(), entry.getValue()));
-    return new EntityFetcherResponse(linkedHashMap);
-  }
 
-  @Override
-  public EntityFetcherResponse visit(TotalFetcherNode totalFetcherNode) {
-    Future<EntityFetcherResponse> resultFuture = executorService.submit(() -> totalFetcherNode.getChildNode().acceptVisitor(this));
-    IEntityFetcher totalEntitiesFetcher = queryHandlerRegistry.getEntityFetcher(totalFetcherNode.getSource());
-
-    Future<Integer> totalFuture = executorService.submit(() ->
-        totalEntitiesFetcher.getTotalEntities(
-            executionContext.getEntitiesRequestContext(),
-            executionContext.getEntitiesRequest()
-        )
-    );
-    executionContext.setTotal(futureGet(totalFuture));
-
-    return futureGet(resultFuture);
+    return new EntityResponse(
+        new EntityFetcherResponse(linkedHashMap), childNodeResponse.getEntityKeys());
   }
 
   private <T> T futureGet(Future<T> future) {

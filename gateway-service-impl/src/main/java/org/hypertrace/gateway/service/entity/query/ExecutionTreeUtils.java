@@ -97,7 +97,7 @@ public class ExecutionTreeUtils {
    * @param executionContext
    * @return
    */
-  static boolean hasEntityIdEqualsFilter(ExecutionContext executionContext) {
+  public static boolean hasEntityIdEqualsFilter(ExecutionContext executionContext) {
     Filter filter = executionContext.getEntitiesRequest().getFilter();
     if (filter.equals(Filter.getDefaultInstance())) {
       return false;

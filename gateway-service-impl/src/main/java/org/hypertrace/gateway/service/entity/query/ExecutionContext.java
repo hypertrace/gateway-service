@@ -59,10 +59,6 @@ public class ExecutionContext {
 
   private final Map<String, Set<AttributeSource>> attributeToSourcesMap = new HashMap<>();
 
-  /** Following fields set during the query execution phase * */
-  // Total number of entities. Set during the execution before pagination
-  private int total;
-
   private ExecutionContext(
       AttributeMetadataProvider attributeMetadataProvider,
       EntityIdColumnsConfigs entityIdColumnsConfigs,
@@ -73,7 +69,6 @@ public class ExecutionContext {
     this.entitiesRequest = entitiesRequest;
     this.entitiesRequestContext = entitiesRequestContext;
     buildSourceToExpressionMaps();
-    areFiltersAndOrderBysFromSameSourceSet();
   }
 
   public static ExecutionContext from(
@@ -122,14 +117,6 @@ public class ExecutionContext {
 
   public EntitiesRequestContext getEntitiesRequestContext() {
     return this.entitiesRequestContext;
-  }
-
-  public int getTotal() {
-    return total;
-  }
-
-  public void setTotal(int total) {
-    this.total = total;
   }
 
   public Set<String> getPendingSelectionSources() {
@@ -321,10 +308,6 @@ public class ExecutionContext {
     return ImmutableMap.<String, List<Expression>>builder().putAll(sourceToExpressionMap).build();
   }
 
-  private void areFiltersAndOrderBysFromSameSourceSet() {
-
-  }
-
   @Override
   public String toString() {
     return "ExecutionContext{"
@@ -352,8 +335,6 @@ public class ExecutionContext {
         + pendingMetricAggregationSourcesForOrderBy
         + ", sortAndPaginationNodeAdded="
         + sortAndPaginationNodeAdded
-        + ", total="
-        + total
         + '}';
   }
 }

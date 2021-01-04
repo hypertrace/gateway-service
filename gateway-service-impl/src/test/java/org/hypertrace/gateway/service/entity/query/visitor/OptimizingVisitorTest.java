@@ -4,7 +4,6 @@ import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.mockito.Mockito.mock;
 
 import org.hypertrace.gateway.service.entity.query.PaginateOnlyNode;
-import org.hypertrace.gateway.service.entity.query.TotalFetcherNode;
 import org.junit.jupiter.api.Test;
 
 public class OptimizingVisitorTest {

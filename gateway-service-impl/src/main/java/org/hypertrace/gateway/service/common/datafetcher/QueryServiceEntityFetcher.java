@@ -15,6 +15,7 @@ import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
+import java.util.Set;
 import java.util.concurrent.TimeUnit;
 import java.util.stream.Collectors;
 import java.util.stream.IntStream;
@@ -582,28 +583,21 @@ public class QueryServiceEntityFetcher implements IEntityFetcher {
   }
 
   @Override
-  public int getTotalEntities(EntitiesRequestContext requestContext, EntitiesRequest entitiesRequest) {
+  public Set<EntityKey> getTotalEntities(EntitiesRequestContext requestContext, EntitiesRequest entitiesRequest) {
     Map<String, AttributeMetadata> attributeMetadataMap =
         attributeMetadataProvider.getAttributesMetadata(
             requestContext, entitiesRequest.getEntityType());
     // Validate EntitiesRequest
     entitiesRequestValidator.validate(entitiesRequest, attributeMetadataMap);
-    return getTotalEntitiesForMultipleEntityId(requestContext, entitiesRequest);
-  }
 
-  private int getTotalEntitiesForMultipleEntityId(EntitiesRequestContext requestContext,
-      EntitiesRequest entitiesRequest) {
     EntityFetcherResponse entityFetcherResponse = getEntities(
         requestContext,
         EntitiesRequest.newBuilder(entitiesRequest)
-            .clearSelection()
-            .clearTimeAggregation()
-            .clearOrderBy()
-            .setOffset(0)
             .setLimit(QueryServiceClient.DEFAULT_QUERY_SERVICE_GROUP_BY_LIMIT)
             .build()
-        );
-    return entityFetcherResponse.size();
+    );
+
+    return entityFetcherResponse.getEntityKeyBuilderMap().keySet();
   }
 
   private QueryRequest buildTimeSeriesQueryRequest(

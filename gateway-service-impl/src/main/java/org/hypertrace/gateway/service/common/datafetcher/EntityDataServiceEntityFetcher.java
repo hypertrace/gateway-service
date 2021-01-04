@@ -4,6 +4,7 @@ import java.util.Iterator;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.Set;
 import java.util.stream.Collectors;
 import java.util.stream.IntStream;
 import org.hypertrace.entity.query.service.client.EntityQueryServiceClient;
@@ -180,7 +181,8 @@ public class EntityDataServiceEntityFetcher implements IEntityFetcher {
   }
 
   @Override
-  public int getTotalEntities(EntitiesRequestContext requestContext, EntitiesRequest entitiesRequest) {
-    throw new UnsupportedOperationException("Fetching total entities not supported by EDS");
+  public Set<EntityKey> getTotalEntities(EntitiesRequestContext requestContext, EntitiesRequest entitiesRequest) {
+    EntityFetcherResponse entityFetcherResponse = getEntities(requestContext, entitiesRequest);
+    return entityFetcherResponse.getEntityKeyBuilderMap().keySet();
   }
 }
