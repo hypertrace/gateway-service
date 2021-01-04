@@ -20,6 +20,7 @@ import org.hypertrace.gateway.service.v1.baseline.BaselineEntity;
 import org.hypertrace.gateway.service.v1.baseline.BaselineInterval;
 import org.hypertrace.gateway.service.v1.baseline.BaselineMetricSeries;
 import org.hypertrace.gateway.service.v1.baseline.BaselineTimeAggregation;
+import org.hypertrace.gateway.service.v1.common.FunctionExpression;
 import org.hypertrace.gateway.service.v1.common.FunctionType;
 import org.hypertrace.gateway.service.v1.common.TimeAggregation;
 import org.hypertrace.gateway.service.v1.common.Value;
@@ -108,7 +109,7 @@ public class BaselineServiceQueryParser {
                     QueryRequestUtil.createFilter(
                         entityIdAttribute,
                         Operator.IN,
-                        createStringArrayLiteralExpression(new ArrayList<>(entityIds))))
+                        createStringArrayLiteralExpression(entityIds)))
             .collect(Collectors.toList()));
 
     // Time range is a mandatory filter for query service, hence add it if it's not already present.
@@ -172,21 +173,10 @@ public class BaselineServiceQueryParser {
             }
 
             Value convertedValue;
-            // AVGRATE is adding a specific implementation because Pinot does not directly support this function,
+            // AVG_RATE is adding a specific implementation because Pinot does not directly support this function,
             // so it has to be parsed separately.
-            if (FunctionType.AVGRATE == timeAggregation.getAggregation().getFunction()) {
-              convertedValue =
-                  ArithmeticValueUtil.computeAvgRate(
-                      timeAggregation.getAggregation(), row.getColumn(i), startTime, endTime);
-            } else {
-              convertedValue =
-                  QueryAndGatewayDtoConverter.convertToGatewayValueForMetricValue(
-                      MetricAggregationFunctionUtil.getValueTypeFromFunction(
-                          timeAggregation.getAggregation(), attributeMetadataMap),
-                      attributeMetadataMap,
-                      metadata,
-                      row.getColumn(i));
-            }
+            convertedValue = MetricAggregationFunctionUtil.getValueFromFunction(startTime, endTime, attributeMetadataMap,
+                    row.getColumn(i), metadata, timeAggregation.getAggregation());
 
             BaselineMetricSeries.Builder seriesBuilder =
                 metricSeriesMap.computeIfAbsent(
@@ -219,6 +209,7 @@ public class BaselineServiceQueryParser {
     }
     return BaselineEntitiesResponse.newBuilder().addAllBaselineEntity(baselineEntities).build();
   }
+
 
   BaselineMetricSeries getSortedMetricSeries(BaselineMetricSeries.Builder builder) {
     List<BaselineInterval> sortedIntervals = new ArrayList<>(builder.getBaselineValueList());

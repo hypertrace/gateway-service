@@ -12,6 +12,9 @@ import java.util.List;
 public class BaselineCalculator {
 
   public static Baseline getBaseline(List<Value> metricValues) {
+    if (metricValues.isEmpty()) {
+      return Baseline.getDefaultInstance();
+    }
     double[] values = getValuesInDouble(metricValues);
     return getBaseline(values);
   }
@@ -39,8 +42,6 @@ public class BaselineCalculator {
   }
 
   private static double[] getValuesInDouble(List<Value> metricValues) {
-    Preconditions.checkArgument(metricValues.size() > 0,
-            "baseline cannot be calculated for empty list");
     ValueType valueType = metricValues.get(0).getValueType();
     switch (valueType) {
       case LONG:

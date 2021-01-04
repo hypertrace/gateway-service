@@ -460,37 +460,22 @@ public class QueryServiceEntityFetcher implements IEntityFetcher {
     Preconditions.checkArgument(healthExpressions.size() <= 1);
     Health health = Health.NOT_COMPUTED;
 
-    if (FunctionType.AVGRATE == function.getFunction()) {
-      Value avgRateValue =
-          ArithmeticValueUtil.computeAvgRate(
-              function,
-              columnValue,
-              entitiesRequest.getStartTimeMillis(),
-              entitiesRequest.getEndTimeMillis());
+    Value convertedValue =
+        MetricAggregationFunctionUtil.getValueFromFunction(
+            entitiesRequest.getStartTimeMillis(),
+            entitiesRequest.getEndTimeMillis(),
+            attributeMetadataMap,
+            columnValue,
+            metadata,
+            function);
 
-      entityBuilder.putMetric(
-          metadata.getColumnName(),
-          AggregatedMetricValue.newBuilder()
-              .setValue(avgRateValue)
-              .setFunction(function.getFunction())
-              .setHealth(health)
-              .build());
-    } else {
-      Value gwValue =
-          QueryAndGatewayDtoConverter.convertToGatewayValueForMetricValue(
-              MetricAggregationFunctionUtil.getValueTypeFromFunction(
-                  function, attributeMetadataMap),
-              attributeMetadataMap,
-              metadata,
-              columnValue);
-      entityBuilder.putMetric(
-          metadata.getColumnName(),
-          AggregatedMetricValue.newBuilder()
-              .setValue(gwValue)
-              .setFunction(function.getFunction())
-              .setHealth(health)
-              .build());
-    }
+    entityBuilder.putMetric(
+        metadata.getColumnName(),
+        AggregatedMetricValue.newBuilder()
+            .setValue(convertedValue)
+            .setFunction(function.getFunction())
+            .setHealth(health)
+            .build());
   }
 
   @Override
