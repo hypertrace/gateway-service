@@ -142,37 +142,28 @@ public class ExecutionTreeBuilder {
 
   private QueryNode buildExecutionTreeForSameSourceFilterAndSelection(String source) {
     if (source.equals(QS.name())) {
-      return buildExecutionTreeForQsFilterAndSelection(source);
+      return buildExecutionTreeForQsFilterAndSelection();
     } else if (source.equals(EDS.name())) {
-      return buildExecutionTreeForEdsFilterAndSelection(source);
+      return buildExecutionTreeForEdsFilterAndSelection();
     } else {
       throw new UnsupportedOperationException("Unknown Entities data source. No fetcher for this source.");
     }
   }
 
-  private QueryNode buildExecutionTreeForQsFilterAndSelection(String source) {
+  private QueryNode buildExecutionTreeForQsFilterAndSelection() {
     EntitiesRequest entitiesRequest = executionContext.getEntitiesRequest();
     QueryNode rootNode = createQsDataFetcherNodeWithPagination(entitiesRequest);
     executionContext.setSortAndPaginationNodeAdded(true);
-
-    // If the request has an EntityId EQ filter then there's no need for the 2nd request to get the
-    // total entities. So no need to set the TotalFetcherNode
-    if (ExecutionTreeUtils.hasEntityIdEqualsFilter(executionContext)) {
-      executionContext.setTotal(1);
-    } else {
-      rootNode = new TotalFetcherNode(rootNode, source);
-    }
-
     return rootNode;
   }
 
-  private QueryNode buildExecutionTreeForEdsFilterAndSelection(String source) {
+  private QueryNode buildExecutionTreeForEdsFilterAndSelection() {
     Filter filter = executionContext.getEntitiesRequest().getFilter();
     int selectionLimit = executionContext.getEntitiesRequest().getLimit();
     int selectionOffset = executionContext.getEntitiesRequest().getOffset();
     List<OrderByExpression> orderBys = executionContext.getEntitiesRequest().getOrderByList();
 
-    QueryNode rootNode = new DataFetcherNode(source, filter, selectionLimit, selectionOffset, orderBys);
+    QueryNode rootNode = new DataFetcherNode(EDS.name(), filter, selectionLimit, selectionOffset, orderBys);
     executionContext.setSortAndPaginationNodeAdded(true);
     return rootNode;
   }
@@ -266,26 +257,14 @@ public class ExecutionTreeBuilder {
           attributeMetadataMap
               .get(filter.getLhs().getColumnIdentifier().getColumnName())
               .getSourcesList();
-      String preferredSource = sources.contains(QS) ? QS.name() : sources.get(0).name();
 
-      // if the filter by and order by are from the same source, pagination can be pushed down to
-      // the data fetcher node
-      if (sourceSetsIfFilterAndOrderByAreFromSameSourceSets.contains(preferredSource)) {
+      // if the filter by and order by are from QS, pagination can be pushed down to QS
+      if (sourceSetsIfFilterAndOrderByAreFromSameSourceSets.contains(QS.name())) {
         executionContext.setSortAndPaginationNodeAdded(true);
-
-        if (preferredSource.equals(QS.name())) {
-          return createQsDataFetcherNodeWithPagination(entitiesRequest);
-        } else {
-          return new DataFetcherNode(
-              preferredSource,
-              filter,
-              entitiesRequest.getLimit(),
-              entitiesRequest.getOffset(),
-              entitiesRequest.getOrderByList());
-        }
+        return createQsDataFetcherNodeWithPagination(entitiesRequest);
       }
 
-      return new DataFetcherNode(preferredSource, filter);
+      return new DataFetcherNode(sources.contains(QS) ? QS.name() : sources.get(0).name(), filter);
     }
   }
 
