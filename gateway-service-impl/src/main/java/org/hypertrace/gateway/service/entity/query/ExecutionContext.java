@@ -321,10 +321,6 @@ public class ExecutionContext {
     return ImmutableMap.<String, List<Expression>>builder().putAll(sourceToExpressionMap).build();
   }
 
-  private void areFiltersAndOrderBysFromSameSourceSet() {
-
-  }
-
   @Override
   public String toString() {
     return "ExecutionContext{"
