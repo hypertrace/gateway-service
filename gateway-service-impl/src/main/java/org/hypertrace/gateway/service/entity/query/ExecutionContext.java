@@ -73,7 +73,6 @@ public class ExecutionContext {
     this.entitiesRequest = entitiesRequest;
     this.entitiesRequestContext = entitiesRequestContext;
     buildSourceToExpressionMaps();
-    areFiltersAndOrderBysFromSameSourceSet();
   }
 
   public static ExecutionContext from(
