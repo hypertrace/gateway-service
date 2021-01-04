@@ -167,7 +167,8 @@ public class EntityDataServiceEntityFetcher implements IEntityFetcher {
 
   @Override
   public int getTotalEntities(EntitiesRequestContext requestContext, EntitiesRequest entitiesRequest) {
-    throw new UnsupportedOperationException("Fetching total entities not supported by EDS");
+    EntityFetcherResponse entityFetcherResponse = getEntities(requestContext, entitiesRequest);
+    return entityFetcherResponse.size();
   }
 
   @Override

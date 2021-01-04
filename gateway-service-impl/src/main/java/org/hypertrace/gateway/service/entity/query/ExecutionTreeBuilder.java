@@ -120,8 +120,9 @@ public class ExecutionTreeBuilder {
   }
 
   private QueryNode buildExecutionTreeForQsFilterAndSelection(String source) {
-    int selectionLimit = executionContext.getEntitiesRequest().getLimit();
-    int selectionOffset = executionContext.getEntitiesRequest().getOffset();
+    EntitiesRequest entitiesRequest = executionContext.getEntitiesRequest();
+    int selectionLimit = entitiesRequest.getLimit();
+    int selectionOffset = entitiesRequest.getOffset();
 
     // query-service/Pinot does not support offset when group by is specified. Since we will be
     // grouping by at least the entity id, we will compute the non zero pagination ourselves. This
@@ -133,11 +134,11 @@ public class ExecutionTreeBuilder {
     }
 
     QueryNode rootNode = new SelectionAndFilterNode(source, selectionLimit, selectionOffset);
-    if (executionContext.getEntitiesRequest().getOffset() > 0) {
+    if (entitiesRequest.getOffset() > 0) {
       rootNode = new PaginateOnlyNode(
           rootNode,
-          executionContext.getEntitiesRequest().getLimit(),
-          executionContext.getEntitiesRequest().getOffset()
+          entitiesRequest.getLimit(),
+          entitiesRequest.getOffset()
       );
     }
 
@@ -146,7 +147,7 @@ public class ExecutionTreeBuilder {
     if (ExecutionTreeUtils.hasEntityIdEqualsFilter(executionContext)) {
       executionContext.setTotal(1);
     } else {
-      rootNode = new TotalFetcherNode(rootNode, source);
+      rootNode = new TotalFetcherNode(rootNode, source, entitiesRequest.getFilter());
     }
 
     return rootNode;
@@ -253,7 +254,10 @@ public class ExecutionTreeBuilder {
           attributeMetadataMap
               .get(filter.getLhs().getColumnIdentifier().getColumnName())
               .getSourcesList();
-      return new DataFetcherNode(sources.contains(QS) ? QS.name() : sources.get(0).name(), filter);
+      String preferredSource = sources.contains(QS) ? QS.name() : sources.get(0).name();
+      QueryNode dataFetcherNode =
+          new DataFetcherNode(preferredSource, filter);
+      return new TotalFetcherNode(dataFetcherNode, preferredSource, filter);
     }
   }
 

@@ -668,10 +668,6 @@ public class QueryServiceEntityFetcher implements IEntityFetcher {
     EntityFetcherResponse entityFetcherResponse = getEntities(
         requestContext,
         EntitiesRequest.newBuilder(entitiesRequest)
-            .clearSelection()
-            .clearTimeAggregation()
-            .clearOrderBy()
-            .setOffset(0)
             .setLimit(QueryServiceClient.DEFAULT_QUERY_SERVICE_GROUP_BY_LIMIT)
             .build()
         );

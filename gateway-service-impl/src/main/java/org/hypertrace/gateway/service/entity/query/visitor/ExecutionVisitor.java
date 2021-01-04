@@ -17,6 +17,8 @@ import java.util.concurrent.Executors;
 import java.util.concurrent.Future;
 import java.util.stream.Collectors;
 import java.util.stream.IntStream;
+
+import org.hypertrace.core.query.service.client.QueryServiceClient;
 import org.hypertrace.gateway.service.common.datafetcher.EntityFetcherResponse;
 import org.hypertrace.gateway.service.common.datafetcher.IEntityFetcher;
 import org.hypertrace.gateway.service.common.util.DataCollectionUtil;
@@ -127,18 +129,22 @@ public class ExecutionVisitor implements Visitor<EntityFetcherResponse> {
 
   @Override
   public EntityFetcherResponse visit(AndNode andNode) {
-    return intersect(
+    EntityFetcherResponse response = intersect(
         andNode.getChildNodes().parallelStream()
             .map(n -> n.acceptVisitor(this))
             .collect(Collectors.toList()));
+    executionContext.setTotal(response.size());
+    return response;
   }
 
   @Override
   public EntityFetcherResponse visit(OrNode orNode) {
-    return union(
+    EntityFetcherResponse response = union(
         orNode.getChildNodes().parallelStream()
             .map(n -> n.acceptVisitor(this))
             .collect(Collectors.toList()));
+    executionContext.setTotal(response.size());
+    return response;
   }
 
   @Override
@@ -155,9 +161,6 @@ public class ExecutionVisitor implements Visitor<EntityFetcherResponse> {
 
     // Construct the filter from the child nodes result
     final Filter filter = constructFilterFromChildNodesResult(childNodeResponse);
-
-    // Set the total entities count in the execution context
-    executionContext.setTotal(childNodeResponse.getEntityKeyBuilderMap().size());
 
     // Select attributes, metric aggregations and time-series data from corresponding sources
     List<EntityFetcherResponse> resultMapList = new ArrayList<>();
@@ -291,8 +294,6 @@ public class ExecutionVisitor implements Visitor<EntityFetcherResponse> {
   @Override
   public EntityFetcherResponse visit(SortAndPaginateNode sortAndPaginateNode) {
     EntityFetcherResponse result = sortAndPaginateNode.getChildNode().acceptVisitor(this);
-    // Set the total entities count in the execution context before pagination
-    executionContext.setTotal(result.size());
 
     // Create a list from elements of HashMap
     List<Map.Entry<EntityKey, Builder>> list =
@@ -377,10 +378,19 @@ public class ExecutionVisitor implements Visitor<EntityFetcherResponse> {
     Future<EntityFetcherResponse> resultFuture = executorService.submit(() -> totalFetcherNode.getChildNode().acceptVisitor(this));
     IEntityFetcher totalEntitiesFetcher = queryHandlerRegistry.getEntityFetcher(totalFetcherNode.getSource());
 
+    EntitiesRequest entitiesRequest = EntitiesRequest.newBuilder(executionContext.getEntitiesRequest())
+        .clearSelection()
+        .clearTimeAggregation()
+        .clearOrderBy()
+        .clearLimit()
+        .setOffset(0)
+        .setFilter(totalFetcherNode.getFilter())
+        .build();
+
     Future<Integer> totalFuture = executorService.submit(()->
         totalEntitiesFetcher.getTotalEntities(
             executionContext.getEntitiesRequestContext(),
-            executionContext.getEntitiesRequest()
+            entitiesRequest
         )
     );
     executionContext.setTotal(futureGet(totalFuture));

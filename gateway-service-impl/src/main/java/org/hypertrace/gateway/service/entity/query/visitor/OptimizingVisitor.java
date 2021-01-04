@@ -45,8 +45,8 @@ public class OptimizingVisitor implements Visitor<QueryNode> {
     if (andNodeList != null) {
       andNodeList.forEach(
           treeNode -> {
-            AndNode an = (AndNode) treeNode;
-            Map<String, List<QueryNode>> childAndNodeMap = groupNodesBySource(an.getChildNodes());
+            AndNode and = (AndNode) treeNode;
+            Map<String, List<QueryNode>> childAndNodeMap = groupNodesBySource(and.getChildNodes());
             childAndNodeMap.forEach(
                 (k, v) ->
                     sourceToTreeNodeListMap.merge(
@@ -102,8 +102,8 @@ public class OptimizingVisitor implements Visitor<QueryNode> {
         .collect(
             Collectors.groupingBy(
                 treeNode1 -> {
-                  if (treeNode1 instanceof DataFetcherNode) {
-                    return ((DataFetcherNode) treeNode1).getSource();
+                  if (treeNode1 instanceof TotalFetcherNode) {
+                    return ((TotalFetcherNode) treeNode1).getSource();
                   } else {
                     return treeNode1.getClass().getSimpleName();
                   }
@@ -142,7 +142,7 @@ public class OptimizingVisitor implements Visitor<QueryNode> {
                   } else {
                     List<Filter> filterList =
                         stringListEntry.getValue().stream()
-                            .map(treeNode -> ((DataFetcherNode) treeNode).getFilter())
+                            .map(treeNode -> ((TotalFetcherNode) treeNode).getFilter())
                             .filter(Objects::nonNull)
                             .filter(f -> !f.equals(Filter.getDefaultInstance()))
                             .collect(Collectors.toList());
@@ -156,7 +156,8 @@ public class OptimizingVisitor implements Visitor<QueryNode> {
                               .addAllChildFilter(filterList)
                               .build();
                     }
-                    return new DataFetcherNode(stringListEntry.getKey(), filter);
+                    DataFetcherNode dataFetcherNode = new DataFetcherNode(stringListEntry.getKey(), filter);
+                    return new TotalFetcherNode(dataFetcherNode, stringListEntry.getKey(), filter);
                   }
                 }));
   }
