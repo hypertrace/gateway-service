@@ -45,7 +45,7 @@ public class GatewayServiceImpl extends GatewayServiceGrpc.GatewayServiceImplBas
 
   private static final String QUERY_SERVICE_CONFIG_KEY = "query.service.config";
   private static final String REQUEST_TIMEOUT_CONFIG_KEY = "request.timeout";
-  private static final int DEFAULT_REQUEST_TIMEOUT_MILLIS = 100000000;
+  private static final int DEFAULT_REQUEST_TIMEOUT_MILLIS = 10000;
 
   private final TracesService traceService;
   private final SpanService spanService;
