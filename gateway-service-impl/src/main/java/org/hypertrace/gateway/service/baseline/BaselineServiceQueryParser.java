@@ -11,6 +11,7 @@ import org.hypertrace.core.query.service.client.QueryServiceClient;
 import org.hypertrace.gateway.service.common.converters.QueryRequestUtil;
 import org.hypertrace.gateway.service.common.AttributeMetadataProvider;
 import org.hypertrace.gateway.service.common.converters.QueryAndGatewayDtoConverter;
+import org.hypertrace.gateway.service.common.util.ArithmeticValueUtil;
 import org.hypertrace.gateway.service.common.util.MetricAggregationFunctionUtil;
 import org.hypertrace.gateway.service.entity.EntityKey;
 import org.hypertrace.gateway.service.v1.baseline.Baseline;
@@ -19,6 +20,7 @@ import org.hypertrace.gateway.service.v1.baseline.BaselineEntity;
 import org.hypertrace.gateway.service.v1.baseline.BaselineInterval;
 import org.hypertrace.gateway.service.v1.baseline.BaselineMetricSeries;
 import org.hypertrace.gateway.service.v1.baseline.BaselineTimeAggregation;
+import org.hypertrace.gateway.service.v1.common.FunctionType;
 import org.hypertrace.gateway.service.v1.common.TimeAggregation;
 import org.hypertrace.gateway.service.v1.common.Value;
 import org.hypertrace.gateway.service.v1.common.ValueType;
@@ -68,9 +70,9 @@ public class BaselineServiceQueryParser {
     builder.setFilter(queryFilter);
 
     builder.addAllGroupBy(
-            entityIdAttributes.stream()
-                    .map(QueryRequestUtil::createColumnExpression)
-                    .collect(Collectors.toList()));
+        entityIdAttributes.stream()
+            .map(QueryRequestUtil::createColumnExpression)
+            .collect(Collectors.toList()));
 
     builder.addGroupBy(createTimeColumnGroupByExpression(timeColumn, periodSecs));
 
@@ -106,24 +108,24 @@ public class BaselineServiceQueryParser {
                     QueryRequestUtil.createFilter(
                         entityIdAttribute,
                         Operator.IN,
-                        createStringArrayLiteralExpression(
-                                new ArrayList<>(entityIds))))
+                        createStringArrayLiteralExpression(new ArrayList<>(entityIds))))
             .collect(Collectors.toList()));
 
     // Time range is a mandatory filter for query service, hence add it if it's not already present.
     filterBuilder.addChildFilter(
-            QueryRequestUtil.createBetweenTimesFilter(timeColumn, startTimeInMillis, endTimeInMillis));
+        QueryRequestUtil.createBetweenTimesFilter(timeColumn, startTimeInMillis, endTimeInMillis));
 
     return filterBuilder;
   }
-
 
   public BaselineEntitiesResponse parseQueryResponse(
       Iterator<ResultSetChunk> resultSetChunkIterator,
       BaselineRequestContext requestContext,
       int idColumnsSize,
       String entityType,
-      long periodSecs) {
+      long periodSecs,
+      long startTime,
+      long endTime) {
     Map<String, AttributeMetadata> attributeMetadataMap =
         attributeMetadataProvider.getAttributesMetadata(requestContext, entityType);
     Map<EntityKey, Map<String, BaselineMetricSeries.Builder>> entityMetricSeriesMap =
@@ -169,13 +171,23 @@ public class BaselineServiceQueryParser {
               continue;
             }
 
-            Value convertedValue =
-                QueryAndGatewayDtoConverter.convertToGatewayValueForMetricValue(
-                    MetricAggregationFunctionUtil.getValueTypeFromFunction(
-                        timeAggregation.getAggregation(), attributeMetadataMap),
-                    attributeMetadataMap,
-                    metadata,
-                    row.getColumn(i));
+            Value convertedValue;
+            // AVGRATE is adding a specific implementation because Pinot does not directly support this function,
+            // so it has to be parsed separately.
+            if (FunctionType.AVGRATE == timeAggregation.getAggregation().getFunction()) {
+              convertedValue =
+                  ArithmeticValueUtil.computeAvgRate(
+                      timeAggregation.getAggregation(), row.getColumn(i), startTime, endTime);
+            } else {
+
+              convertedValue =
+                  QueryAndGatewayDtoConverter.convertToGatewayValueForMetricValue(
+                      MetricAggregationFunctionUtil.getValueTypeFromFunction(
+                          timeAggregation.getAggregation(), attributeMetadataMap),
+                      attributeMetadataMap,
+                      metadata,
+                      row.getColumn(i));
+            }
 
             BaselineMetricSeries.Builder seriesBuilder =
                 metricSeriesMap.computeIfAbsent(
@@ -214,5 +226,4 @@ public class BaselineServiceQueryParser {
     sortedIntervals.sort(Comparator.comparingLong(BaselineInterval::getStartTimeMillis));
     return BaselineMetricSeries.newBuilder().addAllBaselineValue(sortedIntervals).build();
   }
-
 }

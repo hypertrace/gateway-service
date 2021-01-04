@@ -27,9 +27,10 @@ import java.util.Map;
 import java.util.stream.Collectors;
 
 /**
- * This service calculates baseline values for an Entity across time range. This converts both aggregate functions
- * and time series functions in selection expression to time series data and generate baseline, lower bound and upper bound.
- * It also changes Time series requests to get more data points for proper baseline calculation
+ * This service calculates baseline values for an Entity across time range. This converts both
+ * aggregate functions and time series functions in selection expression to time series data and
+ * generate baseline, lower bound and upper bound. It also changes Time series requests to get more
+ * data points for proper baseline calculation
  */
 public class BaselineServiceImpl implements BaselineService {
   private static final long DAY_IN_MILLIS = 86400000L;
@@ -40,10 +41,10 @@ public class BaselineServiceImpl implements BaselineService {
   private final EntityIdColumnsConfigs entityIdColumnsConfigs;
 
   public BaselineServiceImpl(
-          AttributeMetadataProvider attributeMetadataProvider,
-          BaselineServiceQueryParser baselineServiceQueryParser,
-          BaselineServiceQueryExecutor baselineServiceQueryExecutor,
-          EntityIdColumnsConfigs entityIdColumnsConfigs) {
+      AttributeMetadataProvider attributeMetadataProvider,
+      BaselineServiceQueryParser baselineServiceQueryParser,
+      BaselineServiceQueryExecutor baselineServiceQueryExecutor,
+      EntityIdColumnsConfigs entityIdColumnsConfigs) {
     this.attributeMetadataProvider = attributeMetadataProvider;
     this.baselineServiceQueryParser = baselineServiceQueryParser;
     this.baselineServiceQueryExecutor = baselineServiceQueryExecutor;
@@ -74,9 +75,11 @@ public class BaselineServiceImpl implements BaselineService {
           getUpdatedStartTimeForAggregations(
               originalRequest.getStartTimeMillis(), originalRequest.getEndTimeMillis());
       List<String> entityIdAttributes =
-              AttributeMetadataUtil.getIdAttributeIds(
-                      attributeMetadataProvider, entityIdColumnsConfigs, requestContext,
-                      originalRequest.getEntityType());
+          AttributeMetadataUtil.getIdAttributeIds(
+              attributeMetadataProvider,
+              entityIdColumnsConfigs,
+              requestContext,
+              originalRequest.getEntityType());
       QueryRequest aggQueryRequest =
           baselineServiceQueryParser.getQueryRequest(
               seriesStartTime,
@@ -84,7 +87,8 @@ public class BaselineServiceImpl implements BaselineService {
               originalRequest.getEntityIdsList(),
               timeColumn,
               timeAggregations,
-              periodSecs, entityIdAttributes);
+              periodSecs,
+              entityIdAttributes);
       Iterator<ResultSetChunk> aggResponseChunkIterator =
           baselineServiceQueryExecutor.executeQuery(requestHeaders, aggQueryRequest);
       BaselineEntitiesResponse aggEntitiesResponse =
@@ -93,7 +97,9 @@ public class BaselineServiceImpl implements BaselineService {
               requestContext,
               entityIdAttributes.size(),
               originalRequest.getEntityType(),
-              periodSecs);
+              periodSecs,
+              originalRequest.getStartTimeMillis(),
+              originalRequest.getEndTimeMillis());
       baselineEntityAggregatedMetricsMap = getEntitiesMapFromAggResponse(aggEntitiesResponse);
     }
 
@@ -108,9 +114,11 @@ public class BaselineServiceImpl implements BaselineService {
           getUpdatedStartTimeForSeriesRequests(
               originalRequest.getStartTimeMillis(), originalRequest.getEndTimeMillis());
       List<String> entityIdAttributes =
-              AttributeMetadataUtil.getIdAttributeIds(
-                      attributeMetadataProvider, entityIdColumnsConfigs, requestContext,
-                      originalRequest.getEntityType());
+          AttributeMetadataUtil.getIdAttributeIds(
+              attributeMetadataProvider,
+              entityIdColumnsConfigs,
+              requestContext,
+              originalRequest.getEntityType());
       QueryRequest timeSeriesQueryRequest =
           baselineServiceQueryParser.getQueryRequest(
               seriesStartTime,
@@ -118,7 +126,8 @@ public class BaselineServiceImpl implements BaselineService {
               originalRequest.getEntityIdsList(),
               timeColumn,
               timeAggregations,
-              periodSecs, entityIdAttributes);
+              periodSecs,
+              entityIdAttributes);
       Iterator<ResultSetChunk> timeSeriesChunkIterator =
           baselineServiceQueryExecutor.executeQuery(requestHeaders, timeSeriesQueryRequest);
       BaselineEntitiesResponse timeSeriesEntitiesResponse =
@@ -127,7 +136,9 @@ public class BaselineServiceImpl implements BaselineService {
               requestContext,
               entityIdAttributes.size(),
               originalRequest.getEntityType(),
-              periodSecs);
+              periodSecs,
+              originalRequest.getStartTimeMillis(),
+              originalRequest.getEndTimeMillis());
       baselineEntityTimeSeriesMap =
           getEntitiesMapFromTimeSeriesResponse(
               timeSeriesEntitiesResponse, originalRequest.getStartTimeMillis());
@@ -205,8 +216,7 @@ public class BaselineServiceImpl implements BaselineService {
       Map<String, BaselineMetricSeries> metricSeriesMap =
           baselineEntity.getBaselineMetricSeriesMap();
       Map<String, Baseline> baselineMap = new HashMap<>();
-      BaselineEntity.Builder baselineEntityBuilder =
-              getBaselineEntityBuilder(baselineEntity);
+      BaselineEntity.Builder baselineEntityBuilder = getBaselineEntityBuilder(baselineEntity);
       Map<String, BaselineMetricSeries> revisedMetricSeriesMap = new HashMap<>();
       // Calculate baseline
       metricSeriesMap.forEach(
@@ -237,9 +247,7 @@ public class BaselineServiceImpl implements BaselineService {
               }
             }
             BaselineMetricSeries baselineMetricSeries =
-                BaselineMetricSeries.newBuilder()
-                    .addAllBaselineValue(revisedList)
-                    .build();
+                BaselineMetricSeries.newBuilder().addAllBaselineValue(revisedList).build();
             revisedMetricSeriesMap.put(key, baselineMetricSeries);
           });
       baselineEntityBuilder.putAllBaselineMetricSeries(revisedMetricSeriesMap);
@@ -250,8 +258,8 @@ public class BaselineServiceImpl implements BaselineService {
 
   private BaselineEntity.Builder getBaselineEntityBuilder(BaselineEntity baselineEntity) {
     return BaselineEntity.newBuilder()
-            .setEntityType(baselineEntity.getEntityType())
-            .setId(baselineEntity.getId());
+        .setEntityType(baselineEntity.getEntityType())
+        .setId(baselineEntity.getId());
   }
 
   private Map<String, BaselineEntity> getEntitiesMapFromAggResponse(
@@ -262,8 +270,7 @@ public class BaselineServiceImpl implements BaselineService {
         Map<String, BaselineMetricSeries> metricSeriesMap =
             baselineEntity.getBaselineMetricSeriesMap();
         Map<String, Baseline> baselineMap = new HashMap<>();
-        BaselineEntity.Builder baselineEntityBuilder =
-                getBaselineEntityBuilder(baselineEntity);
+        BaselineEntity.Builder baselineEntityBuilder = getBaselineEntityBuilder(baselineEntity);
         metricSeriesMap.forEach(
             (key, value) -> {
               List<Double> metricValues =
@@ -339,7 +346,6 @@ public class BaselineServiceImpl implements BaselineService {
   /**
    * If user selected time range is less than 24 hrs then choose last 24hrs of data for baseline if
    * it is gt 24hours then choose 2X time range for baseline calculation.
-   *
    */
   private long getUpdatedStartTimeForAggregations(long startTimeMillis, long endTimeMillis) {
     if ((endTimeMillis - startTimeMillis) < DAY_IN_MILLIS) {
@@ -350,9 +356,7 @@ public class BaselineServiceImpl implements BaselineService {
     return startTimeMillis;
   }
 
-  /**
-   * It returns 2X user selected time range.
-   */
+  /** It returns 2X user selected time range. */
   private long getUpdatedStartTimeForSeriesRequests(long startTimeMillis, long endTimeMillis) {
     return (endTimeMillis - (2 * (endTimeMillis - startTimeMillis)));
   }

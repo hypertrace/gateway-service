@@ -75,6 +75,8 @@ public class BaselineServiceQueryParserTest {
                   {"entity-id-1", "1608525840000", "16.0"},
                   {"entity-id-1", "1608525540000", "17.0"}
                 }));
+    long endTimeInMillis = System.currentTimeMillis();
+    long startTimeInMillis = endTimeInMillis - 4 * 60 * 60 * 1000;
     TimeAggregation timeAggregation =
         getTimeAggregationFor(
             getFunctionExpressionFor(
@@ -100,7 +102,8 @@ public class BaselineServiceQueryParserTest {
         .thenReturn(attributeMap);
     BaselineEntitiesResponse response =
         baselineServiceQueryParser.parseQueryResponse(
-            resultSetChunks.iterator(), baselineRequestContext, 1, "SERVICE", ONE_HOUR_SECONDS);
+            resultSetChunks.iterator(), baselineRequestContext, 1, "SERVICE",
+                ONE_HOUR_SECONDS, startTimeInMillis, endTimeInMillis);
     Assertions.assertNotNull(response);
     Assertions.assertEquals(1, response.getBaselineEntity(0).getBaselineMetricSeriesCount());
   }
