@@ -3,7 +3,6 @@ package org.hypertrace.gateway.service.baseline;
 import org.hypertrace.core.attribute.service.v1.AttributeMetadata;
 import org.hypertrace.core.query.service.api.QueryRequest;
 import org.hypertrace.core.query.service.api.ResultSetChunk;
-import org.hypertrace.core.query.service.client.QueryServiceClient;
 import org.hypertrace.gateway.service.common.AttributeMetadataProvider;
 import org.hypertrace.gateway.service.common.RequestContext;
 import org.hypertrace.gateway.service.v1.baseline.BaselineEntitiesResponse;
@@ -18,6 +17,7 @@ import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.Test;
 import org.mockito.Mockito;
 
+import java.time.Instant;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.HashMap;
@@ -28,8 +28,6 @@ import static org.hypertrace.gateway.service.common.QueryServiceRequestAndRespon
 
 public class BaselineServiceQueryParserTest {
 
-  private final QueryServiceClient queryServiceClient = Mockito.mock(QueryServiceClient.class);
-  private final int qsRequestTimeout = 1000;
   private static final long ONE_HOUR_SECONDS = 60 * 60L;
   private final AttributeMetadataProvider attributeMetadataProvider =
       Mockito.mock(AttributeMetadataProvider.class);
@@ -39,18 +37,16 @@ public class BaselineServiceQueryParserTest {
   public void testGetQueryRequest() {
     BaselineServiceQueryParser baselineServiceQueryParser =
         new BaselineServiceQueryParser(attributeMetadataProvider);
-    long endTimeInMillis = System.currentTimeMillis();
     List<TimeAggregation> timeAggregationList = new ArrayList<>();
     long periodInSecs = ONE_HOUR_SECONDS;
     TimeAggregation timeAggregation =
         getTimeAggregationFor(
             getFunctionExpressionFor(FunctionType.AVG, "SERVICE.duration", "duration_ts"));
     timeAggregationList.add(timeAggregation);
-    long startTimeInMillis = endTimeInMillis - 4 * 60 * 60 * 1000;
     QueryRequest request =
         baselineServiceQueryParser.getQueryRequest(
-            startTimeInMillis,
-            endTimeInMillis,
+            Instant.parse("2020-11-14T17:40:51.902Z").toEpochMilli(),
+            Instant.parse("2020-11-14T18:40:51.902Z").toEpochMilli(),
             Collections.singletonList("entity-1"),
             "Service.StartTime",
             timeAggregationList,
@@ -75,8 +71,6 @@ public class BaselineServiceQueryParserTest {
                   {"entity-id-1", "1608525840000", "16.0"},
                   {"entity-id-1", "1608525540000", "17.0"}
                 }));
-    long endTimeInMillis = System.currentTimeMillis();
-    long startTimeInMillis = endTimeInMillis - 4 * 60 * 60 * 1000;
     TimeAggregation timeAggregation =
         getTimeAggregationFor(
             getFunctionExpressionFor(
@@ -102,8 +96,13 @@ public class BaselineServiceQueryParserTest {
         .thenReturn(attributeMap);
     BaselineEntitiesResponse response =
         baselineServiceQueryParser.parseQueryResponse(
-            resultSetChunks.iterator(), baselineRequestContext, 1, "SERVICE",
-                ONE_HOUR_SECONDS, startTimeInMillis, endTimeInMillis);
+            resultSetChunks.iterator(),
+            baselineRequestContext,
+            1,
+            "SERVICE",
+            ONE_HOUR_SECONDS,
+            Instant.parse("2020-11-14T17:40:51.902Z").toEpochMilli(),
+            Instant.parse("2020-11-14T18:40:51.902Z").toEpochMilli());
     Assertions.assertNotNull(response);
     Assertions.assertEquals(1, response.getBaselineEntity(0).getBaselineMetricSeriesCount());
   }

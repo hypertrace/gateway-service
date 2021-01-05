@@ -1,5 +1,6 @@
 package org.hypertrace.gateway.service.baseline;
 
+import com.google.common.annotations.VisibleForTesting;
 import com.google.common.base.Preconditions;
 import org.apache.commons.math.stat.descriptive.moment.StandardDeviation;
 import org.apache.commons.math.stat.descriptive.rank.Median;
@@ -41,6 +42,7 @@ public class BaselineCalculator {
     return baseline;
   }
 
+  @VisibleForTesting
   private static double[] getValuesInDouble(List<Value> metricValues) {
     ValueType valueType = metricValues.get(0).getValueType();
     switch (valueType) {

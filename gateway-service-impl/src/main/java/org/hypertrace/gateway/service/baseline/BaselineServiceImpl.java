@@ -1,5 +1,7 @@
 package org.hypertrace.gateway.service.baseline;
 
+import com.google.common.annotations.VisibleForTesting;
+import org.hypertrace.core.attribute.service.v1.AttributeMetadata;
 import org.hypertrace.core.query.service.api.QueryRequest;
 import org.hypertrace.core.query.service.api.ResultSetChunk;
 import org.hypertrace.gateway.service.common.AttributeMetadataProvider;
@@ -34,7 +36,11 @@ import java.util.stream.Collectors;
  * data points for proper baseline calculation
  */
 public class BaselineServiceImpl implements BaselineService {
-  private static final long DAY_IN_MILLIS = 86400000L;
+
+  private static final BaselineEntitiesRequestValidator baselineEntitiesRequestValidator =
+          new BaselineEntitiesRequestValidator();
+
+  protected static final long DAY_IN_MILLIS = 86400000L;
 
   private final AttributeMetadataProvider attributeMetadataProvider;
   private final BaselineServiceQueryParser baselineServiceQueryParser;
@@ -58,6 +64,9 @@ public class BaselineServiceImpl implements BaselineService {
       Map<String, String> requestHeaders) {
     BaselineRequestContext requestContext =
         getRequestContext(tenantId, requestHeaders, originalRequest);
+    Map<String, AttributeMetadata> attributeMetadataMap =
+            attributeMetadataProvider.getAttributesMetadata(requestContext, originalRequest.getEntityType());
+    baselineEntitiesRequestValidator.validate(originalRequest, attributeMetadataMap);
     String timeColumn =
         AttributeMetadataUtil.getTimestampAttributeId(
             attributeMetadataProvider, requestContext, originalRequest.getEntityType());
@@ -73,7 +82,7 @@ public class BaselineServiceImpl implements BaselineService {
       updateAliasMap(requestContext, timeAggregations);
       // Take more data to calculate baseline and standard deviation.
       long seriesStartTime =
-          getUpdatedStartTimeForAggregations(
+          getUpdatedStartTime(
               originalRequest.getStartTimeMillis(), originalRequest.getEndTimeMillis());
       List<String> entityIdAttributes =
           AttributeMetadataUtil.getIdAttributeIds(
@@ -112,7 +121,7 @@ public class BaselineServiceImpl implements BaselineService {
       List<TimeAggregation> timeAggregations =
           getTimeAggregationsForTimeSeriesExpr(originalRequest);
       long seriesStartTime =
-          getUpdatedStartTimeForSeriesRequests(
+          getUpdatedStartTime(
               originalRequest.getStartTimeMillis(), originalRequest.getEndTimeMillis());
       List<String> entityIdAttributes =
           AttributeMetadataUtil.getIdAttributeIds(
@@ -341,20 +350,13 @@ public class BaselineServiceImpl implements BaselineService {
   }
 
   /**
-   * If user selected time range is less than 24 hrs then choose last 24hrs of data for baseline if
-   * it is gt 24hours then choose 2X time range for baseline calculation.
+   * User selected time range(USTR) is difference between end time and start time.
+   * It updates start time -> end time minus maximum of (24h, 2xUSTR)
    */
-  private long getUpdatedStartTimeForAggregations(long startTimeMillis, long endTimeMillis) {
-    if ((endTimeMillis - startTimeMillis) < DAY_IN_MILLIS) {
-      startTimeMillis = endTimeMillis - DAY_IN_MILLIS;
-    } else {
-      startTimeMillis = endTimeMillis - (2 * (endTimeMillis - startTimeMillis));
-    }
-    return startTimeMillis;
+  @VisibleForTesting
+  long getUpdatedStartTime(long startTimeMillis, long endTimeMillis) {
+    long timeDiff = Math.max(DAY_IN_MILLIS, (2 * (endTimeMillis - startTimeMillis)));
+    return endTimeMillis - timeDiff;
   }
 
-  /** It returns 2X user selected time range. */
-  private long getUpdatedStartTimeForSeriesRequests(long startTimeMillis, long endTimeMillis) {
-    return (endTimeMillis - (2 * (endTimeMillis - startTimeMillis)));
-  }
 }

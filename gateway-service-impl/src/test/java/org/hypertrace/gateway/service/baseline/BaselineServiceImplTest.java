@@ -18,12 +18,13 @@ import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.Test;
 import org.mockito.Mockito;
 
-import java.util.Collections;
+import java.time.Instant;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
 
+import static org.hypertrace.gateway.service.baseline.BaselineServiceImpl.DAY_IN_MILLIS;
 import static org.hypertrace.gateway.service.common.QueryServiceRequestAndResponseUtils.getResultSetChunk;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.when;
@@ -31,6 +32,8 @@ import static org.mockito.Mockito.when;
 public class BaselineServiceImplTest {
 
   protected static final String TENANT_ID = "tenant1";
+  private static final long ONE_HOUR_MILLIS = 1000 * 60 * 60;
+  private static final long TWENTY_HOUR_MILLIS = 20 * ONE_HOUR_MILLIS;
   private final AttributeMetadataProvider attributeMetadataProvider =
       Mockito.mock(AttributeMetadataProvider.class);
   private final BaselineServiceQueryExecutor baselineServiceQueryExecutor =
@@ -39,16 +42,13 @@ public class BaselineServiceImplTest {
       new BaselineServiceQueryParser(attributeMetadataProvider);
   private final EntityIdColumnsConfigs entityIdColumnsConfigs = mock(EntityIdColumnsConfigs.class);
 
-
   @Test
   public void testBaselineForEntitiesForAggregates() {
-    long endTime = System.currentTimeMillis();
-    long startTime = endTime - 1000 * 60 * 5;
     BaselineEntitiesRequest baselineEntitiesRequest =
         BaselineEntitiesRequest.newBuilder()
             .setEntityType("SERVICE")
-            .setStartTimeMillis(startTime)
-            .setEndTimeMillis(endTime)
+            .setStartTimeMillis(Instant.parse("2020-11-14T17:40:51.902Z").toEpochMilli())
+            .setEndTimeMillis(Instant.parse("2020-11-14T18:40:51.902Z").toEpochMilli())
             .addEntityIds("entity-1")
             .addBaselineAggregateRequest(
                 getFunctionExpressionFor(FunctionType.AVG, "SERVICE.duration", "duration_ts"))
@@ -81,7 +81,10 @@ public class BaselineServiceImplTest {
 
     BaselineService baselineService =
         new BaselineServiceImpl(
-            attributeMetadataProvider, baselineServiceQueryParser, baselineServiceQueryExecutor, entityIdColumnsConfigs);
+            attributeMetadataProvider,
+            baselineServiceQueryParser,
+            baselineServiceQueryExecutor,
+            entityIdColumnsConfigs);
     BaselineEntitiesResponse baselineResponse =
         baselineService.getBaselineForEntities(TENANT_ID, baselineEntitiesRequest, Map.of());
     Assertions.assertTrue(baselineResponse.getBaselineEntityCount() > 0);
@@ -91,13 +94,11 @@ public class BaselineServiceImplTest {
 
   @Test
   public void testBaselineEntitiesForMetricSeries() {
-    long endTime = System.currentTimeMillis();
-    long startTime = endTime - 100000 * 60 * 5;
     BaselineEntitiesRequest baselineEntitiesRequest =
         BaselineEntitiesRequest.newBuilder()
             .setEntityType("SERVICE")
-            .setStartTimeMillis(startTime)
-            .setEndTimeMillis(endTime)
+            .setStartTimeMillis(Instant.parse("2020-11-14T17:40:51.902Z").toEpochMilli())
+            .setEndTimeMillis(Instant.parse("2020-11-14T18:40:51.902Z").toEpochMilli())
             .addEntityIds("entity-1")
             .addBaselineMetricSeriesRequest(getBaselineTimeSeriesRequest())
             .build();
@@ -113,26 +114,26 @@ public class BaselineServiceImplTest {
                 Mockito.anyMap(), Mockito.any(QueryRequest.class)))
         .thenReturn(getResultSet().iterator());
     Map<String, AttributeMetadata> attributeMap = new HashMap<>();
-    AttributeMetadata attribute = AttributeMetadata.newBuilder().setFqn("Service.Latency").setId("Service.Id").build();
-    attributeMap.put(
-        "duration_ts",
-            attribute);
-    attributeMap.put(
-        "SERVICE.duration",
-            attribute);
+    AttributeMetadata attribute =
+        AttributeMetadata.newBuilder().setFqn("Service.Latency").setId("Service.Id").build();
+    attributeMap.put("duration_ts", attribute);
+    attributeMap.put("SERVICE.duration", attribute);
     Mockito.when(
             attributeMetadataProvider.getAttributesMetadata(
                 Mockito.any(RequestContext.class), Mockito.anyString()))
         .thenReturn(attributeMap);
     Mockito.when(
             attributeMetadataProvider.getAttributeMetadata(
-                    Mockito.any(RequestContext.class), Mockito.anyString(), Mockito.anyString()))
-            .thenReturn(Optional.of(attribute));
+                Mockito.any(RequestContext.class), Mockito.anyString(), Mockito.anyString()))
+        .thenReturn(Optional.of(attribute));
     when(entityIdColumnsConfigs.getIdKey("SERVICE")).thenReturn(Optional.of("id"));
 
     BaselineService baselineService =
         new BaselineServiceImpl(
-            attributeMetadataProvider, baselineServiceQueryParser, baselineServiceQueryExecutor, entityIdColumnsConfigs);
+            attributeMetadataProvider,
+            baselineServiceQueryParser,
+            baselineServiceQueryExecutor,
+            entityIdColumnsConfigs);
     BaselineEntitiesResponse baselineResponse =
         baselineService.getBaselineForEntities(TENANT_ID, baselineEntitiesRequest, Map.of());
     Assertions.assertTrue(baselineResponse.getBaselineEntityCount() > 0);
@@ -174,5 +175,21 @@ public class BaselineServiceImplTest {
                   {"entity-1", String.valueOf(time - 180000), "17.0"}
                 }));
     return resultSetChunks;
+  }
+
+  @Test
+  public void testStartTimeCalcGivenTimeRange() {
+    BaselineServiceImpl baselineService =
+        new BaselineServiceImpl(
+            attributeMetadataProvider, baselineServiceQueryParser,
+            baselineServiceQueryExecutor, entityIdColumnsConfigs);
+    long endTimeInMillis = System.currentTimeMillis();
+    long startTimeInMillis = endTimeInMillis - ONE_HOUR_MILLIS;
+    long actualStartTime = baselineService.getUpdatedStartTime(startTimeInMillis, endTimeInMillis);
+    Assertions.assertEquals(endTimeInMillis - DAY_IN_MILLIS, actualStartTime);
+
+    startTimeInMillis = endTimeInMillis - TWENTY_HOUR_MILLIS;
+    actualStartTime = baselineService.getUpdatedStartTime(startTimeInMillis, endTimeInMillis);
+    Assertions.assertEquals(endTimeInMillis - (2 * TWENTY_HOUR_MILLIS), actualStartTime);
   }
 }
