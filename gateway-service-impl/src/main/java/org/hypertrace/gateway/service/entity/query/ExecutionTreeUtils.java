@@ -10,6 +10,7 @@ import java.util.Optional;
 import java.util.Set;
 import java.util.stream.Collectors;
 
+import com.google.common.collect.Sets;
 import org.hypertrace.core.attribute.service.v1.AttributeSource;
 import org.hypertrace.gateway.service.common.util.ExpressionReader;
 import org.hypertrace.gateway.service.v1.common.Expression;
@@ -308,10 +309,8 @@ public class ExecutionTreeUtils {
       return Collections.emptySet();
     }
 
-    List<Set<String>> listOfSourceSets = new ArrayList<>(attributeToSourcesMap.values());
-
-    return listOfSourceSets.stream()
-        .skip(1)
-        .collect(() -> new HashSet<>(listOfSourceSets.get(0)), Set::retainAll, Set::retainAll);
+    return attributeToSourcesMap.values().stream()
+        .reduce(Sets::intersection)
+        .orElse(Collections.emptySet());
   }
 }
