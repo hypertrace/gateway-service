@@ -124,6 +124,8 @@ public class MetricAggregationFunctionUtil {
           org.hypertrace.core.query.service.api.Value column,
           ColumnMetadata metadata,
           FunctionExpression functionExpression) {
+    // AVG_RATE is adding a specific implementation because Pinot does not directly support this function,
+    // so it has to be parsed separately.
     Value convertedValue;
     if (FunctionType.AVGRATE == functionExpression.getFunction()) {
       convertedValue =

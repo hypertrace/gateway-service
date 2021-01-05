@@ -151,7 +151,6 @@ public class BaselineServiceQueryParser {
 
         BaselineInterval.Builder intervalBuilder = BaselineInterval.newBuilder();
 
-        // Second column is the time column
         Value value =
             QueryAndGatewayDtoConverter.convertQueryValueToGatewayValue(
                 row.getColumn(idColumnsSize));
@@ -172,10 +171,7 @@ public class BaselineServiceQueryParser {
               continue;
             }
 
-            Value convertedValue;
-            // AVG_RATE is adding a specific implementation because Pinot does not directly support this function,
-            // so it has to be parsed separately.
-            convertedValue = MetricAggregationFunctionUtil.getValueFromFunction(startTime, endTime, attributeMetadataMap,
+            Value convertedValue = MetricAggregationFunctionUtil.getValueFromFunction(startTime, endTime, attributeMetadataMap,
                     row.getColumn(i), metadata, timeAggregation.getAggregation());
 
             BaselineMetricSeries.Builder seriesBuilder =
@@ -211,7 +207,7 @@ public class BaselineServiceQueryParser {
   }
 
 
-  BaselineMetricSeries getSortedMetricSeries(BaselineMetricSeries.Builder builder) {
+  private BaselineMetricSeries getSortedMetricSeries(BaselineMetricSeries.Builder builder) {
     List<BaselineInterval> sortedIntervals = new ArrayList<>(builder.getBaselineValueList());
     sortedIntervals.sort(Comparator.comparingLong(BaselineInterval::getStartTimeMillis));
     return BaselineMetricSeries.newBuilder().addAllBaselineValue(sortedIntervals).build();
