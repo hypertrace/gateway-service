@@ -284,8 +284,13 @@ public class RequestHandler implements RequestHandlerWithSorting {
     org.hypertrace.gateway.service.v1.common.Value gwValue;
     if (function != null) { // Function expression value
       gwValue =
-          getValueForFunctionExpression(
-              queryServiceValue, function, requestContext, metadata, attributeMetadataMap);
+          MetricAggregationFunctionUtil.getValueFromFunction(
+              requestContext.getStartTimeMillis(),
+              requestContext.getEndTimeMillis(),
+              attributeMetadataMap,
+              queryServiceValue,
+              metadata,
+              function);
     } else { // Simple columnId Expression value eg. groupBy columns or column selections
       gwValue = getValueForColumnIdExpression(queryServiceValue, metadata, attributeMetadataMap);
     }
@@ -293,26 +298,6 @@ public class RequestHandler implements RequestHandlerWithSorting {
     rowBuilder.putColumns(metadata.getColumnName(), gwValue);
   }
 
-  private org.hypertrace.gateway.service.v1.common.Value getValueForFunctionExpression(
-      Value queryServiceValue,
-      org.hypertrace.gateway.service.v1.common.FunctionExpression function,
-      ExploreRequestContext requestContext,
-      ColumnMetadata metadata,
-      Map<String, AttributeMetadata> attributeMetadataMap) {
-    if (FunctionType.AVGRATE == function.getFunction()) {
-      return ArithmeticValueUtil.computeAvgRate(
-          function,
-          queryServiceValue,
-          requestContext.getStartTimeMillis(),
-          requestContext.getEndTimeMillis());
-    } else {
-      return QueryAndGatewayDtoConverter.convertToGatewayValueForMetricValue(
-          MetricAggregationFunctionUtil.getValueTypeFromFunction(function, attributeMetadataMap),
-          attributeMetadataMap,
-          metadata,
-          queryServiceValue);
-    }
-  }
 
   private org.hypertrace.gateway.service.v1.common.Value getValueForColumnIdExpression(
       Value queryServiceValue,
