@@ -155,14 +155,6 @@ public class ExecutionTreeBuilder {
     QueryNode rootNode = createQsDataFetcherNodeWithPagination(entitiesRequest);
     executionContext.setSortAndPaginationNodeAdded(true);
 
-    // If the request has an EntityId EQ filter then there's no need for the 2nd request to get the
-    // total entities. So no need to set the TotalFetcherNode
-    if (ExecutionTreeUtils.hasEntityIdEqualsFilter(executionContext)) {
-      executionContext.setTotal(1);
-    } else {
-      rootNode = new TotalFetcherNode(rootNode, QS.name());
-    }
-
     return rootNode;
   }
 
