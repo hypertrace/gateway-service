@@ -359,7 +359,7 @@ public class BaselineServiceImpl implements BaselineService {
 
   /**
    * User selected time range(USTR) is difference between end time and start time. It updates start
-   * time -> startTime minus maximum of (24h, 2xUSTR) 
+   * time -> startTime minus maximum of (24h, 2xUSTR)
    */
   @VisibleForTesting
   long getUpdatedStartTime(long startTimeMillis, long endTimeMillis) {
