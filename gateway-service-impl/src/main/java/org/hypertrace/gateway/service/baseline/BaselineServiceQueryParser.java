@@ -6,6 +6,7 @@ import org.hypertrace.core.query.service.api.Filter;
 import org.hypertrace.core.query.service.api.Operator;
 import org.hypertrace.core.query.service.api.QueryRequest;
 import org.hypertrace.core.query.service.api.ResultSetChunk;
+import org.hypertrace.core.query.service.api.ResultSetMetadata;
 import org.hypertrace.core.query.service.api.Row;
 import org.hypertrace.core.query.service.client.QueryServiceClient;
 import org.hypertrace.gateway.service.common.converters.QueryRequestUtil;
@@ -130,12 +131,17 @@ public class BaselineServiceQueryParser {
         attributeMetadataProvider.getAttributesMetadata(requestContext, entityType);
     Map<EntityKey, Map<String, BaselineMetricSeries.Builder>> entityMetricSeriesMap =
         new LinkedHashMap<>();
+    boolean isFirstChunk = true;
+    ResultSetMetadata resultMetadata = null;
     while (resultSetChunkIterator.hasNext()) {
       ResultSetChunk chunk = resultSetChunkIterator.next();
       LOG.debug("Received chunk: {} ", chunk);
-
       if (chunk.getRowCount() < 1) {
         break;
+      }
+      if (isFirstChunk) {
+        resultMetadata = chunk.getResultSetMetadata();
+        isFirstChunk = false;
       }
 
       for (Row row : chunk.getRowList()) {
@@ -155,9 +161,9 @@ public class BaselineServiceQueryParser {
                 row.getColumn(idColumnsSize));
         if (value.getValueType() == ValueType.STRING) {
           for (int i = idColumnsSize + 1;
-              i < chunk.getResultSetMetadata().getColumnMetadataCount();
+              i < resultMetadata.getColumnMetadataCount();
               i++) {
-            ColumnMetadata metadata = chunk.getResultSetMetadata().getColumnMetadata(i);
+            ColumnMetadata metadata = resultMetadata.getColumnMetadata(i);
             BaselineTimeAggregation timeAggregation =
                 requestContext.getTimeAggregationByAlias(metadata.getColumnName());
 
