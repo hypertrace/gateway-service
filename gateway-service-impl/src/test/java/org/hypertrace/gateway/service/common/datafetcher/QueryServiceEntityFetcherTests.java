@@ -154,21 +154,25 @@ public class QueryServiceEntityFetcherTests {
     Map<EntityKey, Builder> expectedEntityKeyBuilderResponseMap = Map.of(
         EntityKey.of("api-id-0"), Entity.newBuilder()
             .setEntityType(AttributeScope.API.name())
+            .setId("api-id-0")
             .putAttribute(API_NAME_ATTR, getStringValue("api-0"))
             .putAttribute(API_ID_ATTR, getStringValue("api-id-0"))
             .putMetric("AVG_API.duration", getAggregatedMetricValue(FunctionType.AVG, 14.0)),
         EntityKey.of("api-id-1"), Entity.newBuilder()
             .setEntityType(AttributeScope.API.name())
+            .setId("api-id-1")
             .putAttribute(API_NAME_ATTR, getStringValue("api-1"))
             .putAttribute(API_ID_ATTR, getStringValue("api-id-1"))
             .putMetric("AVG_API.duration", getAggregatedMetricValue(FunctionType.AVG, 15.0)),
         EntityKey.of("api-id-2"), Entity.newBuilder()
             .setEntityType(AttributeScope.API.name())
+            .setId("api-id-2")
             .putAttribute(API_NAME_ATTR, getStringValue("api-2"))
             .putAttribute(API_ID_ATTR, getStringValue("api-id-2"))
             .putMetric("AVG_API.duration", getAggregatedMetricValue(FunctionType.AVG, 16.0)),
         EntityKey.of("api-id-3"), Entity.newBuilder()
             .setEntityType(AttributeScope.API.name())
+            .setId("api-id-3")
             .putAttribute(API_NAME_ATTR, getStringValue("api-3"))
             .putAttribute(API_ID_ATTR, getStringValue("api-id-3"))
             .putMetric("AVG_API.duration", getAggregatedMetricValue(FunctionType.AVG, 17.0))
@@ -301,6 +305,7 @@ public class QueryServiceEntityFetcherTests {
     Map<EntityKey, Builder> expectedEntityKeyBuilderResponseMap = Map.of(
         EntityKey.of("api-id-0"), Entity.newBuilder()
                                         .setEntityType(AttributeScope.API.name())
+                                        .setId("api-id-0")
                                         .putAttribute(API_NAME_ATTR, getStringValue("api-0"))
                                         .putAttribute(API_ID_ATTR, getStringValue("api-id-0"))
                                         .putMetric("AVG_API.duration", getAggregatedMetricValue(FunctionType.AVG, 14.0))

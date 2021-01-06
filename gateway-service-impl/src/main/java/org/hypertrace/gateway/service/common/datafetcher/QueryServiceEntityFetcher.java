@@ -134,7 +134,7 @@ public class QueryServiceEntityFetcher implements IEntityFetcher {
                     .toArray(String[]::new));
         Builder entityBuilder = entityBuilders.computeIfAbsent(entityKey, k -> Entity.newBuilder());
         entityBuilder.setEntityType(entitiesRequest.getEntityType());
-
+        entityBuilder.setId(entityKey.toString());
         // Always include the id in entity since that's needed to make follow up queries in
         // optimal fashion. If this wasn't really requested by the client, it should be removed
         // as post processing.
@@ -225,7 +225,7 @@ public class QueryServiceEntityFetcher implements IEntityFetcher {
                     .toArray(String[]::new));
         Builder entityBuilder = entityMap.computeIfAbsent(entityKey, k -> Entity.newBuilder());
         entityBuilder.setEntityType(entitiesRequest.getEntityType());
-
+        entityBuilder.setId(entityKey.toString());
         // Always include the id in entity since that's needed to make follow up queries in
         // optimal fashion. If this wasn't really requested by the client, it should be removed
         // as post processing.
@@ -310,6 +310,7 @@ public class QueryServiceEntityFetcher implements IEntityFetcher {
                     .toArray(String[]::new));
         Builder entityBuilder = entityBuilders.computeIfAbsent(entityKey, k -> Entity.newBuilder());
         entityBuilder.setEntityType(entitiesRequest.getEntityType());
+        entityBuilder.setId(entityKey.toString());
 
         // Always include the id in entity since that's needed to make follow up queries in
         // optimal fashion. If this wasn't really requested by the client, it should be removed
@@ -459,37 +460,22 @@ public class QueryServiceEntityFetcher implements IEntityFetcher {
     Preconditions.checkArgument(healthExpressions.size() <= 1);
     Health health = Health.NOT_COMPUTED;
 
-    if (FunctionType.AVGRATE == function.getFunction()) {
-      Value avgRateValue =
-          ArithmeticValueUtil.computeAvgRate(
-              function,
-              columnValue,
-              entitiesRequest.getStartTimeMillis(),
-              entitiesRequest.getEndTimeMillis());
+    Value convertedValue =
+        MetricAggregationFunctionUtil.getValueFromFunction(
+            entitiesRequest.getStartTimeMillis(),
+            entitiesRequest.getEndTimeMillis(),
+            attributeMetadataMap,
+            columnValue,
+            metadata,
+            function);
 
-      entityBuilder.putMetric(
-          metadata.getColumnName(),
-          AggregatedMetricValue.newBuilder()
-              .setValue(avgRateValue)
-              .setFunction(function.getFunction())
-              .setHealth(health)
-              .build());
-    } else {
-      Value gwValue =
-          QueryAndGatewayDtoConverter.convertToGatewayValueForMetricValue(
-              MetricAggregationFunctionUtil.getValueTypeFromFunction(
-                  function, attributeMetadataMap),
-              attributeMetadataMap,
-              metadata,
-              columnValue);
-      entityBuilder.putMetric(
-          metadata.getColumnName(),
-          AggregatedMetricValue.newBuilder()
-              .setValue(gwValue)
-              .setFunction(function.getFunction())
-              .setHealth(health)
-              .build());
-    }
+    entityBuilder.putMetric(
+        metadata.getColumnName(),
+        AggregatedMetricValue.newBuilder()
+            .setValue(convertedValue)
+            .setFunction(function.getFunction())
+            .setHealth(health)
+            .build());
   }
 
   @Override
@@ -635,6 +621,7 @@ public class QueryServiceEntityFetcher implements IEntityFetcher {
       Entity.Builder entityBuilder =
           Entity.newBuilder()
               .setEntityType(entitiesRequest.getEntityType())
+              .setId(entry.getKey().toString())
               .putAllMetricSeries(
                   entry.getValue().entrySet().stream()
                       .collect(
