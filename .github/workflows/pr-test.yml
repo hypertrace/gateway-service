@@ -40,18 +40,6 @@ jobs:
           fail_ci_if_error: true
           flags: unit
 
-      - name: Integration test
-        uses: hypertrace/github-actions/gradle@main
-        with: 
-          args: jacocoIntegrationTestReport
-   
-      - name: Upload coverage to Codecov
-        uses: codecov/codecov-action@v1
-        with:
-          name: integration test reports
-          fail_ci_if_error: true
-          flags: integration
-
       - name: copy test reports
         uses: hypertrace/github-actions/gradle@main
         with: 
