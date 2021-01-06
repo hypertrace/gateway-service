@@ -190,6 +190,6 @@ public class BaselineServiceImplTest {
 
     startTimeInMillis = endTimeInMillis - TWENTY_HOUR_MILLIS;
     actualStartTime = baselineService.getUpdatedStartTime(startTimeInMillis, endTimeInMillis);
-    Assertions.assertEquals(endTimeInMillis - (2 * TWENTY_HOUR_MILLIS), actualStartTime);
+    Assertions.assertEquals(startTimeInMillis - (2 * TWENTY_HOUR_MILLIS), actualStartTime);
   }
 }

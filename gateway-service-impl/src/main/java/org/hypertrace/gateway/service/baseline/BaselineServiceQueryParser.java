@@ -124,7 +124,6 @@ public class BaselineServiceQueryParser {
       BaselineRequestContext requestContext,
       int idColumnsSize,
       String entityType,
-      long periodSecs,
       long startTime,
       long endTime) {
     Map<String, AttributeMetadata> attributeMetadataMap =
@@ -155,10 +154,6 @@ public class BaselineServiceQueryParser {
             QueryAndGatewayDtoConverter.convertQueryValueToGatewayValue(
                 row.getColumn(idColumnsSize));
         if (value.getValueType() == ValueType.STRING) {
-          long time = Long.parseLong(value.getString());
-          intervalBuilder.setStartTimeMillis(time);
-          intervalBuilder.setEndTimeMillis(time + TimeUnit.SECONDS.toMillis(periodSecs));
-
           for (int i = idColumnsSize + 1;
               i < chunk.getResultSetMetadata().getColumnMetadataCount();
               i++) {

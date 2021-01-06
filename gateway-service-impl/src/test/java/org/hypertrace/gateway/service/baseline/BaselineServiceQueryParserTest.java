@@ -100,7 +100,6 @@ public class BaselineServiceQueryParserTest {
             baselineRequestContext,
             1,
             "SERVICE",
-            ONE_HOUR_SECONDS,
             Instant.parse("2020-11-14T17:40:51.902Z").toEpochMilli(),
             Instant.parse("2020-11-14T18:40:51.902Z").toEpochMilli());
     Assertions.assertNotNull(response);
