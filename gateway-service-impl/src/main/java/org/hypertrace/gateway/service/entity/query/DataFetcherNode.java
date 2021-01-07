@@ -10,6 +10,8 @@ import java.util.List;
 /**
  * Node in the execution tree that applies the encapsulated filters and fetches attributes
  * corresponding to a specific source
+ *
+ * Also, applies limit, offset and orderBys, if present
  */
 public class DataFetcherNode implements QueryNode {
 
