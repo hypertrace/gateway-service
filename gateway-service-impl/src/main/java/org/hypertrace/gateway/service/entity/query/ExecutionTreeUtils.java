@@ -41,14 +41,16 @@ public class ExecutionTreeUtils {
     Set<String> metricAggregationsSourceSet = executionContext.getSourceToMetricExpressionMap().keySet();
     Set<String> timeAggregationsSourceSet = executionContext.getSourceToTimeAggregationMap().keySet();
     Set<String> filtersSourceSet = executionContext.getSourceToFilterExpressionMap().keySet();
-    Set<String> orderBysSourceSet = executionContext.getSourceToOrderByExpressionMap().keySet();
+    Set<String> selectionOrderBysSourceSet = executionContext.getSourceToSelectionOrderByExpressionMap().keySet();
+    Set<String> metricAggregationOrderBysSourceSet = executionContext.getSourceToMetricOrderByExpressionMap().keySet();
 
     Set<String> sources = new HashSet<>();
     sources.addAll(selectionsSourceSet);
     sources.addAll(metricAggregationsSourceSet);
     sources.addAll(timeAggregationsSourceSet);
     sources.addAll(filtersSourceSet);
-    sources.addAll(orderBysSourceSet);
+    sources.addAll(selectionOrderBysSourceSet);
+    sources.addAll(metricAggregationOrderBysSourceSet);
     if (sources.size() == 1) {
       return sources.stream().findFirst();
     } else {
@@ -183,18 +185,5 @@ public class ExecutionTreeUtils {
     }
 
     return false;
-  }
-
-  public static Map<String, Set<String>> buildSourceToAttributesMap(
-      Map<String, List<Expression>> sourceToExpressionMap) {
-    return sourceToExpressionMap.entrySet().stream()
-        .collect(
-            Collectors.toUnmodifiableMap(
-                Map.Entry::getKey,
-                entry ->
-                    entry.getValue().stream()
-                        .map(ExpressionReader::extractColumns)
-                        .flatMap(Collection::stream)
-                        .collect(Collectors.toSet())));
   }
 }

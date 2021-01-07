@@ -10,6 +10,8 @@ import java.util.Map;
 import java.util.Optional;
 import java.util.Set;
 import java.util.stream.Collectors;
+import java.util.stream.Stream;
+
 import org.hypertrace.core.attribute.service.v1.AttributeMetadata;
 import org.hypertrace.core.attribute.service.v1.AttributeSource;
 import org.hypertrace.gateway.service.common.util.TimeRangeFilterUtil;
@@ -291,8 +293,16 @@ public class ExecutionTreeBuilder {
       return childNode;
     }
     // Add ordering and pagination node
+    List<OrderByExpression> selectionOrderByExpressions =
+        executionContext.getSourceToSelectionOrderByExpressionMap().values().stream()
+            .flatMap(Collection::stream)
+            .collect(Collectors.toList());
+    List<OrderByExpression> metricOrderByExpressions =
+        executionContext.getSourceToMetricOrderByExpressionMap().values().stream()
+            .flatMap(Collection::stream)
+            .collect(Collectors.toList());
     List<OrderByExpression> orderByExpressions =
-        executionContext.getSourceToOrderByExpressionMap().values().stream()
+        Stream.of(selectionOrderByExpressions, metricOrderByExpressions)
             .flatMap(Collection::stream)
             .collect(Collectors.toList());
     if (orderByExpressions.isEmpty() && executionContext.getEntitiesRequest().getLimit() == 0) {

@@ -37,6 +37,7 @@ public class ExecutionTreeUtilsTest {
         createSourceToExpressionsMap(List.of("QS")),
         createSourceToExpressionsMap(List.of("QS")),
         createSourceToExpressionsMap(List.of("QS")),
+        createSourceToExpressionsMap(List.of("QS")),
         Map.of(
             "API.id", Set.of(QS.name()),
             "API.name", Set.of(QS.name()),
@@ -57,6 +58,7 @@ public class ExecutionTreeUtilsTest {
             createSourceToExpressionsMap(List.of("QS", "EDS")),
             createSourceToExpressionsMap(List.of("QS")),
             createSourceToExpressionsMap(List.of("QS")),
+            createSourceToExpressionsMap(List.of("QS")),
             Map.of(
                 "API.id", Set.of(QS.name()),
                 "API.name", Set.of(QS.name()),
@@ -72,6 +74,7 @@ public class ExecutionTreeUtilsTest {
         createSourceToExpressionsMap(List.of("QS")),
         createSourceToExpressionsMap(List.of("QS")),
         createSourceToExpressionsMap(List.of("EDS")),
+        createSourceToExpressionsMap(List.of("QS")),
         createSourceToExpressionsMap(List.of("QS")),
         createSourceToExpressionsMap(List.of("QS")),
         Map.of(
@@ -93,6 +96,7 @@ public class ExecutionTreeUtilsTest {
         createSourceToExpressionsMap(List.of("QS")),
         createSourceToExpressionsMap(List.of()),
         createSourceToExpressionsMap(List.of("QS")),
+        createSourceToExpressionsMap(List.of("QS")),
         createSourceToExpressionsMap(List.of()),
         Map.of(
             "API.id", Set.of(QS.name()),
@@ -109,6 +113,7 @@ public class ExecutionTreeUtilsTest {
   @Test
   public void testGetSingleSourceForAllAttributes_allEmptySourceExpressionMapKeySetsAndAttributes() {
     ExecutionContext executionContext = getMockExecutionContext(
+        createSourceToExpressionsMap(List.of()),
         createSourceToExpressionsMap(List.of()),
         createSourceToExpressionsMap(List.of()),
         createSourceToExpressionsMap(List.of()),
@@ -374,7 +379,8 @@ public class ExecutionTreeUtilsTest {
   private ExecutionContext getMockExecutionContext(Map<String, List<Expression>> sourceToSelectionExpressionMap,
                                                    Map<String, List<Expression>> sourceToMetricExpressionMap,
                                                    Map<String, List<TimeAggregation>> sourceToTimeAggregationMap,
-                                                   Map<String, List<OrderByExpression>> sourceToOrderByExpressionMap,
+                                                   Map<String, List<OrderByExpression>> sourceToSelectionOrderByExpressionMap,
+                                                   Map<String, List<OrderByExpression>> sourceToMetricOrderByExpressionMap,
                                                    Map<String, List<Expression>> sourceToFilterExpressionMap,
                                                    Map<String, Set<String>> attributeToSourcesMap
                                                    ) {
@@ -383,7 +389,8 @@ public class ExecutionTreeUtilsTest {
     when(executionContext.getSourceToSelectionExpressionMap()).thenReturn(sourceToSelectionExpressionMap);
     when(executionContext.getSourceToMetricExpressionMap()).thenReturn(sourceToMetricExpressionMap);
     when(executionContext.getSourceToTimeAggregationMap()).thenReturn(sourceToTimeAggregationMap);
-    when(executionContext.getSourceToOrderByExpressionMap()).thenReturn(sourceToOrderByExpressionMap);
+    when(executionContext.getSourceToSelectionOrderByExpressionMap()).thenReturn(sourceToSelectionOrderByExpressionMap);
+    when(executionContext.getSourceToMetricOrderByExpressionMap()).thenReturn(sourceToMetricOrderByExpressionMap);
     when(executionContext.getSourceToFilterExpressionMap()).thenReturn(sourceToFilterExpressionMap);
 
     when(executionContext.getAllAttributesToSourcesMap()).thenReturn(attributeToSourcesMap);

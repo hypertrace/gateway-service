@@ -77,13 +77,8 @@ public class ExecutionContextBuilderVisitorTest {
     when(executionContext.getSourceToSelectionAttributeMap())
         .thenReturn(Map.of("QS", Set.of("API.id"), "EDS", Set.of("API.id", "API.name")));
 
-    when(executionContext.getSourceToOrderByExpressionMap())
-        .thenReturn(
-            Map.of(
-                "QS",
-                List.of(createOrderByExpressionFromColumnName("API.id")),
-                "EDS",
-                List.of(createOrderByExpressionFromColumnName("API.name"))));
+    when(executionContext.getSourceToSelectionOrderByAttributeMap())
+        .thenReturn(Map.of("QS", Set.of("API.id"), "EDS", Set.of("API.name")));
 
     when(executionContext.getPendingSelectionSources()).thenReturn(Set.of("EDS"));
     when(executionContext.getPendingSelectionSourcesForOrderBy()).thenReturn(Set.of("EDS"));
@@ -102,29 +97,12 @@ public class ExecutionContextBuilderVisitorTest {
 
     // API.id -> ["QS", "EDS"]
     // API.name -> ["QS", "EDS"]
-    when(executionContext.getSourceToSelectionExpressionMap())
-        .thenReturn(
-            Map.of(
-                "QS",
-                List.of(
-                    createExpressionFromColumnName("API.id"),
-                    createExpressionFromColumnName("API.name")),
-                "EDS",
-                List.of(
-                    createExpressionFromColumnName("API.id"),
-                    createExpressionFromColumnName("API.name"))));
-
     when(executionContext.getSourceToSelectionAttributeMap())
         .thenReturn(
             Map.of("QS", Set.of("API.id", "API.name"), "EDS", Set.of("API.id", "API.name")));
 
-    when(executionContext.getSourceToOrderByExpressionMap())
-        .thenReturn(
-            Map.of(
-                "QS",
-                List.of(createOrderByExpressionFromColumnName("API.id")),
-                "EDS",
-                List.of(createOrderByExpressionFromColumnName("API.status"))));
+    when(executionContext.getSourceToSelectionOrderByAttributeMap())
+        .thenReturn(Map.of("QS", Set.of("API.id"), "EDS", Set.of("API.status")));
 
     when(executionContext.getPendingSelectionSources()).thenReturn(Set.of("EDS"));
     when(executionContext.getPendingSelectionSourcesForOrderBy()).thenReturn(Set.of("EDS"));
@@ -144,20 +122,6 @@ public class ExecutionContextBuilderVisitorTest {
     // API.id -> ["QS", "EDS"]
     // API.name -> ["QS", "EDS"]
     // API.status -> ["AS"]
-    when(executionContext.getSourceToSelectionExpressionMap())
-        .thenReturn(
-            Map.of(
-                "QS",
-                List.of(
-                    createExpressionFromColumnName("API.id"),
-                    createExpressionFromColumnName("API.name")),
-                "EDS",
-                List.of(
-                    createExpressionFromColumnName("API.id"),
-                    createExpressionFromColumnName("API.name")),
-                "AS",
-                List.of(createExpressionFromColumnName("API.status"))));
-
     when(executionContext.getSourceToSelectionAttributeMap())
         .thenReturn(
             Map.of(
@@ -168,13 +132,8 @@ public class ExecutionContextBuilderVisitorTest {
                 "AS",
                 Set.of("API.status")));
 
-    when(executionContext.getSourceToOrderByExpressionMap())
-        .thenReturn(
-            Map.of(
-                "EDS",
-                List.of(createOrderByExpressionFromColumnName("API.name")),
-                "AS",
-                List.of(createOrderByExpressionFromColumnName("API.status"))));
+    when(executionContext.getSourceToSelectionOrderByAttributeMap())
+        .thenReturn(Map.of("EDS", Set.of("API.name"), "AS", Set.of("API.status")));
 
     when(executionContext.getPendingSelectionSources()).thenReturn(Set.of("EDS", "AS"));
     when(executionContext.getPendingSelectionSourcesForOrderBy()).thenReturn(Set.of("EDS", "AS"));

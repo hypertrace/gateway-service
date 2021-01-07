@@ -3,22 +3,17 @@ package org.hypertrace.gateway.service.entity.query.visitor;
 import org.hypertrace.gateway.service.entity.query.AndNode;
 import org.hypertrace.gateway.service.entity.query.DataFetcherNode;
 import org.hypertrace.gateway.service.entity.query.ExecutionContext;
-import org.hypertrace.gateway.service.entity.query.ExecutionTreeUtils;
 import org.hypertrace.gateway.service.entity.query.NoOpNode;
 import org.hypertrace.gateway.service.entity.query.OrNode;
 import org.hypertrace.gateway.service.entity.query.PaginateOnlyNode;
 import org.hypertrace.gateway.service.entity.query.SelectionNode;
 import org.hypertrace.gateway.service.entity.query.SortAndPaginateNode;
 import org.hypertrace.gateway.service.entity.query.TotalFetcherNode;
-import org.hypertrace.gateway.service.v1.common.Expression;
-import org.hypertrace.gateway.service.v1.common.OrderByExpression;
 
 import java.util.Collections;
 import java.util.HashSet;
-import java.util.List;
 import java.util.Map;
 import java.util.Set;
-import java.util.stream.Collectors;
 
 /**
  * Visitor for capturing the different sources corresponding to the expressions in the execution
@@ -44,15 +39,17 @@ public class ExecutionContextBuilderVisitor implements Visitor<Void> {
    * <p>If api.id, api.name has already been fetched from QS, there is no point fetching the same
    * set of attributes from EDS
    *
-   * <p>Algorithm: - Gather the set of the attributes(say A) fetched from the {@link
-   * DataFetcherNode} source
+   * <p>Algorithm:
    *
-   * <p>- for each pending selection source S from {@link
+   * <p>Gather the set of the attributes(say A) fetched from the {@link DataFetcherNode} source
+   *
+   * <p>for each pending selection source S from {@link
    * ExecutionContext#getPendingSelectionSources()} and {@link
    * ExecutionContext#getPendingMetricAggregationSourcesForOrderBy()}, get all the selection
-   * attributes for the source - if the selection attributes for that source are already present in
-   * the set A, remove this selection source using {@link
-   * ExecutionContext#removePendingSelectionSource(String)} and {@link
+   * attributes for the source
+   *
+   * <p>if the selection attributes for that source are already present in the set A, remove this
+   * selection source using {@link ExecutionContext#removePendingSelectionSource(String)} and {@link
    * ExecutionContext#removePendingSelectionSourceForOrderBy(String)}
    */
   @Override
@@ -75,7 +72,7 @@ public class ExecutionContextBuilderVisitor implements Visitor<Void> {
           getRedundantPendingSelectionSources(
               fetchedAttributes,
               executionContext.getPendingSelectionSources(),
-              executionContext.getSourceToSelectionExpressionMap());
+              executionContext.getSourceToSelectionAttributeMap());
       redundantPendingSelectionSources.forEach(executionContext::removePendingSelectionSource);
     }
 
@@ -84,14 +81,7 @@ public class ExecutionContextBuilderVisitor implements Visitor<Void> {
           getRedundantPendingSelectionSources(
               fetchedAttributes,
               executionContext.getPendingSelectionSourcesForOrderBy(),
-              executionContext.getSourceToOrderByExpressionMap().entrySet().stream()
-                  .collect(
-                      Collectors.toMap(
-                          Map.Entry::getKey,
-                          entry ->
-                              entry.getValue().stream()
-                                  .map(OrderByExpression::getExpression)
-                                  .collect(Collectors.toList()))));
+              executionContext.getSourceToSelectionOrderByAttributeMap());
       redundantPendingSelectionSourcesForOrderBy.forEach(
           executionContext::removePendingSelectionSourceForOrderBy);
     }
@@ -139,14 +129,10 @@ public class ExecutionContextBuilderVisitor implements Visitor<Void> {
   private Set<String> getRedundantPendingSelectionSources(
       Set<String> fetchedAttributes,
       Set<String> pendingAttributeSelectionSources,
-      Map<String, List<Expression>> sourceToSelectionExpressionMap) {
+      Map<String, Set<String>> sourceToAttributeSelectionMap) {
     if (pendingAttributeSelectionSources.isEmpty()) {
       return Collections.emptySet();
     }
-
-    // map of source to attribute selection map
-    Map<String, Set<String>> sourceToAttributeSelectionMap =
-        ExecutionTreeUtils.buildSourceToAttributesMap(sourceToSelectionExpressionMap);
 
     Set<String> redundantPendingSelectionSources = new HashSet<>();
     for (String pendingAttributeSelectionSource : pendingAttributeSelectionSources) {
