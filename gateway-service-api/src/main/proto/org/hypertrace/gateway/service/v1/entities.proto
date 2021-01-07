@@ -10,6 +10,7 @@ import "org/hypertrace/gateway/service/v1/gateway_query.proto";
 
 // Entity + metric data
 message Entity {
+  string id = 1;
   string entity_type = 2;
   map<string, org.hypertrace.gateway.service.v1.common.Value> attribute = 4;
   map<string, org.hypertrace.gateway.service.v1.common.AggregatedMetricValue> metric = 5;

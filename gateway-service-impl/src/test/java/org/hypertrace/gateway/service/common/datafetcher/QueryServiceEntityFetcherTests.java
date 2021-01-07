@@ -6,14 +6,11 @@ import static org.hypertrace.gateway.service.common.EntitiesRequestAndResponseUt
 import static org.hypertrace.gateway.service.common.EntitiesRequestAndResponseUtils.buildTimeAggregation;
 import static org.hypertrace.gateway.service.common.EntitiesRequestAndResponseUtils.compareEntityFetcherResponses;
 import static org.hypertrace.gateway.service.common.EntitiesRequestAndResponseUtils.generateEQFilter;
-import static org.hypertrace.gateway.service.common.EntitiesRequestAndResponseUtils.getAggregatedMetricValue;
 import static org.hypertrace.gateway.service.common.EntitiesRequestAndResponseUtils.getStringValue;
 import static org.hypertrace.gateway.service.common.QueryServiceRequestAndResponseUtils.createQsAggregationExpression;
-import static org.hypertrace.gateway.service.common.QueryServiceRequestAndResponseUtils.createQsOrderBy;
 import static org.hypertrace.gateway.service.common.QueryServiceRequestAndResponseUtils.createQsRequestFilter;
 import static org.hypertrace.gateway.service.common.QueryServiceRequestAndResponseUtils.getResultSetChunk;
 import static org.hypertrace.gateway.service.common.converters.QueryRequestUtil.createColumnExpression;
-import static org.hypertrace.gateway.service.common.converters.QueryRequestUtil.createCountByColumnSelection;
 import static org.hypertrace.gateway.service.common.converters.QueryRequestUtil.createStringFilter;
 import static org.hypertrace.gateway.service.v1.common.Operator.AND;
 import static org.junit.jupiter.api.Assertions.assertEquals;
@@ -197,6 +194,7 @@ public class QueryServiceEntityFetcherTests {
     Map<EntityKey, Builder> expectedEntityKeyBuilderResponseMap = Map.of(
         EntityKey.of("api-id-0"), Entity.newBuilder()
                                         .setEntityType(AttributeScope.API.name())
+                                        .setId("api-id-0")
                                         .putAttribute(API_NAME_ATTR, getStringValue("api-0"))
                                         .putAttribute(API_ID_ATTR, getStringValue("api-id-0"))
     );
