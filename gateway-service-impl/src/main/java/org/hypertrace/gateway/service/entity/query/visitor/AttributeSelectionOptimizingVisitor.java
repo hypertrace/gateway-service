@@ -1,5 +1,6 @@
 package org.hypertrace.gateway.service.entity.query.visitor;
 
+import com.google.common.collect.Iterables;
 import com.google.common.collect.Sets;
 import org.hypertrace.gateway.service.entity.query.AndNode;
 import org.hypertrace.gateway.service.entity.query.DataFetcherNode;
@@ -13,6 +14,7 @@ import org.hypertrace.gateway.service.entity.query.SortAndPaginateNode;
 import org.hypertrace.gateway.service.entity.query.TotalFetcherNode;
 
 import java.util.Collections;
+import java.util.HashSet;
 import java.util.Map;
 import java.util.Set;
 import java.util.stream.Collectors;
@@ -82,6 +84,12 @@ public class AttributeSelectionOptimizingVisitor implements Visitor<Set<String>>
   public Set<String> visit(SelectionNode selectionNode) {
     // set of sources from which the attributes have already been fetched
     Set<String> childAttributeSelectionSources = selectionNode.getChildNode().acceptVisitor(this);
+
+    Set<String> attributeSelectionSources = selectionNode.getAttrSelectionSources();
+    if (attributeSelectionSources.isEmpty()) {
+      return childAttributeSelectionSources;
+    }
+
     // map of selection attributes to sources map
     Map<String, Set<String>> attributeSelectionToSourceMap =
         ExecutionTreeUtils.buildAttributeToSourcesMapFromSourceToExpressionsMap(
@@ -92,8 +100,7 @@ public class AttributeSelectionOptimizingVisitor implements Visitor<Set<String>>
         attributeSelectionToSourceMap.entrySet().stream()
             .filter(
                 entry ->
-                    entry.getValue().containsAll(childAttributeSelectionSources)
-                        || childAttributeSelectionSources.containsAll(entry.getValue()))
+                    !Sets.intersection(entry.getValue(), childAttributeSelectionSources).isEmpty())
             .map(Map.Entry::getKey)
             .collect(Collectors.toSet());
 
@@ -103,19 +110,22 @@ public class AttributeSelectionOptimizingVisitor implements Visitor<Set<String>>
         ExecutionTreeUtils.buildSourceToAttributesMap(
             executionContext.getSourceToSelectionExpressionMap());
 
-    Set<String> attributeSelectionSources = selectionNode.getAttrSelectionSources();
+    Set<String> retainedAttributeSelectionSources = new HashSet<>();
     for (String source: attributeSelectionSources) {
       Set<String> selectionAttributesFromSource = sourceToAttributeSelectionMap.get(source);
       // if all the attributes from the selection source have already been fetched,
       // remove the source from selection node, so that it does not fetch the same
       // set of attributes again
-      if (attributesFromChildAttributeSources.containsAll(selectionAttributesFromSource)) {
-        selectionNode.removeAttrSelectionSource(source);
+      if (!attributesFromChildAttributeSources.containsAll(selectionAttributesFromSource)) {
+        retainedAttributeSelectionSources.add(source);
       }
     }
 
+    selectionNode.setAttrSelectionSources(retainedAttributeSelectionSources);
+
     // return all the set of sources for which the attributes have been fetched
-    return childAttributeSelectionSources;
+    return Sets.newHashSet(
+        Iterables.concat(childAttributeSelectionSources, attributeSelectionSources));
   }
 
   @Override
