@@ -198,7 +198,6 @@ public class EntityServiceTest extends AbstractGatewayServiceTest {
                     .build()));
   }
 
-  @Disabled
   @Test
   public void testGetEntitiesOnlySelectFromSingleSourceWithTimeRangeShouldUseQueryService() {
     long endTime = System.currentTimeMillis();

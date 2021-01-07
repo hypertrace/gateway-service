@@ -24,7 +24,7 @@ import org.hypertrace.gateway.service.v1.common.Operator;
  * <p>If there are multiple filter conditions for the same source, this visitor tries to optimize
  * the queries being made to the respective sources
  */
-public class OptimizingVisitor implements Visitor<QueryNode> {
+public class FilterOptimizingVisitor implements Visitor<QueryNode> {
 
   @Override
   public QueryNode visit(DataFetcherNode dataFetcherNode) {

@@ -1,5 +1,7 @@
 package org.hypertrace.gateway.service.entity.query;
 
+import static org.hypertrace.core.attribute.service.v1.AttributeSource.EDS;
+import static org.hypertrace.core.attribute.service.v1.AttributeSource.QS;
 import static org.hypertrace.gateway.service.common.EntitiesRequestAndResponseUtils.buildExpression;
 import static org.hypertrace.gateway.service.common.EntitiesRequestAndResponseUtils.generateAndOrNotFilter;
 import static org.hypertrace.gateway.service.common.EntitiesRequestAndResponseUtils.generateEQFilter;
@@ -12,7 +14,7 @@ import java.util.Map;
 import java.util.Optional;
 import java.util.Set;
 import java.util.stream.Collectors;
-import org.hypertrace.core.attribute.service.v1.AttributeSource;
+
 import org.hypertrace.gateway.service.v1.common.Expression;
 import org.hypertrace.gateway.service.v1.common.Filter;
 import org.hypertrace.gateway.service.v1.common.Operator;
@@ -35,10 +37,10 @@ public class ExecutionTreeUtilsTest {
         createSourceToExpressionsMap(List.of("QS")),
         createSourceToExpressionsMap(List.of("QS")),
         Map.of(
-            "API.id", Set.of(AttributeSource.QS),
-            "API.name", Set.of(AttributeSource.QS),
-            "API.duration", Set.of(AttributeSource.QS),
-            "API.startTime", Set.of(AttributeSource.QS)
+            "API.id", Set.of(QS.name()),
+            "API.name", Set.of(QS.name()),
+            "API.duration", Set.of(QS.name()),
+            "API.startTime", Set.of(QS.name())
             )
     );
 
@@ -47,19 +49,18 @@ public class ExecutionTreeUtilsTest {
 
   @Test
   public void testGetSingleSourceForAllAttributes_someSourceExpressionMapKeySetsHaveMultipleSources() {
-    ExecutionContext executionContext = getMockExecutionContext(
-        createSourceToExpressionsMap(List.of("QS")),
-        createSourceToExpressionsMap(List.of("QS")),
-        createSourceToExpressionsMap(List.of("QS", "EDS")),
-        createSourceToExpressionsMap(List.of("QS")),
-        createSourceToExpressionsMap(List.of("QS")),
-        Map.of(
-            "API.id", Set.of(AttributeSource.QS),
-            "API.name", Set.of(AttributeSource.QS),
-            "API.duration", Set.of(AttributeSource.QS, AttributeSource.EDS),
-            "API.startTime", Set.of(AttributeSource.QS)
-        )
-    );
+    ExecutionContext executionContext =
+        getMockExecutionContext(
+            createSourceToExpressionsMap(List.of("QS")),
+            createSourceToExpressionsMap(List.of("QS")),
+            createSourceToExpressionsMap(List.of("QS", "EDS")),
+            createSourceToExpressionsMap(List.of("QS")),
+            createSourceToExpressionsMap(List.of("QS")),
+            Map.of(
+                "API.id", Set.of(QS.name()),
+                "API.name", Set.of(QS.name()),
+                "API.duration", Set.of(QS.name(), EDS.name()),
+                "API.startTime", Set.of(QS.name())));
 
     Assertions.assertEquals(Optional.of("QS"), ExecutionTreeUtils.getSingleSourceForAllAttributes(executionContext));
   }
@@ -73,10 +74,10 @@ public class ExecutionTreeUtilsTest {
         createSourceToExpressionsMap(List.of("QS")),
         createSourceToExpressionsMap(List.of("QS")),
         Map.of(
-            "API.id", Set.of(AttributeSource.QS),
-            "API.name", Set.of(AttributeSource.QS),
-            "API.duration", Set.of(AttributeSource.EDS),
-            "API.startTime", Set.of(AttributeSource.QS)
+            "API.id", Set.of(QS.name()),
+            "API.name", Set.of(QS.name()),
+            "API.duration", Set.of(EDS.name()),
+            "API.startTime", Set.of(QS.name())
         )
     );
 
@@ -93,10 +94,10 @@ public class ExecutionTreeUtilsTest {
         createSourceToExpressionsMap(List.of("QS")),
         createSourceToExpressionsMap(List.of()),
         Map.of(
-            "API.id", Set.of(AttributeSource.QS),
-            "API.name", Set.of(AttributeSource.QS),
+            "API.id", Set.of(QS.name()),
+            "API.name", Set.of(QS.name()),
             "API.duration", Set.of(),
-            "API.startTime", Set.of(AttributeSource.QS)
+            "API.startTime", Set.of(QS.name())
         )
     );
 
@@ -374,7 +375,7 @@ public class ExecutionTreeUtilsTest {
                                                    Map<String, List<TimeAggregation>> sourceToTimeAggregationMap,
                                                    Map<String, List<OrderByExpression>> sourceToOrderByExpressionMap,
                                                    Map<String, List<Expression>> sourceToFilterExpressionMap,
-                                                   Map<String, Set<AttributeSource>> attributeToSourcesMap
+                                                   Map<String, Set<String>> attributeToSourcesMap
                                                    ) {
     ExecutionContext executionContext = mock(ExecutionContext.class);
 
@@ -384,7 +385,7 @@ public class ExecutionTreeUtilsTest {
     when(executionContext.getSourceToOrderByExpressionMap()).thenReturn(sourceToOrderByExpressionMap);
     when(executionContext.getSourceToFilterExpressionMap()).thenReturn(sourceToFilterExpressionMap);
 
-    when(executionContext.getAttributeToSourcesMap()).thenReturn(attributeToSourcesMap);
+    when(executionContext.getAllAttributesToSourcesMap()).thenReturn(attributeToSourcesMap);
 
     return executionContext;
   }

@@ -33,6 +33,10 @@ public class SelectionNode implements QueryNode {
     return attrSelectionSources;
   }
 
+  public void removeAttrSelectionSource(String source) {
+    attrSelectionSources.remove(source);
+  }
+
   public Set<String> getAggMetricSelectionSources() {
     return aggMetricSelectionSources;
   }

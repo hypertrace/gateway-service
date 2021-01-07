@@ -15,6 +15,7 @@ import org.hypertrace.core.attribute.service.v1.AttributeMetadata;
 import org.hypertrace.core.attribute.service.v1.AttributeSource;
 import org.hypertrace.gateway.service.common.AttributeMetadataProvider;
 import org.hypertrace.gateway.service.common.util.AttributeMetadataUtil;
+import org.hypertrace.gateway.service.common.util.ExpressionReader;
 import org.hypertrace.gateway.service.common.util.OrderByUtil;
 import org.hypertrace.gateway.service.entity.EntitiesRequestContext;
 import org.hypertrace.gateway.service.entity.config.EntityIdColumnsConfigs;
@@ -56,7 +57,8 @@ public class ExecutionContext {
   private final Set<String> pendingMetricAggregationSourcesForOrderBy = new HashSet<>();
   private boolean sortAndPaginationNodeAdded = false;
 
-  private final Map<String, Set<AttributeSource>> attributeToSourcesMap = new HashMap<>();
+  // map of filter, selections (attribute, metrics, aggregations), order by attributes to source map
+  private final Map<String, Set<String>> allAttributesToSourcesMap = new HashMap<>();
 
   /** Following fields set during the query execution phase * */
   // Total number of entities. Set during the execution before pagination
@@ -194,8 +196,8 @@ public class ExecutionContext {
     return sourceToFilterExpressionMap;
   }
 
-  public Map<String, Set<AttributeSource>> getAttributeToSourcesMap() {
-    return attributeToSourcesMap;
+  public Map<String, Set<String>> getAllAttributesToSourcesMap() {
+    return allAttributesToSourcesMap;
   }
 
   private void buildSourceToExpressionMaps() {
@@ -296,14 +298,15 @@ public class ExecutionContext {
         attributeMetadataProvider.getAttributesMetadata(
             this.entitiesRequestContext, entitiesRequest.getEntityType());
     for (Expression expression : expressions) {
-      Set<String> columnNames = new HashSet<>();
-      extractColumn(columnNames, expression);
+      Set<String> columnNames = ExpressionReader.extractColumns(expression);
       Set<AttributeSource> sources =
           Arrays.stream(AttributeSource.values()).collect(Collectors.toSet());
       for (String columnName : columnNames) {
         List<AttributeSource> sourcesList = attrNameToMetadataMap.get(columnName).getSourcesList();
         sources.retainAll(sourcesList);
-        attributeToSourcesMap.computeIfAbsent(columnName, v -> new HashSet<>()).addAll(sourcesList);
+        allAttributesToSourcesMap
+            .computeIfAbsent(columnName, v -> new HashSet<>())
+            .addAll(sourcesList.stream().map(Enum::name).collect(Collectors.toList()));
       }
       if (sources.isEmpty()) {
         LOG.error("Skipping Expression: {}. No source found", expression);
@@ -316,25 +319,6 @@ public class ExecutionContext {
       }
     }
     return ImmutableMap.<String, List<Expression>>builder().putAll(sourceToExpressionMap).build();
-  }
-
-  private void extractColumn(Set<String> columns, Expression expression) {
-    switch (expression.getValueCase()) {
-      case COLUMNIDENTIFIER:
-        String columnName = expression.getColumnIdentifier().getColumnName();
-        columns.add(columnName);
-        break;
-      case FUNCTION:
-        for (Expression exp : expression.getFunction().getArgumentsList()) {
-          extractColumn(columns, exp);
-        }
-        break;
-      case ORDERBY:
-        extractColumn(columns, expression.getOrderBy().getExpression());
-      case LITERAL:
-      case VALUE_NOT_SET:
-        break;
-    }
   }
 
   @Override

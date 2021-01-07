@@ -1,10 +1,15 @@
 package org.hypertrace.gateway.service.entity.query;
 
+import java.util.Collection;
+import java.util.HashMap;
 import java.util.HashSet;
 import java.util.List;
+import java.util.Map;
 import java.util.Optional;
 import java.util.Set;
-import org.hypertrace.core.attribute.service.v1.AttributeSource;
+import java.util.stream.Collectors;
+
+import org.hypertrace.gateway.service.common.util.ExpressionReader;
 import org.hypertrace.gateway.service.v1.common.Expression;
 import org.hypertrace.gateway.service.v1.common.Filter;
 import org.hypertrace.gateway.service.v1.common.Operator;
@@ -60,7 +65,7 @@ public class ExecutionTreeUtils {
    */
   private static Optional<String> getSingleSourceFromAttributeSourceValueSets(ExecutionContext executionContext) {
     // Compute the intersection of all sources in attributesToSourcesMap and check if it's size is 1
-    Set<AttributeSource> attributeSourcesIntersection = executionContext.getAttributeToSourcesMap().values().stream()
+    Set<String> attributeSourcesIntersection = executionContext.getAllAttributesToSourcesMap().values().stream()
         .filter((sourcesSet) -> !sourcesSet.isEmpty())
         .findFirst()
         .orElse(Set.of());
@@ -71,13 +76,13 @@ public class ExecutionTreeUtils {
 
     attributeSourcesIntersection = new HashSet<>(attributeSourcesIntersection);
 
-    for (Set<AttributeSource> attributeSourcesSet : executionContext.getAttributeToSourcesMap().values()) {
+    for (Set<String> attributeSourcesSet : executionContext.getAllAttributesToSourcesMap().values()) {
       // retainAll() for sets computes the intersections.
       attributeSourcesIntersection.retainAll(attributeSourcesSet);
     }
 
     if (attributeSourcesIntersection.size() == 1) {
-      return attributeSourcesIntersection.stream().map(Enum::name).findFirst();
+      return attributeSourcesIntersection.stream().findFirst();
     } else {
       return Optional.empty();
     }
@@ -178,5 +183,47 @@ public class ExecutionTreeUtils {
     }
 
     return false;
+  }
+
+  public static Map<String, Set<String>> buildSourceToAttributesMap(
+      Map<String, List<Expression>> sourceToExpressionMap) {
+    return sourceToExpressionMap.entrySet().stream()
+        .collect(
+            Collectors.toMap(
+                Map.Entry::getKey,
+                entry ->
+                    entry.getValue().stream()
+                        .map(ExpressionReader::extractColumns)
+                        .flatMap(Collection::stream)
+                        .collect(Collectors.toSet())));
+  }
+
+  public static Map<String, Set<String>> buildAttributeToSourcesMapFromSourceToAttributesMap(
+      Map<String, Set<String>> sourceToAttributesMap) {
+    Map<String, Set<String>> attributeToSourceMap = new HashMap<>();
+    for (Map.Entry<String, Set<String>> entry : sourceToAttributesMap.entrySet()) {
+      String source = entry.getKey();
+      for (String attribute : entry.getValue()) {
+        attributeToSourceMap.computeIfAbsent(attribute, k -> new HashSet<>()).add(source);
+      }
+    }
+    return attributeToSourceMap;
+  }
+
+  public static Map<String, Set<String>> buildAttributeToSourcesMapFromSourceToExpressionsMap(
+      Map<String, List<Expression>> sourceToExpressionMap) {
+    Map<String, Set<String>> attributeToSourceMap = new HashMap<>();
+
+    for (Map.Entry<String, List<Expression>> entry : sourceToExpressionMap.entrySet()) {
+      String source = entry.getKey();
+      List<Expression> expressions = entry.getValue();
+      for (Expression expression : expressions) {
+        Set<String> columnNames = ExpressionReader.extractColumns(expression);
+        for (String columnName : columnNames) {
+          attributeToSourceMap.computeIfAbsent(columnName, k -> new HashSet<>()).add(source);
+        }
+      }
+    }
+    return attributeToSourceMap;
   }
 }

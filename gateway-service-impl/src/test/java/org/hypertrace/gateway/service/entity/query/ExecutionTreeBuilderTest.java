@@ -33,7 +33,7 @@ import org.hypertrace.gateway.service.common.AttributeMetadataProvider;
 import org.hypertrace.gateway.service.common.RequestContext;
 import org.hypertrace.gateway.service.entity.EntitiesRequestContext;
 import org.hypertrace.gateway.service.entity.config.EntityIdColumnsConfigs;
-import org.hypertrace.gateway.service.entity.query.visitor.OptimizingVisitor;
+import org.hypertrace.gateway.service.entity.query.visitor.FilterOptimizingVisitor;
 import org.hypertrace.gateway.service.v1.common.Filter;
 import org.hypertrace.gateway.service.v1.common.FunctionType;
 import org.hypertrace.gateway.service.v1.common.Operator;
@@ -148,7 +148,7 @@ public class ExecutionTreeBuilderTest {
     ExecutionTreeBuilder executionTreeBuilder = getExecutionTreeBuilderForOptimizedFilterTests();
     Filter filter = generateEQFilter(API_API_ID_ATTR, UUID.randomUUID().toString());
     QueryNode queryNode = executionTreeBuilder.buildFilterTree(filter);
-    QueryNode optimizedQueryNode = queryNode.acceptVisitor(new OptimizingVisitor());
+    QueryNode optimizedQueryNode = queryNode.acceptVisitor(new FilterOptimizingVisitor());
     assertNotNull(optimizedQueryNode);
     assertTrue(optimizedQueryNode instanceof DataFetcherNode);
     assertEquals(((DataFetcherNode) optimizedQueryNode).getFilter(), filter);
@@ -167,7 +167,7 @@ public class ExecutionTreeBuilderTest {
       QueryNode queryNode = executionTreeBuilder.buildFilterTree(filter);
       assertNotNull(queryNode);
       assertTrue(queryNode instanceof AndNode);
-      QueryNode optimizedNode = queryNode.acceptVisitor(new OptimizingVisitor());
+      QueryNode optimizedNode = queryNode.acceptVisitor(new FilterOptimizingVisitor());
       assertNotNull(optimizedNode);
       assertTrue(optimizedNode instanceof DataFetcherNode);
       assertEquals(filter, ((DataFetcherNode) optimizedNode).getFilter());
@@ -183,7 +183,7 @@ public class ExecutionTreeBuilderTest {
       QueryNode queryNode = executionTreeBuilder.buildFilterTree(filter);
       assertNotNull(queryNode);
       assertTrue(queryNode instanceof OrNode);
-      QueryNode optimizedNode = queryNode.acceptVisitor(new OptimizingVisitor());
+      QueryNode optimizedNode = queryNode.acceptVisitor(new FilterOptimizingVisitor());
       assertNotNull(optimizedNode);
       assertTrue(optimizedNode instanceof DataFetcherNode);
       assertEquals(filter, ((DataFetcherNode) optimizedNode).getFilter());
@@ -209,7 +209,7 @@ public class ExecutionTreeBuilderTest {
       QueryNode queryNode = executionTreeBuilder.buildFilterTree(filter);
       assertNotNull(queryNode);
       assertTrue(queryNode instanceof AndNode);
-      QueryNode optimizedNode = queryNode.acceptVisitor(new OptimizingVisitor());
+      QueryNode optimizedNode = queryNode.acceptVisitor(new FilterOptimizingVisitor());
       assertNotNull(optimizedNode);
       assertTrue(optimizedNode instanceof AndNode);
       List<QueryNode> queryNodeList = ((AndNode) optimizedNode).getChildNodes();
@@ -230,7 +230,7 @@ public class ExecutionTreeBuilderTest {
       QueryNode queryNode = executionTreeBuilder.buildFilterTree(filter);
       assertNotNull(queryNode);
       assertTrue(queryNode instanceof OrNode);
-      QueryNode optimizedNode = queryNode.acceptVisitor(new OptimizingVisitor());
+      QueryNode optimizedNode = queryNode.acceptVisitor(new FilterOptimizingVisitor());
       assertNotNull(optimizedNode);
       assertTrue(optimizedNode instanceof OrNode);
       List<QueryNode> queryNodeList = ((OrNode) optimizedNode).getChildNodes();
@@ -275,7 +275,7 @@ public class ExecutionTreeBuilderTest {
       Filter filter = generateAndOrNotFilter(Operator.AND, level2Filter, apiNameFilter);
       QueryNode queryNode = executionTreeBuilder.buildFilterTree(filter);
       assertNotNull(queryNode);
-      QueryNode optimizedNode = queryNode.acceptVisitor(new OptimizingVisitor());
+      QueryNode optimizedNode = queryNode.acceptVisitor(new FilterOptimizingVisitor());
       assertNotNull(optimizedNode);
       assertTrue(optimizedNode instanceof AndNode);
       List<QueryNode> queryNodeList = ((AndNode) optimizedNode).getChildNodes();
@@ -296,7 +296,7 @@ public class ExecutionTreeBuilderTest {
       Filter filter = generateAndOrNotFilter(Operator.AND, level2Filter, startTimeFilter);
       QueryNode queryNode = executionTreeBuilder.buildFilterTree(filter);
       assertNotNull(queryNode);
-      QueryNode optimizedNode = queryNode.acceptVisitor(new OptimizingVisitor());
+      QueryNode optimizedNode = queryNode.acceptVisitor(new FilterOptimizingVisitor());
       assertNotNull(optimizedNode);
       assertTrue(optimizedNode instanceof AndNode);
       List<QueryNode> queryNodeList = ((AndNode) optimizedNode).getChildNodes();
@@ -319,7 +319,7 @@ public class ExecutionTreeBuilderTest {
       Filter filter = generateAndOrNotFilter(Operator.AND, level2Filter, apiNameFilter);
       QueryNode queryNode = executionTreeBuilder.buildFilterTree(filter);
       assertNotNull(queryNode);
-      QueryNode optimizedNode = queryNode.acceptVisitor(new OptimizingVisitor());
+      QueryNode optimizedNode = queryNode.acceptVisitor(new FilterOptimizingVisitor());
       assertNotNull(optimizedNode);
       assertTrue(optimizedNode instanceof AndNode);
       List<QueryNode> queryNodeList = ((AndNode) optimizedNode).getChildNodes();
@@ -347,7 +347,7 @@ public class ExecutionTreeBuilderTest {
       Filter filter = generateAndOrNotFilter(Operator.OR, level2Filter, startTimeFilter);
       QueryNode queryNode = executionTreeBuilder.buildFilterTree(filter);
       assertNotNull(queryNode);
-      QueryNode optimizedNode = queryNode.acceptVisitor(new OptimizingVisitor());
+      QueryNode optimizedNode = queryNode.acceptVisitor(new FilterOptimizingVisitor());
       assertNotNull(optimizedNode);
       assertTrue(optimizedNode instanceof OrNode);
       List<QueryNode> queryNodeList = ((OrNode) optimizedNode).getChildNodes();
@@ -368,7 +368,7 @@ public class ExecutionTreeBuilderTest {
       Filter filter = generateAndOrNotFilter(Operator.OR, level2Filter, apiNameFilter);
       QueryNode queryNode = executionTreeBuilder.buildFilterTree(filter);
       assertNotNull(queryNode);
-      QueryNode optimizedNode = queryNode.acceptVisitor(new OptimizingVisitor());
+      QueryNode optimizedNode = queryNode.acceptVisitor(new FilterOptimizingVisitor());
       assertNotNull(optimizedNode);
       assertTrue(optimizedNode instanceof OrNode);
       List<QueryNode> queryNodeList = ((OrNode) optimizedNode).getChildNodes();
@@ -627,7 +627,9 @@ public class ExecutionTreeBuilderTest {
 
     QueryNode childSelectionNode = ((SelectionNode) selectionNode).getChildNode();
     assertTrue(childSelectionNode instanceof SelectionNode);
-    assertTrue(((SelectionNode) childSelectionNode).getAttrSelectionSources().contains("EDS"));
+    // Since API_ID_ATTR has already been fetched from QS, the selection node will have empty attribute selection source
+    // because of AttributeSelectionOptimizingVisitor
+    assertTrue(((SelectionNode) childSelectionNode).getAttrSelectionSources().isEmpty());
 
     QueryNode dataFetcherNode = ((SelectionNode)childSelectionNode).getChildNode();
     assertTrue(dataFetcherNode instanceof DataFetcherNode);
