@@ -1,18 +1,22 @@
 package org.hypertrace.gateway.service.entity.query.visitor;
 
-import org.hypertrace.gateway.service.entity.query.AndNode;
 import org.hypertrace.gateway.service.entity.query.DataFetcherNode;
 import org.hypertrace.gateway.service.entity.query.ExecutionContext;
-import org.hypertrace.gateway.service.entity.query.SelectionNode;
+import org.hypertrace.gateway.service.v1.common.ColumnIdentifier;
+import org.hypertrace.gateway.service.v1.common.Expression;
+import org.hypertrace.gateway.service.v1.common.OrderByExpression;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 
+import java.util.Collections;
 import java.util.List;
+import java.util.Map;
 import java.util.Set;
 
-import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.mockito.Mockito.mock;
+import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.verify;
+import static org.mockito.Mockito.when;
 
 public class ExecutionContextBuilderVisitorTest {
   private ExecutionContext executionContext;
@@ -23,30 +27,181 @@ public class ExecutionContextBuilderVisitorTest {
   }
 
   @Test
-  public void shouldReturnSourcesForFetchedAttributes_DataFetcherNode() {
+  public void shouldRemoveAllPendingSourcesForFetchedAttributes() {
     DataFetcherNode dataFetcherNode = new DataFetcherNode("QS", null);
-    Set<String> attributeSources = dataFetcherNode.acceptVisitor(new ExecutionContextBuilderVisitor(executionContext));
+    // API.id -> ["QS", "EDS"]
+    // API.name -> ["QS", "EDS"]
+    when(executionContext.getSourceToSelectionExpressionMap())
+        .thenReturn(
+            Map.of(
+                "QS",
+                List.of(
+                    createExpressionFromColumnName("API.id"),
+                    createExpressionFromColumnName("API.name")),
+                "EDS",
+                List.of(
+                    createExpressionFromColumnName("API.id"),
+                    createExpressionFromColumnName("API.name"))));
+
+    when(executionContext.getSourceToSelectionAttributeMap())
+        .thenReturn(
+            Map.of("QS", Set.of("API.id", "API.name"), "EDS", Set.of("API.id", "API.name")));
+
+    when(executionContext.getPendingSelectionSources()).thenReturn(Set.of("EDS"));
+    when(executionContext.getPendingSelectionSourcesForOrderBy())
+        .thenReturn(Collections.emptySet());
+
+    dataFetcherNode.acceptVisitor(new ExecutionContextBuilderVisitor(executionContext));
     verify(executionContext).removePendingSelectionSource("QS");
     verify(executionContext).removePendingSelectionSourceForOrderBy("QS");
-    assertEquals(Set.of("QS"), attributeSources);
+    verify(executionContext).removePendingSelectionSource("EDS");
+    verify(executionContext, never()).removePendingSelectionSourceForOrderBy("EDS");
   }
 
+  @Test
+  public void shouldKeepPendingSourcesForNonFetchedAttributes() {
+    DataFetcherNode dataFetcherNode = new DataFetcherNode("QS", null);
+
+    // API.id -> ["QS", "EDS"]
+    // API.name -> ["EDS"]
+    when(executionContext.getSourceToSelectionExpressionMap())
+        .thenReturn(
+            Map.of(
+                "QS",
+                List.of(createExpressionFromColumnName("API.id")),
+                "EDS",
+                List.of(
+                    createExpressionFromColumnName("API.id"),
+                    createExpressionFromColumnName("API.name"))));
+
+    when(executionContext.getSourceToSelectionAttributeMap())
+        .thenReturn(Map.of("QS", Set.of("API.id"), "EDS", Set.of("API.id", "API.name")));
+
+    when(executionContext.getSourceToOrderByExpressionMap())
+        .thenReturn(
+            Map.of(
+                "QS",
+                List.of(createOrderByExpressionFromColumnName("API.id")),
+                "EDS",
+                List.of(createOrderByExpressionFromColumnName("API.name"))));
+
+    when(executionContext.getPendingSelectionSources()).thenReturn(Set.of("EDS"));
+    when(executionContext.getPendingSelectionSourcesForOrderBy()).thenReturn(Set.of("EDS"));
+
+    dataFetcherNode.acceptVisitor(new ExecutionContextBuilderVisitor(executionContext));
+
+    verify(executionContext).removePendingSelectionSource("QS");
+    verify(executionContext).removePendingSelectionSourceForOrderBy("QS");
+    verify(executionContext, never()).removePendingSelectionSource("EDS");
+    verify(executionContext, never()).removePendingSelectionSourceForOrderBy("EDS");
+  }
 
   @Test
-  public void shouldReturnSourcesForFetchedAttributes_AndNode() {
-    //              SelectionNode("EDS")
-    //                     |
-    //                  AndNode
-    //             /                \
-    // DataFetcherNode("QS1")   DataFetcherNode("QS2")
+  public void shouldKeepPendingSelectionSourcesForOrderBy() {
+    DataFetcherNode dataFetcherNode = new DataFetcherNode("QS", null);
 
-    DataFetcherNode dataFetcherNode1 = new DataFetcherNode("QS1", null);
-    DataFetcherNode dataFetcherNode2 = new DataFetcherNode("QS2", null);
-    AndNode andNode = new AndNode(List.of(dataFetcherNode1, dataFetcherNode2));
-    SelectionNode selectionNode =
-        new SelectionNode.Builder(andNode).setAttrSelectionSources(Set.of("EDS")).build();
-    Set<String> attributeSources =
-        selectionNode.acceptVisitor(new ExecutionContextBuilderVisitor(executionContext));
-    assertEquals(Set.of("QS1", "QS2", "EDS"), attributeSources);
+    // API.id -> ["QS", "EDS"]
+    // API.name -> ["QS", "EDS"]
+    when(executionContext.getSourceToSelectionExpressionMap())
+        .thenReturn(
+            Map.of(
+                "QS",
+                List.of(
+                    createExpressionFromColumnName("API.id"),
+                    createExpressionFromColumnName("API.name")),
+                "EDS",
+                List.of(
+                    createExpressionFromColumnName("API.id"),
+                    createExpressionFromColumnName("API.name"))));
+
+    when(executionContext.getSourceToSelectionAttributeMap())
+        .thenReturn(
+            Map.of("QS", Set.of("API.id", "API.name"), "EDS", Set.of("API.id", "API.name")));
+
+    when(executionContext.getSourceToOrderByExpressionMap())
+        .thenReturn(
+            Map.of(
+                "QS",
+                List.of(createOrderByExpressionFromColumnName("API.id")),
+                "EDS",
+                List.of(createOrderByExpressionFromColumnName("API.status"))));
+
+    when(executionContext.getPendingSelectionSources()).thenReturn(Set.of("EDS"));
+    when(executionContext.getPendingSelectionSourcesForOrderBy()).thenReturn(Set.of("EDS"));
+
+    dataFetcherNode.acceptVisitor(new ExecutionContextBuilderVisitor(executionContext));
+
+    verify(executionContext).removePendingSelectionSource("QS");
+    verify(executionContext).removePendingSelectionSourceForOrderBy("QS");
+    verify(executionContext).removePendingSelectionSource("EDS");
+    verify(executionContext, never()).removePendingSelectionSourceForOrderBy("EDS");
+  }
+
+  @Test
+  public void shouldKeepPendingExtraSourcesForNonFetchedAttributes() {
+    DataFetcherNode dataFetcherNode = new DataFetcherNode("QS", null);
+
+    // API.id -> ["QS", "EDS"]
+    // API.name -> ["QS", "EDS"]
+    // API.status -> ["AS"]
+    when(executionContext.getSourceToSelectionExpressionMap())
+        .thenReturn(
+            Map.of(
+                "QS",
+                List.of(
+                    createExpressionFromColumnName("API.id"),
+                    createExpressionFromColumnName("API.name")),
+                "EDS",
+                List.of(
+                    createExpressionFromColumnName("API.id"),
+                    createExpressionFromColumnName("API.name")),
+                "AS",
+                List.of(createExpressionFromColumnName("API.status"))));
+
+    when(executionContext.getSourceToSelectionAttributeMap())
+        .thenReturn(
+            Map.of(
+                "QS",
+                Set.of("API.id", "API.name"),
+                "EDS",
+                Set.of("API.id", "API.name"),
+                "AS",
+                Set.of("API.status")));
+
+    when(executionContext.getSourceToOrderByExpressionMap())
+        .thenReturn(
+            Map.of(
+                "EDS",
+                List.of(createOrderByExpressionFromColumnName("API.name")),
+                "AS",
+                List.of(createOrderByExpressionFromColumnName("API.status"))));
+
+    when(executionContext.getPendingSelectionSources()).thenReturn(Set.of("EDS", "AS"));
+    when(executionContext.getPendingSelectionSourcesForOrderBy()).thenReturn(Set.of("EDS", "AS"));
+
+    dataFetcherNode.acceptVisitor(new ExecutionContextBuilderVisitor(executionContext));
+
+    verify(executionContext).removePendingSelectionSource("QS");
+    verify(executionContext).removePendingSelectionSourceForOrderBy("QS");
+    verify(executionContext).removePendingSelectionSource("EDS");
+    verify(executionContext).removePendingSelectionSourceForOrderBy("EDS");
+    verify(executionContext, never()).removePendingSelectionSourceForOrderBy("AS");
+    verify(executionContext, never()).removePendingSelectionSourceForOrderBy("AS");
+  }
+
+  private Expression createExpressionFromColumnName(String columnName) {
+    return Expression.newBuilder()
+        .setColumnIdentifier(ColumnIdentifier.newBuilder().setColumnName(columnName).build())
+        .build();
+  }
+
+  private OrderByExpression createOrderByExpressionFromColumnName(String columnName) {
+    return OrderByExpression.newBuilder()
+        .setExpression(
+            Expression.newBuilder()
+                .setColumnIdentifier(
+                    ColumnIdentifier.newBuilder().setColumnName(columnName).build())
+                .build())
+        .build();
   }
 }

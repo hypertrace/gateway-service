@@ -67,11 +67,10 @@ public class ExecutionTreeBuilder {
     // sources
     if (entitiesRequest.getIncludeNonLiveEntities()) {
       QueryNode rootNode = new DataFetcherNode(EDS.name(), entitiesRequest.getFilter());
-      Set<String> attributeSelectionSources =
-          rootNode.acceptVisitor(new ExecutionContextBuilderVisitor(executionContext));
 
-      QueryNode executionTree =
-          buildExecutionTree(executionContext, rootNode, attributeSelectionSources);
+      rootNode.acceptVisitor(new ExecutionContextBuilderVisitor(executionContext));
+
+      QueryNode executionTree = buildExecutionTree(executionContext, rootNode);
 
       if (LOG.isDebugEnabled()) {
         LOG.debug("Execution Tree:{}", executionTree.acceptVisitor(new PrintVisitor()));
@@ -88,9 +87,9 @@ public class ExecutionTreeBuilder {
       String source = singleSourceForAllAttributes.get();
       QueryNode rootNode = buildExecutionTreeForSameSourceFilterAndSelection(source);
 
-      Set<String> sourcesForFetchedAttributes =
-          rootNode.acceptVisitor(new ExecutionContextBuilderVisitor(executionContext));
-      QueryNode executionTree = buildExecutionTree(executionContext, rootNode, sourcesForFetchedAttributes);
+      rootNode.acceptVisitor(new ExecutionContextBuilderVisitor(executionContext));
+
+      QueryNode executionTree = buildExecutionTree(executionContext, rootNode);
 
       if (LOG.isDebugEnabled()) {
         LOG.debug("Execution Tree:{}", executionTree.acceptVisitor(new PrintVisitor()));
@@ -104,8 +103,8 @@ public class ExecutionTreeBuilder {
       LOG.debug("Filter Tree:{}", filterTree.acceptVisitor(new PrintVisitor()));
     }
 
-    Set<String> sourcesForFetchedAttributes =
-        filterTree.acceptVisitor(new ExecutionContextBuilderVisitor(executionContext));
+    filterTree.acceptVisitor(new ExecutionContextBuilderVisitor(executionContext));
+
     if (LOG.isDebugEnabled()) {
       LOG.debug("ExecutionContext: {}", executionContext);
     }
@@ -120,8 +119,7 @@ public class ExecutionTreeBuilder {
       LOG.debug("Optimized Filter Tree:{}", optimizedFilterTree.acceptVisitor(new PrintVisitor()));
     }
 
-    QueryNode executionTree =
-        buildExecutionTree(executionContext, optimizedFilterTree, sourcesForFetchedAttributes);
+    QueryNode executionTree = buildExecutionTree(executionContext, optimizedFilterTree);
     if (LOG.isDebugEnabled()) {
       LOG.debug("Execution Tree:{}", executionTree.acceptVisitor(new PrintVisitor()));
     }
@@ -192,14 +190,10 @@ public class ExecutionTreeBuilder {
   }
 
   @VisibleForTesting
-  QueryNode buildExecutionTree(ExecutionContext executionContext, QueryNode filterTree, Set<String> sourcesForFetchedAttributes) {
+  QueryNode buildExecutionTree(ExecutionContext executionContext, QueryNode filterTree) {
     QueryNode rootNode = filterTree;
     // Select attributes from sources in order by but not part of the filter tree
-    Set<String> attrSourcesForOrderBy =
-        ExecutionTreeUtils.getPendingAttributeSelectionSources(
-            executionContext,
-            sourcesForFetchedAttributes,
-            executionContext.getPendingSelectionSourcesForOrderBy());
+    Set<String> attrSourcesForOrderBy = executionContext.getPendingSelectionSourcesForOrderBy();
     if (!attrSourcesForOrderBy.isEmpty()) {
       rootNode =
           new SelectionNode.Builder(filterTree)
@@ -223,15 +217,10 @@ public class ExecutionTreeBuilder {
     rootNode = checkAndAddSortAndPaginationNode(rootNode, executionContext);
 
     // Fetch all other attributes, metric agg and time series data
-    Set<String> pendingAttributeSelectionSources =
-        ExecutionTreeUtils.getPendingAttributeSelectionSources(
-            executionContext,
-            sourcesForFetchedAttributes,
-            executionContext.getPendingSelectionSources());
-    if (!pendingAttributeSelectionSources.isEmpty()) {
+    if (!executionContext.getPendingSelectionSources().isEmpty()) {
       rootNode =
           new SelectionNode.Builder(rootNode)
-              .setAttrSelectionSources(pendingAttributeSelectionSources)
+              .setAttrSelectionSources(executionContext.getPendingSelectionSources())
               .build();
       // Handle case where there is no order by but pagination still needs to be done
       rootNode = checkAndAddSortAndPaginationNode(rootNode, executionContext);

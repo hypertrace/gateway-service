@@ -1,22 +1,5 @@
 package org.hypertrace.gateway.service.entity.query;
 
-import static org.hypertrace.core.attribute.service.v1.AttributeSource.EDS;
-import static org.hypertrace.core.attribute.service.v1.AttributeSource.QS;
-import static org.hypertrace.gateway.service.common.EntitiesRequestAndResponseUtils.buildExpression;
-import static org.hypertrace.gateway.service.common.EntitiesRequestAndResponseUtils.generateAndOrNotFilter;
-import static org.hypertrace.gateway.service.common.EntitiesRequestAndResponseUtils.generateEQFilter;
-import static org.hypertrace.gateway.service.common.EntitiesRequestAndResponseUtils.generateFilter;
-import static org.junit.jupiter.api.Assertions.assertEquals;
-import static org.junit.jupiter.api.Assertions.assertTrue;
-import static org.mockito.Mockito.mock;
-import static org.mockito.Mockito.when;
-
-import java.util.List;
-import java.util.Map;
-import java.util.Optional;
-import java.util.Set;
-import java.util.stream.Collectors;
-
 import org.hypertrace.gateway.service.v1.common.ColumnIdentifier;
 import org.hypertrace.gateway.service.v1.common.Expression;
 import org.hypertrace.gateway.service.v1.common.Filter;
@@ -28,6 +11,21 @@ import org.hypertrace.gateway.service.v1.common.ValueType;
 import org.hypertrace.gateway.service.v1.entity.EntitiesRequest;
 import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.Test;
+
+import java.util.List;
+import java.util.Map;
+import java.util.Optional;
+import java.util.Set;
+import java.util.stream.Collectors;
+
+import static org.hypertrace.core.attribute.service.v1.AttributeSource.EDS;
+import static org.hypertrace.core.attribute.service.v1.AttributeSource.QS;
+import static org.hypertrace.gateway.service.common.EntitiesRequestAndResponseUtils.buildExpression;
+import static org.hypertrace.gateway.service.common.EntitiesRequestAndResponseUtils.generateAndOrNotFilter;
+import static org.hypertrace.gateway.service.common.EntitiesRequestAndResponseUtils.generateEQFilter;
+import static org.hypertrace.gateway.service.common.EntitiesRequestAndResponseUtils.generateFilter;
+import static org.mockito.Mockito.mock;
+import static org.mockito.Mockito.when;
 
 public class ExecutionTreeUtilsTest {
   @Test
@@ -359,55 +357,6 @@ public class ExecutionTreeUtilsTest {
         )
         .build();
     executeHasEntityIdEqualsFilterTest(entityIdExpressions, entitiesRequest, false);
-  }
-
-  @Test
-  public void shouldIgnore_RedundantAttributeSelectionSources_attributesAlreadyFetched() {
-    ExecutionContext executionContext = mock(ExecutionContext.class);
-    // API.id -> ["QS1", "EDS"]
-    // API.name -> ["QS2", "EDS"]
-    when(executionContext.getSourceToSelectionExpressionMap())
-        .thenReturn(
-            Map.of(
-                "QS1",
-                List.of(createExpressionFromColumnName("API.id")),
-                "QS2",
-                List.of(createExpressionFromColumnName("API.name")),
-                "EDS",
-                List.of(
-                    createExpressionFromColumnName("API.id"),
-                    createExpressionFromColumnName("API.name"))));
-
-    Set<String> attributeSources =
-        ExecutionTreeUtils.getPendingAttributeSelectionSources(
-            executionContext, Set.of("QS1", "QS2"), Set.of("EDS"));
-    assertTrue(attributeSources.isEmpty());
-  }
-
-  @Test
-  public void shouldKeep_attributeSelectionSource_attributesNotFetched() {
-    ExecutionContext executionContext = mock(ExecutionContext.class);
-    // API.id -> ["QS", "EDS"]
-    // API.name -> ["QS", "EDS"]
-    // API.status -> ["AS"]
-    when(executionContext.getSourceToSelectionExpressionMap())
-        .thenReturn(
-            Map.of(
-                "QS",
-                List.of(
-                    createExpressionFromColumnName("API.id"),
-                    createExpressionFromColumnName("API.name")),
-                "EDS",
-                List.of(
-                    createExpressionFromColumnName("API.id"),
-                    createExpressionFromColumnName("API.name")),
-                "AS",
-                List.of(createExpressionFromColumnName("API.status"))));
-
-    Set<String> attributeSources =
-        ExecutionTreeUtils.getPendingAttributeSelectionSources(
-            executionContext, Set.of("QS"), Set.of("EDS", "AS"));
-    assertEquals(Set.of("AS"), attributeSources);
   }
 
   private void executeHasEntityIdEqualsFilterTest(List<Expression> entityIdExpressions,

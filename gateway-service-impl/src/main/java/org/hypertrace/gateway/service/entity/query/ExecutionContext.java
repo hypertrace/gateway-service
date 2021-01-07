@@ -43,6 +43,7 @@ public class ExecutionContext {
   private final EntitiesRequest entitiesRequest;
   private final EntitiesRequestContext entitiesRequestContext;
   private ImmutableMap<String, List<Expression>> sourceToSelectionExpressionMap;
+  private ImmutableMap<String, Set<String>> sourceToSelectionAttributeMap;
   private ImmutableMap<String, List<Expression>> sourceToMetricExpressionMap;
   private ImmutableMap<String, List<TimeAggregation>> sourceToTimeAggregationMap;
   private ImmutableMap<String, List<OrderByExpression>> sourceToOrderByExpressionMap;
@@ -102,6 +103,10 @@ public class ExecutionContext {
 
   public Map<String, List<Expression>> getSourceToSelectionExpressionMap() {
     return sourceToSelectionExpressionMap;
+  }
+
+  public Map<String, Set<String>> getSourceToSelectionAttributeMap() {
+    return sourceToSelectionAttributeMap;
   }
 
   public Map<String, List<Expression>> getSourceToMetricExpressionMap() {
@@ -206,6 +211,11 @@ public class ExecutionContext {
             .collect(Collectors.groupingBy(Expression::getValueCase, Collectors.toList()));
     sourceToSelectionExpressionMap =
         getDataSourceToExpressionMap(selectionExprTypeToExprMap.get(ValueCase.COLUMNIDENTIFIER));
+    sourceToSelectionAttributeMap =
+        ImmutableMap.<String, Set<String>>builder()
+            .putAll(ExecutionTreeUtils.buildSourceToAttributesMap(sourceToSelectionExpressionMap))
+            .build();
+
     sourceToMetricExpressionMap =
         getDataSourceToExpressionMap(selectionExprTypeToExprMap.get(ValueCase.FUNCTION));
     sourceToTimeAggregationMap =

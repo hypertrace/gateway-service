@@ -1,5 +1,10 @@
 package org.hypertrace.gateway.service.entity.query;
 
+import org.hypertrace.gateway.service.common.util.ExpressionReader;
+import org.hypertrace.gateway.service.v1.common.Expression;
+import org.hypertrace.gateway.service.v1.common.Filter;
+import org.hypertrace.gateway.service.v1.common.Operator;
+
 import java.util.Collection;
 import java.util.HashMap;
 import java.util.HashSet;
@@ -8,13 +13,6 @@ import java.util.Map;
 import java.util.Optional;
 import java.util.Set;
 import java.util.stream.Collectors;
-
-import com.google.common.collect.Iterables;
-import com.google.common.collect.Sets;
-import org.hypertrace.gateway.service.common.util.ExpressionReader;
-import org.hypertrace.gateway.service.v1.common.Expression;
-import org.hypertrace.gateway.service.v1.common.Filter;
-import org.hypertrace.gateway.service.v1.common.Operator;
 
 public class ExecutionTreeUtils {
   /**
@@ -187,101 +185,16 @@ public class ExecutionTreeUtils {
     return false;
   }
 
-  /**
-   * @param executionContext
-   * @param sourcesForFetchedAttributes set of sources from which the attributes have already been
-   *     fetched
-   * @param attributeSelectionSources current set of attribute selection sources to fetch attributes
-   * @return set of sources for which the attributes have to be fetched
-   *
-   * Removes the attribute selection source from {@param attributeSelectionSources}, if the attribute has already been
-   * requested from a different source
-   *
-   * Example: select api.id, api.name
-   * api.id -> ["QS", "EDS"] api.name -> ["QS", EDS"]
-   *
-   * If api.id, api.name has already been fetched from QS, there is no point fetching
-   * the same set of attributes from EDS
-   *
-   * Algorithm:
-   * - Generate a set of the attributes(say A) fetched from the above collected sources
-   * from {@param sourcesForFetchedAttributes}
-   *
-   * - for each attribute selection source S from {@param attributeSelectionSources},
-   * get all the selection attributes for the source
-   * - if the selection attributes for that source are already present in the set A,
-   * then this source is redundant to fetch the attributes. Ignore this source
-   * - return the remaining set of sources
-   */
-  public static Set<String> getPendingAttributeSelectionSources(
-      ExecutionContext executionContext,
-      Set<String> sourcesForFetchedAttributes,
-      Set<String> attributeSelectionSources) {
-    if (attributeSelectionSources.isEmpty()) {
-      return attributeSelectionSources;
-    }
-
-    // map of selection attributes to sources map
-    Map<String, Set<String>> attributeSelectionToSourceMap =
-        ExecutionTreeUtils.buildAttributeToSourcesMap(
-            executionContext.getSourceToSelectionExpressionMap());
-
-    // set of attributes which were fetched from child attribute sources
-    Set<String> attributesFromChildAttributeSources =
-        attributeSelectionToSourceMap.entrySet().stream()
-            .filter(
-                entry ->
-                    !Sets.intersection(entry.getValue(), sourcesForFetchedAttributes).isEmpty())
-            .map(Map.Entry::getKey)
-            .collect(Collectors.toSet());
-
-    // reverse of attributeSelectionToSourceMap
-    // map of source to attribute selection map
-    Map<String, Set<String>> sourceToAttributeSelectionMap =
-        buildSourceToAttributesMap(executionContext.getSourceToSelectionExpressionMap());
-
-    Set<String> retainedAttributeSelectionSources = new HashSet<>();
-    for (String source : attributeSelectionSources) {
-      Set<String> selectionAttributesFromSource = sourceToAttributeSelectionMap.get(source);
-      // if all the attributes from the selection source have already been fetched,
-      // remove the source from selection node, so that it does not fetch the same
-      // set of attributes again
-      if (!attributesFromChildAttributeSources.containsAll(selectionAttributesFromSource)) {
-        retainedAttributeSelectionSources.add(source);
-      }
-    }
-
-    // return the set of sources for which the attributes have to be fetched
-    return retainedAttributeSelectionSources;
-  }
-
-  private static Map<String, Set<String>> buildSourceToAttributesMap(
+  public static Map<String, Set<String>> buildSourceToAttributesMap(
       Map<String, List<Expression>> sourceToExpressionMap) {
     return sourceToExpressionMap.entrySet().stream()
         .collect(
-            Collectors.toMap(
+            Collectors.toUnmodifiableMap(
                 Map.Entry::getKey,
                 entry ->
                     entry.getValue().stream()
                         .map(ExpressionReader::extractColumns)
                         .flatMap(Collection::stream)
                         .collect(Collectors.toSet())));
-  }
-
-  private static Map<String, Set<String>> buildAttributeToSourcesMap(
-      Map<String, List<Expression>> sourceToExpressionMap) {
-    Map<String, Set<String>> attributeToSourceMap = new HashMap<>();
-
-    for (Map.Entry<String, List<Expression>> entry : sourceToExpressionMap.entrySet()) {
-      String source = entry.getKey();
-      List<Expression> expressions = entry.getValue();
-      for (Expression expression : expressions) {
-        Set<String> columnNames = ExpressionReader.extractColumns(expression);
-        for (String columnName : columnNames) {
-          attributeToSourceMap.computeIfAbsent(columnName, k -> new HashSet<>()).add(source);
-        }
-      }
-    }
-    return attributeToSourceMap;
   }
 }
