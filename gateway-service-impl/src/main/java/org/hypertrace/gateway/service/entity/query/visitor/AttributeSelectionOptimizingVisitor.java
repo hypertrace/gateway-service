@@ -92,7 +92,7 @@ public class AttributeSelectionOptimizingVisitor implements Visitor<Set<String>>
 
     // map of selection attributes to sources map
     Map<String, Set<String>> attributeSelectionToSourceMap =
-        ExecutionTreeUtils.buildAttributeToSourcesMapFromSourceToExpressionsMap(
+        ExecutionTreeUtils.buildAttributeToSourcesMap(
             executionContext.getSourceToSelectionExpressionMap());
 
     // set of attributes which were fetched from child attribute sources

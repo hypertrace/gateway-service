@@ -198,7 +198,7 @@ public class ExecutionTreeUtils {
                         .collect(Collectors.toSet())));
   }
 
-  public static Map<String, Set<String>> buildAttributeToSourcesMapFromSourceToExpressionsMap(
+  public static Map<String, Set<String>> buildAttributeToSourcesMap(
       Map<String, List<Expression>> sourceToExpressionMap) {
     Map<String, Set<String>> attributeToSourceMap = new HashMap<>();
 
