@@ -10,10 +10,11 @@ import org.hypertrace.gateway.service.entity.query.SelectionNode;
 import org.hypertrace.gateway.service.entity.query.SortAndPaginateNode;
 import org.hypertrace.gateway.service.entity.query.TotalFetcherNode;
 
+import java.util.Collection;
 import java.util.Collections;
-import java.util.HashSet;
 import java.util.Map;
 import java.util.Set;
+import java.util.stream.Collectors;
 
 /**
  * Visitor for capturing the different sources corresponding to the expressions in the execution
@@ -134,19 +135,14 @@ public class ExecutionContextBuilderVisitor implements Visitor<Void> {
       return Collections.emptySet();
     }
 
-    Set<String> redundantPendingSelectionSources = new HashSet<>();
-    for (String pendingAttributeSelectionSource : pendingAttributeSelectionSources) {
-      Set<String> selectionAttributesFromSource =
-          sourceToAttributeSelectionMap.get(pendingAttributeSelectionSource);
-      // if all the attributes from the selection source have already been fetched,
-      // remove the source from pending selection sources, so that it does not fetch the same
-      // set of attributes again
-      if (fetchedAttributes.containsAll(selectionAttributesFromSource)) {
-        redundantPendingSelectionSources.add(pendingAttributeSelectionSource);
-      }
-    }
-
-    // return the set of sources for which the attributes have been fetched
-    return Set.copyOf(redundantPendingSelectionSources);
+    // if all the attributes from the selection source have already been fetched,
+    // remove the source from pending selection sources, so that it does not fetch the same
+    // set of attributes again
+    return pendingAttributeSelectionSources.stream()
+        .filter(
+            source ->
+                fetchedAttributes.containsAll(
+                    sourceToAttributeSelectionMap.getOrDefault(source, Collections.emptySet())))
+        .collect(Collectors.toSet());
   }
 }
