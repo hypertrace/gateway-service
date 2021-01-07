@@ -45,7 +45,6 @@ public class EntityDataServiceEntityFetcher implements IEntityFetcher {
     this.entityIdColumnsConfigs = entityIdColumnsConfigs;
   }
 
-  // TODO: No limit, offset or orderby for this?
   @Override
   public EntityFetcherResponse getEntities(
       EntitiesRequestContext requestContext, EntitiesRequest entitiesRequest) {

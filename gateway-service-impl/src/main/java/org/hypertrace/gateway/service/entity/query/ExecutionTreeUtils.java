@@ -198,18 +198,6 @@ public class ExecutionTreeUtils {
                         .collect(Collectors.toSet())));
   }
 
-  public static Map<String, Set<String>> buildAttributeToSourcesMapFromSourceToAttributesMap(
-      Map<String, Set<String>> sourceToAttributesMap) {
-    Map<String, Set<String>> attributeToSourceMap = new HashMap<>();
-    for (Map.Entry<String, Set<String>> entry : sourceToAttributesMap.entrySet()) {
-      String source = entry.getKey();
-      for (String attribute : entry.getValue()) {
-        attributeToSourceMap.computeIfAbsent(attribute, k -> new HashSet<>()).add(source);
-      }
-    }
-    return attributeToSourceMap;
-  }
-
   public static Map<String, Set<String>> buildAttributeToSourcesMapFromSourceToExpressionsMap(
       Map<String, List<Expression>> sourceToExpressionMap) {
     Map<String, Set<String>> attributeToSourceMap = new HashMap<>();
