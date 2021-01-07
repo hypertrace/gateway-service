@@ -13,7 +13,6 @@ import java.util.stream.Collectors;
 import org.hypertrace.core.attribute.service.v1.AttributeMetadata;
 import org.hypertrace.core.attribute.service.v1.AttributeSource;
 import org.hypertrace.gateway.service.common.util.TimeRangeFilterUtil;
-import org.hypertrace.gateway.service.entity.query.visitor.AttributeSelectionOptimizingVisitor;
 import org.hypertrace.gateway.service.entity.query.visitor.ExecutionContextBuilderVisitor;
 import org.hypertrace.gateway.service.entity.query.visitor.FilterOptimizingVisitor;
 import org.hypertrace.gateway.service.entity.query.visitor.PrintVisitor;
@@ -68,9 +67,11 @@ public class ExecutionTreeBuilder {
     // sources
     if (entitiesRequest.getIncludeNonLiveEntities()) {
       QueryNode rootNode = new DataFetcherNode(EDS.name(), entitiesRequest.getFilter());
-      rootNode.acceptVisitor(new ExecutionContextBuilderVisitor(executionContext));
+      Set<String> attributeSelectionSources =
+          rootNode.acceptVisitor(new ExecutionContextBuilderVisitor(executionContext));
 
-      QueryNode executionTree = buildExecutionTree(executionContext, rootNode);
+      QueryNode executionTree =
+          buildExecutionTree(executionContext, rootNode, attributeSelectionSources);
 
       if (LOG.isDebugEnabled()) {
         LOG.debug("Execution Tree:{}", executionTree.acceptVisitor(new PrintVisitor()));
@@ -87,9 +88,9 @@ public class ExecutionTreeBuilder {
       String source = singleSourceForAllAttributes.get();
       QueryNode rootNode = buildExecutionTreeForSameSourceFilterAndSelection(source);
 
-      rootNode.acceptVisitor(new ExecutionContextBuilderVisitor(executionContext));
-      QueryNode executionTree = buildExecutionTree(executionContext, rootNode);
-      executionTree.acceptVisitor(new AttributeSelectionOptimizingVisitor(executionContext));
+      Set<String> sourcesForFetchedAttributes =
+          rootNode.acceptVisitor(new ExecutionContextBuilderVisitor(executionContext));
+      QueryNode executionTree = buildExecutionTree(executionContext, rootNode, sourcesForFetchedAttributes);
 
       if (LOG.isDebugEnabled()) {
         LOG.debug("Execution Tree:{}", executionTree.acceptVisitor(new PrintVisitor()));
@@ -103,7 +104,8 @@ public class ExecutionTreeBuilder {
       LOG.debug("Filter Tree:{}", filterTree.acceptVisitor(new PrintVisitor()));
     }
 
-    filterTree.acceptVisitor(new ExecutionContextBuilderVisitor(executionContext));
+    Set<String> sourcesForFetchedAttributes =
+        filterTree.acceptVisitor(new ExecutionContextBuilderVisitor(executionContext));
     if (LOG.isDebugEnabled()) {
       LOG.debug("ExecutionContext: {}", executionContext);
     }
@@ -118,7 +120,8 @@ public class ExecutionTreeBuilder {
       LOG.debug("Optimized Filter Tree:{}", optimizedFilterTree.acceptVisitor(new PrintVisitor()));
     }
 
-    QueryNode executionTree = buildExecutionTree(executionContext, optimizedFilterTree);
+    QueryNode executionTree =
+        buildExecutionTree(executionContext, optimizedFilterTree, sourcesForFetchedAttributes);
     if (LOG.isDebugEnabled()) {
       LOG.debug("Execution Tree:{}", executionTree.acceptVisitor(new PrintVisitor()));
     }
@@ -189,10 +192,14 @@ public class ExecutionTreeBuilder {
   }
 
   @VisibleForTesting
-  QueryNode buildExecutionTree(ExecutionContext executionContext, QueryNode filterTree) {
+  QueryNode buildExecutionTree(ExecutionContext executionContext, QueryNode filterTree, Set<String> sourcesForFetchedAttributes) {
     QueryNode rootNode = filterTree;
     // Select attributes from sources in order by but not part of the filter tree
-    Set<String> attrSourcesForOrderBy = executionContext.getPendingSelectionSourcesForOrderBy();
+    Set<String> attrSourcesForOrderBy =
+        ExecutionTreeUtils.getPendingAttributeSelectionSources(
+            executionContext,
+            sourcesForFetchedAttributes,
+            executionContext.getPendingSelectionSourcesForOrderBy());
     if (!attrSourcesForOrderBy.isEmpty()) {
       rootNode =
           new SelectionNode.Builder(filterTree)
@@ -200,6 +207,7 @@ public class ExecutionTreeBuilder {
               .build();
       attrSourcesForOrderBy.forEach(executionContext::removePendingSelectionSource);
     }
+
     // Select agg attributes from sources in order by
     Set<String> metricSourcesForOrderBy =
         executionContext.getPendingMetricAggregationSourcesForOrderBy();
@@ -215,10 +223,15 @@ public class ExecutionTreeBuilder {
     rootNode = checkAndAddSortAndPaginationNode(rootNode, executionContext);
 
     // Fetch all other attributes, metric agg and time series data
-    if (!executionContext.getPendingSelectionSources().isEmpty()) {
+    Set<String> pendingAttributeSelectionSources =
+        ExecutionTreeUtils.getPendingAttributeSelectionSources(
+            executionContext,
+            sourcesForFetchedAttributes,
+            executionContext.getPendingSelectionSources());
+    if (!pendingAttributeSelectionSources.isEmpty()) {
       rootNode =
           new SelectionNode.Builder(rootNode)
-              .setAttrSelectionSources(executionContext.getPendingSelectionSources())
+              .setAttrSelectionSources(pendingAttributeSelectionSources)
               .build();
       // Handle case where there is no order by but pagination still needs to be done
       rootNode = checkAndAddSortAndPaginationNode(rootNode, executionContext);

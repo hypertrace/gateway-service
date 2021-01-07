@@ -625,13 +625,7 @@ public class ExecutionTreeBuilderTest {
     assertTrue(selectionNode instanceof SelectionNode);
     assertTrue(((SelectionNode) selectionNode).getAggMetricSelectionSources().contains("QS"));
 
-    QueryNode childSelectionNode = ((SelectionNode) selectionNode).getChildNode();
-    assertTrue(childSelectionNode instanceof SelectionNode);
-    // Since API_ID_ATTR has already been fetched from QS, the selection node will have empty attribute selection source
-    // because of AttributeSelectionOptimizingVisitor
-    assertTrue(((SelectionNode) childSelectionNode).getAttrSelectionSources().isEmpty());
-
-    QueryNode dataFetcherNode = ((SelectionNode)childSelectionNode).getChildNode();
+    QueryNode dataFetcherNode = ((SelectionNode)selectionNode).getChildNode();
     assertTrue(dataFetcherNode instanceof DataFetcherNode);
     assertEquals("QS", ((DataFetcherNode)dataFetcherNode).getSource());
     assertEquals(0, ((DataFetcherNode)dataFetcherNode).getOffset());
