@@ -90,12 +90,12 @@ public class EntityDataServiceEntityFetcher implements IEntityFetcher {
                         expression)));
 
     int limit = entitiesRequest.getLimit();
-    if (limit >= 0) {
+    if (limit > 0) {
       builder.setLimit(limit);
     }
 
     int offset = entitiesRequest.getOffset();
-    if (offset >= 0) {
+    if (offset > 0) {
       builder.setOffset(offset);
     }
 

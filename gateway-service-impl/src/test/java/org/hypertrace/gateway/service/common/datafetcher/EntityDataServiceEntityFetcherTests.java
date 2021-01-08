@@ -127,8 +127,8 @@ public class EntityDataServiceEntityFetcherTests {
     List<OrderByExpression> orderByExpressions = List.of(buildOrderByExpression(API_ID_ATTR));
     long startTime = 1L;
     long endTime = 10L;
-    int limit = -1;
-    int offset = -1;
+    int limit = 0;
+    int offset = 0;
     String tenantId = "TENANT_ID";
     Map<String, String> requestHeaders = Map.of("x-tenant-id", tenantId);
     AttributeScope entityType = AttributeScope.API;

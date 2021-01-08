@@ -269,9 +269,8 @@ public class QueryServiceEntityFetcher implements IEntityFetcher {
     // Limit has to be applied post the query in this case. Setting offset also might be wrong
     // here, hence not setting it.
 
-    // limit or offset can be set negative, if we cannot push down limit or offset to QS
-    boolean canApplyLimit = limit >= 0;
-    boolean canApplyOffset = offset >= 0;
+    boolean canApplyLimit = limit > 0;
+    boolean canApplyOffset = offset > 0;
 
     // If we cannot apply limit, limit the number of results to a default limit
     if (!canApplyLimit || builder.getGroupByCount() > 1) {

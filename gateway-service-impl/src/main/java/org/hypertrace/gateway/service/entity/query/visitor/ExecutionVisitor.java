@@ -129,16 +129,10 @@ public class ExecutionVisitor implements Visitor<EntityFetcherResponse> {
 
     if (dataFetcherNode.getLimit() != null) {
       requestBuilder.setLimit(dataFetcherNode.getLimit());
-    } else {
-      // set limit to a negative value, to denote it cannot be pushed down to data store
-      requestBuilder.setLimit(-1);
     }
 
     if (dataFetcherNode.getOffset() != null) {
       requestBuilder.setOffset(dataFetcherNode.getOffset());
-    } else {
-      // set offset to a negative value, to denote it cannot be pushed down to data store
-      requestBuilder.setOffset(-1);
     }
 
     if (!dataFetcherNode.getOrderByExpressionList().isEmpty()) {
