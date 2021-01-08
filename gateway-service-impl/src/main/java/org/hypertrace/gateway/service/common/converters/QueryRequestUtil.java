@@ -16,6 +16,8 @@ import org.hypertrace.core.query.service.api.ValueType;
  */
 public class QueryRequestUtil {
 
+  public static final String DATE_TIME_CONVERTER = "dateTimeConvert";
+
   public static Filter createBetweenTimesFilter(String columnName, long lower, long higher) {
     return Filter.newBuilder()
         .setOperator(Operator.AND)
@@ -109,7 +111,7 @@ public class QueryRequestUtil {
     return Expression.newBuilder()
         .setFunction(
             Function.newBuilder()
-                .setFunctionName("dateTimeConvert")
+                .setFunctionName(DATE_TIME_CONVERTER)
                 .addArguments(createColumnExpression(timeColumn))
                 .addArguments(createStringLiteralExpression("1:MILLISECONDS:EPOCH"))
                 .addArguments(createStringLiteralExpression("1:MILLISECONDS:EPOCH"))

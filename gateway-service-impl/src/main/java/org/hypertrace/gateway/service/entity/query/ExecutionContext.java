@@ -3,6 +3,7 @@ package org.hypertrace.gateway.service.entity.query;
 import com.google.common.collect.ImmutableMap;
 import java.util.ArrayList;
 import java.util.Arrays;
+import java.util.Collection;
 import java.util.Collections;
 import java.util.HashMap;
 import java.util.HashSet;
@@ -11,6 +12,7 @@ import java.util.Map;
 import java.util.Set;
 import java.util.stream.Collectors;
 import java.util.stream.IntStream;
+
 import org.hypertrace.core.attribute.service.v1.AttributeMetadata;
 import org.hypertrace.core.attribute.service.v1.AttributeSource;
 import org.hypertrace.gateway.service.common.AttributeMetadataProvider;
@@ -42,11 +44,24 @@ public class ExecutionContext {
 
   private final EntitiesRequest entitiesRequest;
   private final EntitiesRequestContext entitiesRequestContext;
+
+  //selections
   private ImmutableMap<String, List<Expression>> sourceToSelectionExpressionMap;
+  private ImmutableMap<String, Set<String>> sourceToSelectionAttributeMap;
+
   private ImmutableMap<String, List<Expression>> sourceToMetricExpressionMap;
   private ImmutableMap<String, List<TimeAggregation>> sourceToTimeAggregationMap;
-  private ImmutableMap<String, List<OrderByExpression>> sourceToOrderByExpressionMap;
+
+  // order bys
+  private ImmutableMap<String, List<OrderByExpression>> sourceToSelectionOrderByExpressionMap;
+  private ImmutableMap<String, Set<String>> sourceToSelectionOrderByAttributeMap;
+
+  private ImmutableMap<String, List<OrderByExpression>> sourceToMetricOrderByExpressionMap;
+  private ImmutableMap<String, Set<String>> sourceToMetricOrderByAttributeMap;
+
+  // filters
   private ImmutableMap<String, List<Expression>> sourceToFilterExpressionMap;
+  private ImmutableMap<String, Set<String>> sourceToFilterAttributeMap;
 
   /** Following fields are mutable and updated during the ExecutionTree building phase * */
   private final Set<String> pendingSelectionSources = new HashSet<>();
@@ -57,7 +72,8 @@ public class ExecutionContext {
   private final Set<String> pendingMetricAggregationSourcesForOrderBy = new HashSet<>();
   private boolean sortAndPaginationNodeAdded = false;
 
-  private final Map<String, Set<AttributeSource>> attributeToSourcesMap = new HashMap<>();
+  // map of filter, selections (attribute, metrics, aggregations), order by attributes to source map
+  private final Map<String, Set<String>> allAttributesToSourcesMap = new HashMap<>();
 
   /** Following fields set during the query execution phase * */
   // Total number of entities. Set during the execution before pagination
@@ -73,6 +89,8 @@ public class ExecutionContext {
     this.entitiesRequest = entitiesRequest;
     this.entitiesRequestContext = entitiesRequestContext;
     buildSourceToExpressionMaps();
+    buildSourceToFilterExpressionMaps();
+    buildSourceToOrderByExpressionMaps();
   }
 
   public static ExecutionContext from(
@@ -103,6 +121,10 @@ public class ExecutionContext {
     return sourceToSelectionExpressionMap;
   }
 
+  public Map<String, Set<String>> getSourceToSelectionAttributeMap() {
+    return sourceToSelectionAttributeMap;
+  }
+
   public Map<String, List<Expression>> getSourceToMetricExpressionMap() {
     return sourceToMetricExpressionMap;
   }
@@ -111,8 +133,20 @@ public class ExecutionContext {
     return sourceToTimeAggregationMap;
   }
 
-  public Map<String, List<OrderByExpression>> getSourceToOrderByExpressionMap() {
-    return sourceToOrderByExpressionMap;
+  public Map<String, List<OrderByExpression>> getSourceToSelectionOrderByExpressionMap() {
+    return sourceToSelectionOrderByExpressionMap;
+  }
+
+  public Map<String, Set<String>> getSourceToSelectionOrderByAttributeMap() {
+    return sourceToSelectionOrderByAttributeMap;
+  }
+
+  public Map<String, List<OrderByExpression>> getSourceToMetricOrderByExpressionMap() {
+    return sourceToMetricOrderByExpressionMap;
+  }
+
+  public Map<String, Set<String>> getSourceToMetricOrderByAttributeMap() {
+    return sourceToMetricOrderByAttributeMap;
   }
 
   public Map<String, String> getRequestHeaders() {
@@ -195,8 +229,12 @@ public class ExecutionContext {
     return sourceToFilterExpressionMap;
   }
 
-  public Map<String, Set<AttributeSource>> getAttributeToSourcesMap() {
-    return attributeToSourcesMap;
+  public Map<String, Set<String>> getSourceToFilterAttributeMap() {
+    return sourceToFilterAttributeMap;
+  }
+
+  public Map<String, Set<String>> getAllAttributesToSourcesMap() {
+    return allAttributesToSourcesMap;
   }
 
   private void buildSourceToExpressionMaps() {
@@ -205,45 +243,63 @@ public class ExecutionContext {
             .collect(Collectors.groupingBy(Expression::getValueCase, Collectors.toList()));
     sourceToSelectionExpressionMap =
         getDataSourceToExpressionMap(selectionExprTypeToExprMap.get(ValueCase.COLUMNIDENTIFIER));
+    sourceToSelectionAttributeMap = buildSourceToAttributesMap(sourceToSelectionExpressionMap);
+
     sourceToMetricExpressionMap =
         getDataSourceToExpressionMap(selectionExprTypeToExprMap.get(ValueCase.FUNCTION));
     sourceToTimeAggregationMap =
         getDataSourceToTimeAggregation(entitiesRequest.getTimeAggregationList());
-    sourceToOrderByExpressionMap = getDataSourceToOrderByExpressionMap(entitiesRequest);
-    sourceToFilterExpressionMap = getSourceToFilterExpressionMap(entitiesRequest.getFilter());
     pendingSelectionSources.addAll(sourceToSelectionExpressionMap.keySet());
     pendingMetricAggregationSources.addAll(sourceToMetricExpressionMap.keySet());
     pendingTimeAggregationSources.addAll(sourceToTimeAggregationMap.keySet());
   }
 
-  private ImmutableMap<String, List<OrderByExpression>> getDataSourceToOrderByExpressionMap(
-      EntitiesRequest entitiesRequest) {
+  private void buildSourceToFilterExpressionMaps() {
+    sourceToFilterExpressionMap = getSourceToFilterExpressionMap(entitiesRequest.getFilter());
+    sourceToFilterAttributeMap = buildSourceToAttributesMap(sourceToFilterExpressionMap);
+  }
+
+  private void buildSourceToOrderByExpressionMaps() {
     // Ensure that the OrderByExpression function alias matches that of a column in the selection or
-    // TimeAggregation
-    // since the OrderByComparator uses the alias to match the column name in the QueryService
-    // results.
+    // TimeAggregation, since the OrderByComparator uses the alias to match the column name in the
+    // QueryService results
     List<OrderByExpression> orderByExpressions =
         OrderByUtil.matchOrderByExpressionsAliasToSelectionAlias(
             entitiesRequest.getOrderByList(),
             entitiesRequest.getSelectionList(),
             entitiesRequest.getTimeAggregationList());
+    Map<ValueCase, List<OrderByExpression>> orderByExpressionTypeToExpressionMap =
+        orderByExpressions.stream()
+            .collect(
+                Collectors.groupingBy(
+                    orderByExpression -> orderByExpression.getExpression().getValueCase(),
+                    Collectors.toList()));
+    sourceToSelectionOrderByExpressionMap =
+        getDataSourceToOrderByExpressionMap(
+            orderByExpressionTypeToExpressionMap.getOrDefault(ValueCase.COLUMNIDENTIFIER, Collections.emptyList()));
+    sourceToSelectionOrderByAttributeMap =
+        buildSourceToAttributesMap(
+            convertOrderByExpressionToExpression(sourceToSelectionOrderByExpressionMap));
 
+    sourceToMetricOrderByExpressionMap =
+        getDataSourceToOrderByExpressionMap(
+            orderByExpressionTypeToExpressionMap.getOrDefault(ValueCase.FUNCTION, Collections.emptyList()));
+    sourceToMetricOrderByAttributeMap =
+        buildSourceToAttributesMap(
+            convertOrderByExpressionToExpression(sourceToMetricOrderByExpressionMap));
+    pendingSelectionSourcesForOrderBy.addAll(sourceToSelectionOrderByExpressionMap.keySet());
+    pendingMetricAggregationSourcesForOrderBy.addAll(sourceToMetricOrderByExpressionMap.keySet());
+  }
+
+  private ImmutableMap<String, List<OrderByExpression>> getDataSourceToOrderByExpressionMap(
+      List<OrderByExpression> orderByExpressions) {
     Map<String, List<OrderByExpression>> result = new HashMap<>();
     for (OrderByExpression orderByExpression : orderByExpressions) {
       Expression expression = orderByExpression.getExpression();
       Map<String, List<Expression>> map =
           getDataSourceToExpressionMap(Collections.singletonList(expression));
-      for (String source: map.keySet()) {
-        result
-            .computeIfAbsent(source, k -> new ArrayList<>())
-            .add(orderByExpression);
-      }
-
-      if (expression.getValueCase().equals(ValueCase.COLUMNIDENTIFIER)) {
-        pendingSelectionSourcesForOrderBy.addAll(map.keySet());
-      }
-      if (expression.getValueCase().equals(ValueCase.FUNCTION)) {
-        pendingMetricAggregationSourcesForOrderBy.addAll(map.keySet());
+      for (String source : map.keySet()) {
+        result.computeIfAbsent(source, k -> new ArrayList<>()).add(orderByExpression);
       }
     }
     return ImmutableMap.<String, List<OrderByExpression>>builder().putAll(result).build();
@@ -305,7 +361,9 @@ public class ExecutionContext {
       for (String columnName : columnNames) {
         List<AttributeSource> sourcesList = attrNameToMetadataMap.get(columnName).getSourcesList();
         sources.retainAll(sourcesList);
-        attributeToSourcesMap.computeIfAbsent(columnName, v -> new HashSet<>()).addAll(sourcesList);
+        allAttributesToSourcesMap
+            .computeIfAbsent(columnName, v -> new HashSet<>())
+            .addAll(sourcesList.stream().map(Enum::name).collect(Collectors.toList()));
       }
       if (sources.isEmpty()) {
         LOG.error("Skipping Expression: {}. No source found", expression);
@@ -320,35 +378,67 @@ public class ExecutionContext {
     return ImmutableMap.<String, List<Expression>>builder().putAll(sourceToExpressionMap).build();
   }
 
+  /**
+   * Given a source to expression map, builds an attribute to sources map, where attribute value is extracted
+   * out from the expression. Basically, a reverse map of the map provided as input
+   *
+   * Example:
+   * ("QS" -> API.id, "QS" -> API.name, "EDS" -> API.id) =>
+   *
+   * ("API.id" -> ["QS", "EDS"], "API.name" -> "QS")
+   */
+  private ImmutableMap<String, Set<String>> buildSourceToAttributesMap(
+      Map<String, List<Expression>> sourceToExpressionMap) {
+    return ImmutableMap.<String, Set<String>>builder()
+        .putAll(
+            sourceToExpressionMap.entrySet().stream()
+                .collect(
+                    Collectors.toUnmodifiableMap(
+                        Map.Entry::getKey,
+                        entry ->
+                            entry.getValue().stream()
+                                .map(ExpressionReader::extractColumns)
+                                .flatMap(Collection::stream)
+                                .collect(Collectors.toSet()))))
+        .build();
+  }
+
+  private Map<String, List<Expression>> convertOrderByExpressionToExpression(
+      Map<String, List<OrderByExpression>> sourceToOrderByExpressions) {
+    return sourceToOrderByExpressions.entrySet().stream()
+        .collect(
+            Collectors.toMap(
+                Map.Entry::getKey,
+                entry ->
+                    entry.getValue().stream()
+                        .map(OrderByExpression::getExpression)
+                        .collect(Collectors.toList())));
+  }
+
   @Override
   public String toString() {
-    return "ExecutionContext{"
-        + "attributeMetadataProvider="
-        + attributeMetadataProvider
-        + ", entitiesRequest="
-        + entitiesRequest
-        + ", sourceToSelectionExpressionMap="
-        + sourceToSelectionExpressionMap
-        + ", sourceToMetricExpressionMap="
-        + sourceToMetricExpressionMap
-        + ", sourceToTimeAggregationMap="
-        + sourceToTimeAggregationMap
-        + ", sourceToOrderByExpressionMap="
-        + sourceToOrderByExpressionMap
-        + ", pendingSelectionSources="
-        + pendingSelectionSources
-        + ", pendingMetricAggregationSources="
-        + pendingMetricAggregationSources
-        + ", pendingTimeAggregationSources="
-        + pendingTimeAggregationSources
-        + ", pendingSelectionSourcesForOrderBy="
-        + pendingSelectionSourcesForOrderBy
-        + ", pendingMetricAggregationSourcesForOrderBy="
-        + pendingMetricAggregationSourcesForOrderBy
-        + ", sortAndPaginationNodeAdded="
-        + sortAndPaginationNodeAdded
-        + ", total="
-        + total
-        + '}';
+    return "ExecutionContext{" +
+        "attributeMetadataProvider=" + attributeMetadataProvider +
+        ", entityIdColumnsConfigs=" + entityIdColumnsConfigs +
+        ", entitiesRequest=" + entitiesRequest +
+        ", entitiesRequestContext=" + entitiesRequestContext +
+        ", sourceToSelectionExpressionMap=" + sourceToSelectionExpressionMap +
+        ", sourceToSelectionAttributeMap=" + sourceToSelectionAttributeMap +
+        ", sourceToMetricExpressionMap=" + sourceToMetricExpressionMap +
+        ", sourceToTimeAggregationMap=" + sourceToTimeAggregationMap +
+        ", sourceToSelectionOrderByExpressionMap=" + sourceToSelectionOrderByExpressionMap +
+        ", sourceToSelectionOrderByAttributeMap=" + sourceToSelectionOrderByAttributeMap +
+        ", sourceToMetricOrderByExpressionMap=" + sourceToMetricOrderByExpressionMap +
+        ", sourceToFilterExpressionMap=" + sourceToFilterExpressionMap +
+        ", sourceToFilterAttributeMap=" + sourceToFilterAttributeMap +
+        ", pendingSelectionSources=" + pendingSelectionSources +
+        ", pendingMetricAggregationSources=" + pendingMetricAggregationSources +
+        ", pendingTimeAggregationSources=" + pendingTimeAggregationSources +
+        ", pendingSelectionSourcesForOrderBy=" + pendingSelectionSourcesForOrderBy +
+        ", pendingMetricAggregationSourcesForOrderBy=" + pendingMetricAggregationSourcesForOrderBy +
+        ", sortAndPaginationNodeAdded=" + sortAndPaginationNodeAdded +
+        ", allAttributesToSourcesMap=" + allAttributesToSourcesMap +
+        ", total=" + total +
+        '}';
   }
 }

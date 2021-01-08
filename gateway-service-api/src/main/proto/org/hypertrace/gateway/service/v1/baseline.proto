@@ -1,0 +1,50 @@
+syntax = "proto3";
+
+option java_multiple_files = true;
+option java_package = "org.hypertrace.gateway.service.v1.baseline";
+
+package org.hypertrace.gateway.service.v1.baseline;
+
+import "org/hypertrace/gateway/service/v1/gateway_query.proto";
+
+message BaselineEntitiesRequest {
+  string entity_type = 1;
+  sfixed64 start_time_millis = 2;
+  sfixed64 end_time_millis = 3;
+
+  repeated string entity_ids = 4;
+  repeated org.hypertrace.gateway.service.v1.common.FunctionExpression baseline_aggregate_request = 7;
+  repeated BaselineTimeAggregation baseline_metric_series_request = 8;
+}
+
+message BaselineEntitiesResponse {
+  repeated BaselineEntity baseline_entity = 1;
+}
+
+message BaselineEntity {
+  string id = 1;
+  string entity_type = 2;
+  map<string, Baseline> baseline_aggregate_metric = 5;
+  map<string, BaselineMetricSeries> baseline_metric_series = 6;
+}
+
+message BaselineTimeAggregation {
+  org.hypertrace.gateway.service.v1.common.Period period = 1;
+  org.hypertrace.gateway.service.v1.common.FunctionExpression aggregation = 2;
+}
+
+message Baseline {
+  org.hypertrace.gateway.service.v1.common.Value value = 1;
+  org.hypertrace.gateway.service.v1.common.Value lower_bound = 2;
+  org.hypertrace.gateway.service.v1.common.Value upper_bound = 3;
+}
+
+message BaselineMetricSeries {
+  repeated BaselineInterval baseline_value = 1;
+}
+
+message BaselineInterval {
+  sfixed64 start_time_millis = 1;
+  sfixed64 end_time_millis = 2;
+  Baseline baseline = 3;
+}

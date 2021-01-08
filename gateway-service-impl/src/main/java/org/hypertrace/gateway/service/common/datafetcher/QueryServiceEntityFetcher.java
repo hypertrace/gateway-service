@@ -32,7 +32,6 @@ import org.hypertrace.gateway.service.common.AttributeMetadataProvider;
 import org.hypertrace.gateway.service.common.QueryRequestContext;
 import org.hypertrace.gateway.service.common.converters.QueryAndGatewayDtoConverter;
 import org.hypertrace.gateway.service.common.converters.QueryRequestUtil;
-import org.hypertrace.gateway.service.common.util.ArithmeticValueUtil;
 import org.hypertrace.gateway.service.common.util.AttributeMetadataUtil;
 import org.hypertrace.gateway.service.common.util.ExpressionReader;
 import org.hypertrace.gateway.service.common.util.MetricAggregationFunctionUtil;
@@ -44,7 +43,6 @@ import org.hypertrace.gateway.service.entity.config.EntityIdColumnsConfigs;
 import org.hypertrace.gateway.service.v1.common.AggregatedMetricValue;
 import org.hypertrace.gateway.service.v1.common.Expression.ValueCase;
 import org.hypertrace.gateway.service.v1.common.FunctionExpression;
-import org.hypertrace.gateway.service.v1.common.FunctionType;
 import org.hypertrace.gateway.service.v1.common.Health;
 import org.hypertrace.gateway.service.v1.common.Interval;
 import org.hypertrace.gateway.service.v1.common.MetricSeries;
@@ -100,12 +98,14 @@ public class QueryServiceEntityFetcher implements IEntityFetcher {
     QueryRequest.Builder builder =
         constructSelectionQuery(requestContext, entitiesRequest, entityIdAttributes, aggregates);
 
-    adjustLimitAndOffset(
-        builder,
-        entitiesRequest.getLimit(),
-        entitiesRequest.getOffset(),
-        requestContext.canApplyLimit(),
-        requestContext.canApplyOffset());
+    adjustLimitAndOffset(builder, entitiesRequest.getLimit(), entitiesRequest.getOffset());
+
+    if (!entitiesRequest.getOrderByList().isEmpty()) {
+      // Order by from the request.
+      builder.addAllOrderBy(
+          QueryAndGatewayDtoConverter.convertToQueryOrderByExpressions(
+              entitiesRequest.getOrderByList()));
+    }
 
     if (!entitiesRequest.getOrderByList().isEmpty()) {
       // Order by from the request.
@@ -146,7 +146,7 @@ public class QueryServiceEntityFetcher implements IEntityFetcher {
                     .toArray(String[]::new));
         Builder entityBuilder = entityBuilders.computeIfAbsent(entityKey, k -> Entity.newBuilder());
         entityBuilder.setEntityType(entitiesRequest.getEntityType());
-
+        entityBuilder.setId(entityKey.toString());
         // Always include the id in entity since that's needed to make follow up queries in
         // optimal fashion. If this wasn't really requested by the client, it should be removed
         // as post processing.
@@ -197,12 +197,7 @@ public class QueryServiceEntityFetcher implements IEntityFetcher {
 
     QueryRequest.Builder builder =
         constructSelectionQuery(requestContext, entitiesRequest, entityIdAttributes, aggregates);
-    adjustLimitAndOffset(
-        builder,
-        entitiesRequest.getLimit(),
-        entitiesRequest.getOffset(),
-        requestContext.canApplyLimit(),
-        requestContext.canApplyOffset());
+    adjustLimitAndOffset(builder, entitiesRequest.getLimit(), entitiesRequest.getOffset());
 
     QueryRequest request = builder.build();
 
@@ -242,7 +237,7 @@ public class QueryServiceEntityFetcher implements IEntityFetcher {
                     .toArray(String[]::new));
         Builder entityBuilder = entityMap.computeIfAbsent(entityKey, k -> Entity.newBuilder());
         entityBuilder.setEntityType(entitiesRequest.getEntityType());
-
+        entityBuilder.setId(entityKey.toString());
         // Always include the id in entity since that's needed to make follow up queries in
         // optimal fashion. If this wasn't really requested by the client, it should be removed
         // as post processing.
@@ -272,12 +267,7 @@ public class QueryServiceEntityFetcher implements IEntityFetcher {
     return new EntityFetcherResponse(entityMap);
   }
 
-  private void adjustLimitAndOffset(
-      QueryRequest.Builder builder,
-      int limit,
-      int offset,
-      boolean canApplyLimit,
-      boolean canApplyOffset) {
+  private void adjustLimitAndOffset(QueryRequest.Builder builder, int limit, int offset) {
     // If there is more than one groupBy column, we cannot set the same limit that came
     // in the request since that might return less entities than needed when the same
     // entity has different values for the other group by columns. Example: A service entity's
@@ -285,6 +275,9 @@ public class QueryServiceEntityFetcher implements IEntityFetcher {
     // For now, we pass a high value of limit in this case so that we get all the entities.
     // Limit has to be applied post the query in this case. Setting offset also might be wrong
     // here, hence not setting it.
+
+    boolean canApplyLimit = limit > 0;
+    boolean canApplyOffset = offset > 0;
 
     // If we cannot apply limit, limit the number of results to a default limit
     if (!canApplyLimit || builder.getGroupByCount() > 1) {
@@ -387,37 +380,22 @@ public class QueryServiceEntityFetcher implements IEntityFetcher {
     Preconditions.checkArgument(healthExpressions.size() <= 1);
     Health health = Health.NOT_COMPUTED;
 
-    if (FunctionType.AVGRATE == function.getFunction()) {
-      Value avgRateValue =
-          ArithmeticValueUtil.computeAvgRate(
-              function,
-              columnValue,
-              entitiesRequest.getStartTimeMillis(),
-              entitiesRequest.getEndTimeMillis());
+    Value convertedValue =
+        MetricAggregationFunctionUtil.getValueFromFunction(
+            entitiesRequest.getStartTimeMillis(),
+            entitiesRequest.getEndTimeMillis(),
+            attributeMetadataMap,
+            columnValue,
+            metadata,
+            function);
 
-      entityBuilder.putMetric(
-          metadata.getColumnName(),
-          AggregatedMetricValue.newBuilder()
-              .setValue(avgRateValue)
-              .setFunction(function.getFunction())
-              .setHealth(health)
-              .build());
-    } else {
-      Value gwValue =
-          QueryAndGatewayDtoConverter.convertToGatewayValueForMetricValue(
-              MetricAggregationFunctionUtil.getValueTypeFromFunction(
-                  function, attributeMetadataMap),
-              attributeMetadataMap,
-              metadata,
-              columnValue);
-      entityBuilder.putMetric(
-          metadata.getColumnName(),
-          AggregatedMetricValue.newBuilder()
-              .setValue(gwValue)
-              .setFunction(function.getFunction())
-              .setHealth(health)
-              .build());
-    }
+    entityBuilder.putMetric(
+        metadata.getColumnName(),
+        AggregatedMetricValue.newBuilder()
+            .setValue(convertedValue)
+            .setFunction(function.getFunction())
+            .setHealth(health)
+            .build());
   }
 
   @Override
@@ -563,6 +541,7 @@ public class QueryServiceEntityFetcher implements IEntityFetcher {
       Entity.Builder entityBuilder =
           Entity.newBuilder()
               .setEntityType(entitiesRequest.getEntityType())
+              .setId(entry.getKey().toString())
               .putAllMetricSeries(
                   entry.getValue().entrySet().stream()
                       .collect(

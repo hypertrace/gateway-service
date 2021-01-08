@@ -14,6 +14,8 @@ import org.hypertrace.core.query.service.client.QueryServiceClient;
 import org.hypertrace.core.query.service.client.QueryServiceConfig;
 import org.hypertrace.entity.query.service.client.EntityQueryServiceClient;
 import org.hypertrace.entity.service.client.config.EntityServiceClientConfig;
+import org.hypertrace.gateway.service.baseline.BaselineServiceQueryExecutor;
+import org.hypertrace.gateway.service.baseline.BaselineServiceQueryParser;
 import org.hypertrace.gateway.service.common.AttributeMetadataProvider;
 import org.hypertrace.gateway.service.common.RequestContext;
 import org.hypertrace.gateway.service.common.config.ScopeFilterConfigs;
@@ -21,6 +23,8 @@ import org.hypertrace.gateway.service.entity.EntityService;
 import org.hypertrace.gateway.service.entity.config.EntityIdColumnsConfigs;
 import org.hypertrace.gateway.service.entity.config.LogConfig;
 import org.hypertrace.gateway.service.explore.ExploreService;
+import org.hypertrace.gateway.service.baseline.BaselineService;
+import org.hypertrace.gateway.service.baseline.BaselineServiceImpl;
 import org.hypertrace.gateway.service.span.SpanService;
 import org.hypertrace.gateway.service.trace.TracesService;
 import org.hypertrace.gateway.service.v1.entity.EntitiesResponse;
@@ -28,6 +32,8 @@ import org.hypertrace.gateway.service.v1.entity.UpdateEntityRequest;
 import org.hypertrace.gateway.service.v1.entity.UpdateEntityResponse;
 import org.hypertrace.gateway.service.v1.explore.ExploreRequest;
 import org.hypertrace.gateway.service.v1.explore.ExploreResponse;
+import org.hypertrace.gateway.service.v1.baseline.BaselineEntitiesRequest;
+import org.hypertrace.gateway.service.v1.baseline.BaselineEntitiesResponse;
 import org.hypertrace.gateway.service.v1.span.SpansResponse;
 import org.hypertrace.gateway.service.v1.trace.TracesResponse;
 import org.slf4j.Logger;
@@ -51,6 +57,7 @@ public class GatewayServiceImpl extends GatewayServiceGrpc.GatewayServiceImplBas
   private final SpanService spanService;
   private final EntityService entityService;
   private final ExploreService exploreService;
+  private final BaselineService baselineService;
 
   public GatewayServiceImpl(Config appConfig) {
     AttributeServiceClientConfig asConfig = AttributeServiceClientConfig.from(appConfig);
@@ -83,6 +90,9 @@ public class GatewayServiceImpl extends GatewayServiceGrpc.GatewayServiceImplBas
     this.exploreService =
         new ExploreService(queryServiceClient, qsRequestTimeout,
             attributeMetadataProvider, scopeFilterConfigs);
+    BaselineServiceQueryParser baselineServiceQueryParser = new BaselineServiceQueryParser(attributeMetadataProvider);
+    BaselineServiceQueryExecutor baselineServiceQueryExecutor = new BaselineServiceQueryExecutor(qsRequestTimeout, queryServiceClient);
+    this.baselineService = new BaselineServiceImpl(attributeMetadataProvider, baselineServiceQueryParser, baselineServiceQueryExecutor, entityIdColumnsConfigs);
   }
 
   private static int getRequestTimeoutMillis(Config config) {
@@ -184,9 +194,7 @@ public class GatewayServiceImpl extends GatewayServiceGrpc.GatewayServiceImplBas
               org.hypertrace.core.grpcutils.context.RequestContext.CURRENT.get()
                   .getRequestHeaders());
 
-      if (LOG.isDebugEnabled()) {
-        LOG.debug("Received response: {}", response);
-      }
+      LOG.debug("Received response: {}", response);
 
       responseObserver.onNext(response);
       responseObserver.onCompleted();
@@ -225,6 +233,35 @@ public class GatewayServiceImpl extends GatewayServiceGrpc.GatewayServiceImplBas
       responseObserver.onCompleted();
     } catch (Exception e) {
       LOG.error("Error while handling UpdateEntityRequest: {}.", request, e);
+      responseObserver.onError(e);
+    }
+  }
+
+  @Override
+  public void getBaselineForEntities(
+      BaselineEntitiesRequest request, StreamObserver<BaselineEntitiesResponse> responseObserver) {
+    Optional<String> tenantId =
+        org.hypertrace.core.grpcutils.context.RequestContext.CURRENT.get().getTenantId();
+    if (tenantId.isEmpty()) {
+      responseObserver.onError(new ServiceException("Tenant id is missing in the request."));
+      return;
+    }
+
+    try {
+      BaselineEntitiesResponse response =
+          baselineService.getBaselineForEntities(
+              tenantId.get(),
+              request,
+              org.hypertrace.core.grpcutils.context.RequestContext.CURRENT
+                  .get()
+                  .getRequestHeaders());
+
+      LOG.debug("Received response: {}", response);
+
+      responseObserver.onNext(response);
+      responseObserver.onCompleted();
+    } catch (Exception e) {
+      LOG.error("Error while handling entities request: {}.", request, e);
       responseObserver.onError(e);
     }
   }

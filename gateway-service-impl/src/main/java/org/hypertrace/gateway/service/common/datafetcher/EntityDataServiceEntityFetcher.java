@@ -45,7 +45,6 @@ public class EntityDataServiceEntityFetcher implements IEntityFetcher {
     this.entityIdColumnsConfigs = entityIdColumnsConfigs;
   }
 
-  // TODO: No limit, offset or orderby for this?
   @Override
   public EntityFetcherResponse getEntities(
       EntitiesRequestContext requestContext, EntitiesRequest entitiesRequest) {
@@ -90,12 +89,14 @@ public class EntityDataServiceEntityFetcher implements IEntityFetcher {
                     EntityServiceAndGatewayServiceConverter.convertToEntityServiceExpression(
                         expression)));
 
-    if (requestContext.canApplyLimit()) {
-      builder.setLimit(entitiesRequest.getLimit());
+    int limit = entitiesRequest.getLimit();
+    if (limit > 0) {
+      builder.setLimit(limit);
     }
 
-    if (requestContext.canApplyOffset()) {
-      builder.setOffset(entitiesRequest.getOffset());
+    int offset = entitiesRequest.getOffset();
+    if (offset > 0) {
+      builder.setOffset(offset);
     }
 
     if (!entitiesRequest.getOrderByList().isEmpty()) {
@@ -134,6 +135,7 @@ public class EntityDataServiceEntityFetcher implements IEntityFetcher {
                     .toArray(String[]::new));
         Builder entityBuilder = entityBuilders.computeIfAbsent(entityKey, k -> Entity.newBuilder());
         entityBuilder.setEntityType(entitiesRequest.getEntityType());
+        entityBuilder.setId(entityKey.toString());
 
         // Always include the id in entity since that's needed to make follow up queries in
         // optimal fashion. If this wasn't really requested by the client, it should be removed

@@ -10,11 +10,13 @@ import java.util.Map;
 import java.util.Optional;
 import java.util.Set;
 import java.util.stream.Collectors;
+import java.util.stream.Stream;
+
 import org.hypertrace.core.attribute.service.v1.AttributeMetadata;
 import org.hypertrace.core.attribute.service.v1.AttributeSource;
 import org.hypertrace.gateway.service.common.util.TimeRangeFilterUtil;
 import org.hypertrace.gateway.service.entity.query.visitor.ExecutionContextBuilderVisitor;
-import org.hypertrace.gateway.service.entity.query.visitor.OptimizingVisitor;
+import org.hypertrace.gateway.service.entity.query.visitor.FilterOptimizingVisitor;
 import org.hypertrace.gateway.service.entity.query.visitor.PrintVisitor;
 import org.hypertrace.gateway.service.v1.common.Filter;
 import org.hypertrace.gateway.service.v1.common.Operator;
@@ -103,6 +105,7 @@ public class ExecutionTreeBuilder {
       QueryNode rootNode = buildExecutionTreeForSameSourceFilterAndSelection(source);
 
       rootNode.acceptVisitor(new ExecutionContextBuilderVisitor(executionContext));
+
       QueryNode executionTree = buildExecutionTree(executionContext, rootNode);
 
       if (LOG.isDebugEnabled()) {
@@ -118,16 +121,17 @@ public class ExecutionTreeBuilder {
     }
 
     filterTree.acceptVisitor(new ExecutionContextBuilderVisitor(executionContext));
+
     if (LOG.isDebugEnabled()) {
       LOG.debug("ExecutionContext: {}", executionContext);
     }
 
     /**
-     * {@link OptimizingVisitor} is needed to merge filters corresponding to the same source into
+     * {@link FilterOptimizingVisitor} is needed to merge filters corresponding to the same source into
      * one {@link DataFetcherNode}, instead of having multiple {@link DataFetcherNode}s for each
      * filter
      */
-    QueryNode optimizedFilterTree = filterTree.acceptVisitor(new OptimizingVisitor());
+    QueryNode optimizedFilterTree = filterTree.acceptVisitor(new FilterOptimizingVisitor());
     if (LOG.isDebugEnabled()) {
       LOG.debug("Optimized Filter Tree:{}", optimizedFilterTree.acceptVisitor(new PrintVisitor()));
     }
@@ -189,6 +193,7 @@ public class ExecutionTreeBuilder {
               .build();
       attrSourcesForOrderBy.forEach(executionContext::removePendingSelectionSource);
     }
+
     // Select agg attributes from sources in order by
     Set<String> metricSourcesForOrderBy =
         executionContext.getPendingMetricAggregationSourcesForOrderBy();
@@ -228,6 +233,7 @@ public class ExecutionTreeBuilder {
               .build();
       rootNode = checkAndAddSortAndPaginationNode(rootNode, executionContext);
     }
+
     return rootNode;
   }
 
@@ -284,8 +290,16 @@ public class ExecutionTreeBuilder {
       return childNode;
     }
     // Add ordering and pagination node
+    List<OrderByExpression> selectionOrderByExpressions =
+        executionContext.getSourceToSelectionOrderByExpressionMap().values().stream()
+            .flatMap(Collection::stream)
+            .collect(Collectors.toList());
+    List<OrderByExpression> metricOrderByExpressions =
+        executionContext.getSourceToMetricOrderByExpressionMap().values().stream()
+            .flatMap(Collection::stream)
+            .collect(Collectors.toList());
     List<OrderByExpression> orderByExpressions =
-        executionContext.getSourceToOrderByExpressionMap().values().stream()
+        Stream.of(selectionOrderByExpressions, metricOrderByExpressions)
             .flatMap(Collection::stream)
             .collect(Collectors.toList());
     if (orderByExpressions.isEmpty() && executionContext.getEntitiesRequest().getLimit() == 0) {
