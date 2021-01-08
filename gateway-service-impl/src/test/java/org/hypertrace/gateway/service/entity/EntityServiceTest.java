@@ -342,6 +342,7 @@ public class EntityServiceTest extends AbstractGatewayServiceTest {
             .addSelection(
                 createQsAggregationExpression("AVG", "duration", "API.duration", "duration"))
             .addGroupBy(createColumnExpression("API.apiId"))
+            .setLimit(10000)
             .build();
     when(queryServiceClient.executeQuery(secondQueryRequest, Map.of(), 500))
         .thenReturn(

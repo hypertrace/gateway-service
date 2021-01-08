@@ -1,13 +1,18 @@
 package org.hypertrace.gateway.service.entity.query;
 
-import java.util.HashSet;
-import java.util.List;
-import java.util.Optional;
-import java.util.Set;
-import org.hypertrace.core.attribute.service.v1.AttributeSource;
+import org.hypertrace.gateway.service.common.util.ExpressionReader;
 import org.hypertrace.gateway.service.v1.common.Expression;
 import org.hypertrace.gateway.service.v1.common.Filter;
 import org.hypertrace.gateway.service.v1.common.Operator;
+
+import java.util.Collection;
+import java.util.HashMap;
+import java.util.HashSet;
+import java.util.List;
+import java.util.Map;
+import java.util.Optional;
+import java.util.Set;
+import java.util.stream.Collectors;
 
 public class ExecutionTreeUtils {
   /**
@@ -36,14 +41,16 @@ public class ExecutionTreeUtils {
     Set<String> metricAggregationsSourceSet = executionContext.getSourceToMetricExpressionMap().keySet();
     Set<String> timeAggregationsSourceSet = executionContext.getSourceToTimeAggregationMap().keySet();
     Set<String> filtersSourceSet = executionContext.getSourceToFilterExpressionMap().keySet();
-    Set<String> orderBysSourceSet = executionContext.getSourceToOrderByExpressionMap().keySet();
+    Set<String> selectionOrderBysSourceSet = executionContext.getSourceToSelectionOrderByExpressionMap().keySet();
+    Set<String> metricAggregationOrderBysSourceSet = executionContext.getSourceToMetricOrderByExpressionMap().keySet();
 
     Set<String> sources = new HashSet<>();
     sources.addAll(selectionsSourceSet);
     sources.addAll(metricAggregationsSourceSet);
     sources.addAll(timeAggregationsSourceSet);
     sources.addAll(filtersSourceSet);
-    sources.addAll(orderBysSourceSet);
+    sources.addAll(selectionOrderBysSourceSet);
+    sources.addAll(metricAggregationOrderBysSourceSet);
     if (sources.size() == 1) {
       return sources.stream().findFirst();
     } else {
@@ -60,7 +67,7 @@ public class ExecutionTreeUtils {
    */
   private static Optional<String> getSingleSourceFromAttributeSourceValueSets(ExecutionContext executionContext) {
     // Compute the intersection of all sources in attributesToSourcesMap and check if it's size is 1
-    Set<AttributeSource> attributeSourcesIntersection = executionContext.getAttributeToSourcesMap().values().stream()
+    Set<String> attributeSourcesIntersection = executionContext.getAllAttributesToSourcesMap().values().stream()
         .filter((sourcesSet) -> !sourcesSet.isEmpty())
         .findFirst()
         .orElse(Set.of());
@@ -71,13 +78,13 @@ public class ExecutionTreeUtils {
 
     attributeSourcesIntersection = new HashSet<>(attributeSourcesIntersection);
 
-    for (Set<AttributeSource> attributeSourcesSet : executionContext.getAttributeToSourcesMap().values()) {
+    for (Set<String> attributeSourcesSet : executionContext.getAllAttributesToSourcesMap().values()) {
       // retainAll() for sets computes the intersections.
       attributeSourcesIntersection.retainAll(attributeSourcesSet);
     }
 
     if (attributeSourcesIntersection.size() == 1) {
-      return attributeSourcesIntersection.stream().map(Enum::name).findFirst();
+      return attributeSourcesIntersection.stream().findFirst();
     } else {
       return Optional.empty();
     }

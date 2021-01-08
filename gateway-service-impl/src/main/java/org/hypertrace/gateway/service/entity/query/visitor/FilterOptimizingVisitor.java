@@ -12,7 +12,6 @@ import org.hypertrace.gateway.service.entity.query.NoOpNode;
 import org.hypertrace.gateway.service.entity.query.OrNode;
 import org.hypertrace.gateway.service.entity.query.PaginateOnlyNode;
 import org.hypertrace.gateway.service.entity.query.QueryNode;
-import org.hypertrace.gateway.service.entity.query.SelectionAndFilterNode;
 import org.hypertrace.gateway.service.entity.query.SelectionNode;
 import org.hypertrace.gateway.service.entity.query.SortAndPaginateNode;
 import org.hypertrace.gateway.service.entity.query.TotalFetcherNode;
@@ -25,7 +24,7 @@ import org.hypertrace.gateway.service.v1.common.Operator;
  * <p>If there are multiple filter conditions for the same source, this visitor tries to optimize
  * the queries being made to the respective sources
  */
-public class OptimizingVisitor implements Visitor<QueryNode> {
+public class FilterOptimizingVisitor implements Visitor<QueryNode> {
 
   @Override
   public QueryNode visit(DataFetcherNode dataFetcherNode) {
@@ -164,11 +163,6 @@ public class OptimizingVisitor implements Visitor<QueryNode> {
   @Override
   public QueryNode visit(NoOpNode noOpNode) {
     return noOpNode;
-  }
-
-  @Override
-  public QueryNode visit(SelectionAndFilterNode selectionAndFilterNode) {
-    return selectionAndFilterNode;
   }
 
   @Override

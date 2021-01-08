@@ -45,7 +45,6 @@ public class EntityDataServiceEntityFetcher implements IEntityFetcher {
     this.entityIdColumnsConfigs = entityIdColumnsConfigs;
   }
 
-  // TODO: No limit, offset or orderby for this?
   @Override
   public EntityFetcherResponse getEntities(
       EntitiesRequestContext requestContext, EntitiesRequest entitiesRequest) {
@@ -89,6 +88,22 @@ public class EntityDataServiceEntityFetcher implements IEntityFetcher {
                 builder.addSelection(
                     EntityServiceAndGatewayServiceConverter.convertToEntityServiceExpression(
                         expression)));
+
+    int limit = entitiesRequest.getLimit();
+    if (limit > 0) {
+      builder.setLimit(limit);
+    }
+
+    int offset = entitiesRequest.getOffset();
+    if (offset > 0) {
+      builder.setOffset(offset);
+    }
+
+    if (!entitiesRequest.getOrderByList().isEmpty()) {
+      builder.addAllOrderBy(
+          EntityServiceAndGatewayServiceConverter.convertToOrderByExpressions(
+              entitiesRequest.getOrderByList()));
+    }
 
     EntityQueryRequest entityQueryRequest = builder.build();
     if (LOG.isDebugEnabled()) {
@@ -169,12 +184,5 @@ public class EntityDataServiceEntityFetcher implements IEntityFetcher {
   @Override
   public int getTotalEntities(EntitiesRequestContext requestContext, EntitiesRequest entitiesRequest) {
     throw new UnsupportedOperationException("Fetching total entities not supported by EDS");
-  }
-
-  @Override
-  public EntityFetcherResponse getEntitiesAndAggregatedMetrics(
-      EntitiesRequestContext requestContext, EntitiesRequest entitiesRequest) {
-    throw new UnsupportedOperationException("Fetching entities and aggregated metric data"
-        + " not supported by EDS");
   }
 }

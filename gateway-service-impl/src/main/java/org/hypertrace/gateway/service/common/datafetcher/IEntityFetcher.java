@@ -35,16 +35,6 @@ public interface IEntityFetcher {
       EntitiesRequestContext requestContext, EntitiesRequest entitiesRequest);
 
   /**
-   * Gets entities with aggregatedMetrics at the same time
-   *
-   * @param requestContext Additional context for the incoming request
-   * @param entitiesRequest encapsulates the aggregated metrics query (selection, filter, order)
-   * @return Map of the Entity Builders keyed by the EntityId
-   */
-  EntityFetcherResponse getEntitiesAndAggregatedMetrics(
-      EntitiesRequestContext requestContext, EntitiesRequest entitiesRequest);
-
-  /**
    * Get time series data
    *
    * @param requestContext Additional context for the incoming request

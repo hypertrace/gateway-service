@@ -10,11 +10,13 @@ import java.util.Map;
 import java.util.Optional;
 import java.util.Set;
 import java.util.stream.Collectors;
+import java.util.stream.Stream;
+
 import org.hypertrace.core.attribute.service.v1.AttributeMetadata;
 import org.hypertrace.core.attribute.service.v1.AttributeSource;
 import org.hypertrace.gateway.service.common.util.TimeRangeFilterUtil;
 import org.hypertrace.gateway.service.entity.query.visitor.ExecutionContextBuilderVisitor;
-import org.hypertrace.gateway.service.entity.query.visitor.OptimizingVisitor;
+import org.hypertrace.gateway.service.entity.query.visitor.FilterOptimizingVisitor;
 import org.hypertrace.gateway.service.entity.query.visitor.PrintVisitor;
 import org.hypertrace.gateway.service.v1.common.Filter;
 import org.hypertrace.gateway.service.v1.common.Operator;
@@ -67,9 +69,16 @@ public class ExecutionTreeBuilder {
     // sources
     if (entitiesRequest.getIncludeNonLiveEntities()) {
       QueryNode rootNode = new DataFetcherNode(EDS.name(), entitiesRequest.getFilter());
+
       rootNode.acceptVisitor(new ExecutionContextBuilderVisitor(executionContext));
 
-      return buildExecutionTree(executionContext, rootNode);
+      QueryNode executionTree = buildExecutionTree(executionContext, rootNode);
+
+      if (LOG.isDebugEnabled()) {
+        LOG.debug("Execution Tree:{}", executionTree.acceptVisitor(new PrintVisitor()));
+      }
+
+      return executionTree;
     }
 
     // If all the attributes, filters, order by and sort are requested from a single source, there
@@ -78,12 +87,17 @@ public class ExecutionTreeBuilder {
     // the data store
     if (singleSourceForAllAttributes.isPresent()) {
       String source = singleSourceForAllAttributes.get();
-      QueryNode selectionAndFilterNode = buildExecutionTreeForSameSourceFilterAndSelection(source);
+      QueryNode rootNode = buildExecutionTreeForSameSourceFilterAndSelection(source);
+
+      rootNode.acceptVisitor(new ExecutionContextBuilderVisitor(executionContext));
+
+      QueryNode executionTree = buildExecutionTree(executionContext, rootNode);
+
       if (LOG.isDebugEnabled()) {
-        LOG.debug("Execution Tree:{}", selectionAndFilterNode.acceptVisitor(new PrintVisitor()));
+        LOG.debug("Execution Tree:{}", executionTree.acceptVisitor(new PrintVisitor()));
       }
 
-      return selectionAndFilterNode;
+      return executionTree;
     }
 
     QueryNode filterTree = buildFilterTree(executionContext, entitiesRequest.getFilter());
@@ -92,11 +106,17 @@ public class ExecutionTreeBuilder {
     }
 
     filterTree.acceptVisitor(new ExecutionContextBuilderVisitor(executionContext));
+
     if (LOG.isDebugEnabled()) {
       LOG.debug("ExecutionContext: {}", executionContext);
     }
 
-    QueryNode optimizedFilterTree = filterTree.acceptVisitor(new OptimizingVisitor());
+    /**
+     * {@link FilterOptimizingVisitor} is needed to merge filters corresponding to the same source into
+     * one {@link DataFetcherNode}, instead of having multiple {@link DataFetcherNode}s for each
+     * filter
+     */
+    QueryNode optimizedFilterTree = filterTree.acceptVisitor(new FilterOptimizingVisitor());
     if (LOG.isDebugEnabled()) {
       LOG.debug("Optimized Filter Tree:{}", optimizedFilterTree.acceptVisitor(new PrintVisitor()));
     }
@@ -120,26 +140,34 @@ public class ExecutionTreeBuilder {
   }
 
   private QueryNode buildExecutionTreeForQsFilterAndSelection(String source) {
-    int selectionLimit = executionContext.getEntitiesRequest().getLimit();
-    int selectionOffset = executionContext.getEntitiesRequest().getOffset();
+    EntitiesRequest entitiesRequest = executionContext.getEntitiesRequest();
+    Filter filter = entitiesRequest.getFilter();
+    int selectionLimit = entitiesRequest.getLimit();
+    int selectionOffset = entitiesRequest.getOffset();
+    List<OrderByExpression> orderBys = entitiesRequest.getOrderByList();
 
     // query-service/Pinot does not support offset when group by is specified. Since we will be
     // grouping by at least the entity id, we will compute the non zero pagination ourselves. This
     // means that we need to request for offset + limit rows so that we can paginate appropriately.
     // Pinot will do the ordering for us.
+    // https://github.com/apache/incubator-pinot/issues/111#issuecomment-214810551
     if (selectionOffset > 0) {
       selectionLimit = selectionOffset + selectionLimit;
       selectionOffset = 0;
     }
 
-    QueryNode rootNode = new SelectionAndFilterNode(source, selectionLimit, selectionOffset);
-    if (executionContext.getEntitiesRequest().getOffset() > 0) {
-      rootNode = new PaginateOnlyNode(
-          rootNode,
-          executionContext.getEntitiesRequest().getLimit(),
-          executionContext.getEntitiesRequest().getOffset()
-      );
+    QueryNode rootNode =
+        new DataFetcherNode(source, filter, selectionLimit, selectionOffset, orderBys);
+
+    if (entitiesRequest.getOffset() > 0) {
+      rootNode =
+          new PaginateOnlyNode(
+              rootNode,
+              executionContext.getEntitiesRequest().getLimit(),
+              executionContext.getEntitiesRequest().getOffset());
     }
+
+    executionContext.setSortAndPaginationNodeAdded(true);
 
     // If the request has an EntityId EQ filter then there's no need for the 2nd request to get the
     // total entities. So no need to set the TotalFetcherNode
@@ -153,14 +181,13 @@ public class ExecutionTreeBuilder {
   }
 
   private QueryNode buildExecutionTreeForEdsFilterAndSelection(String source) {
+    Filter filter = executionContext.getEntitiesRequest().getFilter();
     int selectionLimit = executionContext.getEntitiesRequest().getLimit();
     int selectionOffset = executionContext.getEntitiesRequest().getOffset();
     List<OrderByExpression> orderBys = executionContext.getEntitiesRequest().getOrderByList();
 
-    QueryNode rootNode = new SelectionAndFilterNode(source, selectionLimit, selectionOffset);
-    // EDS does not seem to do orderby, limiting and offsetting. We will have to do it ourselves.
-    rootNode = new SortAndPaginateNode(rootNode, selectionLimit, selectionOffset, orderBys);
-
+    QueryNode rootNode = new DataFetcherNode(source, filter, selectionLimit, selectionOffset, orderBys);
+    executionContext.setSortAndPaginationNodeAdded(true);
     return rootNode;
   }
 
@@ -176,6 +203,7 @@ public class ExecutionTreeBuilder {
               .build();
       attrSourcesForOrderBy.forEach(executionContext::removePendingSelectionSource);
     }
+
     // Select agg attributes from sources in order by
     Set<String> metricSourcesForOrderBy =
         executionContext.getPendingMetricAggregationSourcesForOrderBy();
@@ -215,6 +243,7 @@ public class ExecutionTreeBuilder {
               .build();
       rootNode = checkAndAddSortAndPaginationNode(rootNode, executionContext);
     }
+
     return rootNode;
   }
 
@@ -264,8 +293,16 @@ public class ExecutionTreeBuilder {
       return childNode;
     }
     // Add ordering and pagination node
+    List<OrderByExpression> selectionOrderByExpressions =
+        executionContext.getSourceToSelectionOrderByExpressionMap().values().stream()
+            .flatMap(Collection::stream)
+            .collect(Collectors.toList());
+    List<OrderByExpression> metricOrderByExpressions =
+        executionContext.getSourceToMetricOrderByExpressionMap().values().stream()
+            .flatMap(Collection::stream)
+            .collect(Collectors.toList());
     List<OrderByExpression> orderByExpressions =
-        executionContext.getSourceToOrderByExpressionMap().values().stream()
+        Stream.of(selectionOrderByExpressions, metricOrderByExpressions)
             .flatMap(Collection::stream)
             .collect(Collectors.toList());
     if (orderByExpressions.isEmpty() && executionContext.getEntitiesRequest().getLimit() == 0) {
