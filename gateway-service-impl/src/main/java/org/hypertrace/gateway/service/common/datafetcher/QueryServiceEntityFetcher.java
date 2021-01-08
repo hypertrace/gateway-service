@@ -98,12 +98,7 @@ public class QueryServiceEntityFetcher implements IEntityFetcher {
     QueryRequest.Builder builder =
         constructSelectionQuery(requestContext, entitiesRequest, entityIdAttributes, aggregates);
 
-    adjustLimitAndOffset(
-        builder,
-        entitiesRequest.getLimit(),
-        entitiesRequest.getOffset(),
-        requestContext.canApplyLimit(),
-        requestContext.canApplyOffset());
+    adjustLimitAndOffset(builder, entitiesRequest.getLimit(), entitiesRequest.getOffset());
 
     if (!entitiesRequest.getOrderByList().isEmpty()) {
       // Order by from the request.
@@ -195,12 +190,7 @@ public class QueryServiceEntityFetcher implements IEntityFetcher {
 
     QueryRequest.Builder builder =
         constructSelectionQuery(requestContext, entitiesRequest, entityIdAttributes, aggregates);
-    adjustLimitAndOffset(
-        builder,
-        entitiesRequest.getLimit(),
-        entitiesRequest.getOffset(),
-        requestContext.canApplyLimit(),
-        requestContext.canApplyOffset());
+    adjustLimitAndOffset(builder, entitiesRequest.getLimit(), entitiesRequest.getOffset());
 
     QueryRequest request = builder.build();
 
@@ -270,12 +260,7 @@ public class QueryServiceEntityFetcher implements IEntityFetcher {
     return new EntityFetcherResponse(entityMap);
   }
 
-  private void adjustLimitAndOffset(
-      QueryRequest.Builder builder,
-      int limit,
-      int offset,
-      boolean canApplyLimit,
-      boolean canApplyOffset) {
+  private void adjustLimitAndOffset(QueryRequest.Builder builder, int limit, int offset) {
     // If there is more than one groupBy column, we cannot set the same limit that came
     // in the request since that might return less entities than needed when the same
     // entity has different values for the other group by columns. Example: A service entity's
@@ -283,6 +268,10 @@ public class QueryServiceEntityFetcher implements IEntityFetcher {
     // For now, we pass a high value of limit in this case so that we get all the entities.
     // Limit has to be applied post the query in this case. Setting offset also might be wrong
     // here, hence not setting it.
+
+    // limit or offset can be set negative, if we cannot push down limit or offset to QS
+    boolean canApplyLimit = limit >= 0;
+    boolean canApplyOffset = offset >= 0;
 
     // If we cannot apply limit, limit the number of results to a default limit
     if (!canApplyLimit || builder.getGroupByCount() > 1) {

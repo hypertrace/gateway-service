@@ -8,9 +8,6 @@ public class EntitiesRequestContext extends QueryRequestContext {
   private final String entityType;
   private final String timestampAttributeId;
 
-  private boolean applyLimit;
-  private boolean applyOffset;
-
   public EntitiesRequestContext(
       String tenantId,
       long startTimeMillis,
@@ -29,22 +26,6 @@ public class EntitiesRequestContext extends QueryRequestContext {
 
   public String getTimestampAttributeId() {
     return timestampAttributeId;
-  }
-
-  public boolean canApplyLimit() {
-    return applyLimit;
-  }
-
-  public void canApplyLimit(boolean applyLimit) {
-    this.applyLimit = applyLimit;
-  }
-
-  public boolean canApplyOffset() {
-    return applyOffset;
-  }
-
-  public void canApplyOffset(boolean applyOffset) {
-    this.applyOffset = applyOffset;
   }
 
   @Override

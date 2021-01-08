@@ -159,7 +159,7 @@ public class ExecutionTreeBuilder {
     QueryNode rootNode =
         new DataFetcherNode(source, filter, selectionLimit, selectionOffset, orderBys);
 
-    if (executionContext.getEntitiesRequest().getOffset() > 0) {
+    if (entitiesRequest.getOffset() > 0) {
       rootNode =
           new PaginateOnlyNode(
               rootNode,

@@ -109,9 +109,6 @@ public class QueryServiceEntityFetcherTests {
         new EntitiesRequestContext(
             tenantId, startTime, endTime, entityType.name(), "API.startTime", requestHeaders);
 
-    entitiesRequestContext.canApplyLimit(true);
-    entitiesRequestContext.canApplyOffset(true);
-
     QueryRequest expectedQueryRequest =
         QueryRequest.newBuilder()
             .addSelection(createColumnExpression(API_ID_ATTR))
@@ -126,6 +123,66 @@ public class QueryServiceEntityFetcherTests {
             .addGroupBy(createColumnExpression(API_ID_ATTR))
             .setOffset(offset)
             .setLimit(limit)
+            .addAllOrderBy(
+                QueryAndGatewayDtoConverter.convertToQueryOrderByExpressions(orderByExpressions))
+            .build();
+
+    List<ResultSetChunk> resultSetChunks =
+        List.of(getResultSetChunk(List.of("API.apiId"), new String[][] {{"apiId1"}, {"apiId2"}}));
+
+    when(queryServiceClient.executeQuery(eq(expectedQueryRequest), eq(requestHeaders), eq(500)))
+        .thenReturn(resultSetChunks.iterator());
+
+    assertEquals(
+        2, queryServiceEntityFetcher.getEntities(entitiesRequestContext, entitiesRequest).size());
+  }
+
+  @Test
+  public void test_getEntitiesWithoutPagination() {
+    List<OrderByExpression> orderByExpressions = List.of(buildOrderByExpression(API_ID_ATTR));
+    long startTime = 1L;
+    long endTime = 10L;
+    int limit = -1;
+    int offset = -1;
+    String tenantId = "TENANT_ID";
+    Map<String, String> requestHeaders = Map.of("x-tenant-id", tenantId);
+    AttributeScope entityType = AttributeScope.API;
+    EntitiesRequest entitiesRequest =
+        EntitiesRequest.newBuilder()
+            .setEntityType(entityType.name())
+            .setStartTimeMillis(startTime)
+            .setEndTimeMillis(endTime)
+            .addTimeAggregation(
+                buildTimeAggregation(
+                    30, API_NUM_CALLS_ATTR, FunctionType.SUM, "SUM_API.numCalls", List.of()))
+            .setFilter(
+                Filter.newBuilder()
+                    .setOperator(AND)
+                    .addChildFilter(
+                        EntitiesRequestAndResponseUtils.getTimeRangeFilter(
+                            "API.startTime", startTime, endTime))
+                    .addChildFilter(generateEQFilter(API_DISCOVERY_STATE_ATTR, "DISCOVERED")))
+            .addAllOrderBy(orderByExpressions)
+            .setLimit(limit)
+            .setOffset(offset)
+            .build();
+    EntitiesRequestContext entitiesRequestContext =
+        new EntitiesRequestContext(
+            tenantId, startTime, endTime, entityType.name(), "API.startTime", requestHeaders);
+
+    QueryRequest expectedQueryRequest =
+        QueryRequest.newBuilder()
+            .addSelection(createColumnExpression(API_ID_ATTR))
+            .addSelection(createQsAggregationExpression("COUNT", API_ID_ATTR))
+            .setFilter(
+                createQsRequestFilter(
+                    API_START_TIME_ATTR,
+                    API_ID_ATTR,
+                    startTime,
+                    endTime,
+                    createStringFilter(API_DISCOVERY_STATE_ATTR, Operator.EQ, "DISCOVERED")))
+            .addGroupBy(createColumnExpression(API_ID_ATTR))
+            .setLimit(QueryServiceClient.DEFAULT_QUERY_SERVICE_GROUP_BY_LIMIT)
             .addAllOrderBy(
                 QueryAndGatewayDtoConverter.convertToQueryOrderByExpressions(orderByExpressions))
             .build();

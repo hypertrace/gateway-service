@@ -89,12 +89,14 @@ public class EntityDataServiceEntityFetcher implements IEntityFetcher {
                     EntityServiceAndGatewayServiceConverter.convertToEntityServiceExpression(
                         expression)));
 
-    if (requestContext.canApplyLimit()) {
-      builder.setLimit(entitiesRequest.getLimit());
+    int limit = entitiesRequest.getLimit();
+    if (limit >= 0) {
+      builder.setLimit(limit);
     }
 
-    if (requestContext.canApplyOffset()) {
-      builder.setOffset(entitiesRequest.getOffset());
+    int offset = entitiesRequest.getOffset();
+    if (offset >= 0) {
+      builder.setOffset(offset);
     }
 
     if (!entitiesRequest.getOrderByList().isEmpty()) {

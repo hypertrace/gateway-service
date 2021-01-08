@@ -12,7 +12,7 @@ import org.hypertrace.gateway.service.entity.query.visitor.Visitor;
  */
 public class SelectionNode implements QueryNode {
 
-  private Set<String> attrSelectionSources;
+  private final Set<String> attrSelectionSources;
   private final Set<String> aggMetricSelectionSources;
   private final Set<String> timeSeriesSelectionSources;
 
@@ -31,10 +31,6 @@ public class SelectionNode implements QueryNode {
 
   public Set<String> getAttrSelectionSources() {
     return attrSelectionSources;
-  }
-
-  public void setAttrSelectionSources(Set<String> attrSelectionSources) {
-    this.attrSelectionSources = attrSelectionSources;
   }
 
   public Set<String> getAggMetricSelectionSources() {
