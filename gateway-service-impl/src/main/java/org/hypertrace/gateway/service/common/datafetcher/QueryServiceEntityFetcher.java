@@ -107,13 +107,6 @@ public class QueryServiceEntityFetcher implements IEntityFetcher {
               entitiesRequest.getOrderByList()));
     }
 
-    if (!entitiesRequest.getOrderByList().isEmpty()) {
-      // Order by from the request.
-      builder.addAllOrderBy(
-          QueryAndGatewayDtoConverter.convertToQueryOrderByExpressions(
-              entitiesRequest.getOrderByList()));
-    }
-
     QueryRequest queryRequest = builder.build();
 
     if (LOG.isDebugEnabled()) {

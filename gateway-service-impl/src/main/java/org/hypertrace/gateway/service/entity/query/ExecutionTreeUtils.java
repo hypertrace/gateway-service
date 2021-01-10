@@ -200,14 +200,15 @@ public class ExecutionTreeUtils {
   public static Set<String> getSourceSetsIfFilterAndOrderByAreFromSameSourceSets(
       ExecutionContext executionContext) {
 
-    Map<String, Set<String>> filterAttributeToSourcesMap = executionContext.getSourceToFilterAttributeMap();
-    Map<String, Set<String>> orderBySelectionAttributeToSourceMap = executionContext.getSourceToSelectionOrderByAttributeMap();
-    Map<String, Set<String>> orderByMetricAttributeToSourceMap = executionContext.getSourceToMetricOrderByAttributeMap();
-    // merges orderBySelectionAttributeToSourceMap and orderByMetricAttributeToSourceMap
-    Map<String, Set<String>> orderByAttributeToSourceMap =
+    Map<String, Set<String>> sourceToFilterAttributeMap = executionContext.getSourceToFilterAttributeMap();
+    Map<String, Set<String>> sourceToSelectionOrderByAttributeMap = executionContext.getSourceToSelectionOrderByAttributeMap();
+    Map<String, Set<String>> sourceToMetricOrderByAttributeMap = executionContext.getSourceToMetricOrderByAttributeMap();
+
+    // merges sourceToSelectionOrderByAttributeMap and sourceToMetricOrderByAttributeMap
+    Map<String, Set<String>> sourceToOrderByAttributeMap =
         Stream.concat(
-                orderByMetricAttributeToSourceMap.entrySet().stream(),
-                orderBySelectionAttributeToSourceMap.entrySet().stream())
+            sourceToSelectionOrderByAttributeMap.entrySet().stream(),
+            sourceToMetricOrderByAttributeMap.entrySet().stream())
             .collect(
                 Collectors.toMap(
                     Map.Entry::getKey,
@@ -220,9 +221,13 @@ public class ExecutionTreeUtils {
                     HashMap::new));
 
     // A weird case, if there are no filters and order bys
-    if (filterAttributeToSourcesMap.isEmpty() && orderByAttributeToSourceMap.isEmpty()) {
+    if (sourceToFilterAttributeMap.isEmpty() && sourceToOrderByAttributeMap.isEmpty()) {
       return Collections.emptySet();
     }
+
+    Map<String, Set<String>> filterAttributeToSourcesMap = buildAttributeToSourcesMap(sourceToFilterAttributeMap);
+    Map<String, Set<String>> orderByAttributeToSourceMap = buildAttributeToSourcesMap(sourceToOrderByAttributeMap);
+
     return getIntersectingSourceSets(filterAttributeToSourcesMap, orderByAttributeToSourceMap);
   }
 
@@ -268,8 +273,7 @@ public class ExecutionTreeUtils {
     Set<String> intersectingSourceSetSecond =
         getIntersectingSourceSets(attributeToSourcesMapSecond);
 
-    intersectingSourceSetFirst.retainAll(intersectingSourceSetSecond);
-    return intersectingSourceSetFirst;
+    return Sets.intersection(intersectingSourceSetFirst, intersectingSourceSetSecond);
   }
 
   /**
@@ -289,5 +293,26 @@ public class ExecutionTreeUtils {
     return attributeToSourcesMap.values().stream()
         .reduce(Sets::intersection)
         .orElse(Collections.emptySet());
+  }
+
+  /**
+   * Given a source to attributes, builds an attribute to sources map.
+   * Basically, a reverse map of the map provided as input
+   *
+   * Example:
+   * ("QS" -> API.id, "QS" -> API.name, "EDS" -> API.id) =>
+   *
+   * ("API.id" -> ["QS", "EDS"], "API.name" -> "QS")
+   */
+  private static Map<String, Set<String>> buildAttributeToSourcesMap(
+      Map<String, Set<String>> sourcesToAttributeMap) {
+    Map<String, Set<String>> attributeToSourcesMap = new HashMap<>();
+    for (Map.Entry<String, Set<String>> entry : sourcesToAttributeMap.entrySet()) {
+      String source = entry.getKey();
+      for (String attribute : entry.getValue()) {
+        attributeToSourcesMap.computeIfAbsent(attribute, k -> new HashSet<>()).add(source);
+      }
+    }
+    return Collections.unmodifiableMap(attributeToSourcesMap);
   }
 }

@@ -76,8 +76,8 @@ public class FilterOptimizingVisitor implements Visitor<QueryNode> {
     if (orNodeList != null) {
       orNodeList.forEach(
           treeNode -> {
-            OrNode an = (OrNode) treeNode;
-            Map<String, List<QueryNode>> childAndNodeMap = groupNodesBySource(an.getChildNodes());
+            OrNode or = (OrNode) treeNode;
+            Map<String, List<QueryNode>> childAndNodeMap = groupNodesBySource(or.getChildNodes());
             childAndNodeMap.forEach(
                 (k, v) ->
                     sourceToTreeNodeListMap.merge(

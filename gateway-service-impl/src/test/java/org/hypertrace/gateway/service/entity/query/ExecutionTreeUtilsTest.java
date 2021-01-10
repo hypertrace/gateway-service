@@ -12,6 +12,7 @@ import org.hypertrace.gateway.service.v1.entity.EntitiesRequest;
 import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.Test;
 
+import java.util.Collections;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
@@ -24,6 +25,8 @@ import static org.hypertrace.gateway.service.common.EntitiesRequestAndResponseUt
 import static org.hypertrace.gateway.service.common.EntitiesRequestAndResponseUtils.generateAndOrNotFilter;
 import static org.hypertrace.gateway.service.common.EntitiesRequestAndResponseUtils.generateEQFilter;
 import static org.hypertrace.gateway.service.common.EntitiesRequestAndResponseUtils.generateFilter;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.when;
 
@@ -46,7 +49,7 @@ public class ExecutionTreeUtilsTest {
             )
     );
 
-    Assertions.assertEquals(Optional.of("QS"), ExecutionTreeUtils.getSingleSourceForAllAttributes(executionContext));
+    assertEquals(Optional.of("QS"), ExecutionTreeUtils.getSingleSourceForAllAttributes(executionContext));
   }
 
   @Test
@@ -65,7 +68,7 @@ public class ExecutionTreeUtilsTest {
                 "API.duration", Set.of(QS.name(), EDS.name()),
                 "API.startTime", Set.of(QS.name())));
 
-    Assertions.assertEquals(Optional.of("QS"), ExecutionTreeUtils.getSingleSourceForAllAttributes(executionContext));
+    assertEquals(Optional.of("QS"), ExecutionTreeUtils.getSingleSourceForAllAttributes(executionContext));
   }
 
   @Test
@@ -85,7 +88,7 @@ public class ExecutionTreeUtilsTest {
         )
     );
 
-    Assertions.assertEquals(Optional.empty(), ExecutionTreeUtils.getSingleSourceForAllAttributes(executionContext));
+    assertEquals(Optional.empty(), ExecutionTreeUtils.getSingleSourceForAllAttributes(executionContext));
   }
 
   @Test
@@ -106,7 +109,7 @@ public class ExecutionTreeUtilsTest {
         )
     );
 
-    Assertions.assertEquals(Optional.of("QS"), ExecutionTreeUtils.getSingleSourceForAllAttributes(executionContext));
+    assertEquals(Optional.of("QS"), ExecutionTreeUtils.getSingleSourceForAllAttributes(executionContext));
   }
 
   // This scenario is not possible but for academic purposes let's test it.
@@ -127,7 +130,7 @@ public class ExecutionTreeUtilsTest {
         )
     );
 
-    Assertions.assertEquals(Optional.empty(), ExecutionTreeUtils.getSingleSourceForAllAttributes(executionContext));
+    assertEquals(Optional.empty(), ExecutionTreeUtils.getSingleSourceForAllAttributes(executionContext));
   }
 
   @Test
@@ -364,6 +367,117 @@ public class ExecutionTreeUtilsTest {
     executeHasEntityIdEqualsFilterTest(entityIdExpressions, entitiesRequest, false);
   }
 
+  @Test
+  public void test_filtersAndOrderByFromSameSingleSourceSet() {
+    ExecutionContext executionContext = mock(ExecutionContext.class);
+    // filters
+    // API.id -> ["QS", "EDS"]
+    // API.name -> ["QS"]
+    when(executionContext.getSourceToFilterAttributeMap())
+        .thenReturn(Map.of("QS", Set.of("API.id", "API.name"), "EDS", Set.of("API.id")));
+
+    // order bys
+    // API.status -> ["QS"]
+    when(executionContext.getSourceToSelectionOrderByAttributeMap())
+        .thenReturn(Map.of("QS", Set.of("API.status")));
+    when(executionContext.getSourceToMetricOrderByAttributeMap())
+        .thenReturn(Collections.emptyMap());
+
+    Set<String> sourceSets = ExecutionTreeUtils.getSourceSetsIfFilterAndOrderByAreFromSameSourceSets(executionContext);
+    assertEquals(1, sourceSets.size());
+    assertTrue(sourceSets.contains("QS"));
+  }
+
+  @Test
+  public void test_filtersAndOrderByFromSameMultipleSourceSets() {
+    ExecutionContext executionContext = mock(ExecutionContext.class);
+    // filters
+    // API.id -> ["QS", "EDS"]
+    // API.name -> ["QS", "EDS"]
+    when(executionContext.getSourceToFilterAttributeMap())
+        .thenReturn(
+            Map.of("QS", Set.of("API.id", "API.name"), "EDS", Set.of("API.id", "API.name")));
+
+    // order bys
+    // API.status -> ["QS", "EDS"]
+    // API.latency -> ["QS", "EDS"]
+    when(executionContext.getSourceToSelectionOrderByAttributeMap())
+        .thenReturn(Map.of("QS", Set.of("API.status", "API.latency")));
+    when(executionContext.getSourceToMetricOrderByAttributeMap())
+        .thenReturn(Map.of("EDS", Set.of("API.status", "API.latency")));
+
+    Set<String> sourceSets =
+        ExecutionTreeUtils.getSourceSetsIfFilterAndOrderByAreFromSameSourceSets(executionContext);
+    assertEquals(2, sourceSets.size());
+    assertTrue(sourceSets.contains("QS"));
+    assertTrue(sourceSets.contains("EDS"));
+  }
+
+  @Test
+  public void test_filtersAndOrderByFromEmptyOrderBy() {
+    ExecutionContext executionContext = mock(ExecutionContext.class);
+    // filters
+    // API.id -> ["QS", "EDS"]
+    // API.name -> ["QS", "EDS"]
+    when(executionContext.getSourceToFilterAttributeMap())
+        .thenReturn(
+            Map.of("QS", Set.of("API.id", "API.name"), "EDS", Set.of("API.id", "API.name")));
+
+    // order bys
+    when(executionContext.getSourceToSelectionOrderByAttributeMap())
+        .thenReturn(Collections.emptyMap());
+    when(executionContext.getSourceToMetricOrderByAttributeMap())
+        .thenReturn(Collections.emptyMap());
+
+    Set<String> sourceSets =
+        ExecutionTreeUtils.getSourceSetsIfFilterAndOrderByAreFromSameSourceSets(executionContext);
+    assertEquals(2, sourceSets.size());
+    assertTrue(sourceSets.contains("QS"));
+    assertTrue(sourceSets.contains("EDS"));
+  }
+
+  @Test
+  public void test_filtersAndOrderByFromEmptyFilters() {
+    ExecutionContext executionContext = mock(ExecutionContext.class);
+    // filters
+    when(executionContext.getSourceToFilterAttributeMap()).thenReturn(Collections.emptyMap());
+
+    // order bys
+    // API.status -> ["QS", "EDS"]
+    // API.latency -> ["QS"]
+    when(executionContext.getSourceToSelectionOrderByAttributeMap())
+        .thenReturn(Map.of("QS", Set.of("API.status", "API.latency")));
+    when(executionContext.getSourceToMetricOrderByAttributeMap())
+        .thenReturn(Map.of("EDS", Set.of("API.status")));
+
+    Set<String> sourceSets =
+        ExecutionTreeUtils.getSourceSetsIfFilterAndOrderByAreFromSameSourceSets(executionContext);
+    assertEquals(1, sourceSets.size());
+    assertTrue(sourceSets.contains("QS"));
+  }
+
+  @Test
+  public void test_filtersAndOrderByFromDifferentSourceSets() {
+    ExecutionContext executionContext = mock(ExecutionContext.class);
+    // filters
+    // API.id -> ["QS", "EDS"]
+    // API.name -> ["QS"]
+    when(executionContext.getSourceToFilterAttributeMap())
+        .thenReturn(Map.of("QS", Set.of("API.id", "API.name"), "EDS", Set.of("API.id")));
+
+    // order bys
+    // API.status -> ["QS", "EDS"]
+    // API.latency -> ["EDS"]
+    when(executionContext.getSourceToSelectionOrderByAttributeMap())
+        .thenReturn(Map.of("QS", Set.of("API.status")));
+    when(executionContext.getSourceToMetricOrderByAttributeMap())
+        .thenReturn(Map.of("EDS", Set.of("API.status", "API.latency")));
+
+    Set<String> sourceSets =
+        ExecutionTreeUtils.getSourceSetsIfFilterAndOrderByAreFromSameSourceSets(executionContext);
+    assertTrue(sourceSets.isEmpty());
+  }
+
   private void executeHasEntityIdEqualsFilterTest(List<Expression> entityIdExpressions,
                                                   EntitiesRequest entitiesRequest,
                                                   boolean expectedResult){
@@ -371,7 +485,7 @@ public class ExecutionTreeUtilsTest {
     when(executionContext.getEntitiesRequest()).thenReturn(entitiesRequest);
     when(executionContext.getEntityIdExpressions()).thenReturn(entityIdExpressions);
 
-    Assertions.assertEquals(
+    assertEquals(
         expectedResult,
         ExecutionTreeUtils.hasEntityIdEqualsFilter(executionContext));
   }
