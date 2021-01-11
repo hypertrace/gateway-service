@@ -1,6 +1,5 @@
 package org.hypertrace.gateway.service.entity.query;
 
-import org.hypertrace.gateway.service.v1.common.ColumnIdentifier;
 import org.hypertrace.gateway.service.v1.common.Expression;
 import org.hypertrace.gateway.service.v1.common.Filter;
 import org.hypertrace.gateway.service.v1.common.Operator;
@@ -423,6 +422,9 @@ public class ExecutionTreeUtilsTest {
     when(executionContext.getSourceToFilterAttributeMap())
         .thenReturn(
             Map.of("QS", Set.of("API.id", "API.name"), "EDS", Set.of("API.id", "API.name")));
+    when(executionContext.getFilterAttributeToSourceMap())
+        .thenReturn(
+            Map.of("API.id", Set.of("QS", "EDS"), "API.name", Set.of("QS", "EDS")));
 
     // order bys
     when(executionContext.getSourceToSelectionOrderByAttributeMap())
@@ -465,6 +467,9 @@ public class ExecutionTreeUtilsTest {
     // API.name -> ["QS"]
     when(executionContext.getSourceToFilterAttributeMap())
         .thenReturn(Map.of("QS", Set.of("API.id", "API.name"), "EDS", Set.of("API.id")));
+    when(executionContext.getFilterAttributeToSourceMap())
+        .thenReturn(
+            Map.of("API.id", Set.of("QS", "EDS"), "API.name", Set.of("QS")));
 
     // order bys
     // API.status -> ["QS", "EDS"]
@@ -489,6 +494,9 @@ public class ExecutionTreeUtilsTest {
     // API.name -> ["QS"]
     when(executionContext.getSourceToFilterAttributeMap())
         .thenReturn(Map.of("QS", Set.of("API.id", "API.name"), "EDS", Set.of("API.id")));
+    when(executionContext.getFilterAttributeToSourceMap())
+        .thenReturn(
+            Map.of("API.id", Set.of("QS", "EDS"), "API.name", Set.of("QS")));
 
     assertTrue(ExecutionTreeUtils.areFiltersOnlyOnCurrentDataSource(executionContext, "QS"));
     assertFalse(ExecutionTreeUtils.areFiltersOnlyOnCurrentDataSource(executionContext, "EDS"));
@@ -504,6 +512,9 @@ public class ExecutionTreeUtilsTest {
     // API.name -> ["QS", "EDS"]
     when(executionContext.getSourceToFilterAttributeMap())
         .thenReturn(Map.of("QS", Set.of("API.id", "API.name"), "EDS", Set.of("API.id", "API.name")));
+    when(executionContext.getFilterAttributeToSourceMap())
+        .thenReturn(
+            Map.of("API.id", Set.of("QS", "EDS"), "API.name", Set.of("QS", "EDS")));
 
     assertTrue(ExecutionTreeUtils.areFiltersOnlyOnCurrentDataSource(executionContext, "QS"));
     assertTrue(ExecutionTreeUtils.areFiltersOnlyOnCurrentDataSource(executionContext, "EDS"));
@@ -519,6 +530,9 @@ public class ExecutionTreeUtilsTest {
     // API.name -> ["EDS"]
     when(executionContext.getSourceToFilterAttributeMap())
         .thenReturn(Map.of("QS", Set.of("API.id"), "EDS", Set.of("API.name")));
+    when(executionContext.getFilterAttributeToSourceMap())
+        .thenReturn(
+            Map.of("API.id", Set.of("QS"), "API.name", Set.of("EDS")));
 
     assertFalse(ExecutionTreeUtils.areFiltersOnlyOnCurrentDataSource(executionContext, "QS"));
     assertFalse(ExecutionTreeUtils.areFiltersOnlyOnCurrentDataSource(executionContext, "EDS"));
@@ -573,11 +587,5 @@ public class ExecutionTreeUtilsTest {
   // We don't care about the values. Just they keySets.
   private <T> Map<String, List<T>> createSourceToExpressionsMap(List<String> sourceKeys) {
     return sourceKeys.stream().collect(Collectors.toUnmodifiableMap(s -> s, s -> List.of()));
-  }
-
-  private Expression createExpressionFromColumnName(String columnName) {
-    return Expression.newBuilder()
-        .setColumnIdentifier(ColumnIdentifier.newBuilder().setColumnName(columnName).build())
-        .build();
   }
 }

@@ -62,6 +62,7 @@ public class ExecutionContext {
   // filters
   private ImmutableMap<String, List<Expression>> sourceToFilterExpressionMap;
   private ImmutableMap<String, Set<String>> sourceToFilterAttributeMap;
+  private ImmutableMap<String, Set<String>> filterAttributeToSourceMap;
 
   /** Following fields are mutable and updated during the ExecutionTree building phase * */
   private final Set<String> pendingSelectionSources = new HashSet<>();
@@ -233,6 +234,10 @@ public class ExecutionContext {
     return sourceToFilterAttributeMap;
   }
 
+  public Map<String, Set<String>> getFilterAttributeToSourceMap() {
+    return filterAttributeToSourceMap;
+  }
+
   public Map<String, Set<String>> getAllAttributesToSourcesMap() {
     return allAttributesToSourcesMap;
   }
@@ -257,6 +262,10 @@ public class ExecutionContext {
   private void buildSourceToFilterExpressionMaps() {
     sourceToFilterExpressionMap = getSourceToFilterExpressionMap(entitiesRequest.getFilter());
     sourceToFilterAttributeMap = buildSourceToAttributesMap(sourceToFilterExpressionMap);
+    filterAttributeToSourceMap =
+        ImmutableMap.<String, Set<String>>builder()
+            .putAll(ExpressionReader.buildAttributeToSourcesMap(sourceToFilterAttributeMap))
+            .build();
   }
 
   private void buildSourceToOrderByExpressionMaps() {
@@ -424,8 +433,10 @@ public class ExecutionContext {
         ", sourceToSelectionOrderByExpressionMap=" + sourceToSelectionOrderByExpressionMap +
         ", sourceToSelectionOrderByAttributeMap=" + sourceToSelectionOrderByAttributeMap +
         ", sourceToMetricOrderByExpressionMap=" + sourceToMetricOrderByExpressionMap +
+        ", sourceToMetricOrderByAttributeMap=" + sourceToMetricOrderByAttributeMap +
         ", sourceToFilterExpressionMap=" + sourceToFilterExpressionMap +
         ", sourceToFilterAttributeMap=" + sourceToFilterAttributeMap +
+        ", filterAttributeToSourceMap=" + filterAttributeToSourceMap +
         ", pendingSelectionSources=" + pendingSelectionSources +
         ", pendingMetricAggregationSources=" + pendingMetricAggregationSources +
         ", pendingTimeAggregationSources=" + pendingTimeAggregationSources +

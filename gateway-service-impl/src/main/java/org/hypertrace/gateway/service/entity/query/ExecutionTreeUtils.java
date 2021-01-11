@@ -15,6 +15,8 @@ import java.util.Set;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
 
+import static org.hypertrace.gateway.service.common.util.ExpressionReader.buildAttributeToSourcesMap;
+
 public class ExecutionTreeUtils {
   /**
    * Returns a non-empty optional if all the attributes in the selection(attributes and
@@ -215,7 +217,7 @@ public class ExecutionTreeUtils {
     }
 
     Map<String, Set<String>> filterAttributeToSourcesMap =
-        buildAttributeToSourcesMap(sourceToFilterAttributeMap);
+        executionContext.getFilterAttributeToSourceMap();
 
     // all the filter attribute sources should contain current source
     return filterAttributeToSourcesMap.values().stream()
@@ -260,7 +262,7 @@ public class ExecutionTreeUtils {
     }
 
     Map<String, Set<String>> filterAttributeToSourcesMap =
-        buildAttributeToSourcesMap(sourceToFilterAttributeMap);
+        executionContext.getFilterAttributeToSourceMap();
     Map<String, Set<String>> orderByAttributeToSourceMap =
         buildAttributeToSourcesMap(sourceToOrderByAttributeMap);
 
@@ -329,26 +331,5 @@ public class ExecutionTreeUtils {
     return attributeToSourcesMap.values().stream()
         .reduce(Sets::intersection)
         .orElse(Collections.emptySet());
-  }
-
-  /**
-   * Given a source to attributes, builds an attribute to sources map.
-   * Basically, a reverse map of the map provided as input
-   *
-   * Example:
-   * ("QS" -> API.id, "QS" -> API.name, "EDS" -> API.id) =>
-   *
-   * ("API.id" -> ["QS", "EDS"], "API.name" -> "QS")
-   */
-  private static Map<String, Set<String>> buildAttributeToSourcesMap(
-      Map<String, Set<String>> sourcesToAttributeMap) {
-    Map<String, Set<String>> attributeToSourcesMap = new HashMap<>();
-    for (Map.Entry<String, Set<String>> entry : sourcesToAttributeMap.entrySet()) {
-      String source = entry.getKey();
-      for (String attribute : entry.getValue()) {
-        attributeToSourcesMap.computeIfAbsent(attribute, k -> new HashSet<>()).add(source);
-      }
-    }
-    return Collections.unmodifiableMap(attributeToSourcesMap);
   }
 }
