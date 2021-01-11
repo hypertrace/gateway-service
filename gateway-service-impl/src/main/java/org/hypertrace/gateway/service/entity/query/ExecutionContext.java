@@ -57,9 +57,11 @@ public class ExecutionContext {
   private ImmutableMap<String, Set<String>> sourceToSelectionOrderByAttributeMap;
 
   private ImmutableMap<String, List<OrderByExpression>> sourceToMetricOrderByExpressionMap;
+  private ImmutableMap<String, Set<String>> sourceToMetricOrderByAttributeMap;
 
   // filters
   private ImmutableMap<String, List<Expression>> sourceToFilterExpressionMap;
+  private ImmutableMap<String, Set<String>> sourceToFilterAttributeMap;
 
   /** Following fields are mutable and updated during the ExecutionTree building phase * */
   private final Set<String> pendingSelectionSources = new HashSet<>();
@@ -87,6 +89,7 @@ public class ExecutionContext {
     this.entitiesRequest = entitiesRequest;
     this.entitiesRequestContext = entitiesRequestContext;
     buildSourceToExpressionMaps();
+    buildSourceToFilterExpressionMaps();
     buildSourceToOrderByExpressionMaps();
   }
 
@@ -140,6 +143,10 @@ public class ExecutionContext {
 
   public Map<String, List<OrderByExpression>> getSourceToMetricOrderByExpressionMap() {
     return sourceToMetricOrderByExpressionMap;
+  }
+
+  public Map<String, Set<String>> getSourceToMetricOrderByAttributeMap() {
+    return sourceToMetricOrderByAttributeMap;
   }
 
   public Map<String, String> getRequestHeaders() {
@@ -222,6 +229,10 @@ public class ExecutionContext {
     return sourceToFilterExpressionMap;
   }
 
+  public Map<String, Set<String>> getSourceToFilterAttributeMap() {
+    return sourceToFilterAttributeMap;
+  }
+
   public Map<String, Set<String>> getAllAttributesToSourcesMap() {
     return allAttributesToSourcesMap;
   }
@@ -241,8 +252,11 @@ public class ExecutionContext {
     pendingSelectionSources.addAll(sourceToSelectionExpressionMap.keySet());
     pendingMetricAggregationSources.addAll(sourceToMetricExpressionMap.keySet());
     pendingTimeAggregationSources.addAll(sourceToTimeAggregationMap.keySet());
+  }
 
+  private void buildSourceToFilterExpressionMaps() {
     sourceToFilterExpressionMap = getSourceToFilterExpressionMap(entitiesRequest.getFilter());
+    sourceToFilterAttributeMap = buildSourceToAttributesMap(sourceToFilterExpressionMap);
   }
 
   private void buildSourceToOrderByExpressionMaps() {
@@ -265,17 +279,14 @@ public class ExecutionContext {
             orderByExpressionTypeToExpressionMap.getOrDefault(ValueCase.COLUMNIDENTIFIER, Collections.emptyList()));
     sourceToSelectionOrderByAttributeMap =
         buildSourceToAttributesMap(
-            sourceToSelectionOrderByExpressionMap.entrySet().stream()
-                .collect(
-                    Collectors.toMap(
-                        Map.Entry::getKey,
-                        entry ->
-                            entry.getValue().stream()
-                                .map(OrderByExpression::getExpression)
-                                .collect(Collectors.toList()))));
+            convertOrderByExpressionToExpression(sourceToSelectionOrderByExpressionMap));
+
     sourceToMetricOrderByExpressionMap =
         getDataSourceToOrderByExpressionMap(
             orderByExpressionTypeToExpressionMap.getOrDefault(ValueCase.FUNCTION, Collections.emptyList()));
+    sourceToMetricOrderByAttributeMap =
+        buildSourceToAttributesMap(
+            convertOrderByExpressionToExpression(sourceToMetricOrderByExpressionMap));
     pendingSelectionSourcesForOrderBy.addAll(sourceToSelectionOrderByExpressionMap.keySet());
     pendingMetricAggregationSourcesForOrderBy.addAll(sourceToMetricOrderByExpressionMap.keySet());
   }
@@ -367,6 +378,10 @@ public class ExecutionContext {
     return ImmutableMap.<String, List<Expression>>builder().putAll(sourceToExpressionMap).build();
   }
 
+  /**
+   * Given a source to expression map, builds a source to attribute map, where the attribute names
+   * are extracted out as column names from the expression
+   */
   private ImmutableMap<String, Set<String>> buildSourceToAttributesMap(
       Map<String, List<Expression>> sourceToExpressionMap) {
     return ImmutableMap.<String, Set<String>>builder()
@@ -381,6 +396,18 @@ public class ExecutionContext {
                                 .flatMap(Collection::stream)
                                 .collect(Collectors.toSet()))))
         .build();
+  }
+
+  private Map<String, List<Expression>> convertOrderByExpressionToExpression(
+      Map<String, List<OrderByExpression>> sourceToOrderByExpressions) {
+    return sourceToOrderByExpressions.entrySet().stream()
+        .collect(
+            Collectors.toMap(
+                Map.Entry::getKey,
+                entry ->
+                    entry.getValue().stream()
+                        .map(OrderByExpression::getExpression)
+                        .collect(Collectors.toList())));
   }
 
   @Override
@@ -398,6 +425,7 @@ public class ExecutionContext {
         ", sourceToSelectionOrderByAttributeMap=" + sourceToSelectionOrderByAttributeMap +
         ", sourceToMetricOrderByExpressionMap=" + sourceToMetricOrderByExpressionMap +
         ", sourceToFilterExpressionMap=" + sourceToFilterExpressionMap +
+        ", sourceToFilterAttributeMap=" + sourceToFilterAttributeMap +
         ", pendingSelectionSources=" + pendingSelectionSources +
         ", pendingMetricAggregationSources=" + pendingMetricAggregationSources +
         ", pendingTimeAggregationSources=" + pendingTimeAggregationSources +

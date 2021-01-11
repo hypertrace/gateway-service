@@ -29,8 +29,8 @@ public class DataFetcherNode implements QueryNode {
   public DataFetcherNode(
       String source,
       Filter filter,
-      int limit,
-      int offset,
+      Integer limit,
+      Integer offset,
       List<OrderByExpression> orderByExpressionList) {
     this.source = source;
     this.filter = filter;

@@ -76,8 +76,8 @@ public class FilterOptimizingVisitor implements Visitor<QueryNode> {
     if (orNodeList != null) {
       orNodeList.forEach(
           treeNode -> {
-            OrNode an = (OrNode) treeNode;
-            Map<String, List<QueryNode>> childAndNodeMap = groupNodesBySource(an.getChildNodes());
+            OrNode or = (OrNode) treeNode;
+            Map<String, List<QueryNode>> childAndNodeMap = groupNodesBySource(or.getChildNodes());
             childAndNodeMap.forEach(
                 (k, v) ->
                     sourceToTreeNodeListMap.merge(
@@ -155,7 +155,20 @@ public class FilterOptimizingVisitor implements Visitor<QueryNode> {
                               .addAllChildFilter(filterList)
                               .build();
                     }
-                    return new DataFetcherNode(stringListEntry.getKey(), filter);
+                    // There should always be at least one entry
+                    if (!stringListEntry.getValue().isEmpty()) {
+                      String source = stringListEntry.getKey();
+                      DataFetcherNode dataFetcherNode = (DataFetcherNode) stringListEntry.getValue().get(0);
+                      return
+                          new DataFetcherNode(
+                              source,
+                              filter,
+                              dataFetcherNode.getLimit(),
+                              dataFetcherNode.getOffset(),
+                              dataFetcherNode.getOrderByExpressionList());
+                    } else {
+                      return new NoOpNode();
+                    }
                   }
                 }));
   }

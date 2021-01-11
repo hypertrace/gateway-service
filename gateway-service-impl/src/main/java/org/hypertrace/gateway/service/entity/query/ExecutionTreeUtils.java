@@ -1,11 +1,14 @@
 package org.hypertrace.gateway.service.entity.query;
 
+
+import com.google.common.collect.Sets;
 import org.hypertrace.gateway.service.common.util.ExpressionReader;
 import org.hypertrace.gateway.service.v1.common.Expression;
 import org.hypertrace.gateway.service.v1.common.Filter;
 import org.hypertrace.gateway.service.v1.common.Operator;
+import org.hypertrace.gateway.service.v1.common.OrderByExpression;
 
-import java.util.Collection;
+import java.util.Collections;
 import java.util.HashMap;
 import java.util.HashSet;
 import java.util.List;
@@ -13,6 +16,7 @@ import java.util.Map;
 import java.util.Optional;
 import java.util.Set;
 import java.util.stream.Collectors;
+import java.util.stream.Stream;
 
 public class ExecutionTreeUtils {
   /**
@@ -185,5 +189,130 @@ public class ExecutionTreeUtils {
     }
 
     return false;
+  }
+
+  /**
+   * Computes common set of sources, if both filters and order bys are requested on the same source
+   * sets
+   *
+   * Look at {@link ExecutionTreeUtils#getIntersectingSourceSets(java.util.Map, java.util.Map)}
+   */
+  public static Set<String> getSourceSetsIfFilterAndOrderByAreFromSameSourceSets(
+      ExecutionContext executionContext) {
+
+    Map<String, Set<String>> sourceToFilterAttributeMap = executionContext.getSourceToFilterAttributeMap();
+    Map<String, Set<String>> sourceToSelectionOrderByAttributeMap = executionContext.getSourceToSelectionOrderByAttributeMap();
+    Map<String, Set<String>> sourceToMetricOrderByAttributeMap = executionContext.getSourceToMetricOrderByAttributeMap();
+
+    // merges sourceToSelectionOrderByAttributeMap and sourceToMetricOrderByAttributeMap
+    Map<String, Set<String>> sourceToOrderByAttributeMap =
+        Stream.concat(
+            sourceToSelectionOrderByAttributeMap.entrySet().stream(),
+            sourceToMetricOrderByAttributeMap.entrySet().stream())
+            .collect(
+                Collectors.toMap(
+                    Map.Entry::getKey,
+                    Map.Entry::getValue,
+                    (v1, v2) -> {
+                      Set<String> mergedSet = new HashSet<>(v1);
+                      mergedSet.addAll(v2);
+                      return mergedSet;
+                    },
+                    HashMap::new));
+
+    // A weird case, if there are no filters and order bys
+    if (sourceToFilterAttributeMap.isEmpty() && sourceToOrderByAttributeMap.isEmpty()) {
+      return Collections.emptySet();
+    }
+
+    Map<String, Set<String>> filterAttributeToSourcesMap = buildAttributeToSourcesMap(sourceToFilterAttributeMap);
+    Map<String, Set<String>> orderByAttributeToSourceMap = buildAttributeToSourcesMap(sourceToOrderByAttributeMap);
+
+    return getIntersectingSourceSets(filterAttributeToSourcesMap, orderByAttributeToSourceMap);
+  }
+
+  /**
+   * Computes intersecting source sets from 2 attribute to sources map
+   * i.e. computes intersection source sets across all attributes from the map
+   *
+   * Examples:
+   * 1.
+   * ("API.id" -> ["EDS", "QS"], "API.name" -> ["QS", "EDS"])
+   * ("API.id" -> ["EDS", "QS"], "API.discoveryState" -> ["EDS"])
+   *
+   * The intersecting source set across all the attributes would be ["EDS"]
+   *
+   * 2.
+   * ("API.id" -> ["EDS", "QS"], "API.name" -> ["QS", "EDS"])
+   * ("API.id" -> ["EDS", "QS"], "API.discoveryState" -> ["EDS", "QS"])
+   *
+   * The intersecting source set across all the attributes would be ["EDS", "QS"]
+   *
+   * 3.
+   * ("API.id" -> ["EDS"], "API.name" -> ["EDS"])
+   * ("API.id" -> ["EDS"], "API.discoveryState" -> ["QS"])
+   *
+   * The intersecting source set across all the attributes would be []
+   */
+  private static Set<String> getIntersectingSourceSets(
+      Map<String, Set<String>> attributeToSourcesMapFirst,
+      Map<String, Set<String>> attributeToSourcesMapSecond) {
+    if (attributeToSourcesMapFirst.isEmpty() && attributeToSourcesMapSecond.isEmpty()) {
+      return Collections.emptySet();
+    }
+
+    if (attributeToSourcesMapFirst.isEmpty()) {
+      return getIntersectingSourceSets(attributeToSourcesMapSecond);
+    }
+
+    if (attributeToSourcesMapSecond.isEmpty()) {
+      return getIntersectingSourceSets(attributeToSourcesMapFirst);
+    }
+
+    Set<String> intersectingSourceSetFirst = getIntersectingSourceSets(attributeToSourcesMapFirst);
+    Set<String> intersectingSourceSetSecond =
+        getIntersectingSourceSets(attributeToSourcesMapSecond);
+
+    return Sets.intersection(intersectingSourceSetFirst, intersectingSourceSetSecond);
+  }
+
+  /**
+   * Computes source sets intersection from attribute to sources map
+   *
+   * Examples:
+   * ("API.id" -> ["EDS", "QS], "API.name" -> ["QS", "EDS]) => ["QS", "EDS]
+   * ("API.id" -> ["EDS", "QS], "API.name" -> ["QS"]) => ["QS"]
+   * ("API.id" -> ["EDS"], "API.name" -> ["QS]) => []
+   */
+  private static Set<String> getIntersectingSourceSets(
+      Map<String, Set<String>> attributeToSourcesMap) {
+    if (attributeToSourcesMap.isEmpty()) {
+      return Collections.emptySet();
+    }
+
+    return attributeToSourcesMap.values().stream()
+        .reduce(Sets::intersection)
+        .orElse(Collections.emptySet());
+  }
+
+  /**
+   * Given a source to attributes, builds an attribute to sources map.
+   * Basically, a reverse map of the map provided as input
+   *
+   * Example:
+   * ("QS" -> API.id, "QS" -> API.name, "EDS" -> API.id) =>
+   *
+   * ("API.id" -> ["QS", "EDS"], "API.name" -> "QS")
+   */
+  private static Map<String, Set<String>> buildAttributeToSourcesMap(
+      Map<String, Set<String>> sourcesToAttributeMap) {
+    Map<String, Set<String>> attributeToSourcesMap = new HashMap<>();
+    for (Map.Entry<String, Set<String>> entry : sourcesToAttributeMap.entrySet()) {
+      String source = entry.getKey();
+      for (String attribute : entry.getValue()) {
+        attributeToSourcesMap.computeIfAbsent(attribute, k -> new HashSet<>()).add(source);
+      }
+    }
+    return Collections.unmodifiableMap(attributeToSourcesMap);
   }
 }

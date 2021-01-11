@@ -10,7 +10,6 @@ import org.hypertrace.gateway.service.entity.query.SelectionNode;
 import org.hypertrace.gateway.service.entity.query.SortAndPaginateNode;
 import org.hypertrace.gateway.service.entity.query.TotalFetcherNode;
 
-import java.util.Collection;
 import java.util.Collections;
 import java.util.Map;
 import java.util.Set;
