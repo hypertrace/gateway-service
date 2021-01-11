@@ -196,7 +196,7 @@ public class EntityServiceTest extends AbstractGatewayServiceTest {
                     .addSources(AttributeSource.QS)
                     .build()));
   }
-  
+
   @Test
   public void testGetEntitiesOnlySelectFromSingleSourceWithTimeRangeShouldUseQueryService() {
     long endTime = System.currentTimeMillis();
