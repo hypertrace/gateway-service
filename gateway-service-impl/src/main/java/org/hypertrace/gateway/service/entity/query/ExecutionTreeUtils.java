@@ -217,7 +217,7 @@ public class ExecutionTreeUtils {
     Map<String, Set<String>> filterAttributeToSourcesMap =
         buildAttributeToSourcesMap(sourceToFilterAttributeMap);
 
-    // all the filter attribute sources
+    // all the filter attribute sources should contain current source
     return filterAttributeToSourcesMap.values().stream()
         .allMatch(sources -> sources.contains(currentSource));
   }
