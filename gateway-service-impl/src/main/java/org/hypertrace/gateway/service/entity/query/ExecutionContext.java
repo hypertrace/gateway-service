@@ -379,13 +379,8 @@ public class ExecutionContext {
   }
 
   /**
-   * Given a source to expression map, builds an attribute to sources map, where attribute value is extracted
-   * out from the expression. Basically, a reverse map of the map provided as input
-   *
-   * Example:
-   * ("QS" -> API.id, "QS" -> API.name, "EDS" -> API.id) =>
-   *
-   * ("API.id" -> ["QS", "EDS"], "API.name" -> "QS")
+   * Given a source to expression map, builds a source to attribute map, where the attribute names
+   * are extracted out as column names from the expression
    */
   private ImmutableMap<String, Set<String>> buildSourceToAttributesMap(
       Map<String, List<Expression>> sourceToExpressionMap) {
