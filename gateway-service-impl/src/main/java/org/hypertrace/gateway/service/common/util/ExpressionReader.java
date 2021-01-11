@@ -1,8 +1,10 @@
 package org.hypertrace.gateway.service.common.util;
 
 import java.util.Collections;
+import java.util.HashMap;
 import java.util.HashSet;
 import java.util.List;
+import java.util.Map;
 import java.util.Set;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
@@ -45,5 +47,26 @@ public class ExpressionReader {
       case VALUE_NOT_SET:
         break;
     }
+  }
+
+  /**
+   * Given a source to attributes, builds an attribute to sources map.
+   * Basically, a reverse map of the map provided as input
+   *
+   * Example:
+   * ("QS" -> API.id, "QS" -> API.name, "EDS" -> API.id) =>
+   *
+   * ("API.id" -> ["QS", "EDS"], "API.name" -> "QS")
+   */
+  public static Map<String, Set<String>> buildAttributeToSourcesMap(
+      Map<String, Set<String>> sourcesToAttributeMap) {
+    Map<String, Set<String>> attributeToSourcesMap = new HashMap<>();
+    for (Map.Entry<String, Set<String>> entry : sourcesToAttributeMap.entrySet()) {
+      String source = entry.getKey();
+      for (String attribute : entry.getValue()) {
+        attributeToSourcesMap.computeIfAbsent(attribute, k -> new HashSet<>()).add(source);
+      }
+    }
+    return Collections.unmodifiableMap(attributeToSourcesMap);
   }
 }
