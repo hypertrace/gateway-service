@@ -278,6 +278,9 @@ public class ExecutionTreeBuilder {
               .getSourcesList();
 
       // if the filter by and order by are from QS, pagination can be pushed down to QS
+      // There will always be a DataFetcherNode for QS, because the results are always fetched
+      // within a time range. Hence, we can only push pagination down to QS and not any other
+      // sources, since we will always have a time range filter on QS
       if (sourceSetsIfFilterAndOrderByAreFromSameSourceSets.contains(QS.name())) {
         executionContext.setSortAndPaginationNodeAdded(true);
         return createQsDataFetcherNodeWithPagination(entitiesRequest);
