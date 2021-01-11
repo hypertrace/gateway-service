@@ -950,4 +950,91 @@ public class ExecutionTreeBuilderTest {
     assertEquals(0, ((DataFetcherNode) secondChild).getOffset());
     assertEquals(1, ((DataFetcherNode) secondChild).getOrderByExpressionList().size());
   }
+
+  @Test
+  public void nonLiveEntities_filtersOnOtherDataSourceThanEds() {
+    EntitiesRequest entitiesRequest =
+        EntitiesRequest.newBuilder()
+            .setEntityType(AttributeScope.API.name())
+            .addSelection(buildExpression(API_API_ID_ATTR))
+            .setFilter(generateEQFilter(API_NUM_CALLS_ATTR, "123"))
+            .setIncludeNonLiveEntities(true)
+            .build();
+    EntitiesRequestContext entitiesRequestContext =
+        new EntitiesRequestContext(TENANT_ID, entitiesRequest.getStartTimeMillis(), entitiesRequest.getEndTimeMillis(),
+            "API", "API.startTime", new HashMap<>());
+    ExecutionContext executionContext =
+        ExecutionContext.from(
+            attributeMetadataProvider,
+            entityIdColumnsConfigs,
+            entitiesRequest,
+            entitiesRequestContext);
+    ExecutionTreeBuilder executionTreeBuilder = new ExecutionTreeBuilder(executionContext);
+    QueryNode executionTree = executionTreeBuilder.build();
+    assertNotNull(executionTree);
+    assertTrue(executionTree instanceof SelectionNode);
+    assertTrue(
+        ((SelectionNode) executionTree)
+            .getAttrSelectionSources()
+            .contains(AttributeSource.EDS.name()));
+
+    QueryNode firstChild = ((SelectionNode) executionTree).getChildNode();
+    assertTrue(firstChild instanceof DataFetcherNode);
+    // should be QS, because there is a filter on QS, even though `setIncludeNonLiveEntities` is set
+    // to true
+    assertEquals(AttributeSource.QS.name(), ((DataFetcherNode) firstChild).getSource());
+  }
+
+  @Test
+  public void nonLiveEntities_noFilters_shouldFetchFromEds() {
+    EntitiesRequest entitiesRequest =
+        EntitiesRequest.newBuilder()
+            .setEntityType(AttributeScope.API.name())
+            .addSelection(buildExpression(API_API_ID_ATTR))
+            .setIncludeNonLiveEntities(true)
+            .build();
+    EntitiesRequestContext entitiesRequestContext =
+        new EntitiesRequestContext(TENANT_ID, entitiesRequest.getStartTimeMillis(), entitiesRequest.getEndTimeMillis(),
+            "API", "API.startTime", new HashMap<>());
+    ExecutionContext executionContext =
+        ExecutionContext.from(
+            attributeMetadataProvider,
+            entityIdColumnsConfigs,
+            entitiesRequest,
+            entitiesRequestContext);
+    ExecutionTreeBuilder executionTreeBuilder = new ExecutionTreeBuilder(executionContext);
+    QueryNode executionTree = executionTreeBuilder.build();
+    assertNotNull(executionTree);
+    assertTrue(executionTree instanceof DataFetcherNode);
+    // should be EDS, since `setIncludeNonLiveEntities` is set to true, and there are no other
+    // filters
+    assertEquals(AttributeSource.EDS.name(), ((DataFetcherNode) executionTree).getSource());
+  }
+
+  @Test
+  public void nonLiveEntities_filterOnEds_shouldFetchFromEds() {
+    EntitiesRequest entitiesRequest =
+        EntitiesRequest.newBuilder()
+            .setEntityType(AttributeScope.API.name())
+            .addSelection(buildExpression(API_API_ID_ATTR))
+            .setFilter(generateEQFilter(API_NAME_ATTR, "apiName"))
+            .setIncludeNonLiveEntities(true)
+            .build();
+    EntitiesRequestContext entitiesRequestContext =
+        new EntitiesRequestContext(TENANT_ID, entitiesRequest.getStartTimeMillis(), entitiesRequest.getEndTimeMillis(),
+            "API", "API.startTime", new HashMap<>());
+    ExecutionContext executionContext =
+        ExecutionContext.from(
+            attributeMetadataProvider,
+            entityIdColumnsConfigs,
+            entitiesRequest,
+            entitiesRequestContext);
+    ExecutionTreeBuilder executionTreeBuilder = new ExecutionTreeBuilder(executionContext);
+    QueryNode executionTree = executionTreeBuilder.build();
+    assertNotNull(executionTree);
+    assertTrue(executionTree instanceof DataFetcherNode);
+    // should be EDS, since `setIncludeNonLiveEntities` is set to true, and there are no other
+    // filters
+    assertEquals(AttributeSource.EDS.name(), ((DataFetcherNode) executionTree).getSource());
+  }
 }

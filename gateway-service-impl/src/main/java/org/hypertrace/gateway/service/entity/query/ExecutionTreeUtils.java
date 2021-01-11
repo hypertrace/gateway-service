@@ -1,12 +1,9 @@
 package org.hypertrace.gateway.service.entity.query;
 
-
 import com.google.common.collect.Sets;
-import org.hypertrace.gateway.service.common.util.ExpressionReader;
 import org.hypertrace.gateway.service.v1.common.Expression;
 import org.hypertrace.gateway.service.v1.common.Filter;
 import org.hypertrace.gateway.service.v1.common.Operator;
-import org.hypertrace.gateway.service.v1.common.OrderByExpression;
 
 import java.util.Collections;
 import java.util.HashMap;
@@ -20,8 +17,9 @@ import java.util.stream.Stream;
 
 public class ExecutionTreeUtils {
   /**
-   * Returns a non-empty optional if all the attributes in the selection(attributes and aggreagtions),
-   * time aggregations, filter and order by can be read from the same source.
+   * Returns a non-empty optional if all the attributes in the selection(attributes and
+   * aggregations), time aggregations, filter and order by can be read from the same source.
+   *
    * @param executionContext
    * @return
    */
@@ -35,18 +33,23 @@ public class ExecutionTreeUtils {
   }
 
   /**
-   * Returns a non-empty optional if the size union of all keysets is equal to 1. This means that all
-   * the attributes can be read from one source.
+   * Returns a non-empty optional if the size union of all keysets is equal to 1. This means that
+   * all the attributes can be read from one source.
+   *
    * @param executionContext
    * @return
    */
   private static Optional<String> getSingleSourceFromKeySets(ExecutionContext executionContext) {
     Set<String> selectionsSourceSet = executionContext.getSourceToSelectionExpressionMap().keySet();
-    Set<String> metricAggregationsSourceSet = executionContext.getSourceToMetricExpressionMap().keySet();
-    Set<String> timeAggregationsSourceSet = executionContext.getSourceToTimeAggregationMap().keySet();
+    Set<String> metricAggregationsSourceSet =
+        executionContext.getSourceToMetricExpressionMap().keySet();
+    Set<String> timeAggregationsSourceSet =
+        executionContext.getSourceToTimeAggregationMap().keySet();
     Set<String> filtersSourceSet = executionContext.getSourceToFilterExpressionMap().keySet();
-    Set<String> selectionOrderBysSourceSet = executionContext.getSourceToSelectionOrderByExpressionMap().keySet();
-    Set<String> metricAggregationOrderBysSourceSet = executionContext.getSourceToMetricOrderByExpressionMap().keySet();
+    Set<String> selectionOrderBysSourceSet =
+        executionContext.getSourceToSelectionOrderByExpressionMap().keySet();
+    Set<String> metricAggregationOrderBysSourceSet =
+        executionContext.getSourceToMetricOrderByExpressionMap().keySet();
 
     Set<String> sources = new HashSet<>();
     sources.addAll(selectionsSourceSet);
@@ -66,15 +69,18 @@ public class ExecutionTreeUtils {
    * Some attributes can be served by more than 1 source. eg. API.apiDiscoveryState. Check if it is
    * possible to serve all the attributes from a single source by computing the intersection of
    * their sources and checking if it's equal to 1.
+   *
    * @param executionContext
    * @return
    */
-  private static Optional<String> getSingleSourceFromAttributeSourceValueSets(ExecutionContext executionContext) {
+  private static Optional<String> getSingleSourceFromAttributeSourceValueSets(
+      ExecutionContext executionContext) {
     // Compute the intersection of all sources in attributesToSourcesMap and check if it's size is 1
-    Set<String> attributeSourcesIntersection = executionContext.getAllAttributesToSourcesMap().values().stream()
-        .filter((sourcesSet) -> !sourcesSet.isEmpty())
-        .findFirst()
-        .orElse(Set.of());
+    Set<String> attributeSourcesIntersection =
+        executionContext.getAllAttributesToSourcesMap().values().stream()
+            .filter((sourcesSet) -> !sourcesSet.isEmpty())
+            .findFirst()
+            .orElse(Set.of());
 
     if (attributeSourcesIntersection.isEmpty()) {
       return Optional.empty();
@@ -82,7 +88,8 @@ public class ExecutionTreeUtils {
 
     attributeSourcesIntersection = new HashSet<>(attributeSourcesIntersection);
 
-    for (Set<String> attributeSourcesSet : executionContext.getAllAttributesToSourcesMap().values()) {
+    for (Set<String> attributeSourcesSet :
+        executionContext.getAllAttributesToSourcesMap().values()) {
       // retainAll() for sets computes the intersections.
       attributeSourcesIntersection.retainAll(attributeSourcesSet);
     }
@@ -97,6 +104,7 @@ public class ExecutionTreeUtils {
   /**
    * Returns true if the filter will AND on the Entity Id EQ filter. Will work as well for multiple
    * expressions, read from executionContext entity id expressions, that compose the Entity Id.
+   *
    * @param executionContext
    * @return
    */
@@ -114,7 +122,8 @@ public class ExecutionTreeUtils {
 
     // Simple EQ filter without ANDs that is the equality filter. Only works when there's only one
     // entityId column. If there were multiple, then this would be an AND filter.
-    if (entityIdExpressionList.size() == 1 && simpleFilterEntityIdEqualsFilter(filter, entityIdExpressionList)){
+    if (entityIdExpressionList.size() == 1
+        && simpleFilterEntityIdEqualsFilter(filter, entityIdExpressionList)) {
       return true;
     }
 
@@ -131,8 +140,8 @@ public class ExecutionTreeUtils {
     return hasEntityIdEqualsFilter(filter, entityIdExpressionList);
   }
 
-  private static boolean hasEntityIdEqualsFilter(Filter filter,
-                                                 List<Expression> entityIdExpressionList) {
+  private static boolean hasEntityIdEqualsFilter(
+      Filter filter, List<Expression> entityIdExpressionList) {
     Operator operator = filter.getOperator();
 
     if (operator != Operator.AND) {
@@ -160,11 +169,17 @@ public class ExecutionTreeUtils {
     return entityIdsMatched == entityIdExpressionList.size();
   }
 
-  private static boolean simpleFilterEntityIdEqualsFilter(Filter filter,
-                                                          List<Expression> entityIdExpressionList) {
-    if (filter.getOperator() == Operator.EQ && filter.hasLhs() && filter.getLhs().hasColumnIdentifier()) {
+  private static boolean simpleFilterEntityIdEqualsFilter(
+      Filter filter, List<Expression> entityIdExpressionList) {
+    if (filter.getOperator() == Operator.EQ
+        && filter.hasLhs()
+        && filter.getLhs().hasColumnIdentifier()) {
       for (Expression entityIdExpression : entityIdExpressionList) {
-        if (filter.getLhs().getColumnIdentifier().getColumnName().equals(entityIdExpression.getColumnIdentifier().getColumnName())) {
+        if (filter
+            .getLhs()
+            .getColumnIdentifier()
+            .getColumnName()
+            .equals(entityIdExpression.getColumnIdentifier().getColumnName())) {
           return true;
         }
       }
@@ -191,24 +206,43 @@ public class ExecutionTreeUtils {
     return false;
   }
 
+  public static boolean areFiltersOnlyOnCurrentDataSource(ExecutionContext executionContext, String currentSource) {
+    Map<String, Set<String>> sourceToFilterAttributeMap =
+        executionContext.getSourceToFilterAttributeMap();
+
+    if (sourceToFilterAttributeMap.isEmpty()) {
+      return true;
+    }
+
+    Map<String, Set<String>> filterAttributeToSourcesMap =
+        buildAttributeToSourcesMap(sourceToFilterAttributeMap);
+
+    // all the filter attribute sources
+    return filterAttributeToSourcesMap.values().stream()
+        .allMatch(sources -> sources.contains(currentSource));
+  }
+
   /**
    * Computes common set of sources, if both filters and order bys are requested on the same source
    * sets
    *
-   * Look at {@link ExecutionTreeUtils#getIntersectingSourceSets(java.util.Map, java.util.Map)}
+   * <p>Look at {@link ExecutionTreeUtils#getIntersectingSourceSets(java.util.Map, java.util.Map)}
    */
   public static Set<String> getSourceSetsIfFilterAndOrderByAreFromSameSourceSets(
       ExecutionContext executionContext) {
 
-    Map<String, Set<String>> sourceToFilterAttributeMap = executionContext.getSourceToFilterAttributeMap();
-    Map<String, Set<String>> sourceToSelectionOrderByAttributeMap = executionContext.getSourceToSelectionOrderByAttributeMap();
-    Map<String, Set<String>> sourceToMetricOrderByAttributeMap = executionContext.getSourceToMetricOrderByAttributeMap();
+    Map<String, Set<String>> sourceToFilterAttributeMap =
+        executionContext.getSourceToFilterAttributeMap();
+    Map<String, Set<String>> sourceToSelectionOrderByAttributeMap =
+        executionContext.getSourceToSelectionOrderByAttributeMap();
+    Map<String, Set<String>> sourceToMetricOrderByAttributeMap =
+        executionContext.getSourceToMetricOrderByAttributeMap();
 
     // merges sourceToSelectionOrderByAttributeMap and sourceToMetricOrderByAttributeMap
     Map<String, Set<String>> sourceToOrderByAttributeMap =
         Stream.concat(
-            sourceToSelectionOrderByAttributeMap.entrySet().stream(),
-            sourceToMetricOrderByAttributeMap.entrySet().stream())
+                sourceToSelectionOrderByAttributeMap.entrySet().stream(),
+                sourceToMetricOrderByAttributeMap.entrySet().stream())
             .collect(
                 Collectors.toMap(
                     Map.Entry::getKey,
@@ -225,8 +259,10 @@ public class ExecutionTreeUtils {
       return Collections.emptySet();
     }
 
-    Map<String, Set<String>> filterAttributeToSourcesMap = buildAttributeToSourcesMap(sourceToFilterAttributeMap);
-    Map<String, Set<String>> orderByAttributeToSourceMap = buildAttributeToSourcesMap(sourceToOrderByAttributeMap);
+    Map<String, Set<String>> filterAttributeToSourcesMap =
+        buildAttributeToSourcesMap(sourceToFilterAttributeMap);
+    Map<String, Set<String>> orderByAttributeToSourceMap =
+        buildAttributeToSourcesMap(sourceToOrderByAttributeMap);
 
     return getIntersectingSourceSets(filterAttributeToSourcesMap, orderByAttributeToSourceMap);
   }

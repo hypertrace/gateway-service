@@ -10,6 +10,7 @@ import org.hypertrace.gateway.service.v1.common.Value;
 import org.hypertrace.gateway.service.v1.common.ValueType;
 import org.hypertrace.gateway.service.v1.entity.EntitiesRequest;
 import org.junit.jupiter.api.Assertions;
+import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 
 import java.util.Collections;
@@ -26,6 +27,7 @@ import static org.hypertrace.gateway.service.common.EntitiesRequestAndResponseUt
 import static org.hypertrace.gateway.service.common.EntitiesRequestAndResponseUtils.generateEQFilter;
 import static org.hypertrace.gateway.service.common.EntitiesRequestAndResponseUtils.generateFilter;
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.when;
@@ -476,6 +478,63 @@ public class ExecutionTreeUtilsTest {
     Set<String> sourceSets =
         ExecutionTreeUtils.getSourceSetsIfFilterAndOrderByAreFromSameSourceSets(executionContext);
     assertTrue(sourceSets.isEmpty());
+  }
+
+  @Test
+  @DisplayName(
+      "filters are applied on a single data source, for filters check on other data source")
+  public void test_areFiltersOnCurrentDataSource_onlyPresentOnTheCurrentDataSource() {
+    ExecutionContext executionContext = mock(ExecutionContext.class);
+    // filters
+    // API.id -> ["QS", "EDS"]
+    // API.name -> ["QS"]
+    when(executionContext.getSourceToFilterAttributeMap())
+        .thenReturn(Map.of("QS", Set.of("API.id", "API.name"), "EDS", Set.of("API.id")));
+
+    assertTrue(ExecutionTreeUtils.areFiltersOnlyOnCurrentDataSource(executionContext, "QS"));
+    assertFalse(ExecutionTreeUtils.areFiltersOnlyOnCurrentDataSource(executionContext, "EDS"));
+  }
+
+  @Test
+  @DisplayName(
+      "are filters applied on a single data source, if attributes are on multiple data sources")
+  public void test_areFiltersOnCurrentDataSource_multipleSourcesForAttributes() {
+    ExecutionContext executionContext = mock(ExecutionContext.class);
+    // filters
+    // API.id -> ["QS", "EDS"]
+    // API.name -> ["QS", "EDS"]
+    when(executionContext.getSourceToFilterAttributeMap())
+        .thenReturn(Map.of("QS", Set.of("API.id", "API.name"), "EDS", Set.of("API.id", "API.name")));
+
+    assertTrue(ExecutionTreeUtils.areFiltersOnlyOnCurrentDataSource(executionContext, "QS"));
+    assertTrue(ExecutionTreeUtils.areFiltersOnlyOnCurrentDataSource(executionContext, "EDS"));
+  }
+
+  @Test
+  @DisplayName(
+      "are filters applied on a single data source, if attributes are on different data sources")
+  public void test_areFiltersOnCurrentDataSource_attributesOnDifferentSources() {
+    ExecutionContext executionContext = mock(ExecutionContext.class);
+    // filters
+    // API.id -> ["QS"]
+    // API.name -> ["EDS"]
+    when(executionContext.getSourceToFilterAttributeMap())
+        .thenReturn(Map.of("QS", Set.of("API.id"), "EDS", Set.of("API.name")));
+
+    assertFalse(ExecutionTreeUtils.areFiltersOnlyOnCurrentDataSource(executionContext, "QS"));
+    assertFalse(ExecutionTreeUtils.areFiltersOnlyOnCurrentDataSource(executionContext, "EDS"));
+  }
+
+  @Test
+  @DisplayName(
+      "are filters applied on a single data source, if no filters")
+  public void test_areFiltersOnCurrentDataSource_noFilters() {
+    ExecutionContext executionContext = mock(ExecutionContext.class);
+    // filters
+    when(executionContext.getSourceToFilterAttributeMap()).thenReturn(Collections.emptyMap());
+
+    assertTrue(ExecutionTreeUtils.areFiltersOnlyOnCurrentDataSource(executionContext, "QS"));
+    assertTrue(ExecutionTreeUtils.areFiltersOnlyOnCurrentDataSource(executionContext, "EDS"));
   }
 
   private void executeHasEntityIdEqualsFilterTest(List<Expression> entityIdExpressions,
