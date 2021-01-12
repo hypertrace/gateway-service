@@ -182,6 +182,13 @@ public class ExecutionTreeBuilder {
 
     QueryNode rootNode = new DataFetcherNode(EDS.name(), filter, selectionLimit, selectionOffset, orderBys);
     executionContext.setSortAndPaginationNodeAdded(true);
+
+    if (ExecutionTreeUtils.hasEntityIdEqualsFilter(executionContext)) {
+      executionContext.setTotal(1);
+    } else {
+      rootNode = new TotalFetcherNode(rootNode, EDS.name());
+    }
+
     return rootNode;
   }
 

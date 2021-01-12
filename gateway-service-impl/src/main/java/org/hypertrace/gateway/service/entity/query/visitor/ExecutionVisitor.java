@@ -141,9 +141,7 @@ public class ExecutionVisitor implements Visitor<EntityFetcherResponse> {
 
     EntitiesRequest request = requestBuilder.build();
     IEntityFetcher entityFetcher = queryHandlerRegistry.getEntityFetcher(source);
-    EntityFetcherResponse response = entityFetcher.getEntities(context, request);
-    executionContext.setTotal(response.size());
-    return response;
+    return entityFetcher.getEntities(context, request);
   }
 
   @Override
