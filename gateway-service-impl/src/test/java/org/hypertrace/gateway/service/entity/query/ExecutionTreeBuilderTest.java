@@ -435,13 +435,16 @@ public class ExecutionTreeBuilderTest {
       ExecutionTreeBuilder executionTreeBuilder = new ExecutionTreeBuilder(executionContext);
       QueryNode executionTree = executionTreeBuilder.build();
       assertNotNull(executionTree);
+      assertTrue(executionTree instanceof TotalFetcherNode);
+      assertEquals("EDS", ((TotalFetcherNode) executionTree).getSource());
 
-      assertTrue(executionTree instanceof DataFetcherNode);
-      assertEquals("EDS", ((DataFetcherNode) executionTree).getSource());
-      assertEquals(20, ((DataFetcherNode) executionTree).getOffset());
-      assertEquals(10, ((DataFetcherNode) executionTree).getLimit());
+      QueryNode childNode = ((TotalFetcherNode) executionTree).getChildNode();
+      assertTrue(childNode instanceof DataFetcherNode);
+      assertEquals("EDS", ((DataFetcherNode) childNode).getSource());
+      assertEquals(20, ((DataFetcherNode) childNode).getOffset());
+      assertEquals(10, ((DataFetcherNode) childNode).getLimit());
       assertEquals(
-          List.of(orderByExpression), ((DataFetcherNode) executionTree).getOrderByExpressionList());
+          List.of(orderByExpression), ((DataFetcherNode) childNode).getOrderByExpressionList());
     }
 
     {
@@ -497,10 +500,14 @@ public class ExecutionTreeBuilderTest {
     ExecutionTreeBuilder executionTreeBuilder = new ExecutionTreeBuilder(executionContext);
     QueryNode executionTree = executionTreeBuilder.build();
     assertNotNull(executionTree);
-    assertTrue(executionTree instanceof DataFetcherNode);
-    assertEquals(10, ((DataFetcherNode)executionTree).getLimit());
-    assertEquals(20, ((DataFetcherNode)executionTree).getOffset());
-    assertEquals(List.of(), ((DataFetcherNode)executionTree).getOrderByExpressionList());
+    assertTrue(executionTree instanceof TotalFetcherNode);
+    assertEquals("EDS", ((TotalFetcherNode) executionTree).getSource());
+
+    QueryNode childNode = ((TotalFetcherNode) executionTree).getChildNode();
+    assertTrue(childNode instanceof DataFetcherNode);
+    assertEquals(10, ((DataFetcherNode)childNode).getLimit());
+    assertEquals(20, ((DataFetcherNode)childNode).getOffset());
+    assertEquals(List.of(), ((DataFetcherNode)childNode).getOrderByExpressionList());
   }
 
   @Test
