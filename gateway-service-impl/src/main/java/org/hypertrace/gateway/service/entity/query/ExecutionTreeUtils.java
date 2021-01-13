@@ -99,7 +99,8 @@ public class ExecutionTreeUtils {
     }
   }
 
-  public static boolean areFiltersOnlyOnCurrentDataSource(ExecutionContext executionContext, String currentSource) {
+  public static boolean areFiltersOnlyOnCurrentDataSource(
+      ExecutionContext executionContext, String currentSource) {
     Map<String, Set<String>> sourceToFilterAttributeMap =
         executionContext.getSourceToFilterAttributeMap();
 
@@ -134,8 +135,8 @@ public class ExecutionTreeUtils {
     // merges sourceToSelectionOrderByAttributeMap and sourceToMetricOrderByAttributeMap
     Map<String, Set<String>> sourceToOrderByAttributeMap =
         Stream.concat(
-            sourceToSelectionOrderByAttributeMap.entrySet().stream(),
-            sourceToMetricOrderByAttributeMap.entrySet().stream())
+                sourceToSelectionOrderByAttributeMap.entrySet().stream(),
+                sourceToMetricOrderByAttributeMap.entrySet().stream())
             .collect(
                 Collectors.toMap(
                     Map.Entry::getKey,
