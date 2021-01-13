@@ -59,7 +59,6 @@ import org.hypertrace.gateway.service.v1.entity.EntitiesResponse;
 import org.hypertrace.gateway.service.v1.entity.Entity;
 import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.BeforeEach;
-import org.junit.jupiter.api.Disabled;
 import org.junit.jupiter.api.Test;
 import org.mockito.Mockito;
 
@@ -198,7 +197,6 @@ public class EntityServiceTest extends AbstractGatewayServiceTest {
                     .build()));
   }
 
-  @Disabled
   @Test
   public void testGetEntitiesOnlySelectFromSingleSourceWithTimeRangeShouldUseQueryService() {
     long endTime = System.currentTimeMillis();
