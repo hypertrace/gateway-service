@@ -10,11 +10,13 @@ import java.util.Map;
 import java.util.Optional;
 import java.util.Set;
 import java.util.stream.Collectors;
+import java.util.stream.Stream;
+
 import org.hypertrace.core.attribute.service.v1.AttributeMetadata;
 import org.hypertrace.core.attribute.service.v1.AttributeSource;
 import org.hypertrace.gateway.service.common.util.TimeRangeFilterUtil;
 import org.hypertrace.gateway.service.entity.query.visitor.ExecutionContextBuilderVisitor;
-import org.hypertrace.gateway.service.entity.query.visitor.OptimizingVisitor;
+import org.hypertrace.gateway.service.entity.query.visitor.FilterOptimizingVisitor;
 import org.hypertrace.gateway.service.entity.query.visitor.PrintVisitor;
 import org.hypertrace.gateway.service.v1.common.Filter;
 import org.hypertrace.gateway.service.v1.common.Operator;
@@ -61,15 +63,19 @@ public class ExecutionTreeBuilder {
         ExecutionTreeUtils.getSingleSourceForAllAttributes(executionContext);
     EntitiesRequest entitiesRequest = executionContext.getEntitiesRequest();
 
-    // TODO: If there is a filter on a data source, other than EDS, then the flag is a no-op
-
     // EDS source has all the entities (live + non live). In order to fetch all the non live
     // entities, along with live entities,
     // the query needs to be anchored around EDS.
     // Hence, EDS is treated as a DataFetcherNode, so that first all the entities are fetched from
     // EDS, irrespective of the time range. And, then the remaining data can be fetched from other
     // sources
-    if (entitiesRequest.getIncludeNonLiveEntities()) {
+
+    // If there is a filter on any other data source than EDS, then fetching all the entities
+    // (live + non live) does not make sense, since filters on any other data source will anyways
+    // filter out the "non live" entities
+    boolean areFiltersOnlyOnEds =
+        ExecutionTreeUtils.areFiltersOnlyOnCurrentDataSource(executionContext, EDS.name());
+    if (entitiesRequest.getIncludeNonLiveEntities() && areFiltersOnlyOnEds) {
       QueryNode rootNode = new DataFetcherNode(EDS.name(), entitiesRequest.getFilter());
       // if the filter by and order by are from the same source, pagination can be pushed down to EDS
       if (sourceSetsIfFilterAndOrderByAreFromSameSourceSets.contains(EDS.name())) {
@@ -118,16 +124,17 @@ public class ExecutionTreeBuilder {
     }
 
     filterTree.acceptVisitor(new ExecutionContextBuilderVisitor(executionContext));
+
     if (LOG.isDebugEnabled()) {
       LOG.debug("ExecutionContext: {}", executionContext);
     }
 
     /**
-     * {@link OptimizingVisitor} is needed to merge filters corresponding to the same source into
+     * {@link FilterOptimizingVisitor} is needed to merge filters corresponding to the same source into
      * one {@link DataFetcherNode}, instead of having multiple {@link DataFetcherNode}s for each
      * filter
      */
-    QueryNode optimizedFilterTree = filterTree.acceptVisitor(new OptimizingVisitor());
+    QueryNode optimizedFilterTree = filterTree.acceptVisitor(new FilterOptimizingVisitor());
     if (LOG.isDebugEnabled()) {
       LOG.debug("Optimized Filter Tree:{}", optimizedFilterTree.acceptVisitor(new PrintVisitor()));
     }
@@ -181,6 +188,7 @@ public class ExecutionTreeBuilder {
               .build();
       attrSourcesForOrderBy.forEach(executionContext::removePendingSelectionSource);
     }
+
     // Select agg attributes from sources in order by
     Set<String> metricSourcesForOrderBy =
         executionContext.getPendingMetricAggregationSourcesForOrderBy();
@@ -220,6 +228,7 @@ public class ExecutionTreeBuilder {
               .build();
       rootNode = checkAndAddSortAndPaginationNode(rootNode, executionContext);
     }
+
     return rootNode;
   }
 
@@ -260,6 +269,10 @@ public class ExecutionTreeBuilder {
               .getSourcesList();
 
       // if the filter by and order by are from QS, pagination can be pushed down to QS
+
+      // There will always be a DataFetcherNode for QS, because the results are always fetched
+      // within a time range. Hence, we can only push pagination down to QS and not any other
+      // sources, since we will always have a time range filter on QS
       if (sourceSetsIfFilterAndOrderByAreFromSameSourceSets.contains(QS.name())) {
         executionContext.setSortAndPaginationNodeAdded(true);
         return createQsDataFetcherNodeWithPagination(entitiesRequest);
@@ -276,8 +289,16 @@ public class ExecutionTreeBuilder {
       return childNode;
     }
     // Add ordering and pagination node
+    List<OrderByExpression> selectionOrderByExpressions =
+        executionContext.getSourceToSelectionOrderByExpressionMap().values().stream()
+            .flatMap(Collection::stream)
+            .collect(Collectors.toList());
+    List<OrderByExpression> metricOrderByExpressions =
+        executionContext.getSourceToMetricOrderByExpressionMap().values().stream()
+            .flatMap(Collection::stream)
+            .collect(Collectors.toList());
     List<OrderByExpression> orderByExpressions =
-        executionContext.getSourceToOrderByExpressionMap().values().stream()
+        Stream.of(selectionOrderByExpressions, metricOrderByExpressions)
             .flatMap(Collection::stream)
             .collect(Collectors.toList());
     if (orderByExpressions.isEmpty() && executionContext.getEntitiesRequest().getLimit() == 0) {

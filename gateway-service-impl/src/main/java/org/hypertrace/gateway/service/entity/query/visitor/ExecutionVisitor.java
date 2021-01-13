@@ -160,12 +160,10 @@ public class ExecutionVisitor implements Visitor<EntityResponse> {
 
     if (dataFetcherNode.getLimit() != null) {
       requestBuilder.setLimit(dataFetcherNode.getLimit());
-      context.canApplyLimit(true);
     }
 
     if (dataFetcherNode.getOffset() != null) {
       requestBuilder.setOffset(dataFetcherNode.getOffset());
-      context.canApplyOffset(true);
     }
 
     if (!dataFetcherNode.getOrderByExpressionList().isEmpty()) {

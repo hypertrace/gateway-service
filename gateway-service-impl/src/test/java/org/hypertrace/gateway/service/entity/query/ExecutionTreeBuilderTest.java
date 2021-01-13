@@ -33,7 +33,7 @@ import org.hypertrace.gateway.service.common.AttributeMetadataProvider;
 import org.hypertrace.gateway.service.common.RequestContext;
 import org.hypertrace.gateway.service.entity.EntitiesRequestContext;
 import org.hypertrace.gateway.service.entity.config.EntityIdColumnsConfigs;
-import org.hypertrace.gateway.service.entity.query.visitor.OptimizingVisitor;
+import org.hypertrace.gateway.service.entity.query.visitor.FilterOptimizingVisitor;
 import org.hypertrace.gateway.service.v1.common.Filter;
 import org.hypertrace.gateway.service.v1.common.FunctionType;
 import org.hypertrace.gateway.service.v1.common.Operator;
@@ -128,27 +128,27 @@ public class ExecutionTreeBuilderTest {
         ).thenReturn(Optional.of(attribute)));
   }
 
-  private ExecutionTreeBuilder getExecutionTreeBuilderForOptimizedFilterTests() {
+  private ExecutionContext getExecutionContextForOptimizedFilterTests(Filter filter) {
     long endTime = System.currentTimeMillis();
     long startTime = endTime - 1000;
     EntitiesRequest entitiesRequest = EntitiesRequest.newBuilder()
         .setStartTimeMillis(startTime).setEndTimeMillis(endTime)
         .setEntityType(AttributeScope.API.name())
-        .setFilter(getTimeRangeFilter("API.startTime", startTime, endTime))
+        .setFilter(filter)
         .build();
     EntitiesRequestContext entitiesRequestContext =
         new EntitiesRequestContext(TENANT_ID, startTime, endTime, "API", "API.startTime", new HashMap<>());
-    ExecutionContext executionContext =
-        ExecutionContext.from(attributeMetadataProvider, entityIdColumnsConfigs, entitiesRequest, entitiesRequestContext);
-    return new ExecutionTreeBuilder(executionContext);
+    return ExecutionContext.from(attributeMetadataProvider, entityIdColumnsConfigs, entitiesRequest, entitiesRequestContext);
   }
 
   @Test
   public void testOptimizedFilterTreeBuilderSimpleFilter() {
-    ExecutionTreeBuilder executionTreeBuilder = getExecutionTreeBuilderForOptimizedFilterTests();
     Filter filter = generateEQFilter(API_API_ID_ATTR, UUID.randomUUID().toString());
-    QueryNode queryNode = executionTreeBuilder.buildFilterTree(filter);
-    QueryNode optimizedQueryNode = queryNode.acceptVisitor(new OptimizingVisitor());
+    ExecutionContext executionContext = getExecutionContextForOptimizedFilterTests(filter);
+    ExecutionTreeBuilder executionTreeBuilder = new ExecutionTreeBuilder(executionContext);
+    QueryNode queryNode =
+        executionTreeBuilder.buildFilterTree(executionContext.getEntitiesRequest(), filter);
+    QueryNode optimizedQueryNode = queryNode.acceptVisitor(new FilterOptimizingVisitor());
     assertNotNull(optimizedQueryNode);
     assertTrue(optimizedQueryNode instanceof DataFetcherNode);
     assertEquals(((DataFetcherNode) optimizedQueryNode).getFilter(), filter);
@@ -156,7 +156,6 @@ public class ExecutionTreeBuilderTest {
 
   @Test
   public void testOptimizedFilterTreeBuilderAndOrFilterSingleDataSource() {
-    ExecutionTreeBuilder executionTreeBuilder = getExecutionTreeBuilderForOptimizedFilterTests();
     {
       Filter filter =
           generateAndOrNotFilter(
@@ -164,10 +163,13 @@ public class ExecutionTreeBuilderTest {
               generateEQFilter(API_API_ID_ATTR, UUID.randomUUID().toString()),
               generateEQFilter(API_NAME_ATTR, "/login"),
               generateEQFilter(API_TYPE_ATTR, "http"));
-      QueryNode queryNode = executionTreeBuilder.buildFilterTree(filter);
+      ExecutionContext executionContext = getExecutionContextForOptimizedFilterTests(filter);
+      ExecutionTreeBuilder executionTreeBuilder = new ExecutionTreeBuilder(executionContext);
+      QueryNode queryNode =
+          executionTreeBuilder.buildFilterTree(executionContext.getEntitiesRequest(), filter);
       assertNotNull(queryNode);
       assertTrue(queryNode instanceof AndNode);
-      QueryNode optimizedNode = queryNode.acceptVisitor(new OptimizingVisitor());
+      QueryNode optimizedNode = queryNode.acceptVisitor(new FilterOptimizingVisitor());
       assertNotNull(optimizedNode);
       assertTrue(optimizedNode instanceof DataFetcherNode);
       assertEquals(filter, ((DataFetcherNode) optimizedNode).getFilter());
@@ -180,10 +182,13 @@ public class ExecutionTreeBuilderTest {
               generateEQFilter(API_API_ID_ATTR, UUID.randomUUID().toString()),
               generateEQFilter(API_NAME_ATTR, "/login"),
               generateEQFilter(API_TYPE_ATTR, "http"));
-      QueryNode queryNode = executionTreeBuilder.buildFilterTree(filter);
+      ExecutionContext executionContext = getExecutionContextForOptimizedFilterTests(filter);
+      ExecutionTreeBuilder executionTreeBuilder = new ExecutionTreeBuilder(executionContext);
+      QueryNode queryNode =
+          executionTreeBuilder.buildFilterTree(executionContext.getEntitiesRequest(), filter);
       assertNotNull(queryNode);
       assertTrue(queryNode instanceof OrNode);
-      QueryNode optimizedNode = queryNode.acceptVisitor(new OptimizingVisitor());
+      QueryNode optimizedNode = queryNode.acceptVisitor(new FilterOptimizingVisitor());
       assertNotNull(optimizedNode);
       assertTrue(optimizedNode instanceof DataFetcherNode);
       assertEquals(filter, ((DataFetcherNode) optimizedNode).getFilter());
@@ -192,7 +197,6 @@ public class ExecutionTreeBuilderTest {
 
   @Test
   public void testOptimizedFilterTreeBuilderAndOrFilterMultiDataSource() {
-    ExecutionTreeBuilder executionTreeBuilder = getExecutionTreeBuilderForOptimizedFilterTests();
     Filter apiIdFilter = generateEQFilter(API_API_ID_ATTR, UUID.randomUUID().toString());
     Filter apiNameFilter = generateEQFilter(API_NAME_ATTR, "/login");
     Filter startTimeFilter =
@@ -206,10 +210,13 @@ public class ExecutionTreeBuilderTest {
     {
       Filter filter =
           generateAndOrNotFilter(Operator.AND, apiIdFilter, apiNameFilter, startTimeFilter);
-      QueryNode queryNode = executionTreeBuilder.buildFilterTree(filter);
+      ExecutionContext executionContext = getExecutionContextForOptimizedFilterTests(filter);
+      ExecutionTreeBuilder executionTreeBuilder = new ExecutionTreeBuilder(executionContext);
+      QueryNode queryNode =
+          executionTreeBuilder.buildFilterTree(executionContext.getEntitiesRequest(), filter);
       assertNotNull(queryNode);
       assertTrue(queryNode instanceof AndNode);
-      QueryNode optimizedNode = queryNode.acceptVisitor(new OptimizingVisitor());
+      QueryNode optimizedNode = queryNode.acceptVisitor(new FilterOptimizingVisitor());
       assertNotNull(optimizedNode);
       assertTrue(optimizedNode instanceof AndNode);
       List<QueryNode> queryNodeList = ((AndNode) optimizedNode).getChildNodes();
@@ -227,10 +234,13 @@ public class ExecutionTreeBuilderTest {
 
     {
       Filter filter = generateAndOrNotFilter(Operator.OR, apiIdFilter, apiNameFilter, startTimeFilter);
-      QueryNode queryNode = executionTreeBuilder.buildFilterTree(filter);
+      ExecutionContext executionContext = getExecutionContextForOptimizedFilterTests(filter);
+      ExecutionTreeBuilder executionTreeBuilder = new ExecutionTreeBuilder(executionContext);
+      QueryNode queryNode =
+          executionTreeBuilder.buildFilterTree(executionContext.getEntitiesRequest(), filter);
       assertNotNull(queryNode);
       assertTrue(queryNode instanceof OrNode);
-      QueryNode optimizedNode = queryNode.acceptVisitor(new OptimizingVisitor());
+      QueryNode optimizedNode = queryNode.acceptVisitor(new FilterOptimizingVisitor());
       assertNotNull(optimizedNode);
       assertTrue(optimizedNode instanceof OrNode);
       List<QueryNode> queryNodeList = ((OrNode) optimizedNode).getChildNodes();
@@ -249,7 +259,6 @@ public class ExecutionTreeBuilderTest {
 
   @Test
   public void testOptimizedFilterTreeBuilderNestedAndFilter() {
-    ExecutionTreeBuilder executionTreeBuilder = getExecutionTreeBuilderForOptimizedFilterTests();
     Filter apiIdFilter = generateEQFilter(API_API_ID_ATTR, UUID.randomUUID().toString());
     Filter apiNameFilter = generateEQFilter(API_NAME_ATTR, "/login");
     Filter apiPatternFilter = generateEQFilter(API_PATTERN_ATTR, "/login");
@@ -273,9 +282,12 @@ public class ExecutionTreeBuilderTest {
     {
       Filter level2Filter = generateAndOrNotFilter(Operator.AND, apiIdFilter, startTimeFilter);
       Filter filter = generateAndOrNotFilter(Operator.AND, level2Filter, apiNameFilter);
-      QueryNode queryNode = executionTreeBuilder.buildFilterTree(filter);
+      ExecutionContext executionContext = getExecutionContextForOptimizedFilterTests(filter);
+      ExecutionTreeBuilder executionTreeBuilder = new ExecutionTreeBuilder(executionContext);
+      QueryNode queryNode =
+          executionTreeBuilder.buildFilterTree(executionContext.getEntitiesRequest(), filter);
       assertNotNull(queryNode);
-      QueryNode optimizedNode = queryNode.acceptVisitor(new OptimizingVisitor());
+      QueryNode optimizedNode = queryNode.acceptVisitor(new FilterOptimizingVisitor());
       assertNotNull(optimizedNode);
       assertTrue(optimizedNode instanceof AndNode);
       List<QueryNode> queryNodeList = ((AndNode) optimizedNode).getChildNodes();
@@ -294,9 +306,12 @@ public class ExecutionTreeBuilderTest {
     {
       Filter level2Filter = generateAndOrNotFilter(Operator.AND, apiIdFilter, apiNameFilter);
       Filter filter = generateAndOrNotFilter(Operator.AND, level2Filter, startTimeFilter);
-      QueryNode queryNode = executionTreeBuilder.buildFilterTree(filter);
+      ExecutionContext executionContext = getExecutionContextForOptimizedFilterTests(filter);
+      ExecutionTreeBuilder executionTreeBuilder = new ExecutionTreeBuilder(executionContext);
+      QueryNode queryNode =
+          executionTreeBuilder.buildFilterTree(executionContext.getEntitiesRequest(), filter);
       assertNotNull(queryNode);
-      QueryNode optimizedNode = queryNode.acceptVisitor(new OptimizingVisitor());
+      QueryNode optimizedNode = queryNode.acceptVisitor(new FilterOptimizingVisitor());
       assertNotNull(optimizedNode);
       assertTrue(optimizedNode instanceof AndNode);
       List<QueryNode> queryNodeList = ((AndNode) optimizedNode).getChildNodes();
@@ -317,9 +332,12 @@ public class ExecutionTreeBuilderTest {
       Filter level2Filter =
           generateAndOrNotFilter(Operator.AND, apiIdFilter, startTimeFilter, level3Filter);
       Filter filter = generateAndOrNotFilter(Operator.AND, level2Filter, apiNameFilter);
-      QueryNode queryNode = executionTreeBuilder.buildFilterTree(filter);
+      ExecutionContext executionContext = getExecutionContextForOptimizedFilterTests(filter);
+      ExecutionTreeBuilder executionTreeBuilder = new ExecutionTreeBuilder(executionContext);
+      QueryNode queryNode =
+          executionTreeBuilder.buildFilterTree(executionContext.getEntitiesRequest(), filter);
       assertNotNull(queryNode);
-      QueryNode optimizedNode = queryNode.acceptVisitor(new OptimizingVisitor());
+      QueryNode optimizedNode = queryNode.acceptVisitor(new FilterOptimizingVisitor());
       assertNotNull(optimizedNode);
       assertTrue(optimizedNode instanceof AndNode);
       List<QueryNode> queryNodeList = ((AndNode) optimizedNode).getChildNodes();
@@ -330,7 +348,6 @@ public class ExecutionTreeBuilderTest {
 
   @Test
   public void testOptimizedFilterTreeBuilderNestedAndOrFilter() {
-    ExecutionTreeBuilder executionTreeBuilder = getExecutionTreeBuilderForOptimizedFilterTests();
     Filter apiIdFilter = generateEQFilter(API_API_ID_ATTR, UUID.randomUUID().toString());
     Filter apiNameFilter = generateEQFilter(API_NAME_ATTR, "/login");
     Filter startTimeFilter =
@@ -345,9 +362,12 @@ public class ExecutionTreeBuilderTest {
     {
       Filter level2Filter = generateAndOrNotFilter(Operator.AND, apiIdFilter, apiNameFilter);
       Filter filter = generateAndOrNotFilter(Operator.OR, level2Filter, startTimeFilter);
-      QueryNode queryNode = executionTreeBuilder.buildFilterTree(filter);
+      ExecutionContext executionContext = getExecutionContextForOptimizedFilterTests(filter);
+      ExecutionTreeBuilder executionTreeBuilder = new ExecutionTreeBuilder(executionContext);
+      QueryNode queryNode =
+          executionTreeBuilder.buildFilterTree(executionContext.getEntitiesRequest(), filter);
       assertNotNull(queryNode);
-      QueryNode optimizedNode = queryNode.acceptVisitor(new OptimizingVisitor());
+      QueryNode optimizedNode = queryNode.acceptVisitor(new FilterOptimizingVisitor());
       assertNotNull(optimizedNode);
       assertTrue(optimizedNode instanceof OrNode);
       List<QueryNode> queryNodeList = ((OrNode) optimizedNode).getChildNodes();
@@ -366,9 +386,12 @@ public class ExecutionTreeBuilderTest {
     {
       Filter level2Filter = generateAndOrNotFilter(Operator.AND, apiIdFilter, startTimeFilter);
       Filter filter = generateAndOrNotFilter(Operator.OR, level2Filter, apiNameFilter);
-      QueryNode queryNode = executionTreeBuilder.buildFilterTree(filter);
+      ExecutionContext executionContext = getExecutionContextForOptimizedFilterTests(filter);
+      ExecutionTreeBuilder executionTreeBuilder = new ExecutionTreeBuilder(executionContext);
+      QueryNode queryNode =
+          executionTreeBuilder.buildFilterTree(executionContext.getEntitiesRequest(), filter);
       assertNotNull(queryNode);
-      QueryNode optimizedNode = queryNode.acceptVisitor(new OptimizingVisitor());
+      QueryNode optimizedNode = queryNode.acceptVisitor(new FilterOptimizingVisitor());
       assertNotNull(optimizedNode);
       assertTrue(optimizedNode instanceof OrNode);
       List<QueryNode> queryNodeList = ((OrNode) optimizedNode).getChildNodes();
@@ -625,11 +648,7 @@ public class ExecutionTreeBuilderTest {
     assertTrue(selectionNode instanceof SelectionNode);
     assertTrue(((SelectionNode) selectionNode).getAggMetricSelectionSources().contains("QS"));
 
-    QueryNode childSelectionNode = ((SelectionNode) selectionNode).getChildNode();
-    assertTrue(childSelectionNode instanceof SelectionNode);
-    assertTrue(((SelectionNode) childSelectionNode).getAttrSelectionSources().contains("EDS"));
-
-    QueryNode dataFetcherNode = ((SelectionNode)childSelectionNode).getChildNode();
+    QueryNode dataFetcherNode = ((SelectionNode)selectionNode).getChildNode();
     assertTrue(dataFetcherNode instanceof DataFetcherNode);
     assertEquals("QS", ((DataFetcherNode)dataFetcherNode).getSource());
     assertEquals(0, ((DataFetcherNode)dataFetcherNode).getOffset());
@@ -763,6 +782,7 @@ public class ExecutionTreeBuilderTest {
                     "SUM_numCalls",
                     List.of()))
             .setFilter(getTimeRangeFilter("API.startTime", System.currentTimeMillis() - 1000, System.currentTimeMillis()))
+            .addOrderBy(buildOrderByExpression(API_NAME_ATTR))
             .setLimit(10)
             .setOffset(0)
             .build();
@@ -777,14 +797,14 @@ public class ExecutionTreeBuilderTest {
     assertTrue(executionTree instanceof SelectionNode);
     assertTrue(((SelectionNode) executionTree).getAggMetricSelectionSources().contains(AttributeSource.QS.name()));
     QueryNode firstChild = ((SelectionNode) executionTree).getChildNode();
-    assertTrue(firstChild instanceof SelectionNode);
-    assertTrue(((SelectionNode) firstChild).getAttrSelectionSources().contains(AttributeSource.EDS.name()));
+    assertTrue(firstChild instanceof SortAndPaginateNode);
+    assertEquals(entitiesRequest.getLimit(), ((SortAndPaginateNode) firstChild).getLimit());
 
-    QueryNode secondChild = ((SelectionNode) firstChild).getChildNode();
-    assertTrue(secondChild instanceof SortAndPaginateNode);
-    assertEquals(entitiesRequest.getLimit(), ((SortAndPaginateNode) secondChild).getLimit());
+    QueryNode secondChild = ((SortAndPaginateNode) firstChild).getChildNode();
+    assertTrue(secondChild instanceof SelectionNode);
+    assertTrue(((SelectionNode) secondChild).getAttrSelectionSources().contains(AttributeSource.EDS.name()));
 
-    QueryNode thirdChild = ((SortAndPaginateNode) secondChild).getChildNode();
+    QueryNode thirdChild = ((SelectionNode) secondChild).getChildNode();
     assertTrue(thirdChild instanceof DataFetcherNode);
     assertEquals(AttributeSource.QS.name(), ((DataFetcherNode) thirdChild).getSource());
   }
@@ -850,5 +870,171 @@ public class ExecutionTreeBuilderTest {
     QueryNode firstChild = ((SelectionNode) executionTree).getChildNode();
     assertTrue(firstChild instanceof DataFetcherNode);
     assertEquals(AttributeSource.EDS.name(), ((DataFetcherNode) firstChild).getSource());
+  }
+
+  @Test
+  public void test_build_filterAndOrderBySameSourceSets_paginationToDataSourceToQs() {
+    // filter and order by on QS
+    // selections on both EDS and QS
+    EntitiesRequest entitiesRequest =
+        EntitiesRequest.newBuilder()
+            .setEntityType(AttributeScope.API.name())
+            .addSelection(buildExpression(API_NAME_ATTR))
+            .addSelection(
+                buildAggregateExpression(API_NUM_CALLS_ATTR,
+                    FunctionType.SUM,
+                    "SUM_numCalls",
+                    List.of()))
+            .setFilter(getTimeRangeFilter(API_START_TIME_ATTR, System.currentTimeMillis() - 1000, System.currentTimeMillis()))
+            .addOrderBy(buildOrderByExpression(API_NUM_CALLS_ATTR))
+            .setLimit(10)
+            .setOffset(0)
+            .build();
+    EntitiesRequestContext entitiesRequestContext =
+        new EntitiesRequestContext(TENANT_ID, entitiesRequest.getStartTimeMillis(), entitiesRequest.getEndTimeMillis(),
+            "API", "API.startTime", new HashMap<>());
+    ExecutionContext executionContext =
+        ExecutionContext.from(attributeMetadataProvider, entityIdColumnsConfigs, entitiesRequest, entitiesRequestContext);
+    ExecutionTreeBuilder executionTreeBuilder = new ExecutionTreeBuilder(executionContext);
+    QueryNode executionTree = executionTreeBuilder.build();
+    assertNotNull(executionTree);
+    assertTrue(executionTree instanceof SelectionNode);
+    assertTrue(((SelectionNode) executionTree).getAggMetricSelectionSources().contains(AttributeSource.QS.name()));
+    QueryNode firstChild = ((SelectionNode) executionTree).getChildNode();
+    assertTrue(firstChild instanceof SelectionNode);
+    assertTrue(((SelectionNode) firstChild).getAttrSelectionSources().contains(AttributeSource.EDS.name()));
+
+    QueryNode secondChild = ((SelectionNode) firstChild).getChildNode();
+    assertTrue(secondChild instanceof DataFetcherNode);
+    assertEquals(AttributeSource.QS.name(), ((DataFetcherNode) secondChild).getSource());
+    assertEquals(10, ((DataFetcherNode) secondChild).getLimit());
+    assertEquals(0, ((DataFetcherNode) secondChild).getOffset());
+    assertEquals(1, ((DataFetcherNode) secondChild).getOrderByExpressionList().size());
+  }
+
+  @Test
+  public void test_build_filterAndOrderBySameSourceSets_paginationToDataSourceToEds_nonLiveEntities() {
+    // filter and order by on EDS
+    // selections on both EDS and QS
+    EntitiesRequest entitiesRequest =
+        EntitiesRequest.newBuilder()
+            .setEntityType(AttributeScope.API.name())
+            .addSelection(buildExpression(API_ID_ATTR))
+            .addSelection(buildExpression(API_NAME_ATTR))
+            .addSelection(
+                buildAggregateExpression(API_NUM_CALLS_ATTR,
+                    FunctionType.SUM,
+                    "SUM_numCalls",
+                    List.of()))
+            .setFilter(generateEQFilter(API_NAME_ATTR, "api1"))
+            .addOrderBy(buildOrderByExpression(API_ID_ATTR))
+            .setLimit(10)
+            .setOffset(0)
+            .setIncludeNonLiveEntities(true)
+            .build();
+    EntitiesRequestContext entitiesRequestContext =
+        new EntitiesRequestContext(TENANT_ID, entitiesRequest.getStartTimeMillis(), entitiesRequest.getEndTimeMillis(),
+            "API", "API.startTime", new HashMap<>());
+    ExecutionContext executionContext =
+        ExecutionContext.from(attributeMetadataProvider, entityIdColumnsConfigs, entitiesRequest, entitiesRequestContext);
+    ExecutionTreeBuilder executionTreeBuilder = new ExecutionTreeBuilder(executionContext);
+    QueryNode executionTree = executionTreeBuilder.build();
+    assertNotNull(executionTree);
+    assertTrue(executionTree instanceof SelectionNode);
+    assertTrue(((SelectionNode) executionTree).getAggMetricSelectionSources().contains(AttributeSource.QS.name()));
+
+    QueryNode secondChild = ((SelectionNode) executionTree).getChildNode();
+    assertTrue(secondChild instanceof DataFetcherNode);
+    assertEquals(AttributeSource.EDS.name(), ((DataFetcherNode) secondChild).getSource());
+    assertEquals(10, ((DataFetcherNode) secondChild).getLimit());
+    assertEquals(0, ((DataFetcherNode) secondChild).getOffset());
+    assertEquals(1, ((DataFetcherNode) secondChild).getOrderByExpressionList().size());
+  }
+
+  @Test
+  public void nonLiveEntities_filtersOnOtherDataSourceThanEds() {
+    EntitiesRequest entitiesRequest =
+        EntitiesRequest.newBuilder()
+            .setEntityType(AttributeScope.API.name())
+            .addSelection(buildExpression(API_API_ID_ATTR))
+            .setFilter(generateEQFilter(API_NUM_CALLS_ATTR, "123"))
+            .setIncludeNonLiveEntities(true)
+            .build();
+    EntitiesRequestContext entitiesRequestContext =
+        new EntitiesRequestContext(TENANT_ID, entitiesRequest.getStartTimeMillis(), entitiesRequest.getEndTimeMillis(),
+            "API", "API.startTime", new HashMap<>());
+    ExecutionContext executionContext =
+        ExecutionContext.from(
+            attributeMetadataProvider,
+            entityIdColumnsConfigs,
+            entitiesRequest,
+            entitiesRequestContext);
+    ExecutionTreeBuilder executionTreeBuilder = new ExecutionTreeBuilder(executionContext);
+    QueryNode executionTree = executionTreeBuilder.build();
+    assertNotNull(executionTree);
+    assertTrue(executionTree instanceof SelectionNode);
+    assertTrue(
+        ((SelectionNode) executionTree)
+            .getAttrSelectionSources()
+            .contains(AttributeSource.EDS.name()));
+
+    QueryNode firstChild = ((SelectionNode) executionTree).getChildNode();
+    assertTrue(firstChild instanceof DataFetcherNode);
+    // should be QS, because there is a filter on QS, even though `setIncludeNonLiveEntities` is set
+    // to true
+    assertEquals(AttributeSource.QS.name(), ((DataFetcherNode) firstChild).getSource());
+  }
+
+  @Test
+  public void nonLiveEntities_noFilters_shouldFetchFromEds() {
+    EntitiesRequest entitiesRequest =
+        EntitiesRequest.newBuilder()
+            .setEntityType(AttributeScope.API.name())
+            .addSelection(buildExpression(API_API_ID_ATTR))
+            .setIncludeNonLiveEntities(true)
+            .build();
+    EntitiesRequestContext entitiesRequestContext =
+        new EntitiesRequestContext(TENANT_ID, entitiesRequest.getStartTimeMillis(), entitiesRequest.getEndTimeMillis(),
+            "API", "API.startTime", new HashMap<>());
+    ExecutionContext executionContext =
+        ExecutionContext.from(
+            attributeMetadataProvider,
+            entityIdColumnsConfigs,
+            entitiesRequest,
+            entitiesRequestContext);
+    ExecutionTreeBuilder executionTreeBuilder = new ExecutionTreeBuilder(executionContext);
+    QueryNode executionTree = executionTreeBuilder.build();
+    assertNotNull(executionTree);
+    assertTrue(executionTree instanceof DataFetcherNode);
+    // should be EDS, since `setIncludeNonLiveEntities` is set to true, and there are no other
+    // filters
+    assertEquals(AttributeSource.EDS.name(), ((DataFetcherNode) executionTree).getSource());
+  }
+
+  @Test
+  public void nonLiveEntities_filterOnEds_shouldFetchFromEds() {
+    EntitiesRequest entitiesRequest =
+        EntitiesRequest.newBuilder()
+            .setEntityType(AttributeScope.API.name())
+            .addSelection(buildExpression(API_API_ID_ATTR))
+            .setFilter(generateEQFilter(API_NAME_ATTR, "apiName"))
+            .setIncludeNonLiveEntities(true)
+            .build();
+    EntitiesRequestContext entitiesRequestContext =
+        new EntitiesRequestContext(TENANT_ID, entitiesRequest.getStartTimeMillis(), entitiesRequest.getEndTimeMillis(),
+            "API", "API.startTime", new HashMap<>());
+    ExecutionContext executionContext =
+        ExecutionContext.from(
+            attributeMetadataProvider,
+            entityIdColumnsConfigs,
+            entitiesRequest,
+            entitiesRequestContext);
+    ExecutionTreeBuilder executionTreeBuilder = new ExecutionTreeBuilder(executionContext);
+    QueryNode executionTree = executionTreeBuilder.build();
+    assertNotNull(executionTree);
+    assertTrue(executionTree instanceof DataFetcherNode);
+    // should be EDS, since `setIncludeNonLiveEntities` is set to true, and there are no other
+    // filters
+    assertEquals(AttributeSource.EDS.name(), ((DataFetcherNode) executionTree).getSource());
   }
 }

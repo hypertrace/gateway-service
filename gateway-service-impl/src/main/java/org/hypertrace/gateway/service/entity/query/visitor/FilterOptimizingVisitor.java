@@ -23,7 +23,7 @@ import org.hypertrace.gateway.service.v1.common.Operator;
  * <p>If there are multiple filter conditions for the same source, this visitor tries to optimize
  * the queries being made to the respective sources
  */
-public class OptimizingVisitor implements Visitor<QueryNode> {
+public class FilterOptimizingVisitor implements Visitor<QueryNode> {
 
   @Override
   public QueryNode visit(DataFetcherNode dataFetcherNode) {
@@ -75,8 +75,8 @@ public class OptimizingVisitor implements Visitor<QueryNode> {
     if (orNodeList != null) {
       orNodeList.forEach(
           treeNode -> {
-            OrNode an = (OrNode) treeNode;
-            Map<String, List<QueryNode>> childAndNodeMap = groupNodesBySource(an.getChildNodes());
+            OrNode or = (OrNode) treeNode;
+            Map<String, List<QueryNode>> childAndNodeMap = groupNodesBySource(or.getChildNodes());
             childAndNodeMap.forEach(
                 (k, v) ->
                     sourceToTreeNodeListMap.merge(

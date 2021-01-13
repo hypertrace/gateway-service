@@ -6,10 +6,8 @@ import static org.hypertrace.gateway.service.common.EntitiesRequestAndResponseUt
 import static org.hypertrace.gateway.service.common.EntitiesRequestAndResponseUtils.buildTimeAggregation;
 import static org.hypertrace.gateway.service.common.EntitiesRequestAndResponseUtils.compareEntityFetcherResponses;
 import static org.hypertrace.gateway.service.common.EntitiesRequestAndResponseUtils.generateEQFilter;
-import static org.hypertrace.gateway.service.common.EntitiesRequestAndResponseUtils.getAggregatedMetricValue;
 import static org.hypertrace.gateway.service.common.EntitiesRequestAndResponseUtils.getStringValue;
 import static org.hypertrace.gateway.service.common.QueryServiceRequestAndResponseUtils.createQsAggregationExpression;
-import static org.hypertrace.gateway.service.common.QueryServiceRequestAndResponseUtils.createQsOrderBy;
 import static org.hypertrace.gateway.service.common.QueryServiceRequestAndResponseUtils.createQsRequestFilter;
 import static org.hypertrace.gateway.service.common.QueryServiceRequestAndResponseUtils.getResultSetChunk;
 import static org.hypertrace.gateway.service.common.converters.QueryRequestUtil.createColumnExpression;
@@ -31,11 +29,11 @@ import org.hypertrace.core.attribute.service.v1.AttributeScope;
 import org.hypertrace.core.query.service.api.Operator;
 import org.hypertrace.core.query.service.api.QueryRequest;
 import org.hypertrace.core.query.service.api.ResultSetChunk;
-import org.hypertrace.core.query.service.api.SortOrder;
 import org.hypertrace.core.query.service.client.QueryServiceClient;
 import org.hypertrace.gateway.service.common.AttributeMetadataProvider;
 import org.hypertrace.gateway.service.common.EntitiesRequestAndResponseUtils;
 import org.hypertrace.gateway.service.common.RequestContext;
+import org.hypertrace.gateway.service.common.converters.QueryAndGatewayDtoConverter;
 import org.hypertrace.gateway.service.common.converters.QueryRequestUtil;
 import org.hypertrace.gateway.service.entity.EntitiesRequestContext;
 import org.hypertrace.gateway.service.entity.EntityKey;
@@ -77,6 +75,127 @@ public class QueryServiceEntityFetcherTests {
 
     queryServiceEntityFetcher = new QueryServiceEntityFetcher(queryServiceClient, 500,
         attributeMetadataProvider, entityIdColumnsConfigs);
+  }
+
+  @Test
+  public void test_getEntitiesWithPagination() {
+    List<OrderByExpression> orderByExpressions = List.of(buildOrderByExpression(API_ID_ATTR));
+    long startTime = 1L;
+    long endTime = 10L;
+    int limit = 10;
+    int offset = 5;
+    String tenantId = "TENANT_ID";
+    Map<String, String> requestHeaders = Map.of("x-tenant-id", tenantId);
+    AttributeScope entityType = AttributeScope.API;
+    EntitiesRequest entitiesRequest =
+        EntitiesRequest.newBuilder()
+            .setEntityType(entityType.name())
+            .setStartTimeMillis(startTime)
+            .setEndTimeMillis(endTime)
+            .addTimeAggregation(
+                buildTimeAggregation(
+                    30, API_NUM_CALLS_ATTR, FunctionType.SUM, "SUM_API.numCalls", List.of()))
+            .setFilter(
+                Filter.newBuilder()
+                    .setOperator(AND)
+                    .addChildFilter(
+                        EntitiesRequestAndResponseUtils.getTimeRangeFilter(
+                            "API.startTime", startTime, endTime))
+                    .addChildFilter(generateEQFilter(API_DISCOVERY_STATE_ATTR, "DISCOVERED")))
+            .addAllOrderBy(orderByExpressions)
+            .setLimit(limit)
+            .setOffset(offset)
+            .build();
+    EntitiesRequestContext entitiesRequestContext =
+        new EntitiesRequestContext(
+            tenantId, startTime, endTime, entityType.name(), "API.startTime", requestHeaders);
+
+    QueryRequest expectedQueryRequest =
+        QueryRequest.newBuilder()
+            .addSelection(createColumnExpression(API_ID_ATTR))
+            .addSelection(createQsAggregationExpression("COUNT", API_ID_ATTR))
+            .setFilter(
+                createQsRequestFilter(
+                    API_START_TIME_ATTR,
+                    API_ID_ATTR,
+                    startTime,
+                    endTime,
+                    createStringFilter(API_DISCOVERY_STATE_ATTR, Operator.EQ, "DISCOVERED")))
+            .addGroupBy(createColumnExpression(API_ID_ATTR))
+            .setOffset(offset)
+            .setLimit(limit)
+            .addAllOrderBy(
+                QueryAndGatewayDtoConverter.convertToQueryOrderByExpressions(orderByExpressions))
+            .build();
+
+    List<ResultSetChunk> resultSetChunks =
+        List.of(getResultSetChunk(List.of("API.apiId"), new String[][] {{"apiId1"}, {"apiId2"}}));
+
+    when(queryServiceClient.executeQuery(eq(expectedQueryRequest), eq(requestHeaders), eq(500)))
+        .thenReturn(resultSetChunks.iterator());
+
+    assertEquals(
+        2, queryServiceEntityFetcher.getEntities(entitiesRequestContext, entitiesRequest).size());
+  }
+
+  @Test
+  public void test_getEntitiesWithoutPagination() {
+    List<OrderByExpression> orderByExpressions = List.of(buildOrderByExpression(API_ID_ATTR));
+    long startTime = 1L;
+    long endTime = 10L;
+    int limit = 0;
+    int offset = 0;
+    String tenantId = "TENANT_ID";
+    Map<String, String> requestHeaders = Map.of("x-tenant-id", tenantId);
+    AttributeScope entityType = AttributeScope.API;
+    EntitiesRequest entitiesRequest =
+        EntitiesRequest.newBuilder()
+            .setEntityType(entityType.name())
+            .setStartTimeMillis(startTime)
+            .setEndTimeMillis(endTime)
+            .addTimeAggregation(
+                buildTimeAggregation(
+                    30, API_NUM_CALLS_ATTR, FunctionType.SUM, "SUM_API.numCalls", List.of()))
+            .setFilter(
+                Filter.newBuilder()
+                    .setOperator(AND)
+                    .addChildFilter(
+                        EntitiesRequestAndResponseUtils.getTimeRangeFilter(
+                            "API.startTime", startTime, endTime))
+                    .addChildFilter(generateEQFilter(API_DISCOVERY_STATE_ATTR, "DISCOVERED")))
+            .addAllOrderBy(orderByExpressions)
+            .setLimit(limit)
+            .setOffset(offset)
+            .build();
+    EntitiesRequestContext entitiesRequestContext =
+        new EntitiesRequestContext(
+            tenantId, startTime, endTime, entityType.name(), "API.startTime", requestHeaders);
+
+    QueryRequest expectedQueryRequest =
+        QueryRequest.newBuilder()
+            .addSelection(createColumnExpression(API_ID_ATTR))
+            .addSelection(createQsAggregationExpression("COUNT", API_ID_ATTR))
+            .setFilter(
+                createQsRequestFilter(
+                    API_START_TIME_ATTR,
+                    API_ID_ATTR,
+                    startTime,
+                    endTime,
+                    createStringFilter(API_DISCOVERY_STATE_ATTR, Operator.EQ, "DISCOVERED")))
+            .addGroupBy(createColumnExpression(API_ID_ATTR))
+            .setLimit(QueryServiceClient.DEFAULT_QUERY_SERVICE_GROUP_BY_LIMIT)
+            .addAllOrderBy(
+                QueryAndGatewayDtoConverter.convertToQueryOrderByExpressions(orderByExpressions))
+            .build();
+
+    List<ResultSetChunk> resultSetChunks =
+        List.of(getResultSetChunk(List.of("API.apiId"), new String[][] {{"apiId1"}, {"apiId2"}}));
+
+    when(queryServiceClient.executeQuery(eq(expectedQueryRequest), eq(requestHeaders), eq(500)))
+        .thenReturn(resultSetChunks.iterator());
+
+    assertEquals(
+        2, queryServiceEntityFetcher.getEntities(entitiesRequestContext, entitiesRequest).size());
   }
 
   @Test
@@ -197,6 +316,7 @@ public class QueryServiceEntityFetcherTests {
     Map<EntityKey, Builder> expectedEntityKeyBuilderResponseMap = Map.of(
         EntityKey.of("api-id-0"), Entity.newBuilder()
                                         .setEntityType(AttributeScope.API.name())
+                                        .setId("api-id-0")
                                         .putAttribute(API_NAME_ATTR, getStringValue("api-0"))
                                         .putAttribute(API_ID_ATTR, getStringValue("api-id-0"))
     );
