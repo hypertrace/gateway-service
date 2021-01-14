@@ -83,19 +83,17 @@ public class BaselineServiceImpl implements BaselineService {
           getPeriod(originalRequest.getStartTimeMillis(), originalRequest.getEndTimeMillis());
       long periodSecs = getPeriodInSecs(aggTimePeriod);
       long alignedStartTime =
-              QueryExpressionUtil.alignToPeriodBoundary(
-                      originalRequest.getStartTimeMillis(), periodSecs, true);
+          QueryExpressionUtil.alignToPeriodBoundary(
+              originalRequest.getStartTimeMillis(), periodSecs, true);
       long alignedEndTime =
-              QueryExpressionUtil.alignToPeriodBoundary(
-                      originalRequest.getEndTimeMillis(), periodSecs, false);
+          QueryExpressionUtil.alignToPeriodBoundary(
+              originalRequest.getEndTimeMillis(), periodSecs, false);
 
-      List<TimeAggregation> timeAggregations = getTimeAggregationsForAggregateExpr(originalRequest,
-              alignedStartTime, alignedEndTime);
+      List<TimeAggregation> timeAggregations =
+          getTimeAggregationsForAggregateExpr(originalRequest, alignedStartTime, alignedEndTime);
       updateAliasMap(requestContext, timeAggregations);
       // Take more data to calculate baseline and standard deviation.
-      long seriesStartTime =
-          getUpdatedStartTime(
-                  alignedStartTime, alignedEndTime);
+      long seriesStartTime = getUpdatedStartTime(alignedStartTime, alignedEndTime);
       long seriesEndTime = alignedStartTime;
       List<String> entityIdAttributes =
           AttributeMetadataUtil.getIdAttributeIds(
@@ -131,15 +129,14 @@ public class BaselineServiceImpl implements BaselineService {
           getTimeSeriesPeriod(originalRequest.getBaselineMetricSeriesRequestList());
       long periodSecs = getPeriodInSecs(timeSeriesPeriod);
       long alignedStartTime =
-              QueryExpressionUtil.alignToPeriodBoundary(
-                      originalRequest.getStartTimeMillis(), periodSecs, true);
+          QueryExpressionUtil.alignToPeriodBoundary(
+              originalRequest.getStartTimeMillis(), periodSecs, true);
       long alignedEndTime =
-              QueryExpressionUtil.alignToPeriodBoundary(
-                      originalRequest.getEndTimeMillis(), periodSecs, false);
+          QueryExpressionUtil.alignToPeriodBoundary(
+              originalRequest.getEndTimeMillis(), periodSecs, false);
       List<TimeAggregation> timeAggregations =
           getTimeAggregationsForTimeSeriesExpr(originalRequest);
-      long seriesStartTime =
-          getUpdatedStartTime(alignedStartTime, alignedEndTime);
+      long seriesStartTime = getUpdatedStartTime(alignedStartTime, alignedEndTime);
       long seriesEndTime = alignedStartTime;
       List<String> entityIdAttributes =
           AttributeMetadataUtil.getIdAttributeIds(
@@ -168,10 +165,7 @@ public class BaselineServiceImpl implements BaselineService {
               alignedEndTime);
       baselineEntityTimeSeriesMap =
           getEntitiesMapFromTimeSeriesResponse(
-              timeSeriesEntitiesResponse,
-              alignedStartTime,
-              alignedEndTime,
-              periodSecs);
+              timeSeriesEntitiesResponse, alignedStartTime, alignedEndTime, periodSecs);
     }
 
     return mergeEntities(baselineEntityAggregatedMetricsMap, baselineEntityTimeSeriesMap);
@@ -337,13 +331,12 @@ public class BaselineServiceImpl implements BaselineService {
   }
 
   private List<TimeAggregation> getTimeAggregationsForAggregateExpr(
-          BaselineEntitiesRequest originalRequest, long alignedStartTime, long alignedEndTime) {
+      BaselineEntitiesRequest originalRequest, long alignedStartTime, long alignedEndTime) {
     List<FunctionExpression> aggregateList = originalRequest.getBaselineAggregateRequestList();
     List<TimeAggregation> timeAggregationList = new ArrayList<>();
     for (FunctionExpression function : aggregateList) {
       TimeAggregation timeAggregation =
-          getAggregationFunction(
-              function, alignedStartTime, alignedEndTime);
+          getAggregationFunction(function, alignedStartTime, alignedEndTime);
       timeAggregationList.add(timeAggregation);
     }
     return timeAggregationList;
