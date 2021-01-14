@@ -6,6 +6,7 @@ import org.hypertrace.core.query.service.api.QueryRequest;
 import org.hypertrace.core.query.service.api.ResultSetChunk;
 import org.hypertrace.gateway.service.common.AttributeMetadataProvider;
 import org.hypertrace.gateway.service.common.util.AttributeMetadataUtil;
+import org.hypertrace.gateway.service.common.util.QueryExpressionUtil;
 import org.hypertrace.gateway.service.entity.config.EntityIdColumnsConfigs;
 import org.hypertrace.gateway.service.v1.baseline.Baseline;
 import org.hypertrace.gateway.service.v1.baseline.BaselineInterval;
@@ -63,6 +64,7 @@ public class BaselineServiceImpl implements BaselineService {
       String tenantId,
       BaselineEntitiesRequest originalRequest,
       Map<String, String> requestHeaders) {
+
     BaselineRequestContext requestContext =
         getRequestContext(tenantId, requestHeaders, originalRequest);
     Map<String, AttributeMetadata> attributeMetadataMap =
@@ -80,13 +82,21 @@ public class BaselineServiceImpl implements BaselineService {
       Period aggTimePeriod =
           getPeriod(originalRequest.getStartTimeMillis(), originalRequest.getEndTimeMillis());
       long periodSecs = getPeriodInSecs(aggTimePeriod);
-      List<TimeAggregation> timeAggregations = getTimeAggregationsForAggregateExpr(originalRequest);
+      long alignedStartTime =
+              QueryExpressionUtil.alignToPeriodBoundary(
+                      originalRequest.getStartTimeMillis(), periodSecs, true);
+      long alignedEndTime =
+              QueryExpressionUtil.alignToPeriodBoundary(
+                      originalRequest.getEndTimeMillis(), periodSecs, false);
+
+      List<TimeAggregation> timeAggregations = getTimeAggregationsForAggregateExpr(originalRequest,
+              alignedStartTime, alignedEndTime);
       updateAliasMap(requestContext, timeAggregations);
       // Take more data to calculate baseline and standard deviation.
       long seriesStartTime =
           getUpdatedStartTime(
-              originalRequest.getStartTimeMillis(), originalRequest.getEndTimeMillis());
-      long seriesEndTime = originalRequest.getStartTimeMillis();
+                  alignedStartTime, alignedEndTime);
+      long seriesEndTime = alignedStartTime;
       List<String> entityIdAttributes =
           AttributeMetadataUtil.getIdAttributeIds(
               attributeMetadataProvider,
@@ -110,8 +120,8 @@ public class BaselineServiceImpl implements BaselineService {
               requestContext,
               entityIdAttributes.size(),
               originalRequest.getEntityType(),
-              originalRequest.getStartTimeMillis(),
-              originalRequest.getEndTimeMillis());
+              alignedStartTime,
+              alignedEndTime);
       baselineEntityAggregatedMetricsMap = getEntitiesMapFromAggResponse(aggEntitiesResponse);
     }
 
@@ -120,12 +130,17 @@ public class BaselineServiceImpl implements BaselineService {
       Period timeSeriesPeriod =
           getTimeSeriesPeriod(originalRequest.getBaselineMetricSeriesRequestList());
       long periodSecs = getPeriodInSecs(timeSeriesPeriod);
+      long alignedStartTime =
+              QueryExpressionUtil.alignToPeriodBoundary(
+                      originalRequest.getStartTimeMillis(), periodSecs, true);
+      long alignedEndTime =
+              QueryExpressionUtil.alignToPeriodBoundary(
+                      originalRequest.getEndTimeMillis(), periodSecs, false);
       List<TimeAggregation> timeAggregations =
           getTimeAggregationsForTimeSeriesExpr(originalRequest);
       long seriesStartTime =
-          getUpdatedStartTime(
-              originalRequest.getStartTimeMillis(), originalRequest.getEndTimeMillis());
-      long seriesEndTime = originalRequest.getStartTimeMillis();
+          getUpdatedStartTime(alignedStartTime, alignedEndTime);
+      long seriesEndTime = alignedStartTime;
       List<String> entityIdAttributes =
           AttributeMetadataUtil.getIdAttributeIds(
               attributeMetadataProvider,
@@ -149,13 +164,13 @@ public class BaselineServiceImpl implements BaselineService {
               requestContext,
               entityIdAttributes.size(),
               originalRequest.getEntityType(),
-              originalRequest.getStartTimeMillis(),
-              originalRequest.getEndTimeMillis());
+              alignedStartTime,
+              alignedEndTime);
       baselineEntityTimeSeriesMap =
           getEntitiesMapFromTimeSeriesResponse(
               timeSeriesEntitiesResponse,
-              originalRequest.getStartTimeMillis(),
-              originalRequest.getEndTimeMillis(),
+              alignedStartTime,
+              alignedEndTime,
               periodSecs);
     }
 
@@ -322,13 +337,13 @@ public class BaselineServiceImpl implements BaselineService {
   }
 
   private List<TimeAggregation> getTimeAggregationsForAggregateExpr(
-      BaselineEntitiesRequest originalRequest) {
+          BaselineEntitiesRequest originalRequest, long alignedStartTime, long alignedEndTime) {
     List<FunctionExpression> aggregateList = originalRequest.getBaselineAggregateRequestList();
     List<TimeAggregation> timeAggregationList = new ArrayList<>();
     for (FunctionExpression function : aggregateList) {
       TimeAggregation timeAggregation =
           getAggregationFunction(
-              function, originalRequest.getStartTimeMillis(), originalRequest.getEndTimeMillis());
+              function, alignedStartTime, alignedEndTime);
       timeAggregationList.add(timeAggregation);
     }
     return timeAggregationList;
