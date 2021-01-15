@@ -76,10 +76,6 @@ public class ExecutionContext {
   // map of filter, selections (attribute, metrics, aggregations), order by attributes to source map
   private final Map<String, Set<String>> allAttributesToSourcesMap = new HashMap<>();
 
-  /** Following fields set during the query execution phase * */
-  // Total number of entities. Set during the execution before pagination
-  private int total;
-
   private ExecutionContext(
       AttributeMetadataProvider attributeMetadataProvider,
       EntityIdColumnsConfigs entityIdColumnsConfigs,
@@ -156,14 +152,6 @@ public class ExecutionContext {
 
   public EntitiesRequestContext getEntitiesRequestContext() {
     return this.entitiesRequestContext;
-  }
-
-  public int getTotal() {
-    return total;
-  }
-
-  public void setTotal(int total) {
-    this.total = total;
   }
 
   public Set<String> getPendingSelectionSources() {
@@ -444,7 +432,6 @@ public class ExecutionContext {
         ", pendingMetricAggregationSourcesForOrderBy=" + pendingMetricAggregationSourcesForOrderBy +
         ", sortAndPaginationNodeAdded=" + sortAndPaginationNodeAdded +
         ", allAttributesToSourcesMap=" + allAttributesToSourcesMap +
-        ", total=" + total +
         '}';
   }
 }

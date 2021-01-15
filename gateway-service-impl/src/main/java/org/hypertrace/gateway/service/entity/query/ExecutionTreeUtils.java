@@ -1,14 +1,10 @@
 package org.hypertrace.gateway.service.entity.query;
 
 import com.google.common.collect.Sets;
-import org.hypertrace.gateway.service.v1.common.Expression;
-import org.hypertrace.gateway.service.v1.common.Filter;
-import org.hypertrace.gateway.service.v1.common.Operator;
 
 import java.util.Collections;
 import java.util.HashMap;
 import java.util.HashSet;
-import java.util.List;
 import java.util.Map;
 import java.util.Optional;
 import java.util.Set;
@@ -103,112 +99,8 @@ public class ExecutionTreeUtils {
     }
   }
 
-  /**
-   * Returns true if the filter will AND on the Entity Id EQ filter. Will work as well for multiple
-   * expressions, read from executionContext entity id expressions, that compose the Entity Id.
-   *
-   * @param executionContext
-   * @return
-   */
-  static boolean hasEntityIdEqualsFilter(ExecutionContext executionContext) {
-    Filter filter = executionContext.getEntitiesRequest().getFilter();
-    if (filter.equals(Filter.getDefaultInstance())) {
-      return false;
-    }
-
-    List<Expression> entityIdExpressionList = executionContext.getEntityIdExpressions();
-    // No known entity Ids
-    if (entityIdExpressionList.size() == 0) {
-      return false;
-    }
-
-    // Simple EQ filter without ANDs that is the equality filter. Only works when there's only one
-    // entityId column. If there were multiple, then this would be an AND filter.
-    if (entityIdExpressionList.size() == 1
-        && simpleFilterEntityIdEqualsFilter(filter, entityIdExpressionList)) {
-      return true;
-    }
-
-    if (filter.getOperator() == Operator.AND && filter.getChildFilterCount() == 0) {
-      return false;
-    }
-
-    // OR or NOT operator in the filter means that highly likely this is not a straight equality
-    // filter.
-    if (containsNotOrOrFilter(filter)) {
-      return false;
-    }
-
-    return hasEntityIdEqualsFilter(filter, entityIdExpressionList);
-  }
-
-  private static boolean hasEntityIdEqualsFilter(
-      Filter filter, List<Expression> entityIdExpressionList) {
-    Operator operator = filter.getOperator();
-
-    if (operator != Operator.AND) {
-      return false;
-    }
-
-    if (filter.getChildFilterCount() == 0) {
-      return false;
-    }
-
-    List<Filter> childFilters = filter.getChildFilterList();
-    int entityIdsMatched = 0;
-
-    for (Filter childFilter : childFilters) {
-      Operator childFilterOperator = childFilter.getOperator();
-      if (childFilterOperator == Operator.AND) {
-        if (hasEntityIdEqualsFilter(childFilter, entityIdExpressionList)) {
-          return true;
-        }
-      } else if (simpleFilterEntityIdEqualsFilter(childFilter, entityIdExpressionList)) {
-        entityIdsMatched++;
-      }
-    }
-
-    return entityIdsMatched == entityIdExpressionList.size();
-  }
-
-  private static boolean simpleFilterEntityIdEqualsFilter(
-      Filter filter, List<Expression> entityIdExpressionList) {
-    if (filter.getOperator() == Operator.EQ
-        && filter.hasLhs()
-        && filter.getLhs().hasColumnIdentifier()) {
-      for (Expression entityIdExpression : entityIdExpressionList) {
-        if (filter
-            .getLhs()
-            .getColumnIdentifier()
-            .getColumnName()
-            .equals(entityIdExpression.getColumnIdentifier().getColumnName())) {
-          return true;
-        }
-      }
-    }
-    return false;
-  }
-
-  private static boolean containsNotOrOrFilter(Filter filter) {
-    Operator operator = filter.getOperator();
-    if (operator == Operator.OR || operator == Operator.NOT) {
-      return true;
-    }
-
-    if (filter.getChildFilterCount() == 0) {
-      return false;
-    }
-
-    for (Filter childFilter : filter.getChildFilterList()) {
-      if (containsNotOrOrFilter(childFilter)) {
-        return true;
-      }
-    }
-
-    return false;
-  }
-
-  public static boolean areFiltersOnlyOnCurrentDataSource(ExecutionContext executionContext, String currentSource) {
+  public static boolean areFiltersOnlyOnCurrentDataSource(
+      ExecutionContext executionContext, String currentSource) {
     Map<String, Set<String>> sourceToFilterAttributeMap =
         executionContext.getSourceToFilterAttributeMap();
 

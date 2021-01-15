@@ -8,7 +8,10 @@ import java.time.temporal.ChronoUnit;
 import java.util.Arrays;
 import java.util.List;
 import java.util.Map;
+import java.util.Set;
+
 import org.hypertrace.gateway.service.common.datafetcher.EntityFetcherResponse;
+import org.hypertrace.gateway.service.common.datafetcher.EntityResponse;
 import org.hypertrace.gateway.service.entity.EntityKey;
 import org.hypertrace.gateway.service.v1.common.AggregatedMetricValue;
 import org.hypertrace.gateway.service.v1.common.ColumnIdentifier;
@@ -140,6 +143,14 @@ public class EntitiesRequestAndResponseUtils {
       assertTrue(actualEntityFetcherResponseMap.containsKey(k), "Missing key: " + k);
       assertEquals(expectedEntityFetcherResponseMap.get(k).build(), actualEntityFetcherResponseMap.get(k).build());
     });
+  }
+
+  public static void compareEntityResponses(EntityResponse expectedEntityResponse, EntityResponse actualEntityResponse) {
+    compareEntityFetcherResponses(
+        expectedEntityResponse.getEntityFetcherResponse(),
+        actualEntityResponse.getEntityFetcherResponse());
+
+    assertEquals(expectedEntityResponse.getEntityKeys(), actualEntityResponse.getEntityKeys());
   }
 
   public static Filter getTimeRangeFilter(String colName, long startTime, long endTime) {

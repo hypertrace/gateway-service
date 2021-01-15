@@ -553,31 +553,6 @@ public class QueryServiceEntityFetcher implements IEntityFetcher {
     return new EntityFetcherResponse(resultMap);
   }
 
-  @Override
-  public int getTotalEntities(EntitiesRequestContext requestContext, EntitiesRequest entitiesRequest) {
-    Map<String, AttributeMetadata> attributeMetadataMap =
-        attributeMetadataProvider.getAttributesMetadata(
-            requestContext, entitiesRequest.getEntityType());
-    // Validate EntitiesRequest
-    entitiesRequestValidator.validate(entitiesRequest, attributeMetadataMap);
-    return getTotalEntitiesForMultipleEntityId(requestContext, entitiesRequest);
-  }
-
-  private int getTotalEntitiesForMultipleEntityId(EntitiesRequestContext requestContext,
-      EntitiesRequest entitiesRequest) {
-    EntityFetcherResponse entityFetcherResponse = getEntities(
-        requestContext,
-        EntitiesRequest.newBuilder(entitiesRequest)
-            .clearSelection()
-            .clearTimeAggregation()
-            .clearOrderBy()
-            .setOffset(0)
-            .setLimit(QueryServiceClient.DEFAULT_QUERY_SERVICE_GROUP_BY_LIMIT)
-            .build()
-        );
-    return entityFetcherResponse.size();
-  }
-
   private QueryRequest buildTimeSeriesQueryRequest(
       EntitiesRequest entitiesRequest,
       EntitiesRequestContext context,

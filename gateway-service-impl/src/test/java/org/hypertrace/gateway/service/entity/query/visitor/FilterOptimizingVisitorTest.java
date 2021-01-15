@@ -11,7 +11,6 @@ import org.hypertrace.gateway.service.entity.query.AndNode;
 import org.hypertrace.gateway.service.entity.query.DataFetcherNode;
 import org.hypertrace.gateway.service.entity.query.PaginateOnlyNode;
 import org.hypertrace.gateway.service.entity.query.QueryNode;
-import org.hypertrace.gateway.service.entity.query.TotalFetcherNode;
 import org.hypertrace.gateway.service.v1.common.Filter;
 import org.hypertrace.gateway.service.v1.common.Operator;
 import org.hypertrace.gateway.service.v1.common.OrderByExpression;
@@ -26,13 +25,6 @@ public class FilterOptimizingVisitorTest {
     PaginateOnlyNode paginateOnlyNode = mock(PaginateOnlyNode.class);
     FilterOptimizingVisitor filterOptimizingVisitor = new FilterOptimizingVisitor();
     assertEquals(paginateOnlyNode, filterOptimizingVisitor.visit(paginateOnlyNode));
-  }
-
-  @Test
-  public void testTotalFetcherNode() {
-    TotalFetcherNode totalFetcherNode = mock(TotalFetcherNode.class);
-    FilterOptimizingVisitor filterOptimizingVisitor = new FilterOptimizingVisitor();
-    assertEquals(totalFetcherNode, filterOptimizingVisitor.visit(totalFetcherNode));
   }
 
   @Test

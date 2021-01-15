@@ -180,19 +180,4 @@ public class EntityDataServiceEntityFetcher implements IEntityFetcher {
       EntitiesRequestContext requestContext, EntitiesRequest entitiesRequest) {
     throw new UnsupportedOperationException("Fetching time series data not supported by EDS");
   }
-
-  @Override
-  public int getTotalEntities(EntitiesRequestContext requestContext, EntitiesRequest entitiesRequest) {
-    EntityFetcherResponse entityFetcherResponse = getEntities(
-        requestContext,
-        EntitiesRequest.newBuilder(entitiesRequest)
-            .clearSelection()
-            .clearTimeAggregation()
-            .clearOrderBy()
-            .clearLimit()
-            .setOffset(0)
-            .build()
-    );
-    return entityFetcherResponse.size();
-  }
 }

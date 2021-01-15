@@ -435,16 +435,13 @@ public class ExecutionTreeBuilderTest {
       ExecutionTreeBuilder executionTreeBuilder = new ExecutionTreeBuilder(executionContext);
       QueryNode executionTree = executionTreeBuilder.build();
       assertNotNull(executionTree);
-      assertTrue(executionTree instanceof TotalFetcherNode);
-      assertEquals("EDS", ((TotalFetcherNode) executionTree).getSource());
 
-      QueryNode childNode = ((TotalFetcherNode) executionTree).getChildNode();
-      assertTrue(childNode instanceof DataFetcherNode);
-      assertEquals("EDS", ((DataFetcherNode) childNode).getSource());
-      assertEquals(20, ((DataFetcherNode) childNode).getOffset());
-      assertEquals(10, ((DataFetcherNode) childNode).getLimit());
+      assertTrue(executionTree instanceof DataFetcherNode);
+      assertEquals("EDS", ((DataFetcherNode) executionTree).getSource());
+      assertEquals(20, ((DataFetcherNode) executionTree).getOffset());
+      assertEquals(10, ((DataFetcherNode) executionTree).getLimit());
       assertEquals(
-          List.of(orderByExpression), ((DataFetcherNode) childNode).getOrderByExpressionList());
+          List.of(orderByExpression), ((DataFetcherNode) executionTree).getOrderByExpressionList());
     }
 
     {
@@ -500,14 +497,10 @@ public class ExecutionTreeBuilderTest {
     ExecutionTreeBuilder executionTreeBuilder = new ExecutionTreeBuilder(executionContext);
     QueryNode executionTree = executionTreeBuilder.build();
     assertNotNull(executionTree);
-    assertTrue(executionTree instanceof TotalFetcherNode);
-    assertEquals("EDS", ((TotalFetcherNode) executionTree).getSource());
-
-    QueryNode childNode = ((TotalFetcherNode) executionTree).getChildNode();
-    assertTrue(childNode instanceof DataFetcherNode);
-    assertEquals(10, ((DataFetcherNode)childNode).getLimit());
-    assertEquals(20, ((DataFetcherNode)childNode).getOffset());
-    assertEquals(List.of(), ((DataFetcherNode)childNode).getOrderByExpressionList());
+    assertTrue(executionTree instanceof DataFetcherNode);
+    assertEquals(10, ((DataFetcherNode)executionTree).getLimit());
+    assertEquals(20, ((DataFetcherNode)executionTree).getOffset());
+    assertEquals(List.of(), ((DataFetcherNode)executionTree).getOrderByExpressionList());
   }
 
   @Test
@@ -531,14 +524,10 @@ public class ExecutionTreeBuilderTest {
     ExecutionTreeBuilder executionTreeBuilder = new ExecutionTreeBuilder(executionContext);
     QueryNode executionTree = executionTreeBuilder.build();
     assertNotNull(executionTree);
-    assertTrue(executionTree instanceof  SelectionNode);
+    assertTrue(executionTree instanceof SelectionNode);
     assertTrue(((SelectionNode) executionTree).getAggMetricSelectionSources().contains("QS"));
 
-    QueryNode totalFetcherNode = ((SelectionNode) executionTree).getChildNode();
-    assertTrue(totalFetcherNode instanceof TotalFetcherNode);
-    assertEquals("QS", ((TotalFetcherNode)totalFetcherNode).getSource());
-
-    QueryNode dataFetcherNode = ((TotalFetcherNode)totalFetcherNode).getChildNode();
+    QueryNode dataFetcherNode = ((SelectionNode)executionTree).getChildNode();
     assertTrue(dataFetcherNode instanceof DataFetcherNode);
     assertEquals("QS", ((DataFetcherNode)dataFetcherNode).getSource());
     assertEquals(0, ((DataFetcherNode)dataFetcherNode).getOffset());
@@ -594,75 +583,11 @@ public class ExecutionTreeBuilderTest {
     assertTrue(selectionNode instanceof SelectionNode);
     assertTrue(((SelectionNode) selectionNode).getAggMetricSelectionSources().contains("QS"));
 
-    QueryNode totalFetcherNode = ((SelectionNode) selectionNode).getChildNode();
-    assertTrue(totalFetcherNode instanceof TotalFetcherNode);
-    assertEquals("QS", ((TotalFetcherNode)totalFetcherNode).getSource());
-
-    QueryNode dataFetcherNode = ((TotalFetcherNode)totalFetcherNode).getChildNode();
-    assertTrue(dataFetcherNode instanceof DataFetcherNode);
-    assertEquals("QS", ((DataFetcherNode)dataFetcherNode).getSource());
-    assertEquals(0, ((DataFetcherNode)dataFetcherNode).getOffset());
-    assertEquals(10, ((DataFetcherNode)dataFetcherNode).getLimit());
-  }
-
-  @Test
-  public void test_build_selectAttributesWithEntityIdEqFilter_shouldNotCreateTotalNode() {
-    when(entityIdColumnsConfigs.getIdKey("API")).thenReturn(Optional.of("id"));
-    EntitiesRequest entitiesRequest =
-        EntitiesRequest.newBuilder()
-            .setEntityType(AttributeScope.API.name())
-            .addSelection(buildExpression(API_STATE_ATTR))
-            .addSelection(buildExpression(API_ID_ATTR))
-            .addSelection(
-                buildAggregateExpression(API_NUM_CALLS_ATTR,
-                    FunctionType.SUM,
-                    "SUM_numCalls",
-                    List.of()))
-            .addTimeAggregation(
-                buildTimeAggregation(
-                    30,
-                    API_NUM_CALLS_ATTR,
-                    FunctionType.AVG,
-                    "AVG_numCalls",
-                    List.of()
-                )
-            )
-            .setFilter(generateAndOrNotFilter(
-                Operator.AND,
-                generateEQFilter(API_ID_ATTR, "apiId1"),
-                generateEQFilter(API_STATE_ATTR, "state1"),
-                generateFilter(Operator.GE, API_NUM_CALLS_ATTR,
-                    Value.newBuilder().
-                        setDouble(60)
-                        .setValueType(ValueType.DOUBLE)
-                        .build()
-                )
-            ))
-            .setLimit(10)
-            .setOffset(0)
-            .build();
-    EntitiesRequestContext entitiesRequestContext =
-        new EntitiesRequestContext(TENANT_ID, 0L, 10L, "API", "API.startTime", new HashMap<>());
-    ExecutionContext executionContext =
-        ExecutionContext.from(attributeMetadataProvider, entityIdColumnsConfigs, entitiesRequest, entitiesRequestContext);
-    ExecutionTreeBuilder executionTreeBuilder = new ExecutionTreeBuilder(executionContext);
-    QueryNode executionTree = executionTreeBuilder.build();
-    assertNotNull(executionTree);
-    assertTrue(executionTree instanceof SelectionNode);
-    assertTrue(((SelectionNode) executionTree).getTimeSeriesSelectionSources().contains("QS"));
-
-    QueryNode selectionNode = ((SelectionNode) executionTree).getChildNode();
-    assertTrue(selectionNode instanceof SelectionNode);
-    assertTrue(((SelectionNode) selectionNode).getAggMetricSelectionSources().contains("QS"));
-
     QueryNode dataFetcherNode = ((SelectionNode)selectionNode).getChildNode();
     assertTrue(dataFetcherNode instanceof DataFetcherNode);
     assertEquals("QS", ((DataFetcherNode)dataFetcherNode).getSource());
     assertEquals(0, ((DataFetcherNode)dataFetcherNode).getOffset());
     assertEquals(10, ((DataFetcherNode)dataFetcherNode).getLimit());
-
-    // Assert that total is set to 1
-    assertEquals(1, executionContext.getTotal());
   }
 
   @Test
@@ -714,11 +639,7 @@ public class ExecutionTreeBuilderTest {
     assertTrue(selectionNode instanceof SelectionNode);
     assertTrue(((SelectionNode) selectionNode).getAggMetricSelectionSources().contains("QS"));
 
-    QueryNode totalFetcherNode = ((SelectionNode) selectionNode).getChildNode();
-    assertTrue(totalFetcherNode instanceof TotalFetcherNode);
-    assertEquals("QS", ((TotalFetcherNode)totalFetcherNode).getSource());
-
-    QueryNode dataFetcherNode = ((TotalFetcherNode)totalFetcherNode).getChildNode();
+    QueryNode dataFetcherNode = ((SelectionNode)selectionNode).getChildNode();
     assertTrue(dataFetcherNode instanceof DataFetcherNode);
     assertEquals("QS", ((DataFetcherNode)dataFetcherNode).getSource());
     assertEquals(0, ((DataFetcherNode)dataFetcherNode).getOffset());
@@ -761,11 +682,7 @@ public class ExecutionTreeBuilderTest {
     assertTrue(executionTree instanceof SelectionNode);
     assertTrue(((SelectionNode) executionTree).getAggMetricSelectionSources().contains("QS"));
 
-    QueryNode totalFetcherNode = ((SelectionNode) executionTree).getChildNode();
-    assertTrue(totalFetcherNode instanceof TotalFetcherNode);
-    assertEquals("QS", ((TotalFetcherNode)totalFetcherNode).getSource());
-
-    QueryNode paginateOnlyNode = ((TotalFetcherNode)totalFetcherNode).getChildNode();
+    QueryNode paginateOnlyNode = ((SelectionNode)executionTree).getChildNode();
     assertTrue(paginateOnlyNode instanceof PaginateOnlyNode);
     assertEquals(10, ((PaginateOnlyNode)paginateOnlyNode).getOffset());
     assertEquals(10, ((PaginateOnlyNode)paginateOnlyNode).getLimit());

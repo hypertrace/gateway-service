@@ -5,6 +5,7 @@ import com.google.common.base.Preconditions;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
+import java.util.Set;
 import java.util.concurrent.TimeUnit;
 import org.apache.commons.lang3.StringUtils;
 import org.hypertrace.core.attribute.service.v1.AttributeMetadata;
@@ -19,6 +20,7 @@ import org.hypertrace.gateway.service.common.config.ScopeFilterConfigs;
 import org.hypertrace.gateway.service.common.datafetcher.EntityDataServiceEntityFetcher;
 import org.hypertrace.gateway.service.common.datafetcher.EntityFetcherResponse;
 import org.hypertrace.gateway.service.common.datafetcher.EntityInteractionsFetcher;
+import org.hypertrace.gateway.service.common.datafetcher.EntityResponse;
 import org.hypertrace.gateway.service.common.datafetcher.QueryServiceEntityFetcher;
 import org.hypertrace.gateway.service.common.transformer.RequestPreProcessor;
 import org.hypertrace.gateway.service.common.transformer.ResponsePostProcessor;
@@ -138,24 +140,26 @@ public class EntityService {
     * EntityQueryHandlerRegistry.get() returns Singleton object, so, it's guaranteed that
     * it won't create new object for each request.
     */
-    EntityFetcherResponse response =
+    EntityResponse response =
         executionTree.acceptVisitor(new ExecutionVisitor(executionContext, EntityQueryHandlerRegistry.get()));
+
+    EntityFetcherResponse entityFetcherResponse = response.getEntityFetcherResponse();
+    Set<EntityKey> allEntityKeys = response.getEntityKeys();
 
     List<Entity.Builder> results =
         this.responsePostProcessor.transform(
-            executionContext, new ArrayList<>(response.getEntityKeyBuilderMap().values()));
+            executionContext, new ArrayList<>(entityFetcherResponse.getEntityKeyBuilderMap().values()));
 
     // Add interactions.
     if (!results.isEmpty()) {
       addEntityInteractions(
-          tenantId, preProcessedRequest, response.getEntityKeyBuilderMap(), requestHeaders);
+          tenantId, preProcessedRequest, entityFetcherResponse.getEntityKeyBuilderMap(), requestHeaders);
     }
 
     EntitiesResponse.Builder responseBuilder =
-        EntitiesResponse.newBuilder().setTotal(executionContext.getTotal());
-    results.forEach(e -> {
-      responseBuilder.addEntity(e.build());
-    });
+        EntitiesResponse.newBuilder().setTotal(allEntityKeys.size());
+
+    results.forEach(e -> responseBuilder.addEntity(e.build()));
 
     long queryExecutionTime = System.currentTimeMillis() - startTime;
     if (queryExecutionTime > logConfig.getQueryThresholdInMillis()) {

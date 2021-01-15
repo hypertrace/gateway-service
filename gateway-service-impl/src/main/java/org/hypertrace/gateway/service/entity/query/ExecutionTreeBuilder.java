@@ -109,7 +109,6 @@ public class ExecutionTreeBuilder {
       QueryNode rootNode = buildExecutionTreeForSameSourceFilterAndSelection(source);
 
       rootNode.acceptVisitor(new ExecutionContextBuilderVisitor(executionContext));
-
       QueryNode executionTree = buildExecutionTree(executionContext, rootNode);
 
       if (LOG.isDebugEnabled()) {
@@ -163,14 +162,6 @@ public class ExecutionTreeBuilder {
     QueryNode rootNode = createQsDataFetcherNodeWithPagination(entitiesRequest);
     executionContext.setSortAndPaginationNodeAdded(true);
 
-    // If the request has an EntityId EQ filter then there's no need for the 2nd request to get the
-    // total entities. So no need to set the TotalFetcherNode
-    if (ExecutionTreeUtils.hasEntityIdEqualsFilter(executionContext)) {
-      executionContext.setTotal(1);
-    } else {
-      rootNode = new TotalFetcherNode(rootNode, QS.name());
-    }
-
     return rootNode;
   }
 
@@ -182,13 +173,6 @@ public class ExecutionTreeBuilder {
 
     QueryNode rootNode = new DataFetcherNode(EDS.name(), filter, selectionLimit, selectionOffset, orderBys);
     executionContext.setSortAndPaginationNodeAdded(true);
-
-    if (ExecutionTreeUtils.hasEntityIdEqualsFilter(executionContext)) {
-      executionContext.setTotal(1);
-    } else {
-      rootNode = new TotalFetcherNode(rootNode, EDS.name());
-    }
-
     return rootNode;
   }
 
@@ -285,6 +269,7 @@ public class ExecutionTreeBuilder {
               .getSourcesList();
 
       // if the filter by and order by are from QS, pagination can be pushed down to QS
+
       // There will always be a DataFetcherNode for QS, because the results are always fetched
       // within a time range. Hence, we can only push pagination down to QS and not any other
       // sources, since we will always have a time range filter on QS
