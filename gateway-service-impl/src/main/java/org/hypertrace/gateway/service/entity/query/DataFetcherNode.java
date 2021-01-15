@@ -21,9 +21,12 @@ public class DataFetcherNode implements QueryNode {
   private Integer offset;
   private List<OrderByExpression> orderByExpressionList = Collections.emptyList();
 
+  private final boolean isPaginated;
+
   public DataFetcherNode(String source, Filter filter) {
     this.source = source;
     this.filter = filter;
+    this.isPaginated = false;
   }
 
   public DataFetcherNode(
@@ -37,6 +40,7 @@ public class DataFetcherNode implements QueryNode {
     this.limit = limit;
     this.offset = offset;
     this.orderByExpressionList = orderByExpressionList;
+    this.isPaginated = limit != null && offset != null && !orderByExpressionList.isEmpty();
   }
 
   public String getSource() {
@@ -59,6 +63,10 @@ public class DataFetcherNode implements QueryNode {
     return orderByExpressionList;
   }
 
+  public boolean isPaginated() {
+    return isPaginated;
+  }
+
   @Override
   public <R> R acceptVisitor(Visitor<R> v) {
     return v.visit(this);
@@ -72,6 +80,7 @@ public class DataFetcherNode implements QueryNode {
         ", limit=" + limit +
         ", offset=" + offset +
         ", orderByExpressionList=" + orderByExpressionList +
+        ", isPaginated=" + isPaginated +
         '}';
   }
 }

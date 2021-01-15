@@ -67,8 +67,7 @@ public class ExecutionVisitor implements Visitor<EntityResponse> {
     this.queryHandlerRegistry = queryHandlerRegistry;
   }
 
-  @VisibleForTesting
-  protected static EntityFetcherResponse intersectEntities(List<EntityFetcherResponse> builders) {
+  private static EntityFetcherResponse intersectEntities(List<EntityFetcherResponse> builders) {
     return new EntityFetcherResponse(
         builders.stream()
             .map(EntityFetcherResponse::getEntityKeyBuilderMap)
@@ -86,6 +85,7 @@ public class ExecutionVisitor implements Visitor<EntityResponse> {
             .orElse(Collections.emptyMap()));
   }
 
+  @VisibleForTesting
   protected static EntityResponse intersect(List<EntityResponse> entityResponses) {
     EntityFetcherResponse entityFetcherResponse =
         intersectEntities(
@@ -101,8 +101,7 @@ public class ExecutionVisitor implements Visitor<EntityResponse> {
     return new EntityResponse(entityFetcherResponse, entityKeys);
   }
 
-  @VisibleForTesting
-  protected static EntityFetcherResponse unionEntities(List<EntityFetcherResponse> builders) {
+  private static EntityFetcherResponse unionEntities(List<EntityFetcherResponse> builders) {
     return new EntityFetcherResponse(
         builders.stream()
             .map(EntityFetcherResponse::getEntityKeyBuilderMap)
@@ -117,6 +116,7 @@ public class ExecutionVisitor implements Visitor<EntityResponse> {
                 }));
   }
 
+  @VisibleForTesting
   protected static EntityResponse union(List<EntityResponse> entityResponses) {
     EntityFetcherResponse entityFetcherResponse =
         unionEntities(
@@ -173,19 +173,28 @@ public class ExecutionVisitor implements Visitor<EntityResponse> {
     EntitiesRequest request = requestBuilder.build();
     IEntityFetcher entityFetcher = queryHandlerRegistry.getEntityFetcher(source);
 
-    EntitiesRequest totalEntitiesRequest =
-        EntitiesRequest.newBuilder(executionContext.getEntitiesRequest())
-            .clearSelection()
-            .clearTimeAggregation()
-            .clearOrderBy()
-            .clearLimit()
-            .setOffset(0)
-            .setFilter(dataFetcherNode.getFilter())
-            .build();
+    // if the data fetcher node is fetching paginated records, the total number of entities has to
+    // be fetched separately
+    if (dataFetcherNode.isPaginated()) {
+      EntitiesRequest totalEntitiesRequest =
+          EntitiesRequest.newBuilder(executionContext.getEntitiesRequest())
+              .clearSelection()
+              .clearTimeAggregation()
+              .clearOrderBy()
+              .clearLimit()
+              .setOffset(0)
+              .setFilter(dataFetcherNode.getFilter())
+              .build();
 
-    return new EntityResponse(
-        entityFetcher.getEntities(context, request),
-        entityFetcher.getTotalEntities(context, totalEntitiesRequest));
+      return new EntityResponse(
+          entityFetcher.getEntities(context, request),
+          entityFetcher.getTotalEntities(context, totalEntitiesRequest));
+    } else {
+      // if the data fetcher node is not paginating, the total number of entities is equal to number
+      // of records fetched
+      EntityFetcherResponse response = entityFetcher.getEntities(context, request);
+      return new EntityResponse(response, response.getEntityKeyBuilderMap().keySet());
+    }
   }
 
   @Override
@@ -313,7 +322,16 @@ public class ExecutionVisitor implements Visitor<EntityResponse> {
         resultMapList.stream()
             .reduce(childEntityFetcherResponse, (r1, r2) -> unionEntities(Arrays.asList(r1, r2)));
 
-    return new EntityResponse(response, childNodeResponse.getEntityKeys());
+    if (!childEntityFetcherResponse.isEmpty()) {
+      // if the child fetcher response is non empty, the total set of entity keys
+      // has already been fetched by node below it.
+      // Could be DataFetcherNode or a child SelectionNode
+      return new EntityResponse(response, childNodeResponse.getEntityKeys());
+    } else {
+      // if the child fetcher response is empty, the total set of entity keys
+      // is equal to the response fetched by the current SelectionNode
+      return new EntityResponse(response, response.getEntityKeyBuilderMap().keySet());
+    }
   }
 
   Filter constructFilterFromChildNodesResult(EntityFetcherResponse result) {
@@ -420,15 +438,5 @@ public class ExecutionVisitor implements Visitor<EntityResponse> {
 
     return new EntityResponse(
         new EntityFetcherResponse(linkedHashMap), childNodeResponse.getEntityKeys());
-  }
-
-  private <T> T futureGet(Future<T> future) {
-    try {
-      return future.get();
-    } catch (InterruptedException ex) {
-      throw new RuntimeException("An interruption while fetching total entities", ex);
-    } catch (ExecutionException ex) {
-      throw new RuntimeException("An error occurred while fetching total entities", ex);
-    }
   }
 }

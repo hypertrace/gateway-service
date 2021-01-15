@@ -208,22 +208,17 @@ public class QueryServiceEntityFetcherTests {
     String tenantId = "TENANT_ID";
     Map<String, String> requestHeaders = Map.of("x-tenant-id", tenantId);
     AttributeScope entityType = AttributeScope.API;
-    EntitiesRequest entitiesRequest =
+    EntitiesRequest totalEntitiesRequest =
         EntitiesRequest.newBuilder()
             .setEntityType(entityType.name())
             .setStartTimeMillis(startTime)
             .setEndTimeMillis(endTime)
-            .addSelection(buildExpression(API_NAME_ATTR))
-            .addSelection(buildAggregateExpression(API_DURATION_ATTR, FunctionType.AVG, "AVG_API.duration", List.of()))
-            .addTimeAggregation(buildTimeAggregation(30, API_NUM_CALLS_ATTR, FunctionType.SUM, "SUM_API.numCalls", List.of()))
             .setFilter(
                 Filter.newBuilder().setOperator(AND)
                     .addChildFilter(EntitiesRequestAndResponseUtils.getTimeRangeFilter("API.startTime", startTime, endTime))
                     .addChildFilter(generateEQFilter(API_DISCOVERY_STATE_ATTR, "DISCOVERED"))
             )
-            .addAllOrderBy(orderByExpressions)
-            .setLimit(limit)
-            .setOffset(offset)
+            .setOffset(0)
             .build();
     EntitiesRequestContext entitiesRequestContext = new EntitiesRequestContext(
         tenantId,
@@ -254,7 +249,9 @@ public class QueryServiceEntityFetcherTests {
     when(queryServiceClient.executeQuery(eq(expectedQueryRequest), eq(requestHeaders), eq(500)))
         .thenReturn(resultSetChunks.iterator());
 
-    assertEquals(2, queryServiceEntityFetcher.getTotalEntities(entitiesRequestContext, entitiesRequest));
+    assertEquals(
+        2,
+        queryServiceEntityFetcher.getTotalEntities(entitiesRequestContext, totalEntitiesRequest).size());
   }
 
   @Test

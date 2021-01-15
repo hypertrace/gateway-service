@@ -1,13 +1,8 @@
 package org.hypertrace.gateway.service.entity.query;
 
 import org.hypertrace.gateway.service.v1.common.Expression;
-import org.hypertrace.gateway.service.v1.common.Filter;
-import org.hypertrace.gateway.service.v1.common.Operator;
 import org.hypertrace.gateway.service.v1.common.OrderByExpression;
 import org.hypertrace.gateway.service.v1.common.TimeAggregation;
-import org.hypertrace.gateway.service.v1.common.Value;
-import org.hypertrace.gateway.service.v1.common.ValueType;
-import org.hypertrace.gateway.service.v1.entity.EntitiesRequest;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 
@@ -20,10 +15,6 @@ import java.util.stream.Collectors;
 
 import static org.hypertrace.core.attribute.service.v1.AttributeSource.EDS;
 import static org.hypertrace.core.attribute.service.v1.AttributeSource.QS;
-import static org.hypertrace.gateway.service.common.EntitiesRequestAndResponseUtils.buildExpression;
-import static org.hypertrace.gateway.service.common.EntitiesRequestAndResponseUtils.generateAndOrNotFilter;
-import static org.hypertrace.gateway.service.common.EntitiesRequestAndResponseUtils.generateEQFilter;
-import static org.hypertrace.gateway.service.common.EntitiesRequestAndResponseUtils.generateFilter;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertTrue;
@@ -131,240 +122,6 @@ public class ExecutionTreeUtilsTest {
     );
 
     assertEquals(Optional.empty(), ExecutionTreeUtils.getSingleSourceForAllAttributes(executionContext));
-  }
-
-  @Test
-  public void testHasEntityIdEqualsFilterEmptyFilterOrEmptyEntityIdExpressions() {
-    List<Expression> entityIdExpressions = List.of(buildExpression("SERVICE.id"));
-    EntitiesRequest entitiesRequest = EntitiesRequest.newBuilder().build();
-
-    executeHasEntityIdEqualsFilterTest(entityIdExpressions, entitiesRequest,false);
-
-    entitiesRequest = EntitiesRequest.newBuilder()
-        .setFilter(
-            Filter.newBuilder()
-                .setOperator(Operator.AND)
-        )
-        .build();
-
-    executeHasEntityIdEqualsFilterTest(entityIdExpressions, entitiesRequest,false);
-
-    // 1 level AND but empty entityIdExpressions
-    entitiesRequest = EntitiesRequest.newBuilder()
-        .setFilter(
-            generateAndOrNotFilter(
-                Operator.AND,
-                generateEQFilter("SERVICE.id", "deliciouscookies")
-            )
-        )
-        .build();
-
-    executeHasEntityIdEqualsFilterTest(List.of(), entitiesRequest, false);
-  }
-
-  @Test
-  public void testHasEntityIdEqualsFilterServiceId() {
-    List<Expression> entityIdExpressions = List.of(buildExpression("SERVICE.id"));
-
-    // 1 level AND
-    EntitiesRequest entitiesRequest = EntitiesRequest.newBuilder()
-            .setFilter(
-                generateAndOrNotFilter(
-                    Operator.AND,
-                    generateEQFilter("SERVICE.id", "deliciouscookies")
-                    )
-            )
-            .build();
-
-    executeHasEntityIdEqualsFilterTest(entityIdExpressions, entitiesRequest, true);
-
-    // 3 levels AND
-    entitiesRequest = EntitiesRequest.newBuilder()
-        .setFilter(
-            generateAndOrNotFilter(
-                Operator.AND,
-                generateAndOrNotFilter(
-                    Operator.AND,
-                    generateAndOrNotFilter(
-                        Operator.AND,
-                        generateEQFilter("SERVICE.id", "deliciouscookies")
-                    )
-               )
-            )
-        )
-        .build();
-
-    executeHasEntityIdEqualsFilterTest(entityIdExpressions, entitiesRequest, true);
-
-    // Simple EQ filter
-    entitiesRequest = EntitiesRequest.newBuilder()
-        .setFilter(
-            generateEQFilter("SERVICE.id", "deliciouscookies")
-        )
-        .build();
-
-    executeHasEntityIdEqualsFilterTest(entityIdExpressions, entitiesRequest, true);
-
-    // Simple EQ filter not on Service Id
-    entitiesRequest = EntitiesRequest.newBuilder()
-        .setFilter(
-            generateEQFilter("SERVICE.name", "deliciouscookies")
-        )
-        .build();
-
-    executeHasEntityIdEqualsFilterTest(entityIdExpressions, entitiesRequest, false);
-
-    // AND with a extra filter on the name. Should return true.
-    entitiesRequest = EntitiesRequest.newBuilder()
-        .setFilter(
-            generateAndOrNotFilter(Operator.AND,
-                generateEQFilter("SERVICE.name", "deliciouscookies"),
-                generateAndOrNotFilter(
-                    Operator.AND,
-                    generateEQFilter("SERVICE.id", "deliciouscookies")
-                )
-            )
-        )
-        .build();
-
-    executeHasEntityIdEqualsFilterTest(entityIdExpressions, entitiesRequest, true);
-
-    // IN clause filter
-    entitiesRequest = EntitiesRequest.newBuilder()
-        .setFilter(
-            generateAndOrNotFilter(
-                Operator.AND,
-                generateFilter(
-                    Operator.IN,
-                    "SERVICE.id",
-                    Value.newBuilder()
-                        .setValueType(ValueType.STRING_ARRAY)
-                        .addAllStringArray(List.of("deliciouscookies", "tickets"))
-                        .build()
-                )
-            )
-        )
-        .build();
-    executeHasEntityIdEqualsFilterTest(entityIdExpressions, entitiesRequest, false);
-
-    // Contains OR
-    entitiesRequest = EntitiesRequest.newBuilder()
-        .setFilter(
-            generateAndOrNotFilter(Operator.OR,
-                generateEQFilter("SERVICE.name", "deliciouscookies"),
-                generateAndOrNotFilter(
-                    Operator.AND,
-                    generateEQFilter("SERVICE.id", "deliciouscookies")
-                )
-            )
-        )
-        .build();
-
-    executeHasEntityIdEqualsFilterTest(entityIdExpressions, entitiesRequest, false);
-
-    // Contains NOT
-    entitiesRequest = EntitiesRequest.newBuilder()
-        .setFilter(
-            generateAndOrNotFilter(Operator.AND,
-                generateEQFilter("SERVICE.name", "deliciouscookies"),
-                generateAndOrNotFilter(
-                    Operator.NOT,
-                    generateEQFilter("SERVICE.id", "deliciouscookies")
-                )
-            )
-        )
-        .build();
-
-    executeHasEntityIdEqualsFilterTest(entityIdExpressions, entitiesRequest, false);
-  }
-
-  @Test
-  public void testHasEntityIdEqualsFilterMultipleEntityIdExpressions() {
-    List<Expression> entityIdExpressions = List.of(
-        buildExpression("SERVICE.idAttr1"),
-        buildExpression("SERVICE.idAttr2")
-    );
-
-    // 1 level AND
-    EntitiesRequest entitiesRequest = EntitiesRequest.newBuilder()
-        .setFilter(
-            generateAndOrNotFilter(
-                Operator.AND,
-                generateEQFilter("SERVICE.idAttr1", "deliciouscookies"),
-                generateEQFilter("SERVICE.idAttr2", "tickets")
-            )
-        )
-        .build();
-    executeHasEntityIdEqualsFilterTest(entityIdExpressions, entitiesRequest, true);
-
-    // Contains OR
-    entitiesRequest = EntitiesRequest.newBuilder()
-        .setFilter(
-            generateAndOrNotFilter(
-                Operator.OR,
-                generateAndOrNotFilter(
-                    Operator.AND,
-                    generateEQFilter("SERVICE.idAttr1", "deliciouscookies"),
-                    generateEQFilter("SERVICE.idAttr2", "tickets")
-                )
-            )
-        )
-        .build();
-    executeHasEntityIdEqualsFilterTest(entityIdExpressions, entitiesRequest, false);
-
-    // 2 level AND
-    entitiesRequest = EntitiesRequest.newBuilder()
-        .setFilter(
-            generateAndOrNotFilter(
-                Operator.AND,
-                generateEQFilter("SERVICE.name", "deliciouscookies"),
-                generateAndOrNotFilter(
-                    Operator.AND,
-                    generateEQFilter("SERVICE.idAttr1", "deliciouscookies"),
-                    generateEQFilter("SERVICE.idAttr2", "tickets")
-                )
-            )
-        )
-        .build();
-    executeHasEntityIdEqualsFilterTest(entityIdExpressions, entitiesRequest, true);
-
-    // 3 level AND
-    entitiesRequest = EntitiesRequest.newBuilder()
-        .setFilter(
-            generateAndOrNotFilter(
-                Operator.AND,
-                generateEQFilter("SERVICE.name", "deliciouscookies"),
-                generateAndOrNotFilter(
-                    Operator.AND,
-                    generateAndOrNotFilter(
-                        Operator.AND,
-                        generateEQFilter("SERVICE.idAttr1", "deliciouscookies"),
-                        generateEQFilter("SERVICE.idAttr2", "tickets")
-                    )
-                )
-            )
-        )
-        .build();
-    executeHasEntityIdEqualsFilterTest(entityIdExpressions, entitiesRequest, true);
-
-    // 3 level AND missing EQ on one of the entityId expressions
-    entitiesRequest = EntitiesRequest.newBuilder()
-        .setFilter(
-            generateAndOrNotFilter(
-                Operator.AND,
-                generateEQFilter("SERVICE.name", "deliciouscookies"),
-                generateAndOrNotFilter(
-                    Operator.AND,
-                    generateAndOrNotFilter(
-                        Operator.AND,
-                        generateEQFilter("SERVICE.idAttr1", "deliciouscookies"),
-                        generateEQFilter("SERVICE.idAttr3", "tickets")
-                    )
-                )
-            )
-        )
-        .build();
-    executeHasEntityIdEqualsFilterTest(entityIdExpressions, entitiesRequest, false);
   }
 
   @Test
@@ -548,18 +305,6 @@ public class ExecutionTreeUtilsTest {
 
     assertTrue(ExecutionTreeUtils.areFiltersOnlyOnCurrentDataSource(executionContext, "QS"));
     assertTrue(ExecutionTreeUtils.areFiltersOnlyOnCurrentDataSource(executionContext, "EDS"));
-  }
-
-  private void executeHasEntityIdEqualsFilterTest(List<Expression> entityIdExpressions,
-                                                  EntitiesRequest entitiesRequest,
-                                                  boolean expectedResult){
-    ExecutionContext executionContext = mock(ExecutionContext.class);
-    when(executionContext.getEntitiesRequest()).thenReturn(entitiesRequest);
-    when(executionContext.getEntityIdExpressions()).thenReturn(entityIdExpressions);
-
-    assertEquals(
-        expectedResult,
-        ExecutionTreeUtils.hasEntityIdEqualsFilter(executionContext));
   }
 
   private ExecutionContext getMockExecutionContext(Map<String, List<Expression>> sourceToSelectionExpressionMap,
