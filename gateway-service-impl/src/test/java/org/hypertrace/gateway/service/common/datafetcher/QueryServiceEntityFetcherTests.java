@@ -251,7 +251,7 @@ public class QueryServiceEntityFetcherTests {
 
     assertEquals(
         2,
-        queryServiceEntityFetcher.getTotalEntities(entitiesRequestContext, totalEntitiesRequest).size());
+        queryServiceEntityFetcher.getEntities(entitiesRequestContext, totalEntitiesRequest).size());
   }
 
   @Test

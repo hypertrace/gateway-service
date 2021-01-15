@@ -164,7 +164,7 @@ public class EntityDataServiceEntityFetcherTests {
 
     assertEquals(
         2,
-        entityDataServiceEntityFetcher.getTotalEntities(entitiesRequestContext, totalEntitiesRequest).size());
+        entityDataServiceEntityFetcher.getEntities(entitiesRequestContext, totalEntitiesRequest).size());
   }
 
   @Test

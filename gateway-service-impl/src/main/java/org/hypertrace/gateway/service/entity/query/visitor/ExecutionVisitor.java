@@ -188,7 +188,10 @@ public class ExecutionVisitor implements Visitor<EntityResponse> {
 
       return new EntityResponse(
           entityFetcher.getEntities(context, request),
-          entityFetcher.getTotalEntities(context, totalEntitiesRequest));
+          entityFetcher
+              .getEntities(context, totalEntitiesRequest)
+              .getEntityKeyBuilderMap()
+              .keySet());
     } else {
       // if the data fetcher node is not paginating, the total number of entities is equal to number
       // of records fetched
