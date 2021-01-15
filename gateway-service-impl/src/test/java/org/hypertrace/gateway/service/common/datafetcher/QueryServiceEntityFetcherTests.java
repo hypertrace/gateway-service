@@ -197,63 +197,7 @@ public class QueryServiceEntityFetcherTests {
     assertEquals(
         2, queryServiceEntityFetcher.getEntities(entitiesRequestContext, entitiesRequest).size());
   }
-
-  @Test
-  public void test_getTotalEntitiesSingleEntityIdAttribute() {
-    List<OrderByExpression> orderByExpressions = List.of(buildOrderByExpression(API_ID_ATTR));
-    long startTime = 1L;
-    long endTime = 10L;
-    int limit = 10;
-    int offset = 0;
-    String tenantId = "TENANT_ID";
-    Map<String, String> requestHeaders = Map.of("x-tenant-id", tenantId);
-    AttributeScope entityType = AttributeScope.API;
-    EntitiesRequest totalEntitiesRequest =
-        EntitiesRequest.newBuilder()
-            .setEntityType(entityType.name())
-            .setStartTimeMillis(startTime)
-            .setEndTimeMillis(endTime)
-            .setFilter(
-                Filter.newBuilder().setOperator(AND)
-                    .addChildFilter(EntitiesRequestAndResponseUtils.getTimeRangeFilter("API.startTime", startTime, endTime))
-                    .addChildFilter(generateEQFilter(API_DISCOVERY_STATE_ATTR, "DISCOVERED"))
-            )
-            .setOffset(0)
-            .build();
-    EntitiesRequestContext entitiesRequestContext = new EntitiesRequestContext(
-        tenantId,
-        startTime,
-        endTime,
-        entityType.name(),
-        "API.startTime",
-        requestHeaders);
-
-    QueryRequest expectedQueryRequest =
-        QueryRequest.newBuilder()
-            .addSelection(createColumnExpression(API_ID_ATTR))
-            .addSelection(createQsAggregationExpression("COUNT", API_ID_ATTR))
-            .setFilter(
-                createQsRequestFilter(
-                    API_START_TIME_ATTR,
-                    API_ID_ATTR,
-                    startTime,
-                    endTime,
-                    createStringFilter(API_DISCOVERY_STATE_ATTR, Operator.EQ, "DISCOVERED")))
-            .addGroupBy(createColumnExpression(API_ID_ATTR))
-            .setLimit(QueryServiceClient.DEFAULT_QUERY_SERVICE_GROUP_BY_LIMIT)
-            .build();
-
-    List<ResultSetChunk> resultSetChunks =
-        List.of(getResultSetChunk(List.of("API.apiId"), new String[][]{ {"apiId1"}, {"apiId2"}}));
-
-    when(queryServiceClient.executeQuery(eq(expectedQueryRequest), eq(requestHeaders), eq(500)))
-        .thenReturn(resultSetChunks.iterator());
-
-    assertEquals(
-        2,
-        queryServiceEntityFetcher.getEntities(entitiesRequestContext, totalEntitiesRequest).size());
-  }
-
+  
   @Test
   public void test_getEntitiesBySpace() {
     long startTime = 1L;

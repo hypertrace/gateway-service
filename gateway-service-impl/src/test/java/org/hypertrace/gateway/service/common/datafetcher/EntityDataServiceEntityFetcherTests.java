@@ -123,51 +123,6 @@ public class EntityDataServiceEntityFetcherTests {
   }
 
   @Test
-  public void test_getTotalEntities() {
-    long startTime = 1L;
-    long endTime = 10L;
-    String tenantId = "TENANT_ID";
-    Map<String, String> requestHeaders = Map.of("x-tenant-id", tenantId);
-    AttributeScope entityType = AttributeScope.API;
-    EntitiesRequest totalEntitiesRequest =
-        EntitiesRequest.newBuilder()
-            .setEntityType(entityType.name())
-            .setStartTimeMillis(startTime)
-            .setEndTimeMillis(endTime)
-            .setFilter(
-                Filter.newBuilder()
-                    .setOperator(AND)
-                    .addChildFilter(generateEQFilter(API_TYPE_ATTR, "HTTP"))
-                    .addChildFilter(generateEQFilter(API_NAME_ATTR, "DISCOVERED")))
-            .build();
-    EntitiesRequestContext entitiesRequestContext =
-        new EntitiesRequestContext(
-            tenantId, startTime, endTime, entityType.name(), "API.startTime", requestHeaders);
-
-    EntityQueryRequest expectedQueryRequest =
-        EntityQueryRequest.newBuilder()
-            .setEntityType("API")
-            .addSelection(
-                convertToEntityServiceExpression(
-                    Expression.newBuilder()
-                        .setColumnIdentifier(
-                            ColumnIdentifier.newBuilder().setColumnName(API_ID_ATTR))
-                        .build()))
-            .setFilter(convertToEntityServiceFilter(totalEntitiesRequest.getFilter()))
-            .build();
-
-    List<ResultSetChunk> resultSetChunks =
-        List.of(getResultSetChunk(List.of("API.apiId"), new String[][] {{"apiId1"}, {"apiId2"}}));
-
-    when(entityQueryServiceClient.execute(eq(expectedQueryRequest), eq(requestHeaders)))
-        .thenReturn(resultSetChunks.iterator());
-
-    assertEquals(
-        2,
-        entityDataServiceEntityFetcher.getEntities(entitiesRequestContext, totalEntitiesRequest).size());
-  }
-
-  @Test
   public void test_getEntities_WithoutPagination() {
     List<OrderByExpression> orderByExpressions = List.of(buildOrderByExpression(API_ID_ATTR));
     long startTime = 1L;
