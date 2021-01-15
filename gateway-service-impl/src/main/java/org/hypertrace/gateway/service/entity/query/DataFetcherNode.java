@@ -40,7 +40,7 @@ public class DataFetcherNode implements QueryNode {
     this.limit = limit;
     this.offset = offset;
     this.orderByExpressionList = orderByExpressionList;
-    this.isPaginated = limit != null && offset != null && !orderByExpressionList.isEmpty();
+    this.isPaginated = limit != null && offset != null;
   }
 
   public String getSource() {
