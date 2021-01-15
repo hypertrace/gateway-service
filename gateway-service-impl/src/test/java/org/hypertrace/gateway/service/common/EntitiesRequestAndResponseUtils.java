@@ -145,19 +145,12 @@ public class EntitiesRequestAndResponseUtils {
     });
   }
 
-  public static void compareEntityKeys(
-      Set<EntityKey> expectedEntityKeys, Set<EntityKey> actualEntityKeys) {
-    assertEquals(expectedEntityKeys.size(), actualEntityKeys.size());
-    expectedEntityKeys.forEach(
-        key -> assertTrue(actualEntityKeys.contains(key), "Missing key: " + key));
-  }
-
   public static void compareEntityResponses(EntityResponse expectedEntityResponse, EntityResponse actualEntityResponse) {
     compareEntityFetcherResponses(
         expectedEntityResponse.getEntityFetcherResponse(),
         actualEntityResponse.getEntityFetcherResponse());
 
-    compareEntityKeys(expectedEntityResponse.getEntityKeys(), actualEntityResponse.getEntityKeys());
+    assertEquals(expectedEntityResponse.getEntityKeys(), actualEntityResponse.getEntityKeys());
   }
 
   public static Filter getTimeRangeFilter(String colName, long startTime, long endTime) {
