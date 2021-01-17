@@ -300,6 +300,7 @@ public class ExecutionVisitor implements Visitor<EntityResponse> {
                 source -> {
                   EntitiesRequest request =
                       EntitiesRequest.newBuilder(executionContext.getEntitiesRequest())
+                          .clearSelection()
                           .clearTimeAggregation()
                           .clearFilter()
                           .clearOrderBy()
