@@ -24,6 +24,10 @@ public class QueryRequestContext extends RequestContext {
     aliasToFunctionExpressionMap.put(alias, functionExpression);
   }
 
+  public boolean containsFunctionExpression(String alias) {
+    return aliasToFunctionExpressionMap.containsKey(alias);
+  }
+
   public FunctionExpression getFunctionExpressionByAlias(String alias) {
     return aliasToFunctionExpressionMap.get(alias);
   }
