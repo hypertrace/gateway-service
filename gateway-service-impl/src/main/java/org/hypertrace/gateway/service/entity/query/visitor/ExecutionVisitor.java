@@ -6,6 +6,7 @@ import com.google.common.collect.Maps;
 
 import java.util.ArrayList;
 import java.util.Arrays;
+import java.util.Collection;
 import java.util.Collections;
 import java.util.LinkedHashMap;
 import java.util.LinkedList;
@@ -16,6 +17,7 @@ import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 import java.util.stream.Collectors;
 import java.util.stream.IntStream;
+import java.util.stream.Stream;
 
 import com.google.common.collect.Sets;
 import org.hypertrace.gateway.service.common.datafetcher.EntityFetcherResponse;
@@ -39,6 +41,7 @@ import org.hypertrace.gateway.service.v1.common.Expression;
 import org.hypertrace.gateway.service.v1.common.Filter;
 import org.hypertrace.gateway.service.v1.common.LiteralConstant;
 import org.hypertrace.gateway.service.v1.common.Operator;
+import org.hypertrace.gateway.service.v1.common.OrderByExpression;
 import org.hypertrace.gateway.service.v1.common.Value;
 import org.hypertrace.gateway.service.v1.common.ValueType;
 import org.hypertrace.gateway.service.v1.entity.EntitiesRequest;
@@ -143,6 +146,23 @@ public class ExecutionVisitor implements Visitor<EntityResponse> {
             executionContext.getTimestampAttributeId(),
             executionContext.getRequestHeaders());
 
+    // fetching both attribute selections and metric order by selections for
+    // optimized pagination
+    List<Expression> attributeSelections =
+        executionContext
+            .getSourceToSelectionExpressionMap()
+            .getOrDefault(source, executionContext.getEntityIdExpressions());
+    List<Expression> metricOrderBySelections =
+        executionContext
+            .getSourceToMetricOrderByExpressionMap()
+            .getOrDefault(source, Collections.emptyList())
+            .stream()
+            .map(OrderByExpression::getExpression)
+            .collect(Collectors.toList());
+    List<Expression> selections = Stream.of(attributeSelections, metricOrderBySelections)
+        .flatMap(Collection::stream)
+        .collect(Collectors.toList());
+
     EntitiesRequest.Builder requestBuilder =
         EntitiesRequest.newBuilder(entitiesRequest)
             .clearSelection()
@@ -151,10 +171,7 @@ public class ExecutionVisitor implements Visitor<EntityResponse> {
             .clearOrderBy()
             .clearLimit()
             .clearOffset()
-            .addAllSelection(
-                executionContext
-                    .getSourceToSelectionExpressionMap()
-                    .getOrDefault(source, executionContext.getEntityIdExpressions()))
+            .addAllSelection(selections)
             .setFilter(dataFetcherNode.getFilter());
 
     if (dataFetcherNode.getLimit() != null) {

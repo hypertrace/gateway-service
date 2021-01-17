@@ -206,12 +206,16 @@ public class ExecutionContext {
     pendingSelectionSources.remove(source);
   }
 
-  public void removePendingMetricAggregationSources(String source) {
+  public void removePendingMetricAggregationSource(String source) {
     pendingMetricAggregationSources.remove(source);
   }
 
   public void removePendingSelectionSourceForOrderBy(String source) {
     pendingSelectionSourcesForOrderBy.remove(source);
+  }
+
+  public void removePendingMetricAggregationSourceForOrderBy(String source) {
+    pendingMetricAggregationSourcesForOrderBy.remove(source);
   }
 
   public Map<String, List<Expression>> getSourceToFilterExpressionMap() {

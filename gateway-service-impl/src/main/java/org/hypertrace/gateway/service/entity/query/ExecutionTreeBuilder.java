@@ -197,7 +197,7 @@ public class ExecutionTreeBuilder {
           new SelectionNode.Builder(rootNode)
               .setAggMetricSelectionSources(metricSourcesForOrderBy)
               .build();
-      metricSourcesForOrderBy.forEach(executionContext::removePendingMetricAggregationSources);
+      metricSourcesForOrderBy.forEach(executionContext::removePendingMetricAggregationSource);
     }
 
     // Try adding SortAndPaginateNode

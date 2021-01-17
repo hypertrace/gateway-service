@@ -58,6 +58,13 @@ public class ExecutionContextBuilderVisitor implements Visitor<Void> {
     executionContext.removePendingSelectionSource(source);
     // TODO: Currently, assumes that the order by attribute is also present in the selection set
     executionContext.removePendingSelectionSourceForOrderBy(source);
+    // TODO: Remove redundant attributes for metric aggregation source for order by
+    // The current metric aggregation source is only QS
+
+    // The order by on metric aggregations will also be added in the selections list of
+    // DataFetcherNode, so that the order by metric aggregations can be fetched before
+    // and only the required data set is paginated
+    executionContext.removePendingMetricAggregationSourceForOrderBy(source);
 
     // set of attributes which were fetched from the source
     Map<String, Set<String>> sourceToSelectionAttributeMap =
