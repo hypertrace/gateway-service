@@ -323,8 +323,8 @@ public class ExecutionContext {
     return ImmutableMap.<String, List<TimeAggregation>>builder().putAll(result).build();
   }
 
-  private void getSourceToFilterExpressionMap(Filter filter,
-                                              Map<String, List<Expression>> sourceToExpressionMap) {
+  private void getSourceToFilterExpressionMap(
+      Filter filter, Map<String, List<Expression>> sourceToFilterExpressionMap) {
     if (Filter.getDefaultInstance().equals(filter)) {
       return;
     }
@@ -332,13 +332,25 @@ public class ExecutionContext {
     if (filter.hasLhs()) {
       // Assuming RHS never has columnar expressions.
       Expression lhs = filter.getLhs();
-      Map<String, List<Expression>> map = getDataSourceToExpressionMap(List.of(lhs));
-      sourceToExpressionMap.putAll(map);
+      Map<String, List<Expression>> sourceToExpressionMap =
+          getDataSourceToExpressionMap(List.of(lhs));
+      sourceToExpressionMap.forEach(
+          (key, value) ->
+              sourceToFilterExpressionMap.merge(
+                  key,
+                  value,
+                  (v1, v2) -> {
+                    v1.addAll(v2);
+                    return v1;
+                  }));
     }
 
     if (filter.getChildFilterCount() > 0) {
-      filter.getChildFilterList().forEach((childFilter) ->
-          getSourceToFilterExpressionMap(childFilter, sourceToExpressionMap));
+      filter
+          .getChildFilterList()
+          .forEach(
+              (childFilter) ->
+                  getSourceToFilterExpressionMap(childFilter, sourceToFilterExpressionMap));
     }
   }
 
