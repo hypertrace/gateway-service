@@ -157,7 +157,10 @@ public class QueryServiceEntityFetcher implements IEntityFetcher {
             i++) {
           ColumnMetadata metadata = chunk.getResultSetMetadata().getColumnMetadata(i);
           org.hypertrace.core.query.service.api.Value columnValue = row.getColumn(i);
-          addEntityAttribute(entityBuilder,
+          buildEntity(
+              entityBuilder,
+              requestContext,
+              entitiesRequest,
               metadata,
               columnValue,
               attributeMetadataMap,
@@ -167,97 +170,6 @@ public class QueryServiceEntityFetcher implements IEntityFetcher {
     }
 
     return new EntityFetcherResponse(entityBuilders);
-  }
-
-  @Override
-  public EntityFetcherResponse getAggregatedMetrics(
-      EntitiesRequestContext requestContext, EntitiesRequest entitiesRequest) {
-    // Only supported filter is entityIds IN ["id1", "id2", "id3"]
-    Map<String, AttributeMetadata> attributeMetadataMap =
-        attributeMetadataProvider.getAttributesMetadata(
-            requestContext, entitiesRequest.getEntityType());
-    entitiesRequestValidator.validate(entitiesRequest, attributeMetadataMap);
-
-    List<org.hypertrace.gateway.service.v1.common.Expression> aggregates =
-        ExpressionReader.getFunctionExpressions(entitiesRequest.getSelectionList().stream());
-    if (aggregates.isEmpty()) {
-      return new EntityFetcherResponse();
-    }
-
-    List<String> entityIdAttributes =
-        AttributeMetadataUtil.getIdAttributeIds(
-            attributeMetadataProvider, entityIdColumnsConfigs, requestContext, entitiesRequest.getEntityType());
-
-    QueryRequest.Builder builder =
-        constructSelectionQuery(requestContext, entitiesRequest, entityIdAttributes, aggregates);
-    adjustLimitAndOffset(builder, entitiesRequest.getLimit(), entitiesRequest.getOffset());
-
-    QueryRequest request = builder.build();
-
-    if (LOG.isDebugEnabled()) {
-      LOG.debug("Sending Aggregated Metrics Request to Query Service ======== \n {}", request);
-    }
-
-    Iterator<ResultSetChunk> resultSetChunkIterator =
-        queryServiceClient.executeQuery(request, requestContext.getHeaders(),
-            requestTimeout);
-
-    // We want to retain the order as returned from the respective source. Hence using a
-    // LinkedHashMap
-    Map<EntityKey, Builder> entityMap = new LinkedHashMap<>();
-
-    while (resultSetChunkIterator.hasNext()) {
-      ResultSetChunk chunk = resultSetChunkIterator.next();
-      if (LOG.isDebugEnabled()) {
-        LOG.debug("Received chunk: " + chunk.toString());
-      }
-
-      if (chunk.getRowCount() < 1) {
-        break;
-      }
-
-      if (!chunk.hasResultSetMetadata()) {
-        LOG.warn("Chunk doesn't have result metadata so couldn't process the response.");
-        break;
-      }
-
-      for (Row row : chunk.getRowList()) {
-        // Construct the EntityKey from the EntityId attributes columns
-        EntityKey entityKey =
-            EntityKey.of(
-                IntStream.range(0, entityIdAttributes.size())
-                    .mapToObj(value -> row.getColumn(value).getString())
-                    .toArray(String[]::new));
-        Builder entityBuilder = entityMap.computeIfAbsent(entityKey, k -> Entity.newBuilder());
-        entityBuilder.setEntityType(entitiesRequest.getEntityType());
-        entityBuilder.setId(entityKey.toString());
-        // Always include the id in entity since that's needed to make follow up queries in
-        // optimal fashion. If this wasn't really requested by the client, it should be removed
-        // as post processing.
-        for (int i = 0; i < entityIdAttributes.size(); i++) {
-          entityBuilder.putAttribute(
-              entityIdAttributes.get(i),
-              Value.newBuilder()
-                  .setString(entityKey.getAttributes().get(i))
-                  .setValueType(ValueType.STRING)
-                  .build());
-        }
-
-        for (int i = entityIdAttributes.size();
-            i < chunk.getResultSetMetadata().getColumnMetadataCount();
-            i++) {
-          ColumnMetadata metadata = chunk.getResultSetMetadata().getColumnMetadata(i);
-          org.hypertrace.core.query.service.api.Value columnValue = row.getColumn(i);
-          addAggregateMetric(entityBuilder,
-              requestContext,
-              entitiesRequest,
-              metadata,
-              columnValue,
-              attributeMetadataMap);
-        }
-      }
-    }
-    return new EntityFetcherResponse(entityMap);
   }
 
   private void adjustLimitAndOffset(QueryRequest.Builder builder, int limit, int offset) {
@@ -336,28 +248,51 @@ public class QueryServiceEntityFetcher implements IEntityFetcher {
     return builder;
   }
 
-  private void addEntityAttribute(Entity.Builder entityBuilder,
+  private void buildEntity(
+      Entity.Builder entityBuilder,
+      QueryRequestContext requestContext,
+      EntitiesRequest entitiesRequest,
       ColumnMetadata metadata,
       org.hypertrace.core.query.service.api.Value columnValue,
       Map<String, AttributeMetadata> attributeMetadataMap,
       boolean isSkipCountColumn) {
 
     // Ignore the count column since we introduced that ourselves into the query
-    if (isSkipCountColumn &&
-        StringUtils.equalsIgnoreCase(COUNT_COLUMN_NAME, metadata.getColumnName())) {
+    if (isSkipCountColumn
+        && StringUtils.equalsIgnoreCase(COUNT_COLUMN_NAME, metadata.getColumnName())) {
       return;
     }
+
+    // aggregate
+    if (requestContext.containsFunctionExpression(metadata.getColumnName())) {
+      addAggregateMetric(
+          entityBuilder,
+          requestContext,
+          entitiesRequest,
+          metadata,
+          columnValue,
+          attributeMetadataMap);
+    } else {
+      // attribute
+      addEntityAttribute(entityBuilder, metadata, columnValue, attributeMetadataMap);
+    }
+  }
+
+  private void addEntityAttribute(
+      Entity.Builder entityBuilder,
+      ColumnMetadata metadata,
+      org.hypertrace.core.query.service.api.Value columnValue,
+      Map<String, AttributeMetadata> attributeMetadataMap) {
 
     String attributeName = metadata.getColumnName();
     entityBuilder.putAttribute(
         attributeName,
         QueryAndGatewayDtoConverter.convertToGatewayValue(
-            attributeName,
-            columnValue,
-            attributeMetadataMap));
+            attributeName, columnValue, attributeMetadataMap));
   }
 
-  private void addAggregateMetric(Entity.Builder entityBuilder,
+  private void addAggregateMetric(
+      Entity.Builder entityBuilder,
       QueryRequestContext requestContext,
       EntitiesRequest entitiesRequest,
       ColumnMetadata metadata,

@@ -170,12 +170,6 @@ public class EntityDataServiceEntityFetcher implements IEntityFetcher {
   }
 
   @Override
-  public EntityFetcherResponse getAggregatedMetrics(
-      EntitiesRequestContext requestContext, EntitiesRequest entitiesRequest) {
-    throw new UnsupportedOperationException("Fetching aggregated metrics not supported by EDS");
-  }
-
-  @Override
   public EntityFetcherResponse getTimeAggregatedMetrics(
       EntitiesRequestContext requestContext, EntitiesRequest entitiesRequest) {
     throw new UnsupportedOperationException("Fetching time series data not supported by EDS");

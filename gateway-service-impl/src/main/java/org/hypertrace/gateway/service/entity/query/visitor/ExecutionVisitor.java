@@ -12,10 +12,8 @@ import java.util.LinkedList;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
-import java.util.concurrent.ExecutionException;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
-import java.util.concurrent.Future;
 import java.util.stream.Collectors;
 import java.util.stream.IntStream;
 
@@ -148,6 +146,7 @@ public class ExecutionVisitor implements Visitor<EntityResponse> {
     EntitiesRequest.Builder requestBuilder =
         EntitiesRequest.newBuilder(entitiesRequest)
             .clearSelection()
+            .clearTimeAggregation()
             .clearFilter()
             .clearOrderBy()
             .clearLimit()
@@ -243,6 +242,7 @@ public class ExecutionVisitor implements Visitor<EntityResponse> {
               EntitiesRequest request =
                   EntitiesRequest.newBuilder(executionContext.getEntitiesRequest())
                       .clearSelection()
+                      .clearTimeAggregation()
                       .clearFilter()
                       // TODO: Should we push order by, limit and offet down to the data source?
                       // If we want to push the order by down, we would also have to divide order by into
@@ -273,6 +273,7 @@ public class ExecutionVisitor implements Visitor<EntityResponse> {
                   EntitiesRequest request =
                       EntitiesRequest.newBuilder(executionContext.getEntitiesRequest())
                           .clearSelection()
+                          .clearTimeAggregation()
                           .clearFilter()
                           .clearOrderBy()
                           .clearOffset()
@@ -290,7 +291,7 @@ public class ExecutionVisitor implements Visitor<EntityResponse> {
                           request.getEntityType(),
                           executionContext.getTimestampAttributeId(),
                           executionContext.getRequestHeaders());
-                  return entityFetcher.getAggregatedMetrics(context, request);
+                  return entityFetcher.getEntities(context, request);
                 })
             .collect(Collectors.toList()));
     resultMapList.addAll(
@@ -299,6 +300,7 @@ public class ExecutionVisitor implements Visitor<EntityResponse> {
                 source -> {
                   EntitiesRequest request =
                       EntitiesRequest.newBuilder(executionContext.getEntitiesRequest())
+                          .clearSelection()
                           .clearTimeAggregation()
                           .clearFilter()
                           .clearOrderBy()

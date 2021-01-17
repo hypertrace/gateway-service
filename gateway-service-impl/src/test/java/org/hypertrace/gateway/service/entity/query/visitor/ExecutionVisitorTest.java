@@ -684,6 +684,7 @@ public class ExecutionVisitorTest {
     when(executionContext.getTimestampAttributeId()).thenReturn("API.startTime");
     EntitiesRequest entitiesRequestForAttributes = EntitiesRequest.newBuilder(entitiesRequest)
         .clearSelection()
+        .clearTimeAggregation()
         .addSelection(selectionExpression)
         .setLimit(limit + offset)
         .setOffset(0)
@@ -694,11 +695,13 @@ public class ExecutionVisitorTest {
         .clearOffset()
         .clearOrderBy()
         .clearSelection()
+        .clearTimeAggregation()
         .addSelection(metricExpression)
         .clearFilter()
         .setFilter(generateInFilter(API_ID_ATTR, List.of("entity-id-3", "entity-id-2")))
         .build();
     EntitiesRequest entitiesRequestForTimeAggregation = EntitiesRequest.newBuilder(entitiesRequest)
+        .clearSelection()
         .clearLimit()
         .clearOffset()
         .clearOrderBy()
@@ -711,7 +714,7 @@ public class ExecutionVisitorTest {
     when(queryServiceEntityFetcher.getEntities(
         eq(entitiesRequestContext), eq(totalEntitiesRequest)))
         .thenReturn(totalEntityFetcherResponse);
-    when(queryServiceEntityFetcher.getAggregatedMetrics(
+    when(queryServiceEntityFetcher.getEntities(
             entitiesRequestContext, entitiesRequestForMetricAggregation))
         .thenReturn(new EntityFetcherResponse(entityKeyBuilderResponseMap2));
     when(queryServiceEntityFetcher.getTimeAggregatedMetrics(
@@ -753,12 +756,12 @@ public class ExecutionVisitorTest {
         Map.of(EDS_SOURCE, Collections.emptyList()),
         Map.of(QS_SOURCE, Collections.emptyList()));
     when(entityDataServiceEntityFetcher.getEntities(any(), any())).thenReturn(result4);
-    when(queryServiceEntityFetcher.getAggregatedMetrics(any(), any())).thenReturn(result4);
+    when(queryServiceEntityFetcher.getEntities(any(), any())).thenReturn(result4);
     when(executionVisitor.visit(any(NoOpNode.class)))
         .thenReturn(new EntityResponse(result4, result4.getEntityKeyBuilderMap().keySet()));
     executionVisitor.visit(selectionNode);
     verify(entityDataServiceEntityFetcher).getEntities(any(), any());
-    verify(queryServiceEntityFetcher).getAggregatedMetrics(any(), any());
+    verify(queryServiceEntityFetcher).getEntities(any(), any());
   }
 
   @Test
@@ -865,7 +868,7 @@ public class ExecutionVisitorTest {
     when(queryServiceEntityFetcher.getEntities(
         entitiesRequestContext, entitiesRequestForAttributes))
         .thenReturn(attributesResponse);
-    when(queryServiceEntityFetcher.getAggregatedMetrics(
+    when(queryServiceEntityFetcher.getEntities(
         entitiesRequestContext, entitiesRequestForMetricAggregation))
         .thenReturn(new EntityFetcherResponse(entityKeyBuilderResponseMap2));
 
@@ -931,7 +934,6 @@ public class ExecutionVisitorTest {
     Assertions.assertTrue(response.getEntityFetcherResponse().isEmpty());
     Assertions.assertTrue(response.getEntityKeys().isEmpty());
     verify(queryServiceEntityFetcher, never()).getEntities(any(), any());
-    verify(queryServiceEntityFetcher, never()).getAggregatedMetrics(any(), any());
   }
 
   private MetricSeries getMockMetricSeries(int period, String aggregation) {
