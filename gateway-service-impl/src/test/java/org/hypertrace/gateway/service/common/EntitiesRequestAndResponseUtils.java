@@ -115,6 +115,13 @@ public class EntitiesRequestAndResponseUtils {
         .build();
   }
 
+  public static AggregatedMetricValue getAggregatedMetricValue(FunctionType functionType, long value) {
+    return AggregatedMetricValue.newBuilder()
+        .setFunction(functionType)
+        .setValue(Value.newBuilder().setLong(value).setValueType(ValueType.LONG))
+        .build();
+  }
+
   public static Expression getLiteralExpression(long value) {
     return Expression.newBuilder()
         .setLiteral(
