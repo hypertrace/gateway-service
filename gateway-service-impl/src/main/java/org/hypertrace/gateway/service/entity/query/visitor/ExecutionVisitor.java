@@ -152,7 +152,7 @@ public class ExecutionVisitor implements Visitor<EntityResponse> {
             .clearOrderBy()
             .clearLimit()
             .clearOffset()
-            .addAllSelection(
+              .addAllSelection(
                 executionContext
                     .getSourceToSelectionExpressionMap()
                     .getOrDefault(source, executionContext.getEntityIdExpressions()))
