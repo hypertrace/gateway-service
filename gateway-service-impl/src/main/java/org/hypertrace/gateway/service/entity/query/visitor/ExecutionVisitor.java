@@ -148,10 +148,16 @@ public class ExecutionVisitor implements Visitor<EntityResponse> {
 
     // fetching both attribute selections and metric order by selections for
     // optimized pagination
-    List<Expression> attributeSelections =
-        executionContext
-            .getSourceToSelectionExpressionMap()
-            .getOrDefault(source, executionContext.getEntityIdExpressions());
+    List<Expression> attributeSelections = new ArrayList<>();
+    if (!source.equals("EDS")) {
+      attributeSelections =
+          executionContext
+              .getSourceToSelectionExpressionMap()
+              .getOrDefault(source, executionContext.getEntityIdExpressions());
+    } else {
+      attributeSelections = executionContext.getEntityIdExpressions();
+    }
+
     List<Expression> metricOrderBySelections =
         executionContext
             .getSourceToMetricOrderByExpressionMap()
