@@ -87,6 +87,11 @@ public class ExecutionTreeBuilder {
                 entitiesRequest.getOffset(),
                 entitiesRequest.getOrderByList());
         executionContext.setSortAndPaginationNodeAdded(true);
+      } else {
+        // TODO: Add an or node on other sources, if there is order by on other sources
+        rootNode =
+            new OrNode(
+                List.of(rootNode, new DataFetcherNode(QS.name(), Filter.getDefaultInstance())));
       }
 
       rootNode.acceptVisitor(new ExecutionContextBuilderVisitor(executionContext));

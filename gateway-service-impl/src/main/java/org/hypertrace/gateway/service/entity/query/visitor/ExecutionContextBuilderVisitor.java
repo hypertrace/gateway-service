@@ -55,7 +55,9 @@ public class ExecutionContextBuilderVisitor implements Visitor<Void> {
   public Void visit(DataFetcherNode dataFetcherNode) {
     String source = dataFetcherNode.getSource();
 
-    executionContext.removePendingSelectionSource(source);
+    if (!source.equals("EDS")) {
+      executionContext.removePendingSelectionSource(source);
+    }
     // TODO: Currently, assumes that the order by attribute is also present in the selection set
     executionContext.removePendingSelectionSourceForOrderBy(source);
     // TODO: Remove redundant attributes for metric aggregation source for order by
@@ -73,14 +75,14 @@ public class ExecutionContextBuilderVisitor implements Visitor<Void> {
     Set<String> fetchedAttributes =
         sourceToSelectionAttributeMap.getOrDefault(source, Collections.emptySet());
 
-    if (!executionContext.getPendingSelectionSources().isEmpty()) {
-      Set<String> redundantPendingSelectionSources =
-          getRedundantPendingSelectionSources(
-              fetchedAttributes,
-              executionContext.getPendingSelectionSources(),
-              executionContext.getSourceToSelectionAttributeMap());
-      redundantPendingSelectionSources.forEach(executionContext::removePendingSelectionSource);
-    }
+//    if (!executionContext.getPendingSelectionSources().isEmpty()) {
+//      Set<String> redundantPendingSelectionSources =
+//          getRedundantPendingSelectionSources(
+//              fetchedAttributes,
+//              executionContext.getPendingSelectionSources(),
+//              executionContext.getSourceToSelectionAttributeMap());
+//      redundantPendingSelectionSources.forEach(executionContext::removePendingSelectionSource);
+//    }
 
     if (!executionContext.getPendingSelectionSourcesForOrderBy().isEmpty()) {
       Set<String> redundantPendingSelectionSourcesForOrderBy =
