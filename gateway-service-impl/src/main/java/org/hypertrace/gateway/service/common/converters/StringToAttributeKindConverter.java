@@ -4,9 +4,11 @@ import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.core.type.TypeReference;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import java.io.IOException;
+import java.util.Collections;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.Optional;
 import org.apache.commons.lang3.StringUtils;
 import org.hypertrace.core.attribute.service.v1.AttributeKind;
 import org.hypertrace.gateway.service.v1.common.Value;
@@ -89,7 +91,8 @@ public class StringToAttributeKindConverter extends ToAttributeKindConverter<Str
 
     // Check if the string is already in a list format.
     try {
-      return objectMapper.readValue(jsonString, LIST_TYPE_REFERENCE);
+      return Optional.ofNullable(objectMapper.readValue(jsonString, LIST_TYPE_REFERENCE))
+          .orElse(Collections.emptyList());
     } catch (JsonProcessingException e) {
       // If not, it might be a single string, so return a list with one element.
       return List.of(jsonString);

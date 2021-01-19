@@ -59,4 +59,16 @@ public class StringToAttributeKindConverterTest {
         ).getStringArrayList()
     );
   }
+
+  @Test
+  public void test_nullStringToArrayReturnsEmptyList() {
+    StringToAttributeKindConverter converter = StringToAttributeKindConverter.INSTANCE;
+    assertEquals(List.of(),
+        converter.doConvert(
+            "null",
+            AttributeKind.TYPE_STRING_ARRAY,
+            Value.newBuilder()
+        ).getStringArrayList());
+  }
+
 }
