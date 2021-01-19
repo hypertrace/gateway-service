@@ -11,6 +11,8 @@ import org.hypertrace.gateway.service.entity.query.AndNode;
 import org.hypertrace.gateway.service.entity.query.DataFetcherNode;
 import org.hypertrace.gateway.service.entity.query.PaginateOnlyNode;
 import org.hypertrace.gateway.service.entity.query.QueryNode;
+import org.hypertrace.gateway.service.entity.query.SelectionNode;
+import org.hypertrace.gateway.service.entity.query.SortAndPaginateNode;
 import org.hypertrace.gateway.service.v1.common.Filter;
 import org.hypertrace.gateway.service.v1.common.Operator;
 import org.hypertrace.gateway.service.v1.common.OrderByExpression;
@@ -18,13 +20,61 @@ import org.junit.jupiter.api.Test;
 
 import java.util.Collections;
 import java.util.List;
+import java.util.Set;
 
 public class FilterOptimizingVisitorTest {
   @Test
   public void testPaginateOnlyNode() {
-    PaginateOnlyNode paginateOnlyNode = mock(PaginateOnlyNode.class);
+    DataFetcherNode dataFetcherNode = new DataFetcherNode("QS", Filter.getDefaultInstance());
+    PaginateOnlyNode paginateOnlyNode = new PaginateOnlyNode(dataFetcherNode, 10, 10);
     FilterOptimizingVisitor filterOptimizingVisitor = new FilterOptimizingVisitor();
-    assertEquals(paginateOnlyNode, filterOptimizingVisitor.visit(paginateOnlyNode));
+    PaginateOnlyNode visitedPaginatedOnlyNode = (PaginateOnlyNode) filterOptimizingVisitor.visit(paginateOnlyNode);
+    assertEquals(paginateOnlyNode.getChildNode(), visitedPaginatedOnlyNode.getChildNode());
+    assertEquals(paginateOnlyNode.getLimit(), visitedPaginatedOnlyNode.getLimit());
+    assertEquals(paginateOnlyNode.getOffset(), visitedPaginatedOnlyNode.getOffset());
+  }
+
+  @Test
+  public void testSelectionNode() {
+    DataFetcherNode dataFetcherNode = new DataFetcherNode("QS", Filter.getDefaultInstance());
+    Set<String> attrSelectionSources = Set.of("QS", "EDS");
+    Set<String> aggregationSources = Set.of("QS");
+    Set<String> timeAggregationSources = Set.of("source1", "source2");
+    SelectionNode selectionNode =
+        new SelectionNode.Builder(dataFetcherNode)
+            .setAttrSelectionSources(attrSelectionSources)
+            .setAggMetricSelectionSources(aggregationSources)
+            .setTimeSeriesSelectionSources(timeAggregationSources)
+            .build();
+    FilterOptimizingVisitor filterOptimizingVisitor = new FilterOptimizingVisitor();
+    SelectionNode visitedSelectionNode =
+        (SelectionNode) filterOptimizingVisitor.visit(selectionNode);
+    assertEquals(selectionNode.getChildNode(), visitedSelectionNode.getChildNode());
+    assertEquals(
+        selectionNode.getAttrSelectionSources(), visitedSelectionNode.getAttrSelectionSources());
+    assertEquals(
+        selectionNode.getAggMetricSelectionSources(),
+        visitedSelectionNode.getAggMetricSelectionSources());
+    assertEquals(
+        selectionNode.getTimeSeriesSelectionSources(),
+        visitedSelectionNode.getTimeSeriesSelectionSources());
+  }
+
+  @Test
+  public void testSortAndPaginateNode() {
+    OrderByExpression orderByExpression = buildOrderByExpression("api1");
+
+    DataFetcherNode dataFetcherNode = new DataFetcherNode("QS", Filter.getDefaultInstance());
+    SortAndPaginateNode sortAndPaginateNode =
+        new SortAndPaginateNode(dataFetcherNode, 10, 20, List.of(orderByExpression));
+
+    FilterOptimizingVisitor filterOptimizingVisitor = new FilterOptimizingVisitor();
+    SortAndPaginateNode visitedSortAndPaginateNode =
+        (SortAndPaginateNode) filterOptimizingVisitor.visit(sortAndPaginateNode);
+    assertEquals(sortAndPaginateNode.getChildNode(), visitedSortAndPaginateNode.getChildNode());
+    assertEquals(10, visitedSortAndPaginateNode.getLimit());
+    assertEquals(20, visitedSortAndPaginateNode.getOffset());
+    assertEquals(List.of(orderByExpression), visitedSortAndPaginateNode.getOrderByExpressionList());
   }
 
   @Test

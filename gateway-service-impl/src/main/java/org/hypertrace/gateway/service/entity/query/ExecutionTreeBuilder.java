@@ -123,6 +123,14 @@ public class ExecutionTreeBuilder {
       LOG.debug("Filter Tree:{}", filterTree.acceptVisitor(new PrintVisitor()));
     }
 
+    // if the filters and order by are on QS, then the DataFetcherNode(s) would have been created
+    // for QS, with limit and offset pushed down to QS
+    // But, due to a Pinot limitation of not supporting offset when group by is specified, we need
+    // to paginate the data in memory by adding a paginate only node
+    if (sourceSetsIfFilterAndOrderByAreFromSameSourceSets.contains(QS.name())) {
+      filterTree = createPaginateOnlyNode(filterTree, entitiesRequest);
+    }
+
     filterTree.acceptVisitor(new ExecutionContextBuilderVisitor(executionContext));
 
     if (LOG.isDebugEnabled()) {
@@ -159,7 +167,8 @@ public class ExecutionTreeBuilder {
 
   private QueryNode buildExecutionTreeForQsFilterAndSelection() {
     EntitiesRequest entitiesRequest = executionContext.getEntitiesRequest();
-    QueryNode rootNode = createQsDataFetcherNodeWithPagination(entitiesRequest);
+    QueryNode rootNode = createQsDataFetcherNodeWithLimitAndOffset(entitiesRequest);
+    rootNode = createPaginateOnlyNode(rootNode, entitiesRequest);
     executionContext.setSortAndPaginationNodeAdded(true);
 
     return rootNode;
@@ -275,7 +284,7 @@ public class ExecutionTreeBuilder {
       // sources, since we will always have a time range filter on QS
       if (sourceSetsIfFilterAndOrderByAreFromSameSourceSets.contains(QS.name())) {
         executionContext.setSortAndPaginationNodeAdded(true);
-        return createQsDataFetcherNodeWithPagination(entitiesRequest);
+        return createQsDataFetcherNodeWithLimitAndOffset(entitiesRequest);
       }
 
       return new DataFetcherNode(sources.contains(QS) ? QS.name() : sources.get(0).name(), filter);
@@ -313,7 +322,7 @@ public class ExecutionTreeBuilder {
         orderByExpressions);
   }
 
-  private QueryNode createQsDataFetcherNodeWithPagination(EntitiesRequest entitiesRequest) {
+  private QueryNode createQsDataFetcherNodeWithLimitAndOffset(EntitiesRequest entitiesRequest) {
     Filter filter = entitiesRequest.getFilter();
     int selectionLimit = entitiesRequest.getLimit();
     int selectionOffset = entitiesRequest.getOffset();
@@ -329,17 +338,16 @@ public class ExecutionTreeBuilder {
       selectionOffset = 0;
     }
 
-    QueryNode rootNode =
-        new DataFetcherNode(QS.name(), filter, selectionLimit, selectionOffset, orderBys);
+    return new DataFetcherNode(QS.name(), filter, selectionLimit, selectionOffset, orderBys);
+  }
 
-    if (executionContext.getEntitiesRequest().getOffset() > 0) {
-      rootNode =
-          new PaginateOnlyNode(
-              rootNode,
-              executionContext.getEntitiesRequest().getLimit(),
-              executionContext.getEntitiesRequest().getOffset());
+  private QueryNode createPaginateOnlyNode(QueryNode queryNode, EntitiesRequest entitiesRequest) {
+    if (entitiesRequest.getOffset() > 0) {
+      return new PaginateOnlyNode(
+          queryNode,
+          entitiesRequest.getLimit(),
+          entitiesRequest.getOffset());
     }
-
-    return rootNode;
+    return queryNode;
   }
 }
