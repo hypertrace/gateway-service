@@ -695,6 +695,61 @@ public class ExecutionTreeBuilderTest {
   }
 
   @Test
+  public void test_build_selectAttributesAndFilterWithDifferentSourceNonZeroOffset_shouldCreateDataFetcherNodeAndPaginateOnlyNode() {
+    // selections on EDS and QS
+    // filters and order by on QS
+    OrderByExpression orderByExpression = buildOrderByExpression(API_STATE_ATTR);
+    EntitiesRequest entitiesRequest =
+        EntitiesRequest.newBuilder()
+            .setEntityType(AttributeScope.API.name())
+            .addSelection(buildExpression(API_TYPE_ATTR))
+            .addSelection(buildExpression(API_STATE_ATTR))
+            .addSelection(
+                buildAggregateExpression(API_NUM_CALLS_ATTR,
+                    FunctionType.SUM,
+                    "SUM_numCalls",
+                    List.of()))
+            .setFilter(generateAndOrNotFilter(
+                Operator.AND,
+                generateEQFilter(API_DISCOVERY_STATE, "DISCOVERED"),
+                generateFilter(Operator.GE, API_NUM_CALLS_ATTR,
+                    Value.newBuilder().
+                        setDouble(60)
+                        .setValueType(ValueType.DOUBLE)
+                        .build()
+                )
+            ))
+            .addOrderBy(orderByExpression)
+            .setLimit(10)
+            .setOffset(10)
+            .build();
+    EntitiesRequestContext entitiesRequestContext =
+        new EntitiesRequestContext(TENANT_ID, 0L, 10L, "API", "API.startTime", new HashMap<>());
+    ExecutionContext executionContext =
+        ExecutionContext.from(attributeMetadataProvider, entityIdColumnsConfigs, entitiesRequest, entitiesRequestContext);
+    ExecutionTreeBuilder executionTreeBuilder = new ExecutionTreeBuilder(executionContext);
+    QueryNode executionTree = executionTreeBuilder.build();
+    assertNotNull(executionTree);
+    assertTrue(executionTree instanceof SelectionNode);
+    assertTrue(((SelectionNode) executionTree).getAggMetricSelectionSources().contains("QS"));
+
+    QueryNode selectionNode = ((SelectionNode) executionTree).getChildNode();
+    assertTrue(selectionNode instanceof SelectionNode);
+    assertTrue(((SelectionNode) selectionNode).getAttrSelectionSources().contains("EDS"));
+
+    QueryNode paginateOnlyNode = ((SelectionNode)selectionNode).getChildNode();
+    assertTrue(paginateOnlyNode instanceof PaginateOnlyNode);
+    assertEquals(10, ((PaginateOnlyNode)paginateOnlyNode).getOffset());
+    assertEquals(10, ((PaginateOnlyNode)paginateOnlyNode).getLimit());
+
+    QueryNode dataFetcherNode = ((PaginateOnlyNode)paginateOnlyNode).getChildNode();
+    assertTrue(dataFetcherNode instanceof DataFetcherNode);
+    assertEquals("QS", ((DataFetcherNode)dataFetcherNode).getSource());
+    assertEquals(0, ((DataFetcherNode)dataFetcherNode).getOffset());
+    assertEquals(20, ((DataFetcherNode)dataFetcherNode).getLimit());
+  }
+
+  @Test
   public void test_build_selectAttributeAndAggregateMetricWithDifferentSource_shouldCreateDifferentNode() {
     EntitiesRequest entitiesRequest =
         EntitiesRequest.newBuilder()

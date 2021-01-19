@@ -110,12 +110,22 @@ public class FilterOptimizingVisitor implements Visitor<QueryNode> {
 
   @Override
   public QueryNode visit(SelectionNode selectionNode) {
-    return selectionNode;
+    QueryNode childNode = selectionNode.getChildNode().acceptVisitor(this);
+    return new SelectionNode.Builder(childNode)
+        .setTimeSeriesSelectionSources(selectionNode.getTimeSeriesSelectionSources())
+        .setAggMetricSelectionSources(selectionNode.getAggMetricSelectionSources())
+        .setAttrSelectionSources(selectionNode.getAttrSelectionSources())
+        .build();
   }
 
   @Override
   public QueryNode visit(SortAndPaginateNode sortAndPaginateNode) {
-    return sortAndPaginateNode;
+    QueryNode childNode = sortAndPaginateNode.getChildNode().acceptVisitor(this);
+    return new SortAndPaginateNode(
+        childNode,
+        sortAndPaginateNode.getLimit(),
+        sortAndPaginateNode.getOffset(),
+        sortAndPaginateNode.getOrderByExpressionList());
   }
 
   private Map<String, QueryNode> mergeQueryNodesBySource(
@@ -179,6 +189,8 @@ public class FilterOptimizingVisitor implements Visitor<QueryNode> {
 
   @Override
   public QueryNode visit(PaginateOnlyNode paginateOnlyNode) {
-    return paginateOnlyNode;
+    QueryNode childNode = paginateOnlyNode.getChildNode().acceptVisitor(this);
+    return new PaginateOnlyNode(
+        childNode, paginateOnlyNode.getLimit(), paginateOnlyNode.getOffset());
   }
 }
