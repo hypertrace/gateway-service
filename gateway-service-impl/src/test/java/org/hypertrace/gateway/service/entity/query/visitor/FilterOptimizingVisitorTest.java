@@ -22,9 +22,13 @@ import java.util.List;
 public class FilterOptimizingVisitorTest {
   @Test
   public void testPaginateOnlyNode() {
-    PaginateOnlyNode paginateOnlyNode = mock(PaginateOnlyNode.class);
+    DataFetcherNode dataFetcherNode = new DataFetcherNode("QS", Filter.getDefaultInstance());
+    PaginateOnlyNode paginateOnlyNode = new PaginateOnlyNode(dataFetcherNode, 10, 10);
     FilterOptimizingVisitor filterOptimizingVisitor = new FilterOptimizingVisitor();
-    assertEquals(paginateOnlyNode, filterOptimizingVisitor.visit(paginateOnlyNode));
+    PaginateOnlyNode visitedPaginatedOnlyNode = (PaginateOnlyNode) filterOptimizingVisitor.visit(paginateOnlyNode);
+    assertEquals(paginateOnlyNode.getChildNode(), visitedPaginatedOnlyNode.getChildNode());
+    assertEquals(paginateOnlyNode.getLimit(), visitedPaginatedOnlyNode.getLimit());
+    assertEquals(paginateOnlyNode.getOffset(), visitedPaginatedOnlyNode.getOffset());
   }
 
   @Test
