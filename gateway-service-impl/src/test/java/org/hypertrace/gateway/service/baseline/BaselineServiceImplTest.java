@@ -68,7 +68,7 @@ public class BaselineServiceImplTest {
     Mockito.when(
             baselineServiceQueryExecutor.executeQuery(
                 Mockito.anyMap(), Mockito.any(QueryRequest.class)))
-        .thenReturn(getResultSet().iterator());
+        .thenReturn(getResultSet("duration_ts").iterator());
     when(entityIdColumnsConfigs.getIdKey("SERVICE")).thenReturn(Optional.of("id"));
 
     Map<String, AttributeMetadata> attributeMap = new HashMap<>();
@@ -106,12 +106,12 @@ public class BaselineServiceImplTest {
             .addEntityIds("entity-1")
             .addBaselineAggregateRequest(
                 getFunctionExpressionForAvgRate(
-                    FunctionType.AVGRATE, "SERVICE.duration", "duration_ts"))
+                    FunctionType.AVGRATE, "SERVICE.numCalls", "numCalls"))
             .build();
 
     // Mock section
     AttributeMetadata attributeMetadata =
-        AttributeMetadata.newBuilder().setFqn("Service.Latency").setId("Service.StartTime").build();
+        AttributeMetadata.newBuilder().setFqn("Service.numCalls").setId("Service.Id").build();
     Mockito.when(
             attributeMetadataProvider.getAttributeMetadata(
                 Mockito.any(RequestContext.class), Mockito.anyString(), Mockito.anyString()))
@@ -119,13 +119,13 @@ public class BaselineServiceImplTest {
     Mockito.when(
             baselineServiceQueryExecutor.executeQuery(
                 Mockito.anyMap(), Mockito.any(QueryRequest.class)))
-        .thenReturn(getResultSet().iterator());
+        .thenReturn(getResultSet("numCalls").iterator());
     when(entityIdColumnsConfigs.getIdKey("SERVICE")).thenReturn(Optional.of("id"));
-    // Attribute Metadata map contains mapping between Attributes and ID to query data. 
+    // Attribute Metadata map contains mapping between Attributes and ID to query data.
     Map<String, AttributeMetadata> attributeMap = new HashMap<>();
     attributeMap.put(
-        "SERVICE.duration",
-        AttributeMetadata.newBuilder().setFqn("Service.Latency").setId("Service.Id").build());
+        "SERVICE.numCalls",
+        AttributeMetadata.newBuilder().setFqn("Service.numCalls").setId("Service.Id").build());
     Mockito.when(
             attributeMetadataProvider.getAttributesMetadata(
                 Mockito.any(RequestContext.class), Mockito.anyString()))
@@ -145,7 +145,7 @@ public class BaselineServiceImplTest {
     BaselineEntity baselineEntity = baselineResponse.getBaselineEntityList().get(0);
     // verify the baseline for AVG RATE (medianValue/60)
     Assertions.assertEquals(1.0,
-        baselineEntity.getBaselineAggregateMetricMap().get("duration_ts").getValue().getDouble());
+        baselineEntity.getBaselineAggregateMetricMap().get("numCalls").getValue().getDouble());
   }
 
   @Test
@@ -168,7 +168,7 @@ public class BaselineServiceImplTest {
     Mockito.when(
             baselineServiceQueryExecutor.executeQuery(
                 Mockito.anyMap(), Mockito.any(QueryRequest.class)))
-        .thenReturn(getResultSet().iterator());
+        .thenReturn(getResultSet("duration_ts").iterator());
     Map<String, AttributeMetadata> attributeMap = new HashMap<>();
     AttributeMetadata attribute =
         AttributeMetadata.newBuilder().setFqn("Service.Latency").setId("Service.Id").build();
@@ -234,12 +234,12 @@ public class BaselineServiceImplTest {
         .build();
   }
 
-  public List<ResultSetChunk> getResultSet() {
+  public List<ResultSetChunk> getResultSet(String alias) {
     long time = Instant.parse("2020-11-14T18:40:51.902Z").toEpochMilli();
 
     return List.of(
         getResultSetChunk(
-            List.of("SERVICE.id", "dateTimeConvert", "duration_ts"),
+            List.of("SERVICE.id", "dateTimeConvert", alias),
             new String[][] {
               {"entity-1", String.valueOf(time), "20.0"},
               {"entity-1", String.valueOf(time - 60000), "40.0"},
