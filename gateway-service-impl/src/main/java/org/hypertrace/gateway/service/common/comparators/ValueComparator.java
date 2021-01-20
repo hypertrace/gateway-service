@@ -1,17 +1,35 @@
 package org.hypertrace.gateway.service.common.comparators;
 
+import static java.util.Objects.isNull;
+
 import com.google.common.base.Preconditions;
-import org.apache.commons.lang3.StringUtils;
+import com.google.common.collect.Ordering;
+import java.util.Comparator;
+import java.util.Objects;
 import org.hypertrace.gateway.service.v1.common.Value;
 
 public class ValueComparator {
 
+  private static final Comparator<Iterable<String>> STRING_LIST_COMPARATOR =
+      Ordering.from(CharSequence::compare).lexicographical();
+
+  private static final Comparator<Iterable<Double>> DOUBLE_LIST_COMPARATOR =
+      Ordering.from(Double::compare).lexicographical();
+
+  private static final Comparator<Iterable<Long>> LONG_LIST_COMPARATOR =
+      Ordering.from(Long::compare).lexicographical();
+
+  private static final Comparator<Iterable<Boolean>> BOOLEAN_LIST_COMPARATOR =
+      Ordering.from(Boolean::compare).lexicographical();
+
   public static int compare(Value left, Value right) {
-    if (left == right) {
+    if (Objects.equals(left, right)) {
       return 0;
-    } else if (left == null) {
+    }
+    if (isNull(left)) {
       return -1;
-    } else if (right == null) {
+    }
+    if (isNull(right)) {
       return 1;
     }
 
@@ -25,41 +43,20 @@ public class ValueComparator {
       case DOUBLE:
         return Double.compare(left.getDouble(), right.getDouble());
       case STRING:
-        return StringUtils.compare(left.getString(), right.getString());
+        return CharSequence.compare(left.getString(), right.getString());
       case TIMESTAMP:
         return Long.compare(left.getTimestamp(), right.getTimestamp());
       case BOOLEAN_ARRAY:
-        for (int i = 0; i < left.getBooleanArrayCount(); i++) {
-          int value = Boolean.compare(left.getBooleanArray(i), right.getBooleanArray(i));
-          if (value != 0) {
-            return value;
-          }
-        }
-        return 0;
+        return BOOLEAN_LIST_COMPARATOR.compare(
+            left.getBooleanArrayList(), right.getBooleanArrayList());
       case LONG_ARRAY:
-        for (int i = 0; i < left.getLongArrayCount(); i++) {
-          int value = Long.compare(left.getLongArray(i), right.getLongArray(i));
-          if (value != 0) {
-            return value;
-          }
-        }
-        return 0;
+        return LONG_LIST_COMPARATOR.compare(left.getLongArrayList(), right.getLongArrayList());
       case DOUBLE_ARRAY:
-        for (int i = 0; i < left.getDoubleArrayCount(); i++) {
-          int value = Double.compare(left.getDoubleArray(i), right.getDoubleArray(i));
-          if (value != 0) {
-            return value;
-          }
-        }
-        return 0;
+        return DOUBLE_LIST_COMPARATOR.compare(
+            left.getDoubleArrayList(), right.getDoubleArrayList());
       case STRING_ARRAY:
-        for (int i = 0; i < left.getStringArrayCount(); i++) {
-          int value = StringUtils.compare(left.getStringArray(i), right.getStringArray(i));
-          if (value != 0) {
-            return value;
-          }
-        }
-        return 0;
+        return STRING_LIST_COMPARATOR.compare(
+            left.getStringArrayList(), right.getStringArrayList());
       default:
         throw new IllegalArgumentException("Unhandled type: " + left.getValueType());
     }
