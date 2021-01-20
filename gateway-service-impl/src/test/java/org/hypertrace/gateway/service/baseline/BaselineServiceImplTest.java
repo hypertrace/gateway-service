@@ -103,7 +103,7 @@ public class BaselineServiceImplTest {
             .setEntityType("SERVICE")
             .setStartTimeMillis(Instant.parse("2020-11-14T17:40:51.902Z").toEpochMilli())
             .setEndTimeMillis(Instant.parse("2020-11-14T18:40:51.902Z").toEpochMilli())
-            .addEntityIds("entity1")
+            .addEntityIds("entity-1")
             .addBaselineAggregateRequest(
                 getFunctionExpressionForAvgRate(
                     FunctionType.AVGRATE, "SERVICE.duration", "duration_ts"))
@@ -121,10 +121,8 @@ public class BaselineServiceImplTest {
                 Mockito.anyMap(), Mockito.any(QueryRequest.class)))
         .thenReturn(getResultSet().iterator());
     when(entityIdColumnsConfigs.getIdKey("SERVICE")).thenReturn(Optional.of("id"));
+    // Attribute Metadata map contains mapping between Attributes and ID to query data. 
     Map<String, AttributeMetadata> attributeMap = new HashMap<>();
-    attributeMap.put(
-        "duration_ts",
-        AttributeMetadata.newBuilder().setFqn("Service.Latency").setId("Service.Id").build());
     attributeMap.put(
         "SERVICE.duration",
         AttributeMetadata.newBuilder().setFqn("Service.Latency").setId("Service.Id").build());
@@ -145,8 +143,9 @@ public class BaselineServiceImplTest {
     Assertions.assertTrue(
         baselineResponse.getBaselineEntityList().get(0).getBaselineAggregateMetricCount() > 0);
     BaselineEntity baselineEntity = baselineResponse.getBaselineEntityList().get(0);
-    Assertions.assertNotNull(
-        baselineEntity.getBaselineAggregateMetricMap().get("duration_ts").getValue());
+    // verify the baseline for AVG RATE (medianValue/60)
+    Assertions.assertEquals(1.0,
+        baselineEntity.getBaselineAggregateMetricMap().get("duration_ts").getValue().getDouble());
   }
 
   @Test
@@ -236,19 +235,18 @@ public class BaselineServiceImplTest {
   }
 
   public List<ResultSetChunk> getResultSet() {
-    long time = System.currentTimeMillis();
+    long time = Instant.parse("2020-11-14T18:40:51.902Z").toEpochMilli();
 
-    List<ResultSetChunk> resultSetChunks =
-        List.of(
-            getResultSetChunk(
-                List.of("SERVICE.id", "dateTimeConvert", "duration_ts"),
-                new String[][] {
-                  {"entity-1", String.valueOf(time), "14.0"},
-                  {"entity-1", String.valueOf(time - 60000), "15.0"},
-                  {"entity-1", String.valueOf(time - 120000), "16.0"},
-                  {"entity-1", String.valueOf(time - 180000), "17.0"}
-                }));
-    return resultSetChunks;
+    return List.of(
+        getResultSetChunk(
+            List.of("SERVICE.id", "dateTimeConvert", "duration_ts"),
+            new String[][] {
+              {"entity-1", String.valueOf(time), "20.0"},
+              {"entity-1", String.valueOf(time - 60000), "40.0"},
+              {"entity-1", String.valueOf(time - 120000), "60.0"},
+              {"entity-1", String.valueOf(time - 180000), "80.0"},
+              {"entity-1", String.valueOf(time - 180000), "100.0"},
+            }));
   }
 
   @Test
