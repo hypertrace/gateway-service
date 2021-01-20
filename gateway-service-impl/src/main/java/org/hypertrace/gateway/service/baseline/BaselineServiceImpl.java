@@ -82,19 +82,15 @@ public class BaselineServiceImpl implements BaselineService {
       Period aggTimePeriod =
           getPeriod(originalRequest.getStartTimeMillis(), originalRequest.getEndTimeMillis());
       long periodSecs = getPeriodInSecs(aggTimePeriod);
-      long alignedStartTime =
-          QueryExpressionUtil.alignToPeriodBoundary(
-              originalRequest.getStartTimeMillis(), periodSecs, true);
-      long alignedEndTime =
-          QueryExpressionUtil.alignToPeriodBoundary(
-              originalRequest.getEndTimeMillis(), periodSecs, false);
+      long aggStartTime = originalRequest.getStartTimeMillis();
+      long aggEndTime = originalRequest.getEndTimeMillis();
 
       List<TimeAggregation> timeAggregations =
-          getTimeAggregationsForAggregateExpr(originalRequest, alignedStartTime, alignedEndTime);
+          getTimeAggregationsForAggregateExpr(originalRequest, aggStartTime, aggEndTime);
       updateAliasMap(requestContext, timeAggregations);
       // Take more data to calculate baseline and standard deviation.
-      long seriesStartTime = getUpdatedStartTime(alignedStartTime, alignedEndTime);
-      long seriesEndTime = alignedStartTime;
+      long seriesStartTime = getUpdatedStartTime(aggStartTime, aggEndTime);
+      long seriesEndTime = aggStartTime;
       List<String> entityIdAttributes =
           AttributeMetadataUtil.getIdAttributeIds(
               attributeMetadataProvider,
@@ -118,8 +114,8 @@ public class BaselineServiceImpl implements BaselineService {
               requestContext,
               entityIdAttributes.size(),
               originalRequest.getEntityType(),
-              alignedStartTime,
-              alignedEndTime);
+              aggStartTime,
+              aggEndTime);
       baselineEntityAggregatedMetricsMap = getEntitiesMapFromAggResponse(aggEntitiesResponse);
     }
 
