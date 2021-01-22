@@ -172,9 +172,9 @@ public class ExecutionVisitor implements Visitor<EntityResponse> {
     EntitiesRequest request = requestBuilder.build();
     IEntityFetcher entityFetcher = queryHandlerRegistry.getEntityFetcher(source);
 
-    // if the data fetcher node is fetching paginated records, the total number of entities has to
-    // be fetched separately
-    if (dataFetcherNode.isPaginated()) {
+    // if the data fetcher node is fetching paginated records and the client has requested for
+    // total, the total number of entities has to be fetched separately
+    if (dataFetcherNode.canFetchTotal()) {
       EntitiesRequest totalEntitiesRequest =
           EntitiesRequest.newBuilder(executionContext.getEntitiesRequest())
               .clearSelection()

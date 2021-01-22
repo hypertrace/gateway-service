@@ -21,12 +21,12 @@ public class DataFetcherNode implements QueryNode {
   private Integer offset;
   private List<OrderByExpression> orderByExpressionList = Collections.emptyList();
 
-  private final boolean isPaginated;
+  private final boolean canFetchTotal;
 
   public DataFetcherNode(String source, Filter filter) {
     this.source = source;
     this.filter = filter;
-    this.isPaginated = false;
+    this.canFetchTotal = false; // total would be computed in memory
   }
 
   public DataFetcherNode(
@@ -34,13 +34,18 @@ public class DataFetcherNode implements QueryNode {
       Filter filter,
       Integer limit,
       Integer offset,
-      List<OrderByExpression> orderByExpressionList) {
+      List<OrderByExpression> orderByExpressionList,
+      boolean canFetchTotal) {
     this.source = source;
     this.filter = filter;
     this.limit = limit;
     this.offset = offset;
     this.orderByExpressionList = orderByExpressionList;
-    this.isPaginated = limit != null && offset != null;
+
+    boolean isPaginated = limit != null && offset != null;
+    // should only fetch total, if the pagination is pushed down to the data store
+    // and total has been requested by the client
+    this.canFetchTotal = isPaginated && canFetchTotal;
   }
 
   public String getSource() {
@@ -63,8 +68,8 @@ public class DataFetcherNode implements QueryNode {
     return orderByExpressionList;
   }
 
-  public boolean isPaginated() {
-    return isPaginated;
+  public boolean canFetchTotal() {
+    return canFetchTotal;
   }
 
   @Override
@@ -80,7 +85,7 @@ public class DataFetcherNode implements QueryNode {
         ", limit=" + limit +
         ", offset=" + offset +
         ", orderByExpressionList=" + orderByExpressionList +
-        ", isPaginated=" + isPaginated +
+        ", fetchTotal=" + canFetchTotal +
         '}';
   }
 }

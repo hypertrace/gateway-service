@@ -439,11 +439,69 @@ public class ExecutionVisitorTest {
         .thenReturn(new EntityFetcherResponse());
 
     DataFetcherNode dataFetcherNode =
-        new DataFetcherNode("QS", entitiesRequest.getFilter(), limit, offset, orderByExpressions);
+        new DataFetcherNode(
+            "QS", entitiesRequest.getFilter(), limit, offset, orderByExpressions, true);
 
     compareEntityResponses(
         new EntityResponse(
             entityFetcherResponse, totalEntityFetcherResponse.getEntityKeyBuilderMap().keySet()),
+        executionVisitor.visit(dataFetcherNode));
+  }
+
+  @Test
+  public void test_visitDataFetcherNode_cannotFetchTotal() {
+    List<OrderByExpression> orderByExpressions = List.of(buildOrderByExpression(API_ID_ATTR));
+    int limit = 10;
+    int offset = 0;
+    long startTime = 0;
+    long endTime = 10;
+    String tenantId = "TENANT_ID";
+    Map<String, String> requestHeaders = Map.of("x-tenant-id", tenantId);
+    AttributeScope entityType = AttributeScope.API;
+    Expression selectionExpression = buildExpression(API_NAME_ATTR);
+    EntitiesRequest entitiesRequest =
+        EntitiesRequest.newBuilder()
+            .setEntityType(entityType.name())
+            .setStartTimeMillis(startTime)
+            .setEndTimeMillis(endTime)
+            .addSelection(selectionExpression)
+            .setFilter(generateEQFilter(API_DISCOVERY_STATE, "DISCOVERED"))
+            .addAllOrderBy(orderByExpressions)
+            .setLimit(limit)
+            .setOffset(offset)
+            .build();
+    EntitiesRequestContext entitiesRequestContext = new EntitiesRequestContext(
+        tenantId,
+        startTime,
+        endTime,
+        entityType.name(),
+        "API.startTime",
+        requestHeaders);
+    Map<EntityKey, Builder> entityKeyBuilderResponseMap = Map.of(
+        EntityKey.of("entity-id-0"), Entity.newBuilder().putAttribute("API.name", getStringValue("entity-0")),
+        EntityKey.of("entity-id-1"), Entity.newBuilder().putAttribute("API.name", getStringValue("entity-1")),
+        EntityKey.of("entity-id-2"), Entity.newBuilder().putAttribute("API.name", getStringValue("entity-2"))
+    );
+
+    EntityFetcherResponse entityFetcherResponse = new EntityFetcherResponse(entityKeyBuilderResponseMap);
+    when(executionContext.getSourceToSelectionExpressionMap())
+        .thenReturn(Map.of("QS", List.of(selectionExpression)));
+    when(executionContext.getEntitiesRequest()).thenReturn(entitiesRequest);
+    when(executionContext.getTenantId()).thenReturn(tenantId);
+    when(executionContext.getRequestHeaders()).thenReturn(requestHeaders);
+    when(executionContext.getTimestampAttributeId()).thenReturn("API.startTime");
+    when(queryServiceEntityFetcher.getEntities(eq(entitiesRequestContext), eq(entitiesRequest)))
+        .thenReturn(entityFetcherResponse);
+    when(queryServiceEntityFetcher.getTimeAggregatedMetrics(eq(entitiesRequestContext), eq(entitiesRequest)))
+        .thenReturn(new EntityFetcherResponse());
+
+    DataFetcherNode dataFetcherNode =
+        new DataFetcherNode(
+            "QS", entitiesRequest.getFilter(), limit, offset, orderByExpressions, false);
+
+    compareEntityResponses(
+        new EntityResponse(
+            entityFetcherResponse, entityFetcherResponse.getEntityKeyBuilderMap().keySet()),
         executionVisitor.visit(dataFetcherNode));
   }
 
@@ -512,7 +570,7 @@ public class ExecutionVisitorTest {
         eq(entitiesRequestContext), eq(totalEntitiesRequest)))
         .thenReturn(totalEntityFetcherResponse);
     DataFetcherNode dataFetcherNode =
-        new DataFetcherNode("EDS", entitiesRequest.getFilter(), limit, offset, orderByExpressions);
+        new DataFetcherNode("EDS", entitiesRequest.getFilter(), limit, offset, orderByExpressions, true);
 
     compareEntityResponses(
         new EntityResponse(
@@ -723,7 +781,7 @@ public class ExecutionVisitorTest {
 
     DataFetcherNode dataFetcherNode =
         new DataFetcherNode(
-            "QS", entitiesRequest.getFilter(), limit + offset, 0, orderByExpressions);
+            "QS", entitiesRequest.getFilter(), limit + offset, 0, orderByExpressions, true);
     PaginateOnlyNode paginateOnlyNode = new PaginateOnlyNode(dataFetcherNode, limit, offset);
     SelectionNode childSelectionNode =
         new SelectionNode.Builder(paginateOnlyNode)
