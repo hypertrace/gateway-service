@@ -47,6 +47,7 @@ message EntitiesRequest {
   int32 offset = 21;
   bool include_non_live_entities = 22;
   string space_id = 23;
+  bool fetch_total = 24;
 }
 
 message EntitiesResponse {
