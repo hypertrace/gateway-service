@@ -92,6 +92,7 @@ public class ExecutionVisitor implements Visitor<EntityResponse> {
                 .collect(Collectors.toList()));
     Set<EntityKey> entityKeys =
         entityResponses.parallelStream()
+            .filter(EntityResponse::hasEntityKeys)
             .map(EntityResponse::getEntityKeys)
             .reduce(Sets::intersection)
             .orElse(Collections.emptySet());
@@ -123,6 +124,7 @@ public class ExecutionVisitor implements Visitor<EntityResponse> {
                 .collect(Collectors.toList()));
     Set<EntityKey> entityKeys =
         entityResponses.parallelStream()
+            .filter(EntityResponse::hasEntityKeys)
             .map(EntityResponse::getEntityKeys)
             .reduce(Sets::union)
             .orElse(Collections.emptySet());
@@ -175,22 +177,11 @@ public class ExecutionVisitor implements Visitor<EntityResponse> {
     // if the data fetcher node is fetching paginated records and the client has requested for
     // total, the total number of entities has to be fetched separately
     if (dataFetcherNode.canFetchTotal()) {
-      EntitiesRequest totalEntitiesRequest =
-          EntitiesRequest.newBuilder(executionContext.getEntitiesRequest())
-              .clearSelection()
-              .clearTimeAggregation()
-              .clearOrderBy()
-              .clearLimit()
-              .setOffset(0)
-              .setFilter(dataFetcherNode.getFilter())
-              .build();
-
+      // since, the pagination is pushed down to the data store, total can be requested directly
+      // from the data store
       return new EntityResponse(
           entityFetcher.getEntities(context, request),
-          entityFetcher
-              .getEntities(context, totalEntitiesRequest)
-              .getEntityKeyBuilderMap()
-              .keySet());
+          entityFetcher.getTotal(context, entitiesRequest));
     } else {
       // if the data fetcher node is not paginating, the total number of entities is equal to number
       // of records fetched
@@ -331,7 +322,11 @@ public class ExecutionVisitor implements Visitor<EntityResponse> {
       // if the child fetcher response is non empty, the total set of entity keys
       // has already been fetched by node below it.
       // Could be DataFetcherNode or a child SelectionNode
-      return new EntityResponse(response, childNodeResponse.getEntityKeys());
+      if (childNodeResponse.hasEntityKeys()) {
+        return new EntityResponse(response, childNodeResponse.getEntityKeys());
+      } else {
+        return new EntityResponse(response, childNodeResponse.getTotal());
+      }
     } else {
       // if the child fetcher response is empty, the total set of entity keys
       // is equal to the response fetched by the current SelectionNode

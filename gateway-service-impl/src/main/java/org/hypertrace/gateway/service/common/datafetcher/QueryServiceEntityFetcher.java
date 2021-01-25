@@ -2,6 +2,7 @@ package org.hypertrace.gateway.service.common.datafetcher;
 
 import static org.hypertrace.gateway.service.common.converters.QueryAndGatewayDtoConverter.convertToQueryExpression;
 import static org.hypertrace.gateway.service.common.converters.QueryRequestUtil.createCountByColumnSelection;
+import static org.hypertrace.gateway.service.common.converters.QueryRequestUtil.createDistinctCountByColumnSelection;
 import static org.hypertrace.gateway.service.common.converters.QueryRequestUtil.createFilter;
 import static org.hypertrace.gateway.service.common.converters.QueryRequestUtil.createStringNullLiteralExpression;
 import static org.hypertrace.gateway.service.common.converters.QueryRequestUtil.createTimeColumnGroupByExpression;
@@ -27,6 +28,8 @@ import org.hypertrace.core.query.service.api.Operator;
 import org.hypertrace.core.query.service.api.QueryRequest;
 import org.hypertrace.core.query.service.api.ResultSetChunk;
 import org.hypertrace.core.query.service.api.Row;
+import org.hypertrace.core.query.service.api.TotalQueryRequest;
+import org.hypertrace.core.query.service.api.TotalQueryResponse;
 import org.hypertrace.core.query.service.client.QueryServiceClient;
 import org.hypertrace.gateway.service.common.AttributeMetadataProvider;
 import org.hypertrace.gateway.service.common.QueryRequestContext;
@@ -486,6 +489,66 @@ public class QueryServiceEntityFetcher implements IEntityFetcher {
       resultMap.put(entry.getKey(), entityBuilder);
     }
     return new EntityFetcherResponse(resultMap);
+  }
+
+  @Override
+  public long getTotal(EntitiesRequestContext requestContext, EntitiesRequest entitiesRequest) {
+    Map<String, AttributeMetadata> attributeMetadataMap =
+        attributeMetadataProvider.getAttributesMetadata(
+            requestContext, entitiesRequest.getEntityType());
+    // Validate EntitiesRequest
+    entitiesRequestValidator.validate(entitiesRequest, attributeMetadataMap);
+
+    List<String> entityIdAttributes =
+        AttributeMetadataUtil.getIdAttributeIds(
+            attributeMetadataProvider,
+            entityIdColumnsConfigs,
+            requestContext,
+            entitiesRequest.getEntityType());
+
+    Filter.Builder filterBuilder =
+        constructQueryServiceFilter(entitiesRequest, requestContext, entityIdAttributes);
+
+    QueryRequest queryRequest =
+        QueryRequest.newBuilder()
+            .addSelection(
+                createDistinctCountByColumnSelection(
+                    Optional.ofNullable(entityIdAttributes.get(0)).orElseThrow()))
+            .setFilter(filterBuilder)
+            .build();
+
+    if (LOG.isDebugEnabled()) {
+      LOG.debug("Sending Query to Query Service ======== \n {}", queryRequest);
+    }
+
+    Iterator<ResultSetChunk> resultSetChunkIterator =
+        queryServiceClient.executeQuery(queryRequest, requestContext.getHeaders(),
+            requestTimeout);
+
+    while (resultSetChunkIterator.hasNext()) {
+      ResultSetChunk chunk = resultSetChunkIterator.next();
+      if (LOG.isDebugEnabled()) {
+        LOG.debug("Received chunk: " + chunk.toString());
+      }
+
+      if (chunk.getRowCount() < 1) {
+        break;
+      }
+
+      for (Row row : chunk.getRowList()) {
+        // only DISTINCTCOUNT column is requested as a selection
+        if (row.getColumnList().size() != 1) {
+          break;
+        }
+
+        return Long.parseLong(row.getColumn(0).getString());
+      }
+    }
+
+    LOG.error(
+        "Unable to query total number of entities from query service for query request: {}",
+        queryRequest);
+    return 0;
   }
 
   private QueryRequest buildTimeSeriesQueryRequest(

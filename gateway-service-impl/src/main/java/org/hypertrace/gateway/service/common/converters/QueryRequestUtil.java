@@ -107,6 +107,15 @@ public class QueryRequestUtil {
         .build();
   }
 
+  public static Expression createDistinctCountByColumnSelection(String columnName) {
+    return Expression.newBuilder()
+        .setFunction(
+            Function.newBuilder()
+                .setFunctionName("DISTINCTCOUNT")
+                .addArguments(createColumnExpression(columnName)))
+        .build();
+  }
+
   public static Expression createTimeColumnGroupByExpression(String timeColumn, long periodSecs) {
     return Expression.newBuilder()
         .setFunction(

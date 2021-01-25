@@ -3,10 +3,10 @@ package org.hypertrace.gateway.service.common.datafetcher;
 import java.util.ArrayList;
 import java.util.Comparator;
 import java.util.List;
-import java.util.Set;
 
 import org.hypertrace.gateway.service.entity.EntitiesRequestContext;
 import org.hypertrace.gateway.service.entity.EntityKey;
+import org.hypertrace.gateway.service.v1.common.Filter;
 import org.hypertrace.gateway.service.v1.common.Interval;
 import org.hypertrace.gateway.service.v1.common.MetricSeries;
 import org.hypertrace.gateway.service.v1.entity.EntitiesRequest;
@@ -46,4 +46,6 @@ public interface IEntityFetcher {
         .addAllValue(sortedIntervals)
         .build();
   }
+
+  long getTotal(EntitiesRequestContext requestContext, EntitiesRequest entitiesRequest);
 }
