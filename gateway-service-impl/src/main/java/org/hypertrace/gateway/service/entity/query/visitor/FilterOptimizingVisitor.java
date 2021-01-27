@@ -174,7 +174,8 @@ public class FilterOptimizingVisitor implements Visitor<QueryNode> {
                               filter,
                               dataFetcherNode.getLimit(),
                               dataFetcherNode.getOffset(),
-                              dataFetcherNode.getOrderByExpressionList());
+                              dataFetcherNode.getOrderByExpressionList(),
+                              dataFetcherNode.canFetchTotal());
                     } else {
                       return new NoOpNode();
                     }

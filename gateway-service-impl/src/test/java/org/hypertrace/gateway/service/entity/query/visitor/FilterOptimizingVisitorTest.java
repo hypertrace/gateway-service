@@ -85,9 +85,9 @@ public class FilterOptimizingVisitorTest {
     int offset = 5;
     List<OrderByExpression> orderByExpressions = Collections.singletonList(buildOrderByExpression("API.id"));
     DataFetcherNode dataFetcherNode1 =
-        new DataFetcherNode("QS", filter1, limit, offset, orderByExpressions);
+        new DataFetcherNode("QS", filter1, limit, offset, orderByExpressions, true);
     DataFetcherNode dataFetcherNode2 =
-        new DataFetcherNode("QS", filter2, limit, offset, orderByExpressions);
+        new DataFetcherNode("QS", filter2, limit, offset, orderByExpressions, true);
     AndNode andNode = new AndNode(List.of(dataFetcherNode1, dataFetcherNode2));
     QueryNode queryNode = andNode.acceptVisitor(new FilterOptimizingVisitor());
 

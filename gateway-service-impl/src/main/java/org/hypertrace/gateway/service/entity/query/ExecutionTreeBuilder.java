@@ -85,7 +85,8 @@ public class ExecutionTreeBuilder {
                 entitiesRequest.getFilter(),
                 entitiesRequest.getLimit(),
                 entitiesRequest.getOffset(),
-                entitiesRequest.getOrderByList());
+                entitiesRequest.getOrderByList(),
+                entitiesRequest.getFetchTotal());
         executionContext.setSortAndPaginationNodeAdded(true);
       }
 
@@ -175,12 +176,16 @@ public class ExecutionTreeBuilder {
   }
 
   private QueryNode buildExecutionTreeForEdsFilterAndSelection() {
-    Filter filter = executionContext.getEntitiesRequest().getFilter();
-    int selectionLimit = executionContext.getEntitiesRequest().getLimit();
-    int selectionOffset = executionContext.getEntitiesRequest().getOffset();
-    List<OrderByExpression> orderBys = executionContext.getEntitiesRequest().getOrderByList();
+    EntitiesRequest entitiesRequest = executionContext.getEntitiesRequest();
+    Filter filter = entitiesRequest.getFilter();
+    int selectionLimit = entitiesRequest.getLimit();
+    int selectionOffset = entitiesRequest.getOffset();
+    List<OrderByExpression> orderBys = entitiesRequest.getOrderByList();
+    boolean canFetchTotal = entitiesRequest.getFetchTotal();
 
-    QueryNode rootNode = new DataFetcherNode(EDS.name(), filter, selectionLimit, selectionOffset, orderBys);
+    QueryNode rootNode =
+        new DataFetcherNode(
+            EDS.name(), filter, selectionLimit, selectionOffset, orderBys, canFetchTotal);
     executionContext.setSortAndPaginationNodeAdded(true);
     return rootNode;
   }
@@ -327,6 +332,7 @@ public class ExecutionTreeBuilder {
     int selectionLimit = entitiesRequest.getLimit();
     int selectionOffset = entitiesRequest.getOffset();
     List<OrderByExpression> orderBys = entitiesRequest.getOrderByList();
+    boolean canFetchTotal = entitiesRequest.getFetchTotal();
 
     // query-service/Pinot does not support offset when group by is specified. Since we will be
     // grouping by at least the entity id, we will compute the non zero pagination ourselves. This
@@ -338,7 +344,8 @@ public class ExecutionTreeBuilder {
       selectionOffset = 0;
     }
 
-    return new DataFetcherNode(QS.name(), filter, selectionLimit, selectionOffset, orderBys);
+    return new DataFetcherNode(
+        QS.name(), filter, selectionLimit, selectionOffset, orderBys, canFetchTotal);
   }
 
   private QueryNode createPaginateOnlyNode(QueryNode queryNode, EntitiesRequest entitiesRequest) {
