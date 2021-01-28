@@ -157,7 +157,7 @@ public class EntitiesRequestAndResponseUtils {
         expectedEntityResponse.getEntityFetcherResponse(),
         actualEntityResponse.getEntityFetcherResponse());
 
-    assertEquals(expectedEntityResponse.getEntityKeys(), actualEntityResponse.getEntityKeys());
+    assertEquals(expectedEntityResponse.getTotal(), actualEntityResponse.getTotal());
   }
 
   public static Filter getTimeRangeFilter(String colName, long startTime, long endTime) {

@@ -8,6 +8,7 @@ import static org.hypertrace.gateway.service.common.EntitiesRequestAndResponseUt
 import static org.hypertrace.gateway.service.common.EntitiesRequestAndResponseUtils.generateEQFilter;
 import static org.hypertrace.gateway.service.common.EntitiesRequestAndResponseUtils.getAggregatedMetricValue;
 import static org.hypertrace.gateway.service.common.EntitiesRequestAndResponseUtils.getStringValue;
+import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.mockito.ArgumentMatchers.any;
@@ -134,15 +135,15 @@ public class ExecutionVisitorTest {
       EntityResponse finalResult =
           ExecutionVisitor.intersect(
               Arrays.asList(
-                  new EntityResponse(result1, result1.getEntityKeyBuilderMap().keySet()),
-                  new EntityResponse(result2, result2.getEntityKeyBuilderMap().keySet()),
-                  new EntityResponse(result3, result3.getEntityKeyBuilderMap().keySet())));
+                  new EntityResponse(result1, result1.getEntityKeyBuilderMap().size()),
+                  new EntityResponse(result2, result2.getEntityKeyBuilderMap().size()),
+                  new EntityResponse(result3, result3.getEntityKeyBuilderMap().size())));
 
       Map<EntityKey, Builder> finalEntities = finalResult.getEntityFetcherResponse().getEntityKeyBuilderMap();
-      Set<EntityKey> finalEntityKeys = finalResult.getEntityKeys();
+      long total = finalResult.getTotal();
 
       Assertions.assertEquals(1, finalEntities.size());
-      Assertions.assertEquals(1, finalEntityKeys.size());
+      Assertions.assertEquals(1, total);
 
       Entity.Builder builder = finalEntities.get(EntityKey.of("id1"));
       Assertions.assertNotNull(builder);
@@ -154,14 +155,14 @@ public class ExecutionVisitorTest {
       EntityResponse finalResult =
           ExecutionVisitor.intersect(
               Arrays.asList(
-                  new EntityResponse(result1, result1.getEntityKeyBuilderMap().keySet()),
-                  new EntityResponse(result2, result2.getEntityKeyBuilderMap().keySet()),
-                  new EntityResponse(result4, result4.getEntityKeyBuilderMap().keySet())));
+                  new EntityResponse(result1, result1.getEntityKeyBuilderMap().size()),
+                  new EntityResponse(result2, result2.getEntityKeyBuilderMap().size()),
+                  new EntityResponse(result4, result4.getEntityKeyBuilderMap().size())));
 
       Map<EntityKey, Builder> finalEntities = finalResult.getEntityFetcherResponse().getEntityKeyBuilderMap();
-      Set<EntityKey> finalEntityKeys = finalResult.getEntityKeys();
+      long total = finalResult.getTotal();
       assertTrue(finalEntities.isEmpty());
-      assertTrue(finalEntityKeys.isEmpty());
+      assertEquals(0, total);
     }
   }
 
@@ -171,14 +172,14 @@ public class ExecutionVisitorTest {
       EntityResponse finalResult =
           ExecutionVisitor.union(
               Arrays.asList(
-                  new EntityResponse(result1, result1.getEntityKeyBuilderMap().keySet()),
-                  new EntityResponse(result4, result4.getEntityKeyBuilderMap().keySet())));
+                  new EntityResponse(result1, result1.getEntityKeyBuilderMap().size()),
+                  new EntityResponse(result4, result4.getEntityKeyBuilderMap().size())));
 
       Map<EntityKey, Builder> finalEntities = finalResult.getEntityFetcherResponse().getEntityKeyBuilderMap();
-      Set<EntityKey> finalEntityKeys = finalResult.getEntityKeys();
+      long total = finalResult.getTotal();
 
       Assertions.assertEquals(4, finalEntities.size());
-      Assertions.assertEquals(4, finalEntityKeys.size());
+      Assertions.assertEquals(4, total);
       assertTrue(
           finalEntities
               .keySet()
@@ -186,12 +187,7 @@ public class ExecutionVisitorTest {
                   Stream.of("id1", "id2", "id3", "id4")
                       .map(EntityKey::of)
                       .collect(Collectors.toList())));
-      assertTrue(
-          finalEntityKeys
-              .containsAll(
-                  Stream.of("id1", "id2", "id3", "id4")
-                      .map(EntityKey::of)
-                      .collect(Collectors.toList())));
+      assertEquals(4, total);
       Assertions.assertEquals(
           result1.getEntityKeyBuilderMap().get(EntityKey.of("id1")),
           finalEntities.get(EntityKey.of("id1")));
@@ -392,14 +388,6 @@ public class ExecutionVisitorTest {
             .setLimit(limit)
             .setOffset(offset)
             .build();
-    EntitiesRequest totalEntitiesRequest =
-        EntitiesRequest.newBuilder(entitiesRequest)
-            .clearSelection()
-            .clearTimeAggregation()
-            .clearLimit()
-            .setOffset(0)
-            .clearOrderBy()
-            .build();
     EntitiesRequestContext entitiesRequestContext = new EntitiesRequestContext(
         tenantId,
         startTime,
@@ -413,17 +401,8 @@ public class ExecutionVisitorTest {
         EntityKey.of("entity-id-2"), Entity.newBuilder().putAttribute("API.name", getStringValue("entity-2"))
     );
 
-    Map<EntityKey, Builder> totalEntityKeyBuilderResponseMap = Map.of(
-        EntityKey.of("entity-id-0"), Entity.newBuilder().putAttribute("API.id", getStringValue("entity-0")),
-        EntityKey.of("entity-id-1"), Entity.newBuilder().putAttribute("API.id", getStringValue("entity-1")),
-        EntityKey.of("entity-id-2"), Entity.newBuilder().putAttribute("API.id", getStringValue("entity-2")),
-        EntityKey.of("entity-id-3"), Entity.newBuilder().putAttribute("API.id", getStringValue("entity-3")),
-        EntityKey.of("entity-id-4"), Entity.newBuilder().putAttribute("API.id", getStringValue("entity-4"))
-    );
-
     EntityFetcherResponse entityFetcherResponse = new EntityFetcherResponse(entityKeyBuilderResponseMap);
-    EntityFetcherResponse totalEntityFetcherResponse =
-        new EntityFetcherResponse(totalEntityKeyBuilderResponseMap);
+
     when(executionContext.getSourceToSelectionExpressionMap())
         .thenReturn(Map.of("QS", List.of(selectionExpression)));
     when(executionContext.getEntitiesRequest()).thenReturn(entitiesRequest);
@@ -432,9 +411,9 @@ public class ExecutionVisitorTest {
     when(executionContext.getTimestampAttributeId()).thenReturn("API.startTime");
     when(queryServiceEntityFetcher.getEntities(eq(entitiesRequestContext), eq(entitiesRequest)))
         .thenReturn(entityFetcherResponse);
-    when(queryServiceEntityFetcher.getEntities(
-            eq(entitiesRequestContext), eq(totalEntitiesRequest)))
-        .thenReturn(totalEntityFetcherResponse);
+    when(queryServiceEntityFetcher.getTotal(
+            eq(entitiesRequestContext), eq(entitiesRequest)))
+        .thenReturn(100L);
     when(queryServiceEntityFetcher.getTimeAggregatedMetrics(eq(entitiesRequestContext), eq(entitiesRequest)))
         .thenReturn(new EntityFetcherResponse());
 
@@ -443,8 +422,7 @@ public class ExecutionVisitorTest {
             "QS", entitiesRequest.getFilter(), limit, offset, orderByExpressions, true);
 
     compareEntityResponses(
-        new EntityResponse(
-            entityFetcherResponse, totalEntityFetcherResponse.getEntityKeyBuilderMap().keySet()),
+        new EntityResponse(entityFetcherResponse, 100L),
         executionVisitor.visit(dataFetcherNode));
   }
 
@@ -501,7 +479,7 @@ public class ExecutionVisitorTest {
 
     compareEntityResponses(
         new EntityResponse(
-            entityFetcherResponse, entityFetcherResponse.getEntityKeyBuilderMap().keySet()),
+            entityFetcherResponse, entityFetcherResponse.getEntityKeyBuilderMap().size()),
         executionVisitor.visit(dataFetcherNode));
   }
 
@@ -527,14 +505,6 @@ public class ExecutionVisitorTest {
             .setLimit(limit)
             .setOffset(offset)
             .build();
-    EntitiesRequest totalEntitiesRequest =
-        EntitiesRequest.newBuilder(entitiesRequest)
-            .clearSelection()
-            .clearTimeAggregation()
-            .clearLimit()
-            .setOffset(0)
-            .clearOrderBy()
-            .build();
     EntitiesRequestContext entitiesRequestContext = new EntitiesRequestContext(
         tenantId,
         startTime,
@@ -547,17 +517,8 @@ public class ExecutionVisitorTest {
         EntityKey.of("entity-id-1"), Entity.newBuilder().putAttribute("API.name", getStringValue("entity-1")),
         EntityKey.of("entity-id-2"), Entity.newBuilder().putAttribute("API.name", getStringValue("entity-2"))
     );
-    Map<EntityKey, Builder> totalEntityKeyBuilderResponseMap = Map.of(
-        EntityKey.of("entity-id-0"), Entity.newBuilder().putAttribute("API.id", getStringValue("entity-0")),
-        EntityKey.of("entity-id-1"), Entity.newBuilder().putAttribute("API.id", getStringValue("entity-1")),
-        EntityKey.of("entity-id-2"), Entity.newBuilder().putAttribute("API.id", getStringValue("entity-2")),
-        EntityKey.of("entity-id-3"), Entity.newBuilder().putAttribute("API.id", getStringValue("entity-3")),
-        EntityKey.of("entity-id-4"), Entity.newBuilder().putAttribute("API.id", getStringValue("entity-4"))
-    );
-
     EntityFetcherResponse entityFetcherResponse = new EntityFetcherResponse(entityKeyBuilderResponseMap);
-    EntityFetcherResponse totalEntityFetcherResponse =
-        new EntityFetcherResponse(totalEntityKeyBuilderResponseMap);
+
     when(executionContext.getSourceToSelectionExpressionMap())
         .thenReturn(Map.of("EDS", List.of(selectionExpression)));
     when(executionContext.getEntitiesRequest()).thenReturn(entitiesRequest);
@@ -566,15 +527,14 @@ public class ExecutionVisitorTest {
     when(executionContext.getTimestampAttributeId()).thenReturn("API.startTime");
     when(entityDataServiceEntityFetcher.getEntities(eq(entitiesRequestContext), eq(entitiesRequest)))
         .thenReturn(entityFetcherResponse);
-    when(entityDataServiceEntityFetcher.getEntities(
-        eq(entitiesRequestContext), eq(totalEntitiesRequest)))
-        .thenReturn(totalEntityFetcherResponse);
+    when(entityDataServiceEntityFetcher.getTotal(
+        eq(entitiesRequestContext), eq(entitiesRequest)))
+        .thenReturn(100L);
     DataFetcherNode dataFetcherNode =
         new DataFetcherNode("EDS", entitiesRequest.getFilter(), limit, offset, orderByExpressions, true);
 
     compareEntityResponses(
-        new EntityResponse(
-            entityFetcherResponse, totalEntityFetcherResponse.getEntityKeyBuilderMap().keySet()),
+        new EntityResponse(entityFetcherResponse, 100),
         executionVisitor.visit(dataFetcherNode));
   }
 
@@ -624,7 +584,7 @@ public class ExecutionVisitorTest {
 
     compareEntityResponses(
         new EntityResponse(
-            entityFetcherResponse, entityFetcherResponse.getEntityKeyBuilderMap().keySet()),
+            entityFetcherResponse, entityFetcherResponse.getEntityKeyBuilderMap().size()),
         executionVisitor.visit(dataFetcherNode));
     verify(queryServiceEntityFetcher, times(1)).getEntities(any(), any());
   }
@@ -658,14 +618,6 @@ public class ExecutionVisitorTest {
             .addAllOrderBy(orderByExpressions)
             .setLimit(limit)
             .setOffset(offset)
-            .build();
-    EntitiesRequest totalEntitiesRequest =
-        EntitiesRequest.newBuilder(entitiesRequest)
-            .clearSelection()
-            .clearTimeAggregation()
-            .clearLimit()
-            .setOffset(0)
-            .clearOrderBy()
             .build();
     EntitiesRequestContext entitiesRequestContext = new EntitiesRequestContext(
         tenantId,
@@ -718,17 +670,6 @@ public class ExecutionVisitorTest {
             .putMetricSeries("SUM_API.numCalls", getMockMetricSeries(30, "SUM"))
     );
 
-    Map<EntityKey, Builder> totalEntityKeyBuilderResponseMap = Map.of(
-        EntityKey.of("entity-id-0"), Entity.newBuilder().putAttribute("API.id", getStringValue("entity-0")),
-        EntityKey.of("entity-id-1"), Entity.newBuilder().putAttribute("API.id", getStringValue("entity-1")),
-        EntityKey.of("entity-id-2"), Entity.newBuilder().putAttribute("API.id", getStringValue("entity-2")),
-        EntityKey.of("entity-id-3"), Entity.newBuilder().putAttribute("API.id", getStringValue("entity-3")),
-        EntityKey.of("entity-id-4"), Entity.newBuilder().putAttribute("API.id", getStringValue("entity-4"))
-    );
-
-    EntityFetcherResponse totalEntityFetcherResponse =
-        new EntityFetcherResponse(totalEntityKeyBuilderResponseMap);
-
     when(executionContext.getEntityIdExpressions()).thenReturn(List.of(buildExpression(API_ID_ATTR)));
     when(executionContext.getSourceToSelectionExpressionMap())
         .thenReturn(Map.of("QS", List.of(selectionExpression)));
@@ -769,9 +710,9 @@ public class ExecutionVisitorTest {
     when(queryServiceEntityFetcher.getEntities(
             entitiesRequestContext, entitiesRequestForAttributes))
         .thenReturn(attributesResponse);
-    when(queryServiceEntityFetcher.getEntities(
-        eq(entitiesRequestContext), eq(totalEntitiesRequest)))
-        .thenReturn(totalEntityFetcherResponse);
+    when(queryServiceEntityFetcher.getTotal(
+        eq(entitiesRequestContext), eq(entitiesRequest)))
+        .thenReturn(100L);
     when(queryServiceEntityFetcher.getEntities(
             entitiesRequestContext, entitiesRequestForMetricAggregation))
         .thenReturn(new EntityFetcherResponse(entityKeyBuilderResponseMap2));
@@ -793,9 +734,7 @@ public class ExecutionVisitorTest {
             .build();
 
     compareEntityResponses(
-        new EntityResponse(
-            new EntityFetcherResponse(expectedEntityKeyBuilderResponseMap),
-            totalEntityFetcherResponse.getEntityKeyBuilderMap().keySet()),
+        new EntityResponse(new EntityFetcherResponse(expectedEntityKeyBuilderResponseMap), 100),
         executionVisitor.visit(selectionNode));
   }
 
@@ -816,7 +755,7 @@ public class ExecutionVisitorTest {
     when(entityDataServiceEntityFetcher.getEntities(any(), any())).thenReturn(result4);
     when(queryServiceEntityFetcher.getEntities(any(), any())).thenReturn(result4);
     when(executionVisitor.visit(any(NoOpNode.class)))
-        .thenReturn(new EntityResponse(result4, result4.getEntityKeyBuilderMap().keySet()));
+        .thenReturn(new EntityResponse(result4, result4.getEntityKeyBuilderMap().size()));
     executionVisitor.visit(selectionNode);
     verify(entityDataServiceEntityFetcher).getEntities(any(), any());
     verify(queryServiceEntityFetcher).getEntities(any(), any());
@@ -953,7 +892,7 @@ public class ExecutionVisitorTest {
     {
       compareEntityResponses(
           new EntityResponse(
-              new EntityFetcherResponse(entityKeyBuilderResponseMap1), totalEntityKeys),
+              new EntityFetcherResponse(entityKeyBuilderResponseMap1), 4),
           executionVisitor.visit(childSelectionNode));
     }
 
@@ -962,7 +901,7 @@ public class ExecutionVisitorTest {
     {
       compareEntityResponses(
           new EntityResponse(
-              new EntityFetcherResponse(expectedEntityKeyBuilderResponseMap), totalEntityKeys),
+              new EntityFetcherResponse(expectedEntityKeyBuilderResponseMap), 4),
           executionVisitor.visit(selectionNode));
     }
   }
@@ -990,7 +929,7 @@ public class ExecutionVisitorTest {
 
     EntityResponse response = executionVisitor.visit(selectionNode);
     Assertions.assertTrue(response.getEntityFetcherResponse().isEmpty());
-    Assertions.assertTrue(response.getEntityKeys().isEmpty());
+    Assertions.assertEquals(0, response.getTotal());
     verify(queryServiceEntityFetcher, never()).getEntities(any(), any());
   }
 

@@ -28,8 +28,6 @@ import org.hypertrace.core.query.service.api.Operator;
 import org.hypertrace.core.query.service.api.QueryRequest;
 import org.hypertrace.core.query.service.api.ResultSetChunk;
 import org.hypertrace.core.query.service.api.Row;
-import org.hypertrace.core.query.service.api.TotalQueryRequest;
-import org.hypertrace.core.query.service.api.TotalQueryResponse;
 import org.hypertrace.core.query.service.client.QueryServiceClient;
 import org.hypertrace.gateway.service.common.AttributeMetadataProvider;
 import org.hypertrace.gateway.service.common.QueryRequestContext;
