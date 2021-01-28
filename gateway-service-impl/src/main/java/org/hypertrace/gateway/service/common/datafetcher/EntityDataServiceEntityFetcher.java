@@ -11,6 +11,8 @@ import org.hypertrace.entity.query.service.v1.ColumnMetadata;
 import org.hypertrace.entity.query.service.v1.EntityQueryRequest;
 import org.hypertrace.entity.query.service.v1.ResultSetChunk;
 import org.hypertrace.entity.query.service.v1.Row;
+import org.hypertrace.entity.query.service.v1.TotalEntitiesRequest;
+import org.hypertrace.entity.query.service.v1.TotalEntitiesResponse;
 import org.hypertrace.gateway.service.common.AttributeMetadataProvider;
 import org.hypertrace.gateway.service.common.converters.EntityServiceAndGatewayServiceConverter;
 import org.hypertrace.gateway.service.common.util.AttributeMetadataUtil;
@@ -50,7 +52,10 @@ public class EntityDataServiceEntityFetcher implements IEntityFetcher {
       EntitiesRequestContext requestContext, EntitiesRequest entitiesRequest) {
     List<String> mappedEntityIdAttributeIds =
         AttributeMetadataUtil.getIdAttributeIds(
-            attributeMetadataProvider, entityIdColumnsConfigs, requestContext, entitiesRequest.getEntityType());
+            attributeMetadataProvider,
+            entityIdColumnsConfigs,
+            requestContext,
+            entitiesRequest.getEntityType());
     EntityQueryRequest.Builder builder =
         EntityQueryRequest.newBuilder()
             .setEntityType(entitiesRequest.getEntityType())
@@ -173,5 +178,36 @@ public class EntityDataServiceEntityFetcher implements IEntityFetcher {
   public EntityFetcherResponse getTimeAggregatedMetrics(
       EntitiesRequestContext requestContext, EntitiesRequest entitiesRequest) {
     throw new UnsupportedOperationException("Fetching time series data not supported by EDS");
+  }
+
+  @Override
+  public long getTotal(EntitiesRequestContext requestContext, EntitiesRequest entitiesRequest) {
+    EntityQueryRequest.Builder builder =
+        EntityQueryRequest.newBuilder()
+            .setEntityType(entitiesRequest.getEntityType())
+            .setFilter(
+                EntityServiceAndGatewayServiceConverter.convertToEntityServiceFilter(
+                    entitiesRequest.getFilter()));
+
+    // add time filter for supported scope
+    EntityServiceAndGatewayServiceConverter.addBetweenTimeFilter(
+        entitiesRequest.getStartTimeMillis(),
+        entitiesRequest.getEndTimeMillis(),
+        attributeMetadataProvider,
+        entitiesRequest,
+        builder,
+        requestContext);
+
+    EntityQueryRequest entityQueryRequest = builder.build();
+
+    TotalEntitiesRequest totalEntitiesRequest =
+        TotalEntitiesRequest.newBuilder()
+            .setEntityType(entitiesRequest.getEntityType())
+            .setFilter(entityQueryRequest.getFilter())
+            .build();
+
+    TotalEntitiesResponse response =
+        entityQueryServiceClient.total(totalEntitiesRequest, requestContext.getHeaders());
+    return response.getTotal();
   }
 }

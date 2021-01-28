@@ -9,6 +9,8 @@ import org.hypertrace.entity.query.service.v1.EntityQueryRequest;
 import org.hypertrace.entity.query.service.v1.ResultSetChunk;
 import org.hypertrace.entity.query.service.v1.ResultSetMetadata;
 import org.hypertrace.entity.query.service.v1.Row;
+import org.hypertrace.entity.query.service.v1.TotalEntitiesRequest;
+import org.hypertrace.entity.query.service.v1.TotalEntitiesResponse;
 import org.hypertrace.entity.query.service.v1.Value;
 import org.hypertrace.entity.query.service.v1.ValueType;
 import org.hypertrace.gateway.service.common.AttributeMetadataProvider;
@@ -22,6 +24,7 @@ import org.hypertrace.gateway.service.v1.common.Filter;
 import org.hypertrace.gateway.service.v1.common.OrderByExpression;
 import org.hypertrace.gateway.service.v1.entity.EntitiesRequest;
 import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Nested;
 import org.junit.jupiter.api.Test;
 
 import java.util.List;
@@ -185,6 +188,50 @@ public class EntityDataServiceEntityFetcherTests {
               new EntitiesRequestContext(TENANT_ID, 0, 1, "API", "API.startTime", Map.of()),
               EntitiesRequest.newBuilder().build());
         });
+  }
+
+  @Nested
+  class TotalEntities {
+    @Test
+    public void shouldReturnTotal() {
+      List<OrderByExpression> orderByExpressions = List.of(buildOrderByExpression(API_ID_ATTR));
+      long startTime = 1L;
+      long endTime = 10L;
+      int limit = 10;
+      int offset = 5;
+      String tenantId = "TENANT_ID";
+      Map<String, String> requestHeaders = Map.of("x-tenant-id", tenantId);
+      AttributeScope entityType = AttributeScope.API;
+      EntitiesRequest entitiesRequest =
+          EntitiesRequest.newBuilder()
+              .setEntityType(entityType.name())
+              .setStartTimeMillis(startTime)
+              .setEndTimeMillis(endTime)
+              .setFilter(
+                  Filter.newBuilder()
+                      .setOperator(AND)
+                      .addChildFilter(generateEQFilter(API_TYPE_ATTR, "HTTP"))
+                      .addChildFilter(generateEQFilter(API_NAME_ATTR, "DISCOVERED")))
+              .addAllOrderBy(orderByExpressions)
+              .setLimit(limit)
+              .setOffset(offset)
+              .build();
+      EntitiesRequestContext entitiesRequestContext =
+          new EntitiesRequestContext(
+              tenantId, startTime, endTime, entityType.name(), "API.startTime", requestHeaders);
+
+      TotalEntitiesRequest expectedQueryRequest =
+          TotalEntitiesRequest.newBuilder()
+              .setEntityType("API")
+              .setFilter(convertToEntityServiceFilter(entitiesRequest.getFilter()))
+              .build();
+
+      when(entityQueryServiceClient.total(eq(expectedQueryRequest), eq(requestHeaders)))
+          .thenReturn(TotalEntitiesResponse.newBuilder().setTotal(100L).build());
+
+      assertEquals(
+          100, entityDataServiceEntityFetcher.getTotal(entitiesRequestContext, entitiesRequest));
+    }
   }
 
   private void mockAttributeMetadataProvider(String attributeScope) {

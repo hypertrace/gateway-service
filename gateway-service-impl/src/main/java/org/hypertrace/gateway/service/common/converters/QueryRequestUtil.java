@@ -18,6 +18,9 @@ public class QueryRequestUtil {
 
   public static final String DATE_TIME_CONVERTER = "dateTimeConvert";
 
+  private static final String COUNT_FUNCTION_NAME = "COUNT";
+  private static final String DISTINCTCOUNT_FUNCTION_NAME = "DISTINCTCOUNT";
+
   public static Filter createBetweenTimesFilter(String columnName, long lower, long higher) {
     return Filter.newBuilder()
         .setOperator(Operator.AND)
@@ -102,7 +105,16 @@ public class QueryRequestUtil {
     return Expression.newBuilder()
         .setFunction(
             Function.newBuilder()
-                .setFunctionName("COUNT")
+                .setFunctionName(COUNT_FUNCTION_NAME)
+                .addArguments(createColumnExpression(columnName)))
+        .build();
+  }
+
+  public static Expression createDistinctCountByColumnSelection(String columnName) {
+    return Expression.newBuilder()
+        .setFunction(
+            Function.newBuilder()
+                .setFunctionName(DISTINCTCOUNT_FUNCTION_NAME)
                 .addArguments(createColumnExpression(columnName)))
         .build();
   }

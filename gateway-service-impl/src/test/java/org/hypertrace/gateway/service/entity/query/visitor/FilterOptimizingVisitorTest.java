@@ -9,6 +9,7 @@ import static org.mockito.Mockito.mock;
 
 import org.hypertrace.gateway.service.entity.query.AndNode;
 import org.hypertrace.gateway.service.entity.query.DataFetcherNode;
+import org.hypertrace.gateway.service.entity.query.OrNode;
 import org.hypertrace.gateway.service.entity.query.PaginateOnlyNode;
 import org.hypertrace.gateway.service.entity.query.QueryNode;
 import org.hypertrace.gateway.service.entity.query.SelectionNode;
@@ -103,6 +104,69 @@ public class FilterOptimizingVisitorTest {
     assertEquals(limit, mergedDataFetcherNode.getLimit());
     assertEquals(offset, mergedDataFetcherNode.getOffset());
     assertEquals(orderByExpressions, mergedDataFetcherNode.getOrderByExpressionList());
+  }
+
+
+  @Test
+  public void testAndNodes_dataFetcherNodes_sameSource() {
+    Filter filter1 = generateEQFilter("API.name", "apiName1");
+    Filter filter2 = generateEQFilter("API.id", "apiId1");
+    Filter filter3 = generateEQFilter("API.type", "HTTP");
+    DataFetcherNode dataFetcherNode1 =
+        new DataFetcherNode("QS", filter1);
+    DataFetcherNode dataFetcherNode2 =
+        new DataFetcherNode("QS", filter2);
+    DataFetcherNode dataFetcherNode3 =
+        new DataFetcherNode("QS", filter3);
+    AndNode andNode = new AndNode(List.of(dataFetcherNode1, dataFetcherNode2));
+    AndNode parentAndNode = new AndNode(List.of(andNode, dataFetcherNode3));
+
+    QueryNode queryNode = parentAndNode.acceptVisitor(new FilterOptimizingVisitor());
+
+    DataFetcherNode mergedDataFetcherNode = (DataFetcherNode) queryNode;
+    assertEquals("QS", mergedDataFetcherNode.getSource());
+    assertEquals(
+        Filter.newBuilder()
+            .setOperator(Operator.AND)
+            .addChildFilter(
+                Filter.newBuilder()
+                    .setOperator(Operator.AND)
+                    .addChildFilter(filter1)
+                    .addChildFilter(filter2))
+            .addChildFilter(filter3)
+            .build(),
+        mergedDataFetcherNode.getFilter());
+  }
+
+  @Test
+  public void testOrNodes_dataFetcherNodes_sameSource() {
+    Filter filter1 = generateEQFilter("API.name", "apiName1");
+    Filter filter2 = generateEQFilter("API.id", "apiId1");
+    Filter filter3 = generateEQFilter("API.type", "HTTP");
+    DataFetcherNode dataFetcherNode1 =
+        new DataFetcherNode("QS", filter1);
+    DataFetcherNode dataFetcherNode2 =
+        new DataFetcherNode("QS", filter2);
+    DataFetcherNode dataFetcherNode3 =
+        new DataFetcherNode("QS", filter3);
+    OrNode orNode = new OrNode(List.of(dataFetcherNode1, dataFetcherNode2));
+    OrNode parentOrNode = new OrNode(List.of(orNode, dataFetcherNode3));
+
+    QueryNode queryNode = parentOrNode.acceptVisitor(new FilterOptimizingVisitor());
+
+    DataFetcherNode mergedDataFetcherNode = (DataFetcherNode) queryNode;
+    assertEquals("QS", mergedDataFetcherNode.getSource());
+    assertEquals(
+        Filter.newBuilder()
+            .setOperator(Operator.OR)
+            .addChildFilter(
+                Filter.newBuilder()
+                    .setOperator(Operator.OR)
+                    .addChildFilter(filter1)
+                    .addChildFilter(filter2))
+            .addChildFilter(filter3)
+            .build(),
+        mergedDataFetcherNode.getFilter());
   }
 
   @Test

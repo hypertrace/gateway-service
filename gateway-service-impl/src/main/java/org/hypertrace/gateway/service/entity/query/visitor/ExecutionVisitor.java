@@ -17,7 +17,6 @@ import java.util.concurrent.Executors;
 import java.util.stream.Collectors;
 import java.util.stream.IntStream;
 
-import com.google.common.collect.Sets;
 import org.hypertrace.gateway.service.common.datafetcher.EntityFetcherResponse;
 import org.hypertrace.gateway.service.common.datafetcher.EntityResponse;
 import org.hypertrace.gateway.service.common.datafetcher.IEntityFetcher;
@@ -90,13 +89,8 @@ public class ExecutionVisitor implements Visitor<EntityResponse> {
             entityResponses.parallelStream()
                 .map(EntityResponse::getEntityFetcherResponse)
                 .collect(Collectors.toList()));
-    Set<EntityKey> entityKeys =
-        entityResponses.parallelStream()
-            .map(EntityResponse::getEntityKeys)
-            .reduce(Sets::intersection)
-            .orElse(Collections.emptySet());
 
-    return new EntityResponse(entityFetcherResponse, entityKeys);
+    return new EntityResponse(entityFetcherResponse, entityFetcherResponse.size());
   }
 
   private static EntityFetcherResponse unionEntities(List<EntityFetcherResponse> builders) {
@@ -121,13 +115,8 @@ public class ExecutionVisitor implements Visitor<EntityResponse> {
             entityResponses.parallelStream()
                 .map(EntityResponse::getEntityFetcherResponse)
                 .collect(Collectors.toList()));
-    Set<EntityKey> entityKeys =
-        entityResponses.parallelStream()
-            .map(EntityResponse::getEntityKeys)
-            .reduce(Sets::union)
-            .orElse(Collections.emptySet());
 
-    return new EntityResponse(entityFetcherResponse, entityKeys);
+    return new EntityResponse(entityFetcherResponse, entityFetcherResponse.size());
   }
 
   @Override
@@ -175,27 +164,16 @@ public class ExecutionVisitor implements Visitor<EntityResponse> {
     // if the data fetcher node is fetching paginated records and the client has requested for
     // total, the total number of entities has to be fetched separately
     if (dataFetcherNode.canFetchTotal()) {
-      EntitiesRequest totalEntitiesRequest =
-          EntitiesRequest.newBuilder(executionContext.getEntitiesRequest())
-              .clearSelection()
-              .clearTimeAggregation()
-              .clearOrderBy()
-              .clearLimit()
-              .setOffset(0)
-              .setFilter(dataFetcherNode.getFilter())
-              .build();
-
+      // since, the pagination is pushed down to the data store, total can be requested directly
+      // from the data store
       return new EntityResponse(
           entityFetcher.getEntities(context, request),
-          entityFetcher
-              .getEntities(context, totalEntitiesRequest)
-              .getEntityKeyBuilderMap()
-              .keySet());
+          entityFetcher.getTotal(context, entitiesRequest));
     } else {
       // if the data fetcher node is not paginating, the total number of entities is equal to number
       // of records fetched
       EntityFetcherResponse response = entityFetcher.getEntities(context, request);
-      return new EntityResponse(response, response.getEntityKeyBuilderMap().keySet());
+      return new EntityResponse(response, response.getEntityKeyBuilderMap().size());
     }
   }
 
@@ -328,14 +306,14 @@ public class ExecutionVisitor implements Visitor<EntityResponse> {
             .reduce(childEntityFetcherResponse, (r1, r2) -> unionEntities(Arrays.asList(r1, r2)));
 
     if (!childEntityFetcherResponse.isEmpty()) {
-      // if the child fetcher response is non empty, the total set of entity keys
+      // if the child fetcher response is non empty, the total
       // has already been fetched by node below it.
       // Could be DataFetcherNode or a child SelectionNode
-      return new EntityResponse(response, childNodeResponse.getEntityKeys());
+      return new EntityResponse(response, childNodeResponse.getTotal());
     } else {
-      // if the child fetcher response is empty, the total set of entity keys
+      // if the child fetcher response is empty, the total
       // is equal to the response fetched by the current SelectionNode
-      return new EntityResponse(response, response.getEntityKeyBuilderMap().keySet());
+      return new EntityResponse(response, response.size());
     }
   }
 
@@ -413,7 +391,7 @@ public class ExecutionVisitor implements Visitor<EntityResponse> {
     Map<EntityKey, Builder> linkedHashMap = new LinkedHashMap<>();
     sortedList.forEach(entry -> linkedHashMap.put(entry.getKey(), entry.getValue()));
     return new EntityResponse(
-        new EntityFetcherResponse(linkedHashMap), childNodeResponse.getEntityKeys());
+        new EntityFetcherResponse(linkedHashMap), childNodeResponse.getTotal());
   }
 
   @Override
@@ -442,6 +420,6 @@ public class ExecutionVisitor implements Visitor<EntityResponse> {
     sortedList.forEach(entry -> linkedHashMap.put(entry.getKey(), entry.getValue()));
 
     return new EntityResponse(
-        new EntityFetcherResponse(linkedHashMap), childNodeResponse.getEntityKeys());
+        new EntityFetcherResponse(linkedHashMap), childNodeResponse.getTotal());
   }
 }

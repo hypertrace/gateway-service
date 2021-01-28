@@ -144,7 +144,6 @@ public class EntityService {
         executionTree.acceptVisitor(new ExecutionVisitor(executionContext, EntityQueryHandlerRegistry.get()));
 
     EntityFetcherResponse entityFetcherResponse = response.getEntityFetcherResponse();
-    Set<EntityKey> allEntityKeys = response.getEntityKeys();
 
     List<Entity.Builder> results =
         this.responsePostProcessor.transform(
@@ -157,7 +156,7 @@ public class EntityService {
     }
 
     EntitiesResponse.Builder responseBuilder =
-        EntitiesResponse.newBuilder().setTotal(allEntityKeys.size());
+        EntitiesResponse.newBuilder().setTotal(Long.valueOf(response.getTotal()).intValue());
 
     results.forEach(e -> responseBuilder.addEntity(e.build()));
 
