@@ -25,8 +25,8 @@ dependencies {
 
   implementation("org.hypertrace.core.query.service:query-service-client:0.5.2")
   implementation("org.hypertrace.core.attribute.service:attribute-service-client:0.9.3")
-  implementation("org.hypertrace.entity.service:entity-service-client:0.6.0-SNAPSHOT")
-  implementation("org.hypertrace.entity.service:entity-service-api:0.6.0-SNAPSHOT")
+  implementation("org.hypertrace.entity.service:entity-service-client:0.5.6")
+  implementation("org.hypertrace.entity.service:entity-service-api:0.5.6")
   implementation("org.hypertrace.core.grpcutils:grpc-context-utils:0.3.2")
   implementation("org.hypertrace.core.serviceframework:platform-metrics:0.1.19")
 
