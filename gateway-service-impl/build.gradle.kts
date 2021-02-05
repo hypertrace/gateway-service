@@ -37,10 +37,7 @@ dependencies {
   implementation("org.apache.commons:commons-lang3:3.10")
   implementation("org.apache.commons:commons-math:2.2")
   implementation("com.google.protobuf:protobuf-java-util:3.13.0")
-
-  // Metrics
-  implementation("io.dropwizard.metrics:metrics-core:4.1.9")
-
+  
   // Needed by clusters snapshots
   implementation("com.fasterxml.jackson.core:jackson-annotations:2.11.1")
   implementation("com.fasterxml.jackson.core:jackson-databind:2.11.1")
