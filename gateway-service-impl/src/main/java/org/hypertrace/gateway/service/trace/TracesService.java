@@ -4,14 +4,17 @@ import static org.hypertrace.gateway.service.common.converters.QueryRequestUtil.
 import static org.hypertrace.gateway.service.common.util.AttributeMetadataUtil.getSpaceAttributeId;
 import static org.hypertrace.gateway.service.common.util.AttributeMetadataUtil.getTimestampAttributeId;
 
-import com.codahale.metrics.Timer;
-import com.codahale.metrics.Timer.Context;
 import com.google.common.annotations.VisibleForTesting;
+import com.google.common.collect.ImmutableMap;
+import io.micrometer.core.instrument.Timer;
+import java.time.Duration;
+import java.time.Instant;
 import java.util.ArrayList;
 import java.util.Collection;
 import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
+import java.util.concurrent.TimeUnit;
 import org.hypertrace.core.attribute.service.v1.AttributeMetadata;
 import org.hypertrace.core.query.service.api.ColumnMetadata;
 import org.hypertrace.core.query.service.api.Filter;
@@ -45,6 +48,7 @@ import org.slf4j.LoggerFactory;
  * <p>Trace will not have independent attributes.
  */
 public class TracesService {
+
   private static final Logger LOG = LoggerFactory.getLogger(TracesService.class);
 
   private final QueryServiceClient queryServiceClient;
@@ -68,12 +72,12 @@ public class TracesService {
   }
 
   private void initMetrics() {
-    queryExecutionTimer = new Timer();
-    PlatformMetricsRegistry.register("traces.query.execution", queryExecutionTimer);
+    queryExecutionTimer = PlatformMetricsRegistry.registerTimer("hypertrace.traces.query.execution",
+        ImmutableMap.of());
   }
 
   public TracesResponse getTracesByFilter(RequestContext context, TracesRequest request) {
-    final Context timerContext = queryExecutionTimer.time();
+    Instant start = Instant.now();
     try {
       requestValidator.validateScope(request);
 
@@ -101,7 +105,8 @@ public class TracesService {
       }
       return response;
     } finally {
-      timerContext.stop();
+      queryExecutionTimer
+          .record(Duration.between(start, Instant.now()).toMillis(), TimeUnit.MILLISECONDS);
     }
   }
 

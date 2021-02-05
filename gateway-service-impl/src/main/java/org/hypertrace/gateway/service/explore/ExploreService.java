@@ -1,8 +1,12 @@
 package org.hypertrace.gateway.service.explore;
 
-import com.codahale.metrics.Timer;
-import com.codahale.metrics.Timer.Context;
+
+import com.google.common.collect.ImmutableMap;
+import io.micrometer.core.instrument.Timer;
+import java.time.Duration;
+import java.time.Instant;
 import java.util.Map;
+import java.util.concurrent.TimeUnit;
 import org.hypertrace.core.attribute.service.v1.AttributeMetadata;
 import org.hypertrace.core.query.service.client.QueryServiceClient;
 import org.hypertrace.core.serviceframework.metrics.PlatformMetricsRegistry;
@@ -12,6 +16,7 @@ import org.hypertrace.gateway.service.v1.explore.ExploreRequest;
 import org.hypertrace.gateway.service.v1.explore.ExploreResponse;
 
 public class ExploreService {
+
   private final AttributeMetadataProvider attributeMetadataProvider;
   private final ExploreRequestValidator exploreRequestValidator = new ExploreRequestValidator();
 
@@ -39,13 +44,13 @@ public class ExploreService {
   }
 
   private void initMetrics() {
-    queryExecutionTimer = new Timer();
-    PlatformMetricsRegistry.register("explore.query.execution", queryExecutionTimer);
+    queryExecutionTimer = PlatformMetricsRegistry
+        .registerTimer("hypertrace.explore.query.execution", ImmutableMap.of());
   }
 
   public ExploreResponse explore(
       String tenantId, ExploreRequest request, Map<String, String> requestHeaders) {
-    final Context timerContext = queryExecutionTimer.time();
+    final Instant start = Instant.now();
     try {
       ExploreRequestContext exploreRequestContext =
           new ExploreRequestContext(tenantId, request, requestHeaders);
@@ -64,7 +69,8 @@ public class ExploreService {
           new ExploreRequestContext(tenantId, request, requestHeaders);
 
       Map<String, AttributeMetadata> attributeMetadataMap =
-          attributeMetadataProvider.getAttributesMetadata(newExploreRequestContext, request.getContext());
+          attributeMetadataProvider
+              .getAttributesMetadata(newExploreRequestContext, request.getContext());
       exploreRequestValidator.validate(request, attributeMetadataMap);
 
       IRequestHandler requestHandler = getRequestHandler(request);
@@ -73,7 +79,8 @@ public class ExploreService {
           requestHandler.handleRequest(newExploreRequestContext, request);
       return responseBuilder.build();
     } finally {
-      timerContext.stop();
+      queryExecutionTimer
+          .record(Duration.between(start, Instant.now()).toMillis(), TimeUnit.MILLISECONDS);
     }
   }
 

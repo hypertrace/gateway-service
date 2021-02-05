@@ -1,11 +1,13 @@
 package org.hypertrace.gateway.service.entity;
 
-import com.codahale.metrics.Timer;
 import com.google.common.base.Preconditions;
+import com.google.common.collect.ImmutableMap;
+import io.micrometer.core.instrument.Timer;
+import java.time.Duration;
+import java.time.Instant;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
-import java.util.Set;
 import java.util.concurrent.TimeUnit;
 import org.apache.commons.lang3.StringUtils;
 import org.hypertrace.core.attribute.service.v1.AttributeMetadata;
@@ -49,6 +51,7 @@ import org.slf4j.LoggerFactory;
  * <p>If there is any specific implementation for a specific Entity Type, this can be extended
  */
 public class EntityService {
+
   private static final Logger LOG = LoggerFactory.getLogger(EntityService.class);
 
   private static final UpdateEntityRequestValidator updateEntityRequestValidator =
@@ -96,10 +99,10 @@ public class EntityService {
   }
 
   private void initMetrics() {
-    this.queryBuildTimer = new Timer();
-    this.queryExecutionTimer = new Timer();
-    PlatformMetricsRegistry.register("entities.query.build", queryBuildTimer);
-    PlatformMetricsRegistry.register("entities.query.execution", queryExecutionTimer);
+    this.queryBuildTimer = PlatformMetricsRegistry
+        .registerTimer("hypertrace.entities.query.build", ImmutableMap.of());
+    this.queryExecutionTimer = PlatformMetricsRegistry
+        .registerTimer("hypertrace.entities.query.execution", ImmutableMap.of());
   }
 
   /**
@@ -113,7 +116,7 @@ public class EntityService {
    */
   public EntitiesResponse getEntities(
       String tenantId, EntitiesRequest originalRequest, Map<String, String> requestHeaders) {
-    long startTime = System.currentTimeMillis();
+    Instant start = Instant.now();
     String timestampAttributeId = AttributeMetadataUtil.getTimestampAttributeId(
         metadataProvider, new RequestContext(tenantId, requestHeaders), originalRequest.getEntityType());
 
@@ -134,7 +137,8 @@ public class EntityService {
         ExecutionContext.from(metadataProvider, entityIdColumnsConfigs, preProcessedRequest, entitiesRequestContext);
     ExecutionTreeBuilder executionTreeBuilder = new ExecutionTreeBuilder(executionContext);
     QueryNode executionTree = executionTreeBuilder.build();
-    queryBuildTimer.update(System.currentTimeMillis() - startTime, TimeUnit.MILLISECONDS);
+    queryBuildTimer
+        .record(Duration.between(start, Instant.now()).toMillis(), TimeUnit.MILLISECONDS);
 
     /*
     * EntityQueryHandlerRegistry.get() returns Singleton object, so, it's guaranteed that
@@ -160,7 +164,7 @@ public class EntityService {
 
     results.forEach(e -> responseBuilder.addEntity(e.build()));
 
-    long queryExecutionTime = System.currentTimeMillis() - startTime;
+    long queryExecutionTime = Duration.between(start, Instant.now()).toMillis();
     if (queryExecutionTime > logConfig.getQueryThresholdInMillis()) {
       LOG.info(
           "Total query execution took: {}(ms) for request: {}",
@@ -168,7 +172,7 @@ public class EntityService {
           originalRequest);
     }
 
-    queryExecutionTimer.update(queryExecutionTime, TimeUnit.MILLISECONDS);
+    queryExecutionTimer.record(queryExecutionTime, TimeUnit.MILLISECONDS);
     return responseBuilder.build();
   }
 
