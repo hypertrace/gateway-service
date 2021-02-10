@@ -1,13 +1,10 @@
 # Gateway Service
-###### org.hypertrace.gateway.service
-
-[![CircleCI](https://circleci.com/gh/hypertrace/gateway-service.svg?style=svg)](https://circleci.com/gh/hypertrace/gateway-service)
 
 An entry service that acts as a single access point for querying data from other services like entity-service, query-service, Attribute service. 
 
 ## Description
 
-| ![space-1.jpg](https://hypertrace-docs.s3.amazonaws.com/hypertrace-query-arch.png) | 
+| ![space-1.jpg](https://hypertrace-docs.s3.amazonaws.com/arch/ht-query.png) | 
 |:--:| 
 | *Hypertrace Query Architecture* |
 
@@ -29,6 +26,7 @@ Run `./gradlew test` to execute unit tests.
 
 ### Testing image
 
+#### With docker-compose
 To test your image using the docker-compose setup follow the steps:
 
 - Commit you changes to a branch say `gateway-service-test`.
@@ -45,6 +43,16 @@ cd gateway-service && git checkout gateway-service-test && cd ..
     ...
 ```
 - and then run `docker-compose up` to test the setup.
+
+#### With Helm setup
+Add image repository and tag in values.yaml file [here](https://github.com/hypertrace/hypertrace/blob/main/kubernetes/platform-services/values.yaml) like below and then run `./hypertrace.sh install` again and you can test your image!
+
+```yaml
+gateway-service:
+  image:
+    repository: "hypertrace/gateway-service"
+    tagOverride: "test"
+ ```
 
 ## Docker Image Source:
 - [DockerHub > Gateway service](https://hub.docker.com/r/hypertrace/gateway-service)
