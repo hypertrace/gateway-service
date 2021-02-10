@@ -7,7 +7,7 @@ An entry service that acts as a single access point for querying data from other
 
 ## Description
 
-| ![space-1.jpg](https://hypertrace-docs.s3.amazonaws.com/hypertrace-query-arch.png) | 
+| ![space-1.jpg](https://hypertrace-docs.s3.amazonaws.com/arch/ht-query.png) | 
 |:--:| 
 | *Hypertrace Query Architecture* |
 
@@ -45,6 +45,16 @@ cd gateway-service && git checkout gateway-service-test && cd ..
     ...
 ```
 - and then run `docker-compose up` to test the setup.
+
+### Helm setup
+Add image repository and tag in values.yaml file [here](https://github.com/hypertrace/hypertrace/blob/main/kubernetes/platform-services/values.yaml) like below and then run `./hypertrace.sh install` again and you can test your image!
+
+```yaml
+gateway-service:
+  image:
+    repository: "hypertrace/gateway-service"
+    tagOverride: "test"
+ ```
 
 ## Docker Image Source:
 - [DockerHub > Gateway service](https://hub.docker.com/r/hypertrace/gateway-service)
