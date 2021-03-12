@@ -199,4 +199,52 @@ public class TimeAggregationsRequestHandlerTest {
             .build(),
         orderByExpressions.get(1));
   }
+
+  @Test
+  public void intervalStartTimeOrderingNotAddedIfAlreadyRequested() {
+    ExploreRequest exploreRequest =
+        ExploreRequest.newBuilder()
+            .addTimeAggregation(
+                TimeAggregation.newBuilder()
+                    .setPeriod(Period.newBuilder().setUnit("SECONDS").setValue(60))
+                    .setAggregation(
+                        Expression.newBuilder()
+                            .setFunction(
+                                FunctionExpression.newBuilder()
+                                    .setFunction(FunctionType.MAX)
+                                    .setAlias("MAX_Duration")
+                                    .addArguments(
+                                        Expression.newBuilder()
+                                            .setColumnIdentifier(
+                                                ColumnIdentifier.newBuilder()
+                                                    .setColumnName("duration"))))))
+            .addOrderBy(
+                OrderByExpression.newBuilder()
+                    .setOrder(SortOrder.DESC)
+                    .setExpression(
+                        Expression.newBuilder()
+                            .setColumnIdentifier(
+                                ColumnIdentifier.newBuilder()
+                                    .setColumnName(ColumnName.INTERVAL_START_TIME.name()))))
+            .build();
+
+    TimeAggregationsRequestHandler requestHandler =
+        new TimeAggregationsRequestHandler(
+            mock(QueryServiceClient.class), 500, mock(AttributeMetadataProvider.class));
+    List<OrderByExpression> orderByExpressions =
+        requestHandler.getRequestOrderByExpressions(exploreRequest);
+
+    // Should maintain the interval start time order as only order by
+    Assertions.assertEquals(
+        List.of(
+            OrderByExpression.newBuilder()
+                .setOrder(SortOrder.DESC)
+                .setExpression(
+                    Expression.newBuilder()
+                        .setColumnIdentifier(
+                            ColumnIdentifier.newBuilder()
+                                .setColumnName(ColumnName.INTERVAL_START_TIME.name())))
+                .build()),
+        orderByExpressions);
+  }
 }
