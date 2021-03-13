@@ -19,8 +19,13 @@ import org.hypertrace.gateway.service.common.AttributeMetadataProvider;
 import org.hypertrace.gateway.service.common.converters.QueryAndGatewayDtoConverter;
 import org.hypertrace.gateway.service.common.util.AttributeMetadataUtil;
 import org.hypertrace.gateway.service.common.util.QueryExpressionUtil;
+import org.hypertrace.gateway.service.v1.common.ColumnIdentifier;
+import org.hypertrace.gateway.service.v1.common.Expression;
+import org.hypertrace.gateway.service.v1.common.OrderByExpression;
 import org.hypertrace.gateway.service.v1.common.Period;
+import org.hypertrace.gateway.service.v1.common.SortOrder;
 import org.hypertrace.gateway.service.v1.common.TimeAggregation;
+import org.hypertrace.gateway.service.v1.common.ValueType;
 import org.hypertrace.gateway.service.v1.explore.ColumnName;
 import org.hypertrace.gateway.service.v1.explore.ExploreRequest;
 import org.hypertrace.gateway.service.v1.explore.ExploreResponse;
@@ -80,30 +85,40 @@ public class TimeAggregationsRequestHandler extends RequestHandler {
    * @return
    */
   @Override
-  public List<org.hypertrace.gateway.service.v1.common.OrderByExpression>
+  public List<OrderByExpression>
       getRequestOrderByExpressions(ExploreRequest request) {
-    List<org.hypertrace.gateway.service.v1.common.OrderByExpression> existingOrderBys =
+    List<OrderByExpression> existingOrderBys =
         super.getRequestOrderByExpressions(request);
-    // Create an OrderBy Expression based on the interval start time column name. We will need to
-    // sort based on this
-    // as the first column.
-    org.hypertrace.gateway.service.v1.common.OrderByExpression intervalStartTimeOrderBy =
-        org.hypertrace.gateway.service.v1.common.OrderByExpression.newBuilder()
-            .setOrder(org.hypertrace.gateway.service.v1.common.SortOrder.ASC)
-            .setExpression(
-                org.hypertrace.gateway.service.v1.common.Expression.newBuilder()
-                    .setColumnIdentifier(
-                        org.hypertrace.gateway.service.v1.common.ColumnIdentifier.newBuilder()
-                            .setColumnName(ColumnName.INTERVAL_START_TIME.name())))
-            .build();
-
-    List<org.hypertrace.gateway.service.v1.common.OrderByExpression> orderByExpressions =
+    List<OrderByExpression> resolvedOrderBys =
         new ArrayList<>();
-    // Add the intervalStartTime OrderBy first and then the request's actual order by expressions.
-    orderByExpressions.add(intervalStartTimeOrderBy);
-    orderByExpressions.addAll(existingOrderBys);
 
-    return orderByExpressions;
+    if (!this.containsIntervalOrdering(existingOrderBys)) {
+      // Create an OrderBy Expression based on the interval start time column name. We will need to
+      // sort based on this as the first column.
+      OrderByExpression defaultIntervalOrdering =
+          OrderByExpression.newBuilder()
+              .setOrder(SortOrder.ASC)
+              .setExpression(
+                  Expression.newBuilder()
+                      .setColumnIdentifier(
+                          ColumnIdentifier.newBuilder()
+                              .setColumnName(ColumnName.INTERVAL_START_TIME.name())))
+              .build();
+
+      resolvedOrderBys.add(defaultIntervalOrdering);
+    }
+
+    resolvedOrderBys.addAll(existingOrderBys);
+
+    return resolvedOrderBys;
+  }
+
+  private boolean containsIntervalOrdering(List<OrderByExpression> orderByExpressions) {
+    return orderByExpressions.stream()
+        .map(OrderByExpression::getExpression)
+        .map(Expression::getColumnIdentifier)
+        .map(ColumnIdentifier::getColumnName)
+        .anyMatch(name -> name.equals(ColumnName.INTERVAL_START_TIME.name()));
   }
 
   private void addTimeAggregationsToRequest(
@@ -183,7 +198,7 @@ public class TimeAggregationsRequestHandler extends RequestHandler {
     // We will need to manually create a Long type value for it since it's a timestamp.
     org.hypertrace.gateway.service.v1.common.Value timeColumnValue =
         org.hypertrace.gateway.service.v1.common.Value.newBuilder()
-            .setValueType(org.hypertrace.gateway.service.v1.common.ValueType.LONG)
+            .setValueType(ValueType.LONG)
             .setLong(Long.parseLong(row.getColumn(0).getString()))
             .build();
 
@@ -227,7 +242,7 @@ public class TimeAggregationsRequestHandler extends RequestHandler {
   @Override
   protected List<org.hypertrace.gateway.service.v1.common.Row.Builder> sortAndPaginateRowBuilders(
       List<org.hypertrace.gateway.service.v1.common.Row.Builder> rowBuilders,
-      List<org.hypertrace.gateway.service.v1.common.OrderByExpression> orderByExpressions,
+      List<OrderByExpression> orderByExpressions,
       int limit,
       int offset) {
     RowComparator rowComparator = new RowComparator(orderByExpressions);
