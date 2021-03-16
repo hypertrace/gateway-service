@@ -114,11 +114,10 @@ public class RequestHandler implements RequestHandlerWithSorting {
 
   private Iterator<ResultSetChunk> executeQuery(
       ExploreRequestContext context, QueryRequest queryRequest) {
-    // FIXME: revert to debug before merging
-    if (getLogger().isInfoEnabled()) {
+    if (getLogger().isDebugEnabled()) {
       try {
         getLogger()
-            .info(
+            .debug(
                 "Sending Request to Query Service ======== \n {}",
                 JsonFormat.printer().print(queryRequest));
       } catch (InvalidProtocolBufferException e) {
@@ -193,16 +192,7 @@ public class RequestHandler implements RequestHandlerWithSorting {
 
     while (resultSetChunkIterator.hasNext()) {
       ResultSetChunk chunk = resultSetChunkIterator.next();
-      // FIXME: revert to debug before merging
-      if (getLogger().isInfoEnabled()) {
-        getLogger().info("Received chunk: ");
-        try {
-          getLogger().info(JsonFormat.printer().print(chunk));
-        } catch (InvalidProtocolBufferException e) {
-          e.printStackTrace();
-        }
-      }
-
+      getLogger().debug("Received chunk: {}", chunk);
       if (chunk.getRowCount() < 1) {
         break;
       }

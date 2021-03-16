@@ -1,9 +1,6 @@
 package org.hypertrace.gateway.service.explore;
 
-
 import com.google.common.collect.ImmutableMap;
-import com.google.protobuf.InvalidProtocolBufferException;
-import com.google.protobuf.util.JsonFormat;
 import io.micrometer.core.instrument.Timer;
 import java.time.Duration;
 import java.time.Instant;
@@ -16,12 +13,9 @@ import org.hypertrace.gateway.service.common.AttributeMetadataProvider;
 import org.hypertrace.gateway.service.common.config.ScopeFilterConfigs;
 import org.hypertrace.gateway.service.v1.explore.ExploreRequest;
 import org.hypertrace.gateway.service.v1.explore.ExploreResponse;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
 
 public class ExploreService {
 
-  private static final Logger LOG = LoggerFactory.getLogger(ExploreService.class);
   private final AttributeMetadataProvider attributeMetadataProvider;
   private final ExploreRequestValidator exploreRequestValidator = new ExploreRequestValidator();
 
@@ -56,13 +50,6 @@ public class ExploreService {
   public ExploreResponse explore(
       String tenantId, ExploreRequest request, Map<String, String> requestHeaders) {
 
-    // FIXME: remove before merging
-    try {
-      LOG.info("Received explorer request");
-      LOG.info(JsonFormat.printer().print(request));
-    } catch (InvalidProtocolBufferException e) {
-      e.printStackTrace();
-    }
     final Instant start = Instant.now();
     try {
       ExploreRequestContext exploreRequestContext =
@@ -91,13 +78,6 @@ public class ExploreService {
       ExploreResponse.Builder responseBuilder =
           requestHandler.handleRequest(newExploreRequestContext, request);
 
-      // FIXME: remove before merging
-      try {
-        LOG.info("Sending explorer response");
-        LOG.info(JsonFormat.printer().print(responseBuilder));
-      } catch (InvalidProtocolBufferException e) {
-        e.printStackTrace();
-      }
       return responseBuilder.build();
     } finally {
       queryExecutionTimer
