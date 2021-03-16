@@ -1,6 +1,5 @@
 package org.hypertrace.gateway.service.explore;
 
-
 import com.google.common.collect.ImmutableMap;
 import io.micrometer.core.instrument.Timer;
 import java.time.Duration;
@@ -50,6 +49,7 @@ public class ExploreService {
 
   public ExploreResponse explore(
       String tenantId, ExploreRequest request, Map<String, String> requestHeaders) {
+
     final Instant start = Instant.now();
     try {
       ExploreRequestContext exploreRequestContext =
@@ -77,6 +77,7 @@ public class ExploreService {
 
       ExploreResponse.Builder responseBuilder =
           requestHandler.handleRequest(newExploreRequestContext, request);
+
       return responseBuilder.build();
     } finally {
       queryExecutionTimer
@@ -87,11 +88,11 @@ public class ExploreService {
   private IRequestHandler getRequestHandler(ExploreRequest request) {
     if (hasTimeAggregationsAndGroupBy(request)) {
       return timeAggregationsWithGroupByRequestHandler;
-    } else if (hasTimeAggregations(request)) {
-      return timeAggregationsRequestHandler;
-    } else {
-      return normalRequestHandler;
     }
+    if (hasTimeAggregations(request)) {
+      return timeAggregationsRequestHandler;
+    }
+    return normalRequestHandler;
   }
 
   private boolean hasTimeAggregations(ExploreRequest request) {

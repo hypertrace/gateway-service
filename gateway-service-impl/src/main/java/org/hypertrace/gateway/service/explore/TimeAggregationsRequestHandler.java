@@ -5,10 +5,7 @@ import static org.hypertrace.gateway.service.common.converters.QueryRequestUtil.
 import java.time.Duration;
 import java.time.temporal.ChronoUnit;
 import java.util.ArrayList;
-import java.util.HashMap;
 import java.util.List;
-import java.util.Map;
-import java.util.stream.Collectors;
 import org.hypertrace.core.query.service.api.ColumnMetadata;
 import org.hypertrace.core.query.service.api.QueryRequest;
 import org.hypertrace.core.query.service.api.ResultSetMetadata;
@@ -47,8 +44,7 @@ public class TimeAggregationsRequestHandler extends RequestHandler {
       ExploreRequest request,
       AttributeMetadataProvider attributeMetadataProvider) {
     // Set hasGroupBy=true in the request context since we will group by the timestamp column
-    // irregardless of the
-    // presence of a groupBy or not.
+    // regardless of the presence of a groupBy or not.
     requestContext.setHasGroupBy(true);
     QueryRequest.Builder builder = QueryRequest.newBuilder();
 
@@ -236,45 +232,6 @@ public class TimeAggregationsRequestHandler extends RequestHandler {
     } else { // Simple columnId Expression value eg. groupBy columns or column selections
       handleQueryServiceResponseSingleColumn(
           queryServiceValue, metadata, rowBuilder, requestContext, attributeMetadataProvider, null);
-    }
-  }
-
-  @Override
-  protected List<org.hypertrace.gateway.service.v1.common.Row.Builder> sortAndPaginateRowBuilders(
-      List<org.hypertrace.gateway.service.v1.common.Row.Builder> rowBuilders,
-      List<OrderByExpression> orderByExpressions,
-      int limit,
-      int offset) {
-    RowComparator rowComparator = new RowComparator(orderByExpressions);
-
-    Map<Long, Integer> counterMap = new HashMap<>();
-
-    // For Time aggregations, we will not support offset for now since we are not sure what it
-    // really means on time
-    // series data.
-    return rowBuilders.stream()
-        .sorted(rowComparator)
-        .filter(rowBuilder -> isWithinLimitInInterval(rowBuilder, counterMap, limit))
-        .collect(Collectors.toList());
-  }
-
-  private boolean isWithinLimitInInterval(
-      org.hypertrace.gateway.service.v1.common.Row.Builder rowBuilder,
-      Map<Long, Integer> counterMap,
-      int limit) {
-    long intervalStartTime =
-        rowBuilder.getColumnsMap().get(ColumnName.INTERVAL_START_TIME.name()).getLong();
-    if (!counterMap.containsKey(intervalStartTime)) {
-      counterMap.put(intervalStartTime, 1);
-      return true;
-    } else {
-      int counter = counterMap.get(intervalStartTime);
-      if (counter == limit) {
-        return false;
-      } else {
-        counterMap.put(intervalStartTime, counter + 1);
-        return true;
-      }
     }
   }
 

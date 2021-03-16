@@ -17,7 +17,6 @@ import org.hypertrace.core.query.service.api.Value;
 import org.hypertrace.core.query.service.client.QueryServiceClient;
 import org.hypertrace.gateway.service.common.AttributeMetadataProvider;
 import org.hypertrace.gateway.service.common.converters.QueryAndGatewayDtoConverter;
-import org.hypertrace.gateway.service.common.util.ArithmeticValueUtil;
 import org.hypertrace.gateway.service.common.util.AttributeMetadataUtil;
 import org.hypertrace.gateway.service.common.util.DataCollectionUtil;
 import org.hypertrace.gateway.service.common.util.ExpressionReader;
@@ -25,7 +24,6 @@ import org.hypertrace.gateway.service.common.util.MetricAggregationFunctionUtil;
 import org.hypertrace.gateway.service.common.util.OrderByUtil;
 import org.hypertrace.gateway.service.v1.common.Expression;
 import org.hypertrace.gateway.service.v1.common.FunctionExpression;
-import org.hypertrace.gateway.service.v1.common.FunctionType;
 import org.hypertrace.gateway.service.v1.common.OrderByExpression;
 import org.hypertrace.gateway.service.v1.explore.ExploreRequest;
 import org.hypertrace.gateway.service.v1.explore.ExploreResponse;
@@ -77,7 +75,7 @@ public class RequestHandler implements RequestHandlerWithSorting {
     List<Expression> aggregatedSelections =
         ExpressionReader.getFunctionExpressions(request.getSelectionList().stream());
     aggregatedSelections.forEach(
-        (aggregatedSelection) -> {
+        aggregatedSelection -> {
           requestContext.mapAliasToFunctionExpression(
               aggregatedSelection.getFunction().getAlias(), aggregatedSelection.getFunction());
           builder.addSelection(
@@ -87,7 +85,7 @@ public class RequestHandler implements RequestHandlerWithSorting {
     List<Expression> columnSelections =
         ExpressionReader.getColumnExpressions(request.getSelectionList().stream());
     columnSelections.forEach(
-        (columnSelection) ->
+        columnSelection ->
             builder.addSelection(
                 QueryAndGatewayDtoConverter.convertToQueryExpression(columnSelection)));
 
@@ -150,7 +148,7 @@ public class RequestHandler implements RequestHandlerWithSorting {
   void addGroupByExpressions(QueryRequest.Builder builder, ExploreRequest request) {
     request
         .getGroupByList()
-        .forEach((expression -> addGroupByExpressionToBuilder(builder, expression)));
+        .forEach(expression -> addGroupByExpressionToBuilder(builder, expression));
   }
 
   private void addSortLimitAndOffset(ExploreRequest request, QueryRequest.Builder queryBuilder) {
@@ -194,10 +192,7 @@ public class RequestHandler implements RequestHandlerWithSorting {
 
     while (resultSetChunkIterator.hasNext()) {
       ResultSetChunk chunk = resultSetChunkIterator.next();
-      if (getLogger().isDebugEnabled()) {
-        getLogger().debug("Received chunk: " + chunk.toString());
-      }
-
+      getLogger().debug("Received chunk: {}", chunk);
       if (chunk.getRowCount() < 1) {
         break;
       }
@@ -210,7 +205,7 @@ public class RequestHandler implements RequestHandlerWithSorting {
       chunk
           .getRowList()
           .forEach(
-              (row) ->
+              row ->
                   handleQueryServiceResponseSingleRow(
                       row,
                       chunk.getResultSetMetadata(),
@@ -224,7 +219,7 @@ public class RequestHandler implements RequestHandlerWithSorting {
       sortAndPaginatePostProcess(
           builder,
           requestContext.getOrderByExpressions(),
-          requestContext.getLimit(),
+          requestContext.getRowLimitBeforeRest(),
           requestContext.getOffset());
     }
 
@@ -260,7 +255,7 @@ public class RequestHandler implements RequestHandlerWithSorting {
       org.hypertrace.gateway.service.v1.common.Row.Builder rowBuilder,
       ExploreRequestContext requestContext,
       AttributeMetadataProvider attributeMetadataProvider) {
-    org.hypertrace.gateway.service.v1.common.FunctionExpression function =
+    FunctionExpression function =
         requestContext.getFunctionExpressionByAlias(metadata.getColumnName());
     handleQueryServiceResponseSingleColumn(
         queryServiceValue,

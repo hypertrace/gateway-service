@@ -1,6 +1,9 @@
 package org.hypertrace.gateway.service.explore;
 
+import com.google.common.collect.ImmutableSet;
+import com.google.common.collect.ImmutableSortedSet;
 import java.util.List;
+import java.util.Set;
 import java.util.stream.Collectors;
 import org.hypertrace.gateway.service.v1.common.ColumnIdentifier;
 import org.hypertrace.gateway.service.v1.common.Expression;
@@ -53,7 +56,7 @@ class TheRestGroupRequestHandler {
         originalResponse,
         theRestGroupResponse,
         orderByExpressions,
-        originalRequest.getLimit(),
+        context.getRowLimitAfterRest(), // check how many rows expected from original request
         originalRequest.getOffset(),
         requestHandler,
         originalRequest.getGroupByList());
@@ -63,13 +66,12 @@ class TheRestGroupRequestHandler {
       ExploreResponse.Builder originalResponse,
       ExploreResponse.Builder theRestGroupResponse,
       List<OrderByExpression> orderBys,
-      int originalLimit,
-      int originalOffset,
+      int rowLimit,
+      int rowOffset,
       RequestHandlerWithSorting requestHandler,
       List<Expression> groupBys) {
     mergeTheRestResponseIntoOriginalResponse(originalResponse, theRestGroupResponse, groupBys);
-    requestHandler.sortAndPaginatePostProcess(
-        originalResponse, orderBys, originalLimit + 1, originalOffset);
+    requestHandler.sortAndPaginatePostProcess(originalResponse, orderBys, rowLimit, rowOffset);
   }
 
   /**
@@ -88,7 +90,6 @@ class TheRestGroupRequestHandler {
             .clearGroupBy() // Remove groupBy
             .clearOrderBy() // Remove orderBy
             .setIncludeRestGroup(false) // Set includeRestGroup to false.
-            .setLimit(1) // Only one row
             .setOffset(0); // No offset
 
     // Create a filter to exclude the values in the the groups found in the original request.
@@ -117,9 +118,8 @@ class TheRestGroupRequestHandler {
       ExploreRequest originalRequest, ExploreResponse.Builder originalResponse) {
     if (originalRequest.getGroupByList().size() == 1) {
       return createExcludeFoundGroupsNotInListFilter(originalRequest, originalResponse);
-    } else {
-      return createExcludeFoundGroupsAndChainFilter(originalRequest, originalResponse);
     }
+    return createExcludeFoundGroupsAndChainFilter(originalRequest, originalResponse);
   }
 
   private Filter.Builder createExcludeFoundGroupsNotInListFilter(
@@ -131,7 +131,7 @@ class TheRestGroupRequestHandler {
         .forEach(
             groupBy -> {
               String columnName = groupBy.getColumnIdentifier().getColumnName();
-              List<String> excludedValues = getExcludedValues(columnName, originalResponse);
+              Set<String> excludedValues = getExcludedValues(columnName, originalResponse);
               filterBuilder.addChildFilter(createExcludedChildFilter(columnName, excludedValues));
             });
 
@@ -212,16 +212,16 @@ class TheRestGroupRequestHandler {
     return filterBuilder;
   }
 
-  private List<String> getExcludedValues(
+  private Set<String> getExcludedValues(
       String columnName, ExploreResponse.Builder originalResponse) {
     // GroupBy only supports columns expressions for now.
     return originalResponse.getRowBuilderList().stream()
         .map(rowBuilder -> rowBuilder.getColumnsMap().get(columnName))
         .map(Value::getString)
-        .collect(Collectors.toUnmodifiableList());
+        .collect(ImmutableSet.toImmutableSet());
   }
 
-  private Filter.Builder createExcludedChildFilter(String columnName, List<String> excludedValues) {
+  private Filter.Builder createExcludedChildFilter(String columnName, Set<String> excludedValues) {
     return Filter.newBuilder()
         .setLhs(
             Expression.newBuilder()

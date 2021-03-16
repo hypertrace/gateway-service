@@ -1,0 +1,449 @@
+[
+  {
+    "request": {
+      "filter": {
+        "childFilter": [
+          {
+            "lhs": {
+              "columnIdentifier": {
+                "columnName": "SERVICE.startTime"
+              }
+            },
+            "operator": "GE",
+            "rhs": {
+              "literal": {
+                "value": {
+                  "valueType": "LONG",
+                  "long": "1615593600000"
+                }
+              }
+            }
+          },
+          {
+            "lhs": {
+              "columnIdentifier": {
+                "columnName": "SERVICE.startTime"
+              }
+            },
+            "operator": "LT",
+            "rhs": {
+              "literal": {
+                "value": {
+                  "valueType": "LONG",
+                  "long": "1615844349000"
+                }
+              }
+            }
+          }
+        ]
+      },
+      "selection": [
+        {
+          "function": {
+            "functionName": "SUM",
+            "arguments": [
+              {
+                "columnIdentifier": {
+                  "columnName": "SERVICE.numCalls"
+                }
+              }
+            ],
+            "alias": "SUM_SERVICE.numCalls_[]"
+          }
+        },
+        {
+          "columnIdentifier": {
+            "columnName": "SERVICE.name",
+            "alias": "SERVICE.name"
+          }
+        }
+      ],
+      "groupBy": [
+        {
+          "columnIdentifier": {
+            "columnName": "SERVICE.name",
+            "alias": "SERVICE.name"
+          }
+        }
+      ],
+      "limit": 10000
+    },
+    "response": {
+      "isLastChunk": true,
+      "resultSetMetadata": {
+        "columnMetadata": [
+          {
+            "columnName": "SERVICE.name"
+          },
+          {
+            "columnName": "SUM_SERVICE.numCalls_[]"
+          }
+        ]
+      },
+      "row": [
+        {
+          "column": [
+            {
+              "string": "dummypartner"
+            },
+            {
+              "string": "136098.0"
+            }
+          ]
+        },
+        {
+          "column": [
+            {
+              "string": "nginx-traceshop"
+            },
+            {
+              "string": "136269.0"
+            }
+          ]
+        },
+        {
+          "column": [
+            {
+              "string": "struts-app"
+            },
+            {
+              "string": "1.0"
+            }
+          ]
+        },
+        {
+          "column": [
+            {
+              "string": "exemplargrpc"
+            },
+            {
+              "string": "501678.0"
+            }
+          ]
+        },
+        {
+          "column": [
+            {
+              "string": "ambassador-ambassador"
+            },
+            {
+              "string": "168.0"
+            }
+          ]
+        },
+        {
+          "column": [
+            {
+              "string": "proxy"
+            },
+            {
+              "string": "4181.0"
+            }
+          ]
+        },
+        {
+          "column": [
+            {
+              "string": "checkoutservice"
+            },
+            {
+              "string": "1350.0"
+            }
+          ]
+        },
+        {
+          "column": [
+            {
+              "string": "tim-hack-test"
+            },
+            {
+              "string": "8.0"
+            }
+          ]
+        },
+        {
+          "column": [
+            {
+              "string": "frontend"
+            },
+            {
+              "string": "19.0"
+            }
+          ]
+        },
+        {
+          "column": [
+            {
+              "string": "orderservice"
+            },
+            {
+              "string": "13376.0"
+            }
+          ]
+        },
+        {
+          "column": [
+            {
+              "string": "shipitservice"
+            },
+            {
+              "string": "1348.0"
+            }
+          ]
+        },
+        {
+          "column": [
+            {
+              "string": "recommendationservice"
+            },
+            {
+              "string": "39639.0"
+            }
+          ]
+        },
+        {
+          "column": [
+            {
+              "string": "traceshop"
+            },
+            {
+              "string": "136258.0"
+            }
+          ]
+        },
+        {
+          "column": [
+            {
+              "string": "userservice"
+            },
+            {
+              "string": "2684.0"
+            }
+          ]
+        },
+        {
+          "column": [
+            {
+              "string": "partnerintegrationservice"
+            },
+            {
+              "string": "1347.0"
+            }
+          ]
+        },
+        {
+          "column": [
+            {
+              "string": "emailservice"
+            },
+            {
+              "string": "3531.0"
+            }
+          ]
+        },
+        {
+          "column": [
+            {
+              "string": "dataservice"
+            },
+            {
+              "string": "434804.0"
+            }
+          ]
+        },
+        {
+          "column": [
+            {
+              "string": "productcatalogservice"
+            },
+            {
+              "string": "316962.0"
+            }
+          ]
+        },
+        {
+          "column": [
+            {
+              "string": "shippingservice"
+            },
+            {
+              "string": "5788.0"
+            }
+          ]
+        },
+        {
+          "column": [
+            {
+              "string": "loginservice"
+            },
+            {
+              "string": "134091.0"
+            }
+          ]
+        },
+        {
+          "column": [
+            {
+              "string": "adservice"
+            },
+            {
+              "string": "37338.0"
+            }
+          ]
+        },
+        {
+          "column": [
+            {
+              "string": "userreviewservice"
+            },
+            {
+              "string": "35194.0"
+            }
+          ]
+        },
+        {
+          "column": [
+            {
+              "string": "ext_cap"
+            },
+            {
+              "string": "168.0"
+            }
+          ]
+        },
+        {
+          "column": [
+            {
+              "string": "paymentservice"
+            },
+            {
+              "string": "2184.0"
+            }
+          ]
+        },
+        {
+          "column": [
+            {
+              "string": "cartservice"
+            },
+            {
+              "string": "24700.0"
+            }
+          ]
+        },
+        {
+          "column": [
+            {
+              "string": "currencyservice"
+            },
+            {
+              "string": "151414.0"
+            }
+          ]
+        }
+      ]
+    }
+  },
+  {
+    "request": {
+      "filter": {
+        "childFilter": [
+          {
+            "childFilter": [
+              {
+                "lhs": {
+                  "columnIdentifier": {
+                    "columnName": "SERVICE.startTime"
+                  }
+                },
+                "operator": "GE",
+                "rhs": {
+                  "literal": {
+                    "value": {
+                      "valueType": "LONG",
+                      "long": "1615593600000"
+                    }
+                  }
+                }
+              },
+              {
+                "lhs": {
+                  "columnIdentifier": {
+                    "columnName": "SERVICE.startTime"
+                  }
+                },
+                "operator": "LT",
+                "rhs": {
+                  "literal": {
+                    "value": {
+                      "valueType": "LONG",
+                      "long": "1615844349000"
+                    }
+                  }
+                }
+              }
+            ]
+          },
+          {
+            "childFilter": [
+              {
+                "lhs": {
+                  "columnIdentifier": {
+                    "columnName": "SERVICE.name"
+                  }
+                },
+                "operator": "NOT_IN",
+                "rhs": {
+                  "literal": {
+                    "value": {
+                      "valueType": "STRING_ARRAY",
+                      "stringArray": [
+                        "dummypartner",
+                        "nginx-traceshop"
+                      ]
+                    }
+                  }
+                }
+              }
+            ]
+          }
+        ]
+      },
+      "selection": [
+        {
+          "function": {
+            "functionName": "SUM",
+            "arguments": [
+              {
+                "columnIdentifier": {
+                  "columnName": "SERVICE.numCalls"
+                }
+              }
+            ],
+            "alias": "SUM_SERVICE.numCalls_[]"
+          }
+        }
+      ],
+      "limit": 6
+    },
+    "response": {
+      "isLastChunk": true,
+      "resultSetMetadata": {
+        "columnMetadata": [
+          {
+            "columnName": "SUM_SERVICE.numCalls_[]"
+          }
+        ]
+      },
+      "row": [
+        {
+          "column": [
+            {
+              "string": "1848231.0"
+            }
+          ]
+        }
+      ]
+    }
+  }
+]
