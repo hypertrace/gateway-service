@@ -1,0 +1,93 @@
+{
+  "row": [{
+    "columns": {
+      "INTERVAL_START_TIME": {
+        "valueType": "LONG",
+        "long": "1615593600000"
+      },
+      "SERVICE.name": {
+        "valueType": "STRING",
+        "string": "dummypartner"
+      },
+      "SUM_SERVICE.numCalls_[]": {
+        "valueType": "LONG",
+        "long": "1616"
+      }
+    }
+  }, {
+    "columns": {
+      "INTERVAL_START_TIME": {
+        "valueType": "LONG",
+        "long": "1615593600000"
+      },
+      "SERVICE.name": {
+        "valueType": "STRING",
+        "string": "nginx-traceshop"
+      },
+      "SUM_SERVICE.numCalls_[]": {
+        "valueType": "LONG",
+        "long": "1989"
+      }
+    }
+  }, {
+    "columns": {
+      "INTERVAL_START_TIME": {
+        "valueType": "LONG",
+        "long": "1615597200000"
+      },
+      "SERVICE.name": {
+        "valueType": "STRING",
+        "string": "dummypartner"
+      },
+      "SUM_SERVICE.numCalls_[]": {
+        "valueType": "LONG",
+        "long": "2525"
+      }
+    }
+  }, {
+    "columns": {
+      "INTERVAL_START_TIME": {
+        "valueType": "LONG",
+        "long": "1615597200000"
+      },
+      "SERVICE.name": {
+        "valueType": "STRING",
+        "string": "nginx-traceshop"
+      },
+      "SUM_SERVICE.numCalls_[]": {
+        "valueType": "LONG",
+        "long": "1977"
+      }
+    }
+  }, {
+    "columns": {
+      "INTERVAL_START_TIME": {
+        "valueType": "LONG",
+        "long": "1615600800000"
+      },
+      "SERVICE.name": {
+        "valueType": "STRING",
+        "string": "nginx-traceshop"
+      },
+      "SUM_SERVICE.numCalls_[]": {
+        "valueType": "LONG",
+        "long": "1965"
+      }
+    }
+  }, {
+    "columns": {
+      "INTERVAL_START_TIME": {
+        "valueType": "LONG",
+        "long": "1615600800000"
+      },
+      "SERVICE.name": {
+        "valueType": "STRING",
+        "string": "dummypartner"
+      },
+      "SUM_SERVICE.numCalls_[]": {
+        "valueType": "LONG",
+        "long": "2323"
+      }
+    }
+  }]
+}

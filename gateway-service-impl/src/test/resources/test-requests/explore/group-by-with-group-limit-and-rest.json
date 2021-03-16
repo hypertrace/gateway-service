@@ -1,0 +1,33 @@
+{
+  "context": "SERVICE",
+  "startTimeMillis": "1615593600000",
+  "endTimeMillis": "1615844349000",
+  "filter": {
+  },
+  "selection": [
+    {
+      "function": {
+        "function": "SUM",
+        "arguments": [
+          {
+            "columnIdentifier": {
+              "columnName": "SERVICE.numCalls"
+            }
+          }
+        ],
+        "alias": "SUM_SERVICE.numCalls_[]"
+      }
+    }
+  ],
+  "groupBy": [
+    {
+      "columnIdentifier": {
+        "columnName": "SERVICE.name",
+        "alias": "SERVICE.name"
+      }
+    }
+  ],
+  "includeRestGroup": true,
+  "groupLimit": 2,
+  "limit": 6
+}

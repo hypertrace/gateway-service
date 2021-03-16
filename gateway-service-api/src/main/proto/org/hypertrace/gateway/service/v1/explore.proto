@@ -22,12 +22,12 @@ message ExploreRequest {
 
   repeated org.hypertrace.gateway.service.v1.common.OrderByExpression order_by = 15;
   repeated org.hypertrace.gateway.service.v1.common.Expression group_by = 16;
-  // Include results that did not fall into the top "limit" groups. If this is set,
-  // limit + 1 rows will be returned.
+  // Include results that did not fall into the top "group_limit" groups.
   bool include_rest_group = 17;
+  // Specifies how many groups to include, independent of the rest group. Defaults to limit if unset
+  int32 group_limit = 18;
 
-  // When the group_by is specified, it determines how many groups to return. The order is determined
-  // by the order by expression.
+  // The total number of result rows to return
   int32 limit = 20;
   int32 offset = 21;
 

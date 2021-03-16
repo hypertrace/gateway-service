@@ -1,5 +1,7 @@
 package org.hypertrace.gateway.service.explore;
 
+import static org.hypertrace.core.query.service.client.QueryServiceClient.DEFAULT_QUERY_SERVICE_GROUP_BY_LIMIT;
+
 import java.util.List;
 import java.util.Map;
 import org.hypertrace.gateway.service.common.QueryRequestContext;
@@ -61,8 +63,21 @@ public class ExploreRequestContext extends QueryRequestContext {
     this.orderByExpressions = orderByExpressions;
   }
 
-  public int getLimit() {
-    return this.exploreRequest.getLimit();
+  /**
+   * Returns the max number of rows to be fetched exclusive of any rest group rows which may be
+   * added on top of the group by limit
+   */
+  public int getRowLimitBeforeRest() {
+    // On a grouped aggregation without time series, row limit should not be larger than group limit
+    if (this.hasGroupBy() && !this.hasTimeAggregations()) {
+      return Math.min(this.getBackwardsCompatibleRowLimit(), this.getGroupByLimit());
+    }
+
+    return this.getBackwardsCompatibleRowLimit();
+  }
+
+  public int getRowLimitAfterRest() {
+    return this.getBackwardsCompatibleRowLimit();
   }
 
   public int getOffset() {
@@ -71,5 +86,39 @@ public class ExploreRequestContext extends QueryRequestContext {
 
   boolean getIncludeRestGroup() {
     return this.exploreRequest.getIncludeRestGroup();
+  }
+
+  private int getGroupByLimit() {
+    // If a request has no group limit, default to row limit
+    if (this.providedGroupLimitUnset()) {
+      return this.exploreRequest.getLimit();
+    }
+    return this.exploreRequest.getGroupLimit();
+  }
+
+  /**
+   * Returns the row limit, falling back to calculated/default limits if old format queries are
+   * detected
+   */
+  private int getBackwardsCompatibleRowLimit() {
+    // Row limit previously was the number of groups for a grouped + time series request. If group
+    // limit isn't set, assume the old format and expand the row limit to default limit
+    if (this.providedGroupLimitUnset() && this.hasGroupBy() && this.hasTimeAggregations()) {
+      return Math.max(this.exploreRequest.getLimit(), DEFAULT_QUERY_SERVICE_GROUP_BY_LIMIT);
+    }
+    // Previously, a rest group would not count against the limit
+    if (this.providedGroupLimitUnset() && this.hasGroupBy() && this.getIncludeRestGroup()) {
+      return this.exploreRequest.getLimit() + 1;
+    }
+
+    return this.exploreRequest.getLimit();
+  }
+
+  private boolean providedGroupLimitUnset() {
+    return this.exploreRequest.getGroupLimit() == 0;
+  }
+
+  private boolean hasTimeAggregations() {
+    return !this.exploreRequest.getTimeAggregationList().isEmpty();
   }
 }

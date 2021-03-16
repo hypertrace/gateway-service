@@ -1,5 +1,6 @@
 package org.hypertrace.gateway.service.explore;
 
+import com.google.common.collect.ImmutableSet;
 import java.util.Set;
 import java.util.stream.Collectors;
 import org.hypertrace.core.query.service.client.QueryServiceClient;
@@ -20,17 +21,21 @@ public class TimeAggregationsWithGroupByRequestHandler implements IRequestHandle
   private final TimeAggregationsRequestHandler timeAggregationsRequestHandler;
 
   TimeAggregationsWithGroupByRequestHandler(
-      QueryServiceClient queryServiceClient, int requestTimeout,
+      QueryServiceClient queryServiceClient,
+      int requestTimeout,
       AttributeMetadataProvider attributeMetadataProvider) {
     this.normalRequestHandler =
         new RequestHandler(queryServiceClient, requestTimeout, attributeMetadataProvider);
-    this.timeAggregationsRequestHandler = new TimeAggregationsRequestHandler(
-        queryServiceClient, requestTimeout, attributeMetadataProvider);
+    this.timeAggregationsRequestHandler =
+        new TimeAggregationsRequestHandler(
+            queryServiceClient, requestTimeout, attributeMetadataProvider);
   }
 
   @Override
   public ExploreResponse.Builder handleRequest(
       ExploreRequestContext requestContext, ExploreRequest request) {
+    // This type of handler is always a group by
+    requestContext.setHasGroupBy(true);
     // 1. Create a GroupBy request and get the response for the GroupBy
     ExploreRequest groupByRequest = buildGroupByRequest(request);
     ExploreRequestContext groupByRequestContext =
@@ -69,6 +74,7 @@ public class TimeAggregationsWithGroupByRequestHandler implements IRequestHandle
         ExploreRequest.newBuilder(originalRequest)
             .clearTimeAggregation() // Clear the time aggregations. We will move the time
                                     // aggregations expressions into selections
+            .clearOffset() // Overall request offset doesn't apply to getting the actual groups
             .setIncludeRestGroup(
                 false); // Set includeRestGroup to false. We will handle the Rest group results
                         // separately
@@ -86,11 +92,7 @@ public class TimeAggregationsWithGroupByRequestHandler implements IRequestHandle
     ExploreRequest.Builder requestBuilder =
         ExploreRequest.newBuilder(originalRequest)
             .setIncludeRestGroup(
-                false) // Set includeRestGroup to false. We will handle the Rest group results
-                       // separately
-            .setLimit(
-                groupByResponse
-                    .getRowCount()); // Set limit to be size of groupByResponse rows count.
+                false); // Set includeRestGroup to false. Rest group results handled separately
 
     // Create an "IN clause" filter to fetch time series only for the matching groups in the Group
     // By Response
@@ -127,7 +129,7 @@ public class TimeAggregationsWithGroupByRequestHandler implements IRequestHandle
     return exploreResponse.getRowBuilderList().stream()
         .map(row -> row.getColumnsMap().get(columnName))
         .map(Value::getString)
-        .collect(Collectors.toUnmodifiableSet());
+        .collect(ImmutableSet.toImmutableSet());
   }
 
   private Filter.Builder createInClauseChildFilter(String columnName, Set<String> inClauseValues) {
