@@ -527,7 +527,12 @@ public class ExecutionTreeBuilderTest {
     assertTrue(executionTree instanceof SelectionNode);
     assertTrue(((SelectionNode) executionTree).getAggMetricSelectionSources().contains("QS"));
 
-    QueryNode dataFetcherNode = ((SelectionNode)executionTree).getChildNode();
+    QueryNode paginateOnlyNode = ((SelectionNode)executionTree).getChildNode();
+    assertTrue(paginateOnlyNode instanceof PaginateOnlyNode);
+    assertEquals(0, ((PaginateOnlyNode)paginateOnlyNode).getOffset());
+    assertEquals(10, ((PaginateOnlyNode)paginateOnlyNode).getLimit());
+
+    QueryNode dataFetcherNode = ((PaginateOnlyNode)paginateOnlyNode).getChildNode();
     assertTrue(dataFetcherNode instanceof DataFetcherNode);
     assertEquals("QS", ((DataFetcherNode)dataFetcherNode).getSource());
     assertEquals(0, ((DataFetcherNode)dataFetcherNode).getOffset());
@@ -583,7 +588,12 @@ public class ExecutionTreeBuilderTest {
     assertTrue(selectionNode instanceof SelectionNode);
     assertTrue(((SelectionNode) selectionNode).getAggMetricSelectionSources().contains("QS"));
 
-    QueryNode dataFetcherNode = ((SelectionNode)selectionNode).getChildNode();
+    QueryNode paginateOnlyNode = ((SelectionNode)selectionNode).getChildNode();
+    assertTrue(paginateOnlyNode instanceof PaginateOnlyNode);
+    assertEquals(0, ((PaginateOnlyNode)paginateOnlyNode).getOffset());
+    assertEquals(10, ((PaginateOnlyNode)paginateOnlyNode).getLimit());
+
+    QueryNode dataFetcherNode = ((PaginateOnlyNode)paginateOnlyNode).getChildNode();
     assertTrue(dataFetcherNode instanceof DataFetcherNode);
     assertEquals("QS", ((DataFetcherNode)dataFetcherNode).getSource());
     assertEquals(0, ((DataFetcherNode)dataFetcherNode).getOffset());
@@ -591,63 +601,7 @@ public class ExecutionTreeBuilderTest {
   }
 
   @Test
-  public void test_build_selectAttributesTimeAggregationFilterAndOrderByWithSameSource_shouldCreateDataFetcherNode() {
-    OrderByExpression orderByExpression = buildOrderByExpression(API_STATE_ATTR);
-    EntitiesRequest entitiesRequest =
-        EntitiesRequest.newBuilder()
-            .setEntityType(AttributeScope.API.name())
-            .addSelection(buildExpression(API_STATE_ATTR))
-            .addSelection(
-                buildAggregateExpression(API_NUM_CALLS_ATTR,
-                    FunctionType.SUM,
-                    "SUM_numCalls",
-                    List.of()))
-            .addTimeAggregation(
-                buildTimeAggregation(
-                    30,
-                    API_NUM_CALLS_ATTR,
-                    FunctionType.AVG,
-                    "AVG_numCalls",
-                    List.of()
-                )
-            )
-            .setFilter(generateAndOrNotFilter(
-                Operator.AND,
-                generateEQFilter(API_STATE_ATTR, "state1"),
-                generateFilter(Operator.GE, API_NUM_CALLS_ATTR,
-                    Value.newBuilder().
-                        setDouble(60)
-                        .setValueType(ValueType.DOUBLE)
-                        .build()
-                )
-            ))
-            .addOrderBy(orderByExpression)
-            .setLimit(10)
-            .setOffset(0)
-            .build();
-    EntitiesRequestContext entitiesRequestContext =
-        new EntitiesRequestContext(TENANT_ID, 0L, 10L, "API", "API.startTime", new HashMap<>());
-    ExecutionContext executionContext =
-        ExecutionContext.from(attributeMetadataProvider, entityIdColumnsConfigs, entitiesRequest, entitiesRequestContext);
-    ExecutionTreeBuilder executionTreeBuilder = new ExecutionTreeBuilder(executionContext);
-    QueryNode executionTree = executionTreeBuilder.build();
-    assertNotNull(executionTree);
-    assertTrue(executionTree instanceof SelectionNode);
-    assertTrue(((SelectionNode) executionTree).getTimeSeriesSelectionSources().contains("QS"));
-
-    QueryNode selectionNode = ((SelectionNode) executionTree).getChildNode();
-    assertTrue(selectionNode instanceof SelectionNode);
-    assertTrue(((SelectionNode) selectionNode).getAggMetricSelectionSources().contains("QS"));
-
-    QueryNode dataFetcherNode = ((SelectionNode)selectionNode).getChildNode();
-    assertTrue(dataFetcherNode instanceof DataFetcherNode);
-    assertEquals("QS", ((DataFetcherNode)dataFetcherNode).getSource());
-    assertEquals(0, ((DataFetcherNode)dataFetcherNode).getOffset());
-    assertEquals(10, ((DataFetcherNode)dataFetcherNode).getLimit());
-  }
-
-  @Test
-  public void test_build_selectAttributesAndFilterWithSameSourceNonZeroOffset_shouldCreateDataFetcherNodeAndPaginateOnlyNode() {
+  public void test_build_selectAttributesAndFilterWithSameSource_shouldCreateDataFetcherNodeAndPaginateOnlyNode() {
     OrderByExpression orderByExpression = buildOrderByExpression(API_STATE_ATTR);
     EntitiesRequest entitiesRequest =
         EntitiesRequest.newBuilder()
@@ -883,12 +837,17 @@ public class ExecutionTreeBuilderTest {
     assertTrue(firstChild instanceof SelectionNode);
     assertTrue(((SelectionNode) firstChild).getAttrSelectionSources().contains(AttributeSource.EDS.name()));
 
-    QueryNode secondChild = ((SelectionNode) firstChild).getChildNode();
-    assertTrue(secondChild instanceof DataFetcherNode);
-    assertEquals(AttributeSource.QS.name(), ((DataFetcherNode) secondChild).getSource());
-    assertEquals(10, ((DataFetcherNode) secondChild).getLimit());
-    assertEquals(0, ((DataFetcherNode) secondChild).getOffset());
-    assertEquals(1, ((DataFetcherNode) secondChild).getOrderByExpressionList().size());
+    QueryNode secondChild = ((SelectionNode)firstChild).getChildNode();
+    assertTrue(secondChild instanceof PaginateOnlyNode);
+    assertEquals(0, ((PaginateOnlyNode)secondChild).getOffset());
+    assertEquals(10, ((PaginateOnlyNode)secondChild).getLimit());
+
+    QueryNode thirdChild = ((PaginateOnlyNode)secondChild).getChildNode();
+    assertTrue(thirdChild instanceof DataFetcherNode);
+    assertEquals(AttributeSource.QS.name(), ((DataFetcherNode) thirdChild).getSource());
+    assertEquals(10, ((DataFetcherNode) thirdChild).getLimit());
+    assertEquals(0, ((DataFetcherNode) thirdChild).getOffset());
+    assertEquals(1, ((DataFetcherNode) thirdChild).getOrderByExpressionList().size());
   }
 
   @Test
@@ -957,11 +916,13 @@ public class ExecutionTreeBuilderTest {
             .getAttrSelectionSources()
             .contains(AttributeSource.EDS.name()));
 
-    QueryNode firstChild = ((SelectionNode) executionTree).getChildNode();
-    assertTrue(firstChild instanceof DataFetcherNode);
+    QueryNode paginateOnlyNode = ((SelectionNode) executionTree).getChildNode();
+    assertTrue(paginateOnlyNode instanceof PaginateOnlyNode);
+
+    QueryNode dataFetcherNode = ((PaginateOnlyNode) paginateOnlyNode).getChildNode();
     // should be QS, because there is a filter on QS, even though `setIncludeNonLiveEntities` is set
     // to true
-    assertEquals(AttributeSource.QS.name(), ((DataFetcherNode) firstChild).getSource());
+    assertEquals(AttributeSource.QS.name(), ((DataFetcherNode) dataFetcherNode).getSource());
   }
 
   @Test

@@ -11,7 +11,7 @@ dependencies {
   implementation("org.hypertrace.core.grpcutils:grpc-server-utils:0.3.4")
   implementation("org.hypertrace.core.serviceframework:platform-service-framework:0.1.21")
 
-  implementation("io.grpc:grpc-netty:1.36.0")
+  implementation("io.grpc:grpc-netty:1.36.1")
 
   // Logging
   implementation("org.slf4j:slf4j-api:1.7.30")
