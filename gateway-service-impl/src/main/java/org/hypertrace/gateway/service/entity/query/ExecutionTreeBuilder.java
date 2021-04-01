@@ -349,12 +349,9 @@ public class ExecutionTreeBuilder {
   }
 
   private QueryNode createPaginateOnlyNode(QueryNode queryNode, EntitiesRequest entitiesRequest) {
-    if (entitiesRequest.getOffset() > 0) {
-      return new PaginateOnlyNode(
-          queryNode,
-          entitiesRequest.getLimit(),
-          entitiesRequest.getOffset());
-    }
-    return queryNode;
+    return new PaginateOnlyNode(
+        queryNode,
+        entitiesRequest.getLimit(),
+        entitiesRequest.getOffset());
   }
 }
