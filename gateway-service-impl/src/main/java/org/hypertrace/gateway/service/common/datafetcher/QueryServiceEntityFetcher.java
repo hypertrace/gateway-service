@@ -57,9 +57,7 @@ import org.hypertrace.gateway.service.v1.entity.Entity.Builder;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-/**
- * An implementation of the {@link IEntityFetcher} using the QueryService as the data source
- */
+/** An implementation of the {@link IEntityFetcher} using the QueryService as the data source */
 public class QueryServiceEntityFetcher implements IEntityFetcher {
 
   private static final Logger LOG = LoggerFactory.getLogger(QueryServiceEntityFetcher.class);
@@ -72,7 +70,8 @@ public class QueryServiceEntityFetcher implements IEntityFetcher {
   private final EntityIdColumnsConfigs entityIdColumnsConfigs;
 
   public QueryServiceEntityFetcher(
-      QueryServiceClient queryServiceClient, int qsRequestTimeout,
+      QueryServiceClient queryServiceClient,
+      int qsRequestTimeout,
       AttributeMetadataProvider attributeMetadataProvider,
       EntityIdColumnsConfigs entityIdColumnsConfigs) {
     this.queryServiceClient = queryServiceClient;
@@ -92,7 +91,10 @@ public class QueryServiceEntityFetcher implements IEntityFetcher {
 
     List<String> entityIdAttributes =
         AttributeMetadataUtil.getIdAttributeIds(
-            attributeMetadataProvider, entityIdColumnsConfigs, requestContext, entitiesRequest.getEntityType());
+            attributeMetadataProvider,
+            entityIdColumnsConfigs,
+            requestContext,
+            entitiesRequest.getEntityType());
     List<org.hypertrace.gateway.service.v1.common.Expression> aggregates =
         ExpressionReader.getFunctionExpressions(entitiesRequest.getSelectionList().stream());
 
@@ -115,8 +117,7 @@ public class QueryServiceEntityFetcher implements IEntityFetcher {
     }
 
     Iterator<ResultSetChunk> resultSetChunkIterator =
-        queryServiceClient.executeQuery(queryRequest, requestContext.getHeaders(),
-            requestTimeout);
+        queryServiceClient.executeQuery(queryRequest, requestContext.getHeaders(), requestTimeout);
 
     // We want to retain the order as returned from the respective source. Hence using a
     // LinkedHashMap
@@ -197,7 +198,8 @@ public class QueryServiceEntityFetcher implements IEntityFetcher {
     }
   }
 
-  private QueryRequest.Builder constructSelectionQuery(EntitiesRequestContext requestContext,
+  private QueryRequest.Builder constructSelectionQuery(
+      EntitiesRequestContext requestContext,
       EntitiesRequest entitiesRequest,
       List<String> entityIdAttributes,
       List<org.hypertrace.gateway.service.v1.common.Expression> aggregates) {
@@ -337,7 +339,10 @@ public class QueryServiceEntityFetcher implements IEntityFetcher {
     // Only supported filter is entityIds IN ["id1", "id2", "id3"]
     List<String> idColumns =
         AttributeMetadataUtil.getIdAttributeIds(
-            attributeMetadataProvider, entityIdColumnsConfigs, requestContext, entitiesRequest.getEntityType());
+            attributeMetadataProvider,
+            entityIdColumnsConfigs,
+            requestContext,
+            entitiesRequest.getEntityType());
     String timeColumn =
         AttributeMetadataUtil.getTimestampAttributeId(
             attributeMetadataProvider, requestContext, entitiesRequest.getEntityType());
@@ -520,8 +525,7 @@ public class QueryServiceEntityFetcher implements IEntityFetcher {
     }
 
     Iterator<ResultSetChunk> resultSetChunkIterator =
-        queryServiceClient.executeQuery(queryRequest, requestContext.getHeaders(),
-            requestTimeout);
+        queryServiceClient.executeQuery(queryRequest, requestContext.getHeaders(), requestTimeout);
 
     while (resultSetChunkIterator.hasNext()) {
       ResultSetChunk chunk = resultSetChunkIterator.next();
@@ -574,7 +578,8 @@ public class QueryServiceEntityFetcher implements IEntityFetcher {
             builder.addSelection(
                 QueryAndGatewayDtoConverter.convertToQueryExpression(e.getAggregation())));
 
-    Filter.Builder queryFilter = constructQueryServiceFilter(timeAlignedEntitiesRequest, context, idColumns);
+    Filter.Builder queryFilter =
+        constructQueryServiceFilter(timeAlignedEntitiesRequest, context, idColumns);
     builder.setFilter(queryFilter);
 
     // First group by the id columns.
@@ -637,8 +642,7 @@ public class QueryServiceEntityFetcher implements IEntityFetcher {
     return filterBuilder.addChildFilter(timeSpaceAndProvidedFilter);
   }
 
-  private MetricSeries.Builder getMetricSeriesBuilder(
-      TimeAggregation timeAggregation) {
+  private MetricSeries.Builder getMetricSeriesBuilder(TimeAggregation timeAggregation) {
     MetricSeries.Builder series = MetricSeries.newBuilder();
     series.setAggregation(timeAggregation.getAggregation().getFunction().getFunction().name());
     series.setPeriod(timeAggregation.getPeriod());

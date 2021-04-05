@@ -93,7 +93,7 @@ public abstract class AbstractServiceTest<
     AttributeServiceClient attributesServiceClient = mock(AttributeServiceClient.class);
 
     when(attributesServiceClient.findAttributes(
-        any(new HashMap<String, String>().getClass()), any(AttributeMetadataFilter.class)))
+            any(new HashMap<String, String>().getClass()), any(AttributeMetadataFilter.class)))
         .thenAnswer(
             (Answer<Iterator<AttributeMetadata>>)
                 invocation -> {
@@ -202,7 +202,7 @@ public abstract class AbstractServiceTest<
         createResourceFileName(
             GATEWAY_SERVICE_TEST_REQUESTS_DIR,
             fileName); // GATEWAY_SERVICE_TEST_REQUESTS_DIR + FILE_SEPARATOR + getTestSuiteName() +
-                       // FILE_SEPARATOR + fileName + EXT_SEPARATOR + JSON_EXTENSION;
+    // FILE_SEPARATOR + fileName + EXT_SEPARATOR + JSON_EXTENSION;
     String requestJsonStr = readResourceFileAsString(resourceFileName);
 
     GeneratedMessageV3.Builder requestBuilder = getGatewayServiceRequestBuilder();
@@ -220,8 +220,8 @@ public abstract class AbstractServiceTest<
         createResourceFileName(
             GATEWAY_SERVICE_EXPECTED_TEST_RESPONSES_DIR,
             fileName); // GATEWAY_SERVICE_EXPECTED_TEST_RESPONSES_DIR + FILE_SEPARATOR +
-                       // getTestSuiteName() + FILE_SEPARATOR + fileName + EXT_SEPARATOR +
-                       // JSON_EXTENSION;
+    // getTestSuiteName() + FILE_SEPARATOR + fileName + EXT_SEPARATOR +
+    // JSON_EXTENSION;
     String requestJsonStr = readResourceFileAsString(resourceFileName);
 
     GeneratedMessageV3.Builder responseBuilder = getGatewayServiceResponseBuilder();
@@ -245,7 +245,7 @@ public abstract class AbstractServiceTest<
         readExpectedQueryServiceRequestAndResponse(fileName);
 
     when(queryServiceClient.executeQuery(
-        any(QueryRequest.class), any(HashMap.class), any(Integer.class)))
+            any(QueryRequest.class), any(HashMap.class), any(Integer.class)))
         .thenAnswer(
             (Answer<Iterator<ResultSetChunk>>)
                 invocation -> {

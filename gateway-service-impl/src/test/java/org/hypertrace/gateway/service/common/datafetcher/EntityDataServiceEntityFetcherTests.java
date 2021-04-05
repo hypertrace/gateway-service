@@ -1,5 +1,21 @@
 package org.hypertrace.gateway.service.common.datafetcher;
 
+import static org.hypertrace.gateway.service.common.EntitiesRequestAndResponseUtils.buildOrderByExpression;
+import static org.hypertrace.gateway.service.common.EntitiesRequestAndResponseUtils.generateEQFilter;
+import static org.hypertrace.gateway.service.common.converters.EntityServiceAndGatewayServiceConverter.convertToEntityServiceExpression;
+import static org.hypertrace.gateway.service.common.converters.EntityServiceAndGatewayServiceConverter.convertToEntityServiceFilter;
+import static org.hypertrace.gateway.service.v1.common.Operator.AND;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertThrows;
+import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.eq;
+import static org.mockito.Mockito.mock;
+import static org.mockito.Mockito.when;
+
+import java.util.List;
+import java.util.Map;
+import java.util.Optional;
+import java.util.stream.Collectors;
 import org.hypertrace.core.attribute.service.v1.AttributeKind;
 import org.hypertrace.core.attribute.service.v1.AttributeMetadata;
 import org.hypertrace.core.attribute.service.v1.AttributeScope;
@@ -26,23 +42,6 @@ import org.hypertrace.gateway.service.v1.entity.EntitiesRequest;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Nested;
 import org.junit.jupiter.api.Test;
-
-import java.util.List;
-import java.util.Map;
-import java.util.Optional;
-import java.util.stream.Collectors;
-
-import static org.hypertrace.gateway.service.common.EntitiesRequestAndResponseUtils.buildOrderByExpression;
-import static org.hypertrace.gateway.service.common.EntitiesRequestAndResponseUtils.generateEQFilter;
-import static org.hypertrace.gateway.service.common.converters.EntityServiceAndGatewayServiceConverter.convertToEntityServiceExpression;
-import static org.hypertrace.gateway.service.common.converters.EntityServiceAndGatewayServiceConverter.convertToEntityServiceFilter;
-import static org.hypertrace.gateway.service.v1.common.Operator.AND;
-import static org.junit.jupiter.api.Assertions.assertEquals;
-import static org.junit.jupiter.api.Assertions.assertThrows;
-import static org.mockito.ArgumentMatchers.any;
-import static org.mockito.ArgumentMatchers.eq;
-import static org.mockito.Mockito.mock;
-import static org.mockito.Mockito.when;
 
 public class EntityDataServiceEntityFetcherTests {
   private static final String TENANT_ID = "tenant-id";

@@ -461,10 +461,10 @@ public class QueryAndGatewayDtoConverter {
         && filter.getLhs().getColumnIdentifier().getColumnName().equals(timestampAttributeId);
   }
 
-  private static boolean isNonDefaultFilter(org.hypertrace.gateway.service.v1.common.Filter filter) {
+  private static boolean isNonDefaultFilter(
+      org.hypertrace.gateway.service.v1.common.Filter filter) {
     return filter != null
-        && !org.hypertrace.gateway.service.v1.common.Filter.getDefaultInstance()
-                                                           .equals(filter);
+        && !org.hypertrace.gateway.service.v1.common.Filter.getDefaultInstance().equals(filter);
   }
 
   private static boolean isNonDefaultFilter(Filter filter) {

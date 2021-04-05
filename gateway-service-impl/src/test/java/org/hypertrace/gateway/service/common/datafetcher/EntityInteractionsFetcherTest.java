@@ -400,7 +400,8 @@ public class EntityInteractionsFetcherTest extends AbstractGatewayServiceTest {
   @Test
   public void testEntityWithInteractionMappingToMultipleAttributes() {
     Set<String> entityTypes = ImmutableSet.of("SERVICE");
-    List<String> entityIdInteractionMappings = List.of("INTERACTION.fromNamespaceName", "INTERACTION.fromNamespaceType");
+    List<String> entityIdInteractionMappings =
+        List.of("INTERACTION.fromNamespaceName", "INTERACTION.fromNamespaceType");
 
     Filter.Builder entityTypeFilter =
         Filter.newBuilder()
@@ -434,8 +435,8 @@ public class EntityInteractionsFetcherTest extends AbstractGatewayServiceTest {
 
     attributeMetadataProvider = mock(AttributeMetadataProvider.class);
     Mockito.when(
-        attributeMetadataProvider.getAttributeMetadata(
-            any(), Mockito.eq(AttributeScope.INTERACTION.name()), Mockito.eq("startTime")))
+            attributeMetadataProvider.getAttributeMetadata(
+                any(), Mockito.eq(AttributeScope.INTERACTION.name()), Mockito.eq("startTime")))
         .thenReturn(
             Optional.of(AttributeMetadata.newBuilder().setId("INTERACTION.startTime").build()));
 
@@ -456,7 +457,8 @@ public class EntityInteractionsFetcherTest extends AbstractGatewayServiceTest {
             null);
     assertEquals(entityTypes.size(), queryRequests.size());
 
-    // Should select and group on INTERACTION.toServiceId, INTERACTION.fromNamespaceName, INTERACTION.fromNamespaceType
+    // Should select and group on INTERACTION.toServiceId, INTERACTION.fromNamespaceName,
+    // INTERACTION.fromNamespaceType
     for (QueryRequest queryRequest : queryRequests.values()) {
       assertNotNull(queryRequest);
       assertEquals(3, queryRequest.getGroupByCount());
@@ -498,16 +500,16 @@ public class EntityInteractionsFetcherTest extends AbstractGatewayServiceTest {
   }
 
   private org.hypertrace.core.query.service.api.Filter createStringArrayFilter(
-      org.hypertrace.core.query.service.api.Operator operator, String columnName, List<String> valueList) {
+      org.hypertrace.core.query.service.api.Operator operator,
+      String columnName,
+      List<String> valueList) {
     return org.hypertrace.core.query.service.api.Filter.newBuilder()
         .setOperator(operator)
         .setLhs(
             org.hypertrace.core.query.service.api.Expression.newBuilder()
                 .setColumnIdentifier(
                     org.hypertrace.core.query.service.api.ColumnIdentifier.newBuilder()
-                        .setColumnName(columnName)
-                )
-        )
+                        .setColumnName(columnName)))
         .setRhs(
             org.hypertrace.core.query.service.api.Expression.newBuilder()
                 .setLiteral(
@@ -515,10 +517,9 @@ public class EntityInteractionsFetcherTest extends AbstractGatewayServiceTest {
                         .setValue(
                             org.hypertrace.core.query.service.api.Value.newBuilder()
                                 .addAllStringArray(valueList)
-                                .setValueType(org.hypertrace.core.query.service.api.ValueType.STRING_ARRAY)
-                        )
-                )
-        ).build();
+                                .setValueType(
+                                    org.hypertrace.core.query.service.api.ValueType.STRING_ARRAY))))
+        .build();
   }
 
   private EntitiesRequest.Builder getValidServiceEntitiesRequest() {

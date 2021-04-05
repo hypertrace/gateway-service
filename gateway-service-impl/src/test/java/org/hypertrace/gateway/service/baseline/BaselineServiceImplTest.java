@@ -1,19 +1,29 @@
 package org.hypertrace.gateway.service.baseline;
 
+import static org.hypertrace.gateway.service.baseline.BaselineServiceImpl.DAY_IN_MILLIS;
+import static org.hypertrace.gateway.service.common.QueryServiceRequestAndResponseUtils.getResultSetChunk;
+import static org.mockito.Mockito.mock;
+import static org.mockito.Mockito.when;
+
+import java.time.Instant;
+import java.util.HashMap;
+import java.util.List;
+import java.util.Map;
+import java.util.Optional;
 import org.hypertrace.core.attribute.service.v1.AttributeMetadata;
 import org.hypertrace.core.query.service.api.QueryRequest;
 import org.hypertrace.core.query.service.api.ResultSetChunk;
 import org.hypertrace.gateway.service.common.AttributeMetadataProvider;
 import org.hypertrace.gateway.service.common.RequestContext;
 import org.hypertrace.gateway.service.entity.config.EntityIdColumnsConfigs;
+import org.hypertrace.gateway.service.v1.baseline.BaselineEntitiesRequest;
+import org.hypertrace.gateway.service.v1.baseline.BaselineEntitiesResponse;
 import org.hypertrace.gateway.service.v1.baseline.BaselineEntity;
 import org.hypertrace.gateway.service.v1.baseline.BaselineTimeAggregation;
 import org.hypertrace.gateway.service.v1.common.ColumnIdentifier;
 import org.hypertrace.gateway.service.v1.common.Expression;
 import org.hypertrace.gateway.service.v1.common.FunctionExpression;
 import org.hypertrace.gateway.service.v1.common.FunctionType;
-import org.hypertrace.gateway.service.v1.baseline.BaselineEntitiesRequest;
-import org.hypertrace.gateway.service.v1.baseline.BaselineEntitiesResponse;
 import org.hypertrace.gateway.service.v1.common.LiteralConstant;
 import org.hypertrace.gateway.service.v1.common.Period;
 import org.hypertrace.gateway.service.v1.common.Value;
@@ -21,17 +31,6 @@ import org.hypertrace.gateway.service.v1.common.ValueType;
 import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.Test;
 import org.mockito.Mockito;
-
-import java.time.Instant;
-import java.util.HashMap;
-import java.util.List;
-import java.util.Map;
-import java.util.Optional;
-
-import static org.hypertrace.gateway.service.baseline.BaselineServiceImpl.DAY_IN_MILLIS;
-import static org.hypertrace.gateway.service.common.QueryServiceRequestAndResponseUtils.getResultSetChunk;
-import static org.mockito.Mockito.mock;
-import static org.mockito.Mockito.when;
 
 public class BaselineServiceImplTest {
 
@@ -144,8 +143,8 @@ public class BaselineServiceImplTest {
         baselineResponse.getBaselineEntityList().get(0).getBaselineAggregateMetricCount() > 0);
     BaselineEntity baselineEntity = baselineResponse.getBaselineEntityList().get(0);
     // verify the baseline for AVG RATE (medianValue/60)
-    Assertions.assertEquals(1.0,
-        baselineEntity.getBaselineAggregateMetricMap().get("numCalls").getValue().getDouble());
+    Assertions.assertEquals(
+        1.0, baselineEntity.getBaselineAggregateMetricMap().get("numCalls").getValue().getDouble());
   }
 
   @Test

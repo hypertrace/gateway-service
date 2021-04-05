@@ -17,9 +17,7 @@ import org.hypertrace.gateway.service.v1.common.FunctionExpression;
 import org.hypertrace.gateway.service.v1.common.FunctionType;
 import org.hypertrace.gateway.service.v1.common.Value;
 
-/**
- * Class with some utility methods around Aggregated metrics, alias in the entity requests.
- */
+/** Class with some utility methods around Aggregated metrics, alias in the entity requests. */
 public class MetricAggregationFunctionUtil {
 
   private static final String FUNCTION_NAME_SEPARATOR = "_";
@@ -80,7 +78,7 @@ public class MetricAggregationFunctionUtil {
             .map(e -> e.getColumnIdentifier().getColumnName())
             .findFirst()
             .orElseThrow(); // Should have validated the FunctionExpression using
-                            // AggregationValidator
+    // AggregationValidator
 
     AttributeMetadata metadata = attributeMetadataMap.get(attributeName);
     Preconditions.checkArgument(
@@ -118,26 +116,27 @@ public class MetricAggregationFunctionUtil {
   }
 
   public static Value getValueFromFunction(
-          long startTime,
-          long endTime,
-          Map<String, AttributeMetadata> attributeMetadataMap,
-          org.hypertrace.core.query.service.api.Value column,
-          ColumnMetadata metadata,
-          FunctionExpression functionExpression) {
-    // AVG_RATE is adding a specific implementation because Pinot does not directly support this function,
+      long startTime,
+      long endTime,
+      Map<String, AttributeMetadata> attributeMetadataMap,
+      org.hypertrace.core.query.service.api.Value column,
+      ColumnMetadata metadata,
+      FunctionExpression functionExpression) {
+    // AVG_RATE is adding a specific implementation because Pinot does not directly support this
+    // function,
     // so it has to be parsed separately.
     Value convertedValue;
     if (FunctionType.AVGRATE == functionExpression.getFunction()) {
       convertedValue =
-              ArithmeticValueUtil.computeAvgRate(functionExpression, column, startTime, endTime);
+          ArithmeticValueUtil.computeAvgRate(functionExpression, column, startTime, endTime);
     } else {
       convertedValue =
-              QueryAndGatewayDtoConverter.convertToGatewayValueForMetricValue(
-                      MetricAggregationFunctionUtil.getValueTypeFromFunction(
-                              functionExpression, attributeMetadataMap),
-                      attributeMetadataMap,
-                      metadata,
-                      column);
+          QueryAndGatewayDtoConverter.convertToGatewayValueForMetricValue(
+              MetricAggregationFunctionUtil.getValueTypeFromFunction(
+                  functionExpression, attributeMetadataMap),
+              attributeMetadataMap,
+              metadata,
+              column);
     }
     return convertedValue;
   }

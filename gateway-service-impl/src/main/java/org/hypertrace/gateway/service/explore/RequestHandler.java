@@ -38,7 +38,8 @@ public class RequestHandler implements RequestHandlerWithSorting {
   private final TheRestGroupRequestHandler theRestGroupRequestHandler;
 
   RequestHandler(
-      QueryServiceClient queryServiceClient, int qsRequestTimeout,
+      QueryServiceClient queryServiceClient,
+      int qsRequestTimeout,
       AttributeMetadataProvider attributeMetadataProvider) {
     this.queryServiceClient = queryServiceClient;
     this.requestTimeout = qsRequestTimeout;
@@ -102,7 +103,7 @@ public class RequestHandler implements RequestHandlerWithSorting {
     // these once the we get the results.
     if (requestContext
         .hasGroupBy()) { // Will need to do the Ordering, Limit and Offset ourselves after we get
-                         // the Group By Results
+      // the Group By Results
       builder.setLimit(QueryServiceClient.DEFAULT_QUERY_SERVICE_GROUP_BY_LIMIT);
       requestContext.setOrderByExpressions(getRequestOrderByExpressions(request));
     } else { // No Group By: Use Pinot's Order By, Limit and Offset
@@ -141,7 +142,8 @@ public class RequestHandler implements RequestHandlerWithSorting {
         request.getSpaceId(),
         AttributeMetadataUtil.getTimestampAttributeId(
             attributeMetadataProvider, exploreRequestContext, request.getContext()),
-        AttributeMetadataUtil.getSpaceAttributeId(attributeMetadataProvider, exploreRequestContext, request.getContext()),
+        AttributeMetadataUtil.getSpaceAttributeId(
+            attributeMetadataProvider, exploreRequestContext, request.getContext()),
         request.getFilter());
   }
 
@@ -292,7 +294,6 @@ public class RequestHandler implements RequestHandlerWithSorting {
 
     rowBuilder.putColumns(metadata.getColumnName(), gwValue);
   }
-
 
   private org.hypertrace.gateway.service.v1.common.Value getValueForColumnIdExpression(
       Value queryServiceValue,

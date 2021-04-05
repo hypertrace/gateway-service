@@ -69,14 +69,16 @@ public class EntityService {
 
   public EntityService(
       QueryServiceClient qsClient,
-      int qsRequestTimeout, EntityQueryServiceClient edsQueryServiceClient,
+      int qsRequestTimeout,
+      EntityQueryServiceClient edsQueryServiceClient,
       AttributeMetadataProvider metadataProvider,
       EntityIdColumnsConfigs entityIdColumnsConfigs,
       ScopeFilterConfigs scopeFilterConfigs,
       LogConfig logConfig) {
     this.metadataProvider = metadataProvider;
     this.entityIdColumnsConfigs = entityIdColumnsConfigs;
-    this.interactionsFetcher = new EntityInteractionsFetcher(qsClient, qsRequestTimeout, metadataProvider);
+    this.interactionsFetcher =
+        new EntityInteractionsFetcher(qsClient, qsRequestTimeout, metadataProvider);
     this.requestPreProcessor = new RequestPreProcessor(metadataProvider, scopeFilterConfigs);
     this.responsePostProcessor = new ResponsePostProcessor();
     this.edsEntityUpdater = new EdsEntityUpdater(edsQueryServiceClient);
@@ -87,38 +89,43 @@ public class EntityService {
   }
 
   private void registerEntityFetchers(
-      QueryServiceClient queryServiceClient, int qsRequestTimeout,
+      QueryServiceClient queryServiceClient,
+      int qsRequestTimeout,
       EntityQueryServiceClient edsQueryServiceClient) {
     EntityQueryHandlerRegistry registry = EntityQueryHandlerRegistry.get();
     registry.registerEntityFetcher(
         AttributeSource.QS.name(),
-        new QueryServiceEntityFetcher(queryServiceClient, qsRequestTimeout, metadataProvider, entityIdColumnsConfigs));
+        new QueryServiceEntityFetcher(
+            queryServiceClient, qsRequestTimeout, metadataProvider, entityIdColumnsConfigs));
     registry.registerEntityFetcher(
         AttributeSource.EDS.name(),
-        new EntityDataServiceEntityFetcher(edsQueryServiceClient, metadataProvider, entityIdColumnsConfigs));
+        new EntityDataServiceEntityFetcher(
+            edsQueryServiceClient, metadataProvider, entityIdColumnsConfigs));
   }
 
   private void initMetrics() {
-    this.queryBuildTimer = PlatformMetricsRegistry
-        .registerTimer("hypertrace.entities.query.build", ImmutableMap.of());
-    this.queryExecutionTimer = PlatformMetricsRegistry
-        .registerTimer("hypertrace.entities.query.execution", ImmutableMap.of());
+    this.queryBuildTimer =
+        PlatformMetricsRegistry.registerTimer("hypertrace.entities.query.build", ImmutableMap.of());
+    this.queryExecutionTimer =
+        PlatformMetricsRegistry.registerTimer(
+            "hypertrace.entities.query.execution", ImmutableMap.of());
   }
 
   /**
-   * Method to get entities along with the requested attributes and metrics.
-   * Does it in multiple steps:
-   * 1) Construct the filter tree from the filter condition in the query
-   * 2) Optimize the filter tree by merging nodes corresponding to the same data source
-   * 3) Constructs the complete execution tree
-   * 4) Passes the execution tree through the ExecutionVisitor to get the result
-   * 5) Adds entity interaction data if requested for
+   * Method to get entities along with the requested attributes and metrics. Does it in multiple
+   * steps: 1) Construct the filter tree from the filter condition in the query 2) Optimize the
+   * filter tree by merging nodes corresponding to the same data source 3) Constructs the complete
+   * execution tree 4) Passes the execution tree through the ExecutionVisitor to get the result 5)
+   * Adds entity interaction data if requested for
    */
   public EntitiesResponse getEntities(
       String tenantId, EntitiesRequest originalRequest, Map<String, String> requestHeaders) {
     Instant start = Instant.now();
-    String timestampAttributeId = AttributeMetadataUtil.getTimestampAttributeId(
-        metadataProvider, new RequestContext(tenantId, requestHeaders), originalRequest.getEntityType());
+    String timestampAttributeId =
+        AttributeMetadataUtil.getTimestampAttributeId(
+            metadataProvider,
+            new RequestContext(tenantId, requestHeaders),
+            originalRequest.getEntityType());
 
     // Set the size for percentiles in order by if it is not set. This is to give UI the time to fix
     // the bug which does not set the size when they have order by in the request.
@@ -131,32 +138,39 @@ public class EntityService {
             originalRequest.getEntityType(),
             timestampAttributeId,
             requestHeaders);
-    EntitiesRequest preProcessedRequest = requestPreProcessor.transformFilter(originalRequest, entitiesRequestContext);
+    EntitiesRequest preProcessedRequest =
+        requestPreProcessor.transformFilter(originalRequest, entitiesRequestContext);
 
     ExecutionContext executionContext =
-        ExecutionContext.from(metadataProvider, entityIdColumnsConfigs, preProcessedRequest, entitiesRequestContext);
+        ExecutionContext.from(
+            metadataProvider, entityIdColumnsConfigs, preProcessedRequest, entitiesRequestContext);
     ExecutionTreeBuilder executionTreeBuilder = new ExecutionTreeBuilder(executionContext);
     QueryNode executionTree = executionTreeBuilder.build();
-    queryBuildTimer
-        .record(Duration.between(start, Instant.now()).toMillis(), TimeUnit.MILLISECONDS);
+    queryBuildTimer.record(
+        Duration.between(start, Instant.now()).toMillis(), TimeUnit.MILLISECONDS);
 
     /*
-    * EntityQueryHandlerRegistry.get() returns Singleton object, so, it's guaranteed that
-    * it won't create new object for each request.
-    */
+     * EntityQueryHandlerRegistry.get() returns Singleton object, so, it's guaranteed that
+     * it won't create new object for each request.
+     */
     EntityResponse response =
-        executionTree.acceptVisitor(new ExecutionVisitor(executionContext, EntityQueryHandlerRegistry.get()));
+        executionTree.acceptVisitor(
+            new ExecutionVisitor(executionContext, EntityQueryHandlerRegistry.get()));
 
     EntityFetcherResponse entityFetcherResponse = response.getEntityFetcherResponse();
 
     List<Entity.Builder> results =
         this.responsePostProcessor.transform(
-            executionContext, new ArrayList<>(entityFetcherResponse.getEntityKeyBuilderMap().values()));
+            executionContext,
+            new ArrayList<>(entityFetcherResponse.getEntityKeyBuilderMap().values()));
 
     // Add interactions.
     if (!results.isEmpty()) {
       addEntityInteractions(
-          tenantId, preProcessedRequest, entityFetcherResponse.getEntityKeyBuilderMap(), requestHeaders);
+          tenantId,
+          preProcessedRequest,
+          entityFetcherResponse.getEntityKeyBuilderMap(),
+          requestHeaders);
     }
 
     EntitiesResponse.Builder responseBuilder =

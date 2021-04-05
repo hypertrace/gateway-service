@@ -29,8 +29,7 @@ public class RequestContext {
     if (this == o) return true;
     if (o == null || getClass() != o.getClass()) return false;
     RequestContext that = (RequestContext) o;
-    return Objects.equals(tenantId, that.tenantId) &&
-        Objects.equals(headers, that.headers);
+    return Objects.equals(tenantId, that.tenantId) && Objects.equals(headers, that.headers);
   }
 
   @Override

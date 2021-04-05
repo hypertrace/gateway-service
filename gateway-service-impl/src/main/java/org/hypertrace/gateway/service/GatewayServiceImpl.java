@@ -14,6 +14,8 @@ import org.hypertrace.core.query.service.client.QueryServiceClient;
 import org.hypertrace.core.query.service.client.QueryServiceConfig;
 import org.hypertrace.entity.query.service.client.EntityQueryServiceClient;
 import org.hypertrace.entity.service.client.config.EntityServiceClientConfig;
+import org.hypertrace.gateway.service.baseline.BaselineService;
+import org.hypertrace.gateway.service.baseline.BaselineServiceImpl;
 import org.hypertrace.gateway.service.baseline.BaselineServiceQueryExecutor;
 import org.hypertrace.gateway.service.baseline.BaselineServiceQueryParser;
 import org.hypertrace.gateway.service.common.AttributeMetadataProvider;
@@ -23,17 +25,15 @@ import org.hypertrace.gateway.service.entity.EntityService;
 import org.hypertrace.gateway.service.entity.config.EntityIdColumnsConfigs;
 import org.hypertrace.gateway.service.entity.config.LogConfig;
 import org.hypertrace.gateway.service.explore.ExploreService;
-import org.hypertrace.gateway.service.baseline.BaselineService;
-import org.hypertrace.gateway.service.baseline.BaselineServiceImpl;
 import org.hypertrace.gateway.service.span.SpanService;
 import org.hypertrace.gateway.service.trace.TracesService;
+import org.hypertrace.gateway.service.v1.baseline.BaselineEntitiesRequest;
+import org.hypertrace.gateway.service.v1.baseline.BaselineEntitiesResponse;
 import org.hypertrace.gateway.service.v1.entity.EntitiesResponse;
 import org.hypertrace.gateway.service.v1.entity.UpdateEntityRequest;
 import org.hypertrace.gateway.service.v1.entity.UpdateEntityResponse;
 import org.hypertrace.gateway.service.v1.explore.ExploreRequest;
 import org.hypertrace.gateway.service.v1.explore.ExploreResponse;
-import org.hypertrace.gateway.service.v1.baseline.BaselineEntitiesRequest;
-import org.hypertrace.gateway.service.v1.baseline.BaselineEntitiesResponse;
 import org.hypertrace.gateway.service.v1.span.SpansResponse;
 import org.hypertrace.gateway.service.v1.trace.TracesResponse;
 import org.slf4j.Logger;
@@ -63,36 +63,53 @@ public class GatewayServiceImpl extends GatewayServiceGrpc.GatewayServiceImplBas
     AttributeServiceClientConfig asConfig = AttributeServiceClientConfig.from(appConfig);
     ManagedChannel attributeServiceChannel =
         ManagedChannelBuilder.forAddress(asConfig.getHost(), asConfig.getPort())
-            .usePlaintext().build();
+            .usePlaintext()
+            .build();
     AttributeServiceClient asClient = new AttributeServiceClient(attributeServiceChannel);
     AttributeMetadataProvider attributeMetadataProvider = new AttributeMetadataProvider(asClient);
     EntityIdColumnsConfigs entityIdColumnsConfigs = EntityIdColumnsConfigs.fromConfig(appConfig);
 
     Config qsConfig = appConfig.getConfig(QUERY_SERVICE_CONFIG_KEY);
-    QueryServiceClient queryServiceClient = new QueryServiceClient(new QueryServiceConfig(qsConfig));
+    QueryServiceClient queryServiceClient =
+        new QueryServiceClient(new QueryServiceConfig(qsConfig));
     int qsRequestTimeout = getRequestTimeoutMillis(qsConfig);
 
     EntityServiceClientConfig esConfig = EntityServiceClientConfig.from(appConfig);
     ManagedChannel entityServiceChannel =
         ManagedChannelBuilder.forAddress(esConfig.getHost(), esConfig.getPort())
-            .usePlaintext().build();
+            .usePlaintext()
+            .build();
     EntityQueryServiceClient eqsClient = new EntityQueryServiceClient(entityServiceChannel);
 
     ScopeFilterConfigs scopeFilterConfigs = new ScopeFilterConfigs(appConfig);
     LogConfig logConfig = new LogConfig(appConfig);
-    this.traceService = new TracesService(queryServiceClient, qsRequestTimeout,
-        attributeMetadataProvider, scopeFilterConfigs);
-    this.spanService = new SpanService(queryServiceClient, qsRequestTimeout,
-        attributeMetadataProvider);
+    this.traceService =
+        new TracesService(
+            queryServiceClient, qsRequestTimeout, attributeMetadataProvider, scopeFilterConfigs);
+    this.spanService =
+        new SpanService(queryServiceClient, qsRequestTimeout, attributeMetadataProvider);
     this.entityService =
-        new EntityService(queryServiceClient, qsRequestTimeout,
-            eqsClient, attributeMetadataProvider, entityIdColumnsConfigs, scopeFilterConfigs, logConfig);
+        new EntityService(
+            queryServiceClient,
+            qsRequestTimeout,
+            eqsClient,
+            attributeMetadataProvider,
+            entityIdColumnsConfigs,
+            scopeFilterConfigs,
+            logConfig);
     this.exploreService =
-        new ExploreService(queryServiceClient, qsRequestTimeout,
-            attributeMetadataProvider, scopeFilterConfigs);
-    BaselineServiceQueryParser baselineServiceQueryParser = new BaselineServiceQueryParser(attributeMetadataProvider);
-    BaselineServiceQueryExecutor baselineServiceQueryExecutor = new BaselineServiceQueryExecutor(qsRequestTimeout, queryServiceClient);
-    this.baselineService = new BaselineServiceImpl(attributeMetadataProvider, baselineServiceQueryParser, baselineServiceQueryExecutor, entityIdColumnsConfigs);
+        new ExploreService(
+            queryServiceClient, qsRequestTimeout, attributeMetadataProvider, scopeFilterConfigs);
+    BaselineServiceQueryParser baselineServiceQueryParser =
+        new BaselineServiceQueryParser(attributeMetadataProvider);
+    BaselineServiceQueryExecutor baselineServiceQueryExecutor =
+        new BaselineServiceQueryExecutor(qsRequestTimeout, queryServiceClient);
+    this.baselineService =
+        new BaselineServiceImpl(
+            attributeMetadataProvider,
+            baselineServiceQueryParser,
+            baselineServiceQueryExecutor,
+            entityIdColumnsConfigs);
   }
 
   private static int getRequestTimeoutMillis(Config config) {
@@ -119,7 +136,8 @@ public class GatewayServiceImpl extends GatewayServiceGrpc.GatewayServiceImplBas
       RequestContext requestContext =
           new RequestContext(
               tenantId.get(),
-              org.hypertrace.core.grpcutils.context.RequestContext.CURRENT.get()
+              org.hypertrace.core.grpcutils.context.RequestContext.CURRENT
+                  .get()
                   .getRequestHeaders());
 
       TracesResponse response = traceService.getTracesByFilter(requestContext, request);
@@ -147,7 +165,8 @@ public class GatewayServiceImpl extends GatewayServiceGrpc.GatewayServiceImplBas
       RequestContext context =
           new RequestContext(
               tenantId.get(),
-              org.hypertrace.core.grpcutils.context.RequestContext.CURRENT.get()
+              org.hypertrace.core.grpcutils.context.RequestContext.CURRENT
+                  .get()
                   .getRequestHeaders());
       SpansResponse response = spanService.getSpansByFilter(context, request);
       responseObserver.onNext(response);
@@ -191,7 +210,8 @@ public class GatewayServiceImpl extends GatewayServiceGrpc.GatewayServiceImplBas
           entityService.getEntities(
               tenantId.get(),
               request,
-              org.hypertrace.core.grpcutils.context.RequestContext.CURRENT.get()
+              org.hypertrace.core.grpcutils.context.RequestContext.CURRENT
+                  .get()
                   .getRequestHeaders());
 
       LOG.debug("Received response: {}", response);
@@ -223,7 +243,8 @@ public class GatewayServiceImpl extends GatewayServiceGrpc.GatewayServiceImplBas
           entityService.updateEntity(
               tenantId.get(),
               request,
-              org.hypertrace.core.grpcutils.context.RequestContext.CURRENT.get()
+              org.hypertrace.core.grpcutils.context.RequestContext.CURRENT
+                  .get()
                   .getRequestHeaders());
 
       if (LOG.isDebugEnabled()) {
@@ -280,7 +301,8 @@ public class GatewayServiceImpl extends GatewayServiceGrpc.GatewayServiceImplBas
           exploreService.explore(
               tenantId.get(),
               request,
-              org.hypertrace.core.grpcutils.context.RequestContext.CURRENT.get()
+              org.hypertrace.core.grpcutils.context.RequestContext.CURRENT
+                  .get()
                   .getRequestHeaders());
       responseObserver.onNext(response);
       responseObserver.onCompleted();

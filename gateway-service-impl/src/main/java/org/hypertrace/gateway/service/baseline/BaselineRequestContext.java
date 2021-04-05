@@ -1,10 +1,9 @@
 package org.hypertrace.gateway.service.baseline;
 
-import org.hypertrace.gateway.service.common.RequestContext;
-import org.hypertrace.gateway.service.v1.baseline.BaselineTimeAggregation;
-
 import java.util.HashMap;
 import java.util.Map;
+import org.hypertrace.gateway.service.common.RequestContext;
+import org.hypertrace.gateway.service.v1.baseline.BaselineTimeAggregation;
 
 public class BaselineRequestContext extends RequestContext {
 

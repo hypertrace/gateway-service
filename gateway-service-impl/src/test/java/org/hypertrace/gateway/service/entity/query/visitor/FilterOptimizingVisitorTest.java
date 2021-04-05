@@ -5,8 +5,10 @@ import static org.hypertrace.gateway.service.common.EntitiesRequestAndResponseUt
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertNull;
 import static org.junit.jupiter.api.Assertions.assertTrue;
-import static org.mockito.Mockito.mock;
 
+import java.util.Collections;
+import java.util.List;
+import java.util.Set;
 import org.hypertrace.gateway.service.entity.query.AndNode;
 import org.hypertrace.gateway.service.entity.query.DataFetcherNode;
 import org.hypertrace.gateway.service.entity.query.OrNode;
@@ -19,17 +21,14 @@ import org.hypertrace.gateway.service.v1.common.Operator;
 import org.hypertrace.gateway.service.v1.common.OrderByExpression;
 import org.junit.jupiter.api.Test;
 
-import java.util.Collections;
-import java.util.List;
-import java.util.Set;
-
 public class FilterOptimizingVisitorTest {
   @Test
   public void testPaginateOnlyNode() {
     DataFetcherNode dataFetcherNode = new DataFetcherNode("QS", Filter.getDefaultInstance());
     PaginateOnlyNode paginateOnlyNode = new PaginateOnlyNode(dataFetcherNode, 10, 10);
     FilterOptimizingVisitor filterOptimizingVisitor = new FilterOptimizingVisitor();
-    PaginateOnlyNode visitedPaginatedOnlyNode = (PaginateOnlyNode) filterOptimizingVisitor.visit(paginateOnlyNode);
+    PaginateOnlyNode visitedPaginatedOnlyNode =
+        (PaginateOnlyNode) filterOptimizingVisitor.visit(paginateOnlyNode);
     assertEquals(paginateOnlyNode.getChildNode(), visitedPaginatedOnlyNode.getChildNode());
     assertEquals(paginateOnlyNode.getLimit(), visitedPaginatedOnlyNode.getLimit());
     assertEquals(paginateOnlyNode.getOffset(), visitedPaginatedOnlyNode.getOffset());
@@ -84,7 +83,8 @@ public class FilterOptimizingVisitorTest {
     Filter filter2 = generateEQFilter("API.id", "apiId1");
     int limit = 10;
     int offset = 5;
-    List<OrderByExpression> orderByExpressions = Collections.singletonList(buildOrderByExpression("API.id"));
+    List<OrderByExpression> orderByExpressions =
+        Collections.singletonList(buildOrderByExpression("API.id"));
     DataFetcherNode dataFetcherNode1 =
         new DataFetcherNode("QS", filter1, limit, offset, orderByExpressions, true);
     DataFetcherNode dataFetcherNode2 =
@@ -106,18 +106,14 @@ public class FilterOptimizingVisitorTest {
     assertEquals(orderByExpressions, mergedDataFetcherNode.getOrderByExpressionList());
   }
 
-
   @Test
   public void testAndNodes_dataFetcherNodes_sameSource() {
     Filter filter1 = generateEQFilter("API.name", "apiName1");
     Filter filter2 = generateEQFilter("API.id", "apiId1");
     Filter filter3 = generateEQFilter("API.type", "HTTP");
-    DataFetcherNode dataFetcherNode1 =
-        new DataFetcherNode("QS", filter1);
-    DataFetcherNode dataFetcherNode2 =
-        new DataFetcherNode("QS", filter2);
-    DataFetcherNode dataFetcherNode3 =
-        new DataFetcherNode("QS", filter3);
+    DataFetcherNode dataFetcherNode1 = new DataFetcherNode("QS", filter1);
+    DataFetcherNode dataFetcherNode2 = new DataFetcherNode("QS", filter2);
+    DataFetcherNode dataFetcherNode3 = new DataFetcherNode("QS", filter3);
     AndNode andNode = new AndNode(List.of(dataFetcherNode1, dataFetcherNode2));
     AndNode parentAndNode = new AndNode(List.of(andNode, dataFetcherNode3));
 
@@ -143,12 +139,9 @@ public class FilterOptimizingVisitorTest {
     Filter filter1 = generateEQFilter("API.name", "apiName1");
     Filter filter2 = generateEQFilter("API.id", "apiId1");
     Filter filter3 = generateEQFilter("API.type", "HTTP");
-    DataFetcherNode dataFetcherNode1 =
-        new DataFetcherNode("QS", filter1);
-    DataFetcherNode dataFetcherNode2 =
-        new DataFetcherNode("QS", filter2);
-    DataFetcherNode dataFetcherNode3 =
-        new DataFetcherNode("QS", filter3);
+    DataFetcherNode dataFetcherNode1 = new DataFetcherNode("QS", filter1);
+    DataFetcherNode dataFetcherNode2 = new DataFetcherNode("QS", filter2);
+    DataFetcherNode dataFetcherNode3 = new DataFetcherNode("QS", filter3);
     OrNode orNode = new OrNode(List.of(dataFetcherNode1, dataFetcherNode2));
     OrNode parentOrNode = new OrNode(List.of(orNode, dataFetcherNode3));
 

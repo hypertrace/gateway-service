@@ -8,8 +8,6 @@ import java.time.temporal.ChronoUnit;
 import java.util.Arrays;
 import java.util.List;
 import java.util.Map;
-import java.util.Set;
-
 import org.hypertrace.gateway.service.common.datafetcher.EntityFetcherResponse;
 import org.hypertrace.gateway.service.common.datafetcher.EntityResponse;
 import org.hypertrace.gateway.service.entity.EntityKey;
@@ -64,7 +62,8 @@ public class EntitiesRequestAndResponseUtils {
     return OrderByExpression.newBuilder().setExpression(buildExpression(columnName)).build();
   }
 
-  public static OrderByExpression buildOrderByExpression(SortOrder sortOrder, Expression expression) {
+  public static OrderByExpression buildOrderByExpression(
+      SortOrder sortOrder, Expression expression) {
     return OrderByExpression.newBuilder().setExpression(expression).setOrder(sortOrder).build();
   }
 
@@ -90,16 +89,14 @@ public class EntitiesRequestAndResponseUtils {
     return Expression.newBuilder().setFunction(functionBuilder).build();
   }
 
-  public static TimeAggregation buildTimeAggregation(int period,
-                                              String columnName,
-                                              FunctionType function,
-                                              String alias,
-                                              List<Expression> additionalArguments) {
+  public static TimeAggregation buildTimeAggregation(
+      int period,
+      String columnName,
+      FunctionType function,
+      String alias,
+      List<Expression> additionalArguments) {
     return TimeAggregation.newBuilder()
-        .setPeriod(Period.newBuilder()
-            .setValue(period)
-            .setUnit(ChronoUnit.SECONDS.name())
-        )
+        .setPeriod(Period.newBuilder().setValue(period).setUnit(ChronoUnit.SECONDS.name()))
         .setAggregation(buildAggregateExpression(columnName, function, alias, additionalArguments))
         .build();
   }
@@ -108,14 +105,16 @@ public class EntitiesRequestAndResponseUtils {
     return Value.newBuilder().setString(value).setValueType(ValueType.STRING).build();
   }
 
-  public static AggregatedMetricValue getAggregatedMetricValue(FunctionType functionType, double value) {
+  public static AggregatedMetricValue getAggregatedMetricValue(
+      FunctionType functionType, double value) {
     return AggregatedMetricValue.newBuilder()
         .setFunction(functionType)
         .setValue(Value.newBuilder().setDouble(value).setValueType(ValueType.DOUBLE))
         .build();
   }
 
-  public static AggregatedMetricValue getAggregatedMetricValue(FunctionType functionType, long value) {
+  public static AggregatedMetricValue getAggregatedMetricValue(
+      FunctionType functionType, long value) {
     return AggregatedMetricValue.newBuilder()
         .setFunction(functionType)
         .setValue(Value.newBuilder().setLong(value).setValueType(ValueType.LONG))
@@ -126,33 +125,36 @@ public class EntitiesRequestAndResponseUtils {
     return Expression.newBuilder()
         .setLiteral(
             LiteralConstant.newBuilder()
-                .setValue(
-                    Value.newBuilder()
-                        .setValueType(ValueType.LONG)
-                        .setLong(value)
-                )
-        )
+                .setValue(Value.newBuilder().setValueType(ValueType.LONG).setLong(value)))
         .build();
   }
 
   /**
    * This is because we cannot compare Entity.Builders. We need to build them and compare the built
    * Entity projects.
+   *
    * @param expectedEntityFetcherResponse
    * @param actualEntityFetcherResponse
    */
-  public static void compareEntityFetcherResponses(EntityFetcherResponse expectedEntityFetcherResponse,
-                                                   EntityFetcherResponse actualEntityFetcherResponse) {
+  public static void compareEntityFetcherResponses(
+      EntityFetcherResponse expectedEntityFetcherResponse,
+      EntityFetcherResponse actualEntityFetcherResponse) {
     assertEquals(expectedEntityFetcherResponse.size(), actualEntityFetcherResponse.size());
-    Map<EntityKey, Builder> expectedEntityFetcherResponseMap = expectedEntityFetcherResponse.getEntityKeyBuilderMap();
-    Map<EntityKey, Entity.Builder> actualEntityFetcherResponseMap = actualEntityFetcherResponse.getEntityKeyBuilderMap();
-    expectedEntityFetcherResponseMap.forEach((k, v) -> {
-      assertTrue(actualEntityFetcherResponseMap.containsKey(k), "Missing key: " + k);
-      assertEquals(expectedEntityFetcherResponseMap.get(k).build(), actualEntityFetcherResponseMap.get(k).build());
-    });
+    Map<EntityKey, Builder> expectedEntityFetcherResponseMap =
+        expectedEntityFetcherResponse.getEntityKeyBuilderMap();
+    Map<EntityKey, Entity.Builder> actualEntityFetcherResponseMap =
+        actualEntityFetcherResponse.getEntityKeyBuilderMap();
+    expectedEntityFetcherResponseMap.forEach(
+        (k, v) -> {
+          assertTrue(actualEntityFetcherResponseMap.containsKey(k), "Missing key: " + k);
+          assertEquals(
+              expectedEntityFetcherResponseMap.get(k).build(),
+              actualEntityFetcherResponseMap.get(k).build());
+        });
   }
 
-  public static void compareEntityResponses(EntityResponse expectedEntityResponse, EntityResponse actualEntityResponse) {
+  public static void compareEntityResponses(
+      EntityResponse expectedEntityResponse, EntityResponse actualEntityResponse) {
     compareEntityFetcherResponses(
         expectedEntityResponse.getEntityFetcherResponse(),
         actualEntityResponse.getEntityFetcherResponse());
@@ -172,6 +174,7 @@ public class EntitiesRequestAndResponseUtils {
     return Filter.newBuilder()
         .setOperator(operator)
         .setLhs(buildExpression(colName))
-        .setRhs(getLiteralExpression(timestamp)).build();
+        .setRhs(getLiteralExpression(timestamp))
+        .build();
   }
 }

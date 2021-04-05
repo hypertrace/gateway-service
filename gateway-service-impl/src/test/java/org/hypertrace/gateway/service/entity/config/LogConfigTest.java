@@ -12,10 +12,12 @@ public class LogConfigTest {
 
   @Test
   public void test_getQueryThresholdInMillis_fromValidFile() {
-    File configFile = new File(Thread.currentThread()
-        .getContextClassLoader()
-        .getResource("configs/gateway-service/application.conf")
-        .getPath());
+    File configFile =
+        new File(
+            Thread.currentThread()
+                .getContextClassLoader()
+                .getResource("configs/gateway-service/application.conf")
+                .getPath());
     Config appConfig = ConfigFactory.parseFile(configFile);
     LogConfig logConfig = new LogConfig(appConfig);
     assertEquals(1500L, logConfig.getQueryThresholdInMillis());

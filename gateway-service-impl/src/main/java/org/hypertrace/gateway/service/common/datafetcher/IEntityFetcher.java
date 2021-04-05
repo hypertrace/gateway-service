@@ -3,17 +3,12 @@ package org.hypertrace.gateway.service.common.datafetcher;
 import java.util.ArrayList;
 import java.util.Comparator;
 import java.util.List;
-
 import org.hypertrace.gateway.service.entity.EntitiesRequestContext;
-import org.hypertrace.gateway.service.entity.EntityKey;
-import org.hypertrace.gateway.service.v1.common.Filter;
 import org.hypertrace.gateway.service.v1.common.Interval;
 import org.hypertrace.gateway.service.v1.common.MetricSeries;
 import org.hypertrace.gateway.service.v1.entity.EntitiesRequest;
 
-/**
- * Interface spec for fetching entities, aggregated metrics and time series data
- */
+/** Interface spec for fetching entities, aggregated metrics and time series data */
 public interface IEntityFetcher {
 
   /**

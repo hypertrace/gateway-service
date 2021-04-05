@@ -1,11 +1,10 @@
 package org.hypertrace.gateway.service.baseline;
 
+import java.util.Iterator;
+import java.util.Map;
 import org.hypertrace.core.query.service.api.QueryRequest;
 import org.hypertrace.core.query.service.api.ResultSetChunk;
 import org.hypertrace.core.query.service.client.QueryServiceClient;
-
-import java.util.Iterator;
-import java.util.Map;
 
 public class BaselineServiceQueryExecutor {
 

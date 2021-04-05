@@ -61,19 +61,22 @@ public class TracesService {
 
   public TracesService(
       QueryServiceClient queryServiceClient,
-      int qsRequestTimeout, AttributeMetadataProvider attributeMetadataProvider,
+      int qsRequestTimeout,
+      AttributeMetadataProvider attributeMetadataProvider,
       ScopeFilterConfigs scopeFilterConfigs) {
     this.queryServiceClient = queryServiceClient;
     this.queryServiceReqTimeout = qsRequestTimeout;
     this.attributeMetadataProvider = attributeMetadataProvider;
     this.requestValidator = new TracesRequestValidator();
-    this.requestPreProcessor = new RequestPreProcessor(attributeMetadataProvider, scopeFilterConfigs);
+    this.requestPreProcessor =
+        new RequestPreProcessor(attributeMetadataProvider, scopeFilterConfigs);
     initMetrics();
   }
 
   private void initMetrics() {
-    queryExecutionTimer = PlatformMetricsRegistry.registerTimer("hypertrace.traces.query.execution",
-        ImmutableMap.of());
+    queryExecutionTimer =
+        PlatformMetricsRegistry.registerTimer(
+            "hypertrace.traces.query.execution", ImmutableMap.of());
   }
 
   public TracesResponse getTracesByFilter(RequestContext context, TracesRequest request) {
@@ -105,8 +108,8 @@ public class TracesService {
       }
       return response;
     } finally {
-      queryExecutionTimer
-          .record(Duration.between(start, Instant.now()).toMillis(), TimeUnit.MILLISECONDS);
+      queryExecutionTimer.record(
+          Duration.between(start, Instant.now()).toMillis(), TimeUnit.MILLISECONDS);
     }
   }
 
@@ -200,7 +203,8 @@ public class TracesService {
         try {
           total = Integer.parseInt(totalStr);
         } catch (NumberFormatException nfe) {
-          LOG.error("Unable to convert Total to a number. Received value: {} from Query Service",
+          LOG.error(
+              "Unable to convert Total to a number. Received value: {} from Query Service",
               totalStr);
         }
       }

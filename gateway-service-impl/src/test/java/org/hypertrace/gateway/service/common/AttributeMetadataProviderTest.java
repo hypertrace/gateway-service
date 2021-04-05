@@ -40,8 +40,11 @@ public class AttributeMetadataProviderTest {
                 .setId("API.serviceId")
                 .build());
     when(attributesServiceClient.findAttributes(
-        eq(Map.of("test-header-key", "test-header-value")),
-        eq(AttributeMetadataFilter.newBuilder().addScopeString(AttributeScope.API.name()).build())))
+            eq(Map.of("test-header-key", "test-header-value")),
+            eq(
+                AttributeMetadataFilter.newBuilder()
+                    .addScopeString(AttributeScope.API.name())
+                    .build())))
         .thenAnswer((Answer<Iterator<AttributeMetadata>>) invocation -> attributesList1.iterator());
 
     AttributeMetadataProvider attributeMetadataProvider =
@@ -89,49 +92,72 @@ public class AttributeMetadataProviderTest {
     verify(attributesServiceClient, times(2))
         .findAttributes(
             eq(Map.of("test-header-key", "test-header-value")),
-            eq(AttributeMetadataFilter.newBuilder().addScopeString(AttributeScope.API.name()).build()));
+            eq(
+                AttributeMetadataFilter.newBuilder()
+                    .addScopeString(AttributeScope.API.name())
+                    .build()));
 
     // Different jwt token
     List<AttributeMetadata> attributesList2 =
         List.of(
-            AttributeMetadata.newBuilder().setScopeString(AttributeScope.API.name()).setKey("name2").build(),
-            AttributeMetadata.newBuilder().setScopeString(AttributeScope.API.name()).setKey("apiId").build());
+            AttributeMetadata.newBuilder()
+                .setScopeString(AttributeScope.API.name())
+                .setKey("name2")
+                .build(),
+            AttributeMetadata.newBuilder()
+                .setScopeString(AttributeScope.API.name())
+                .setKey("apiId")
+                .build());
     when(attributesServiceClient.findAttributes(
-        eq(Map.of("test-header-key", "test-header-value-2")),
-        eq(AttributeMetadataFilter.newBuilder().addScopeString(AttributeScope.API.name()).build())))
+            eq(Map.of("test-header-key", "test-header-value-2")),
+            eq(
+                AttributeMetadataFilter.newBuilder()
+                    .addScopeString(AttributeScope.API.name())
+                    .build())))
         .thenAnswer((Answer<Iterator<AttributeMetadata>>) invocation -> attributesList2.iterator());
 
     RequestContext requestContext2 =
-        new RequestContext(
-            "test-tenant-id-2", Map.of("test-header-key", "test-header-value-2"));
+        new RequestContext("test-tenant-id-2", Map.of("test-header-key", "test-header-value-2"));
 
     attributeMetadata =
         attributeMetadataProvider
             .getAttributeMetadata(requestContext2, AttributeScope.API.name(), "apiId")
             .get();
     Assertions.assertEquals(
-        AttributeMetadata.newBuilder().setScopeString(AttributeScope.API.name()).setKey("apiId").build(),
+        AttributeMetadata.newBuilder()
+            .setScopeString(AttributeScope.API.name())
+            .setKey("apiId")
+            .build(),
         attributeMetadata);
     attributeMetadata =
         attributeMetadataProvider
             .getAttributeMetadata(requestContext2, AttributeScope.API.name(), "apiId")
             .get();
     Assertions.assertEquals(
-        AttributeMetadata.newBuilder().setScopeString(AttributeScope.API.name()).setKey("apiId").build(),
+        AttributeMetadata.newBuilder()
+            .setScopeString(AttributeScope.API.name())
+            .setKey("apiId")
+            .build(),
         attributeMetadata);
     attributeMetadata =
         attributeMetadataProvider
             .getAttributeMetadata(requestContext2, AttributeScope.API.name(), "name2")
             .get();
     Assertions.assertEquals(
-        AttributeMetadata.newBuilder().setScopeString(AttributeScope.API.name()).setKey("name2").build(),
+        AttributeMetadata.newBuilder()
+            .setScopeString(AttributeScope.API.name())
+            .setKey("name2")
+            .build(),
         attributeMetadata);
 
     // 2 for a different tenant on (Api, id) and (Api, name2)
     verify(attributesServiceClient, times(2))
         .findAttributes(
             eq(Map.of("test-header-key", "test-header-value-2")),
-            eq(AttributeMetadataFilter.newBuilder().addScopeString(AttributeScope.API.name()).build()));
+            eq(
+                AttributeMetadataFilter.newBuilder()
+                    .addScopeString(AttributeScope.API.name())
+                    .build()));
   }
 
   @Test
@@ -158,8 +184,11 @@ public class AttributeMetadataProviderTest {
     List<AttributeMetadata> attributesList1 =
         List.of(attributeMetadata1, attributeMetadata2, attributeMetadata3);
     when(attributesServiceClient.findAttributes(
-        eq(Map.of("test-header-key", "test-header-value")),
-        eq(AttributeMetadataFilter.newBuilder().addScopeString(AttributeScope.API.name()).build())))
+            eq(Map.of("test-header-key", "test-header-value")),
+            eq(
+                AttributeMetadataFilter.newBuilder()
+                    .addScopeString(AttributeScope.API.name())
+                    .build())))
         .thenAnswer((Answer<Iterator<AttributeMetadata>>) invocation -> attributesList1.iterator());
 
     AttributeMetadataProvider attributeMetadataProvider =
@@ -196,7 +225,10 @@ public class AttributeMetadataProviderTest {
     verify(attributesServiceClient, times(1))
         .findAttributes(
             eq(Map.of("test-header-key", "test-header-value")),
-            eq(AttributeMetadataFilter.newBuilder().addScopeString(AttributeScope.API.name()).build()));
+            eq(
+                AttributeMetadataFilter.newBuilder()
+                    .addScopeString(AttributeScope.API.name())
+                    .build()));
 
     // Different jwt token
     AttributeMetadata attributeMetadata4 =
@@ -213,13 +245,15 @@ public class AttributeMetadataProviderTest {
             .build();
     List<AttributeMetadata> attributesList2 = List.of(attributeMetadata4, attributeMetadata5);
     when(attributesServiceClient.findAttributes(
-        eq(Map.of("test-header-key", "test-header-value-2")),
-        eq(AttributeMetadataFilter.newBuilder().addScopeString(AttributeScope.API.name()).build())))
+            eq(Map.of("test-header-key", "test-header-value-2")),
+            eq(
+                AttributeMetadataFilter.newBuilder()
+                    .addScopeString(AttributeScope.API.name())
+                    .build())))
         .thenAnswer((Answer<Iterator<AttributeMetadata>>) invocation -> attributesList2.iterator());
 
     RequestContext requestContext2 =
-        new RequestContext(
-            "test-tenant-id-2", Map.of("test-header-key", "test-header-value-2"));
+        new RequestContext("test-tenant-id-2", Map.of("test-header-key", "test-header-value-2"));
 
     attributeIdToMetadata =
         attributeMetadataProvider.getAttributesMetadata(requestContext2, AttributeScope.API.name());
@@ -236,6 +270,9 @@ public class AttributeMetadataProviderTest {
     verify(attributesServiceClient, times(1))
         .findAttributes(
             eq(Map.of("test-header-key", "test-header-value-2")),
-            eq(AttributeMetadataFilter.newBuilder().addScopeString(AttributeScope.API.name()).build()));
+            eq(
+                AttributeMetadataFilter.newBuilder()
+                    .addScopeString(AttributeScope.API.name())
+                    .build()));
   }
 }

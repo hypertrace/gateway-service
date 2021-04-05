@@ -45,8 +45,9 @@ public class EntitiesRequestResponseProcessorTest {
   @BeforeEach
   public void setup() {
     mockAttributeMetadataProvider();
-    requestPreProcessor = new RequestPreProcessor(attributeMetadataProvider,
-        new ScopeFilterConfigs(ConfigFactory.empty()));
+    requestPreProcessor =
+        new RequestPreProcessor(
+            attributeMetadataProvider, new ScopeFilterConfigs(ConfigFactory.empty()));
   }
 
   @Test
@@ -65,7 +66,8 @@ public class EntitiesRequestResponseProcessorTest {
 
     EntitiesRequestContext context = mock(EntitiesRequestContext.class);
     when(context.getTimestampAttributeId()).thenReturn("API.startTime");
-    EntitiesRequest transformedRequest = requestPreProcessor.transformFilter(originalRequest, context);
+    EntitiesRequest transformedRequest =
+        requestPreProcessor.transformFilter(originalRequest, context);
     List<Expression> expressionList = transformedRequest.getSelectionList();
     Assertions.assertEquals(3, expressionList.size());
   }

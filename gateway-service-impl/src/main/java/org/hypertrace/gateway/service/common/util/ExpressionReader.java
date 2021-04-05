@@ -8,7 +8,6 @@ import java.util.Map;
 import java.util.Set;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
-
 import org.hypertrace.gateway.service.v1.common.Expression;
 
 public class ExpressionReader {
@@ -50,13 +49,12 @@ public class ExpressionReader {
   }
 
   /**
-   * Given a source to attributes, builds an attribute to sources map.
-   * Basically, a reverse map of the map provided as input
+   * Given a source to attributes, builds an attribute to sources map. Basically, a reverse map of
+   * the map provided as input
    *
-   * Example:
-   * ("QS" -> API.id, "QS" -> API.name, "EDS" -> API.id) =>
+   * <p>Example: ("QS" -> API.id, "QS" -> API.name, "EDS" -> API.id) =>
    *
-   * ("API.id" -> ["QS", "EDS"], "API.name" -> "QS")
+   * <p>("API.id" -> ["QS", "EDS"], "API.name" -> "QS")
    */
   public static Map<String, Set<String>> buildAttributeToSourcesMap(
       Map<String, Set<String>> sourcesToAttributeMap) {

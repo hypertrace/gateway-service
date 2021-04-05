@@ -12,9 +12,7 @@ import java.util.Objects;
 import java.util.stream.Collectors;
 import org.hypertrace.gateway.service.v1.common.Value;
 
-/**
- * A combination of one or more {@link Value}s
- */
+/** A combination of one or more {@link Value}s */
 public class CompositeValue {
 
   private static final String DELIMITER = ":";

@@ -88,7 +88,9 @@ public class EntityInteractionsFetcher {
   private final int queryServiceRequestTimeout;
   private final AttributeMetadataProvider metadataProvider;
 
-  public EntityInteractionsFetcher(QueryServiceClient queryServiceClient, int qsRequestTimeout,
+  public EntityInteractionsFetcher(
+      QueryServiceClient queryServiceClient,
+      int qsRequestTimeout,
       AttributeMetadataProvider metadataProvider) {
     this.queryServiceClient = queryServiceClient;
     this.queryServiceRequestTimeout = qsRequestTimeout;
@@ -181,8 +183,8 @@ public class EntityInteractionsFetcher {
             interactionsRequest.getSelectionList());
     for (Map.Entry<String, QueryRequest> entry : requests.entrySet()) {
       Iterator<ResultSetChunk> resultSet =
-          queryServiceClient.executeQuery(entry.getValue(), context.getHeaders(),
-              queryServiceRequestTimeout);
+          queryServiceClient.executeQuery(
+              entry.getValue(), context.getHeaders(), queryServiceRequestTimeout);
       parseResultSet(
           request.getEntityType(),
           entry.getKey(),
@@ -232,31 +234,34 @@ public class EntityInteractionsFetcher {
         switch (columnName) {
           case FROM_ENTITY_TYPE_ATTRIBUTE_ID:
             return QueryRequestUtil.createCompositeFilter(
-                    Operator.AND,
-                    getEntityIdColumnsFromInteraction(otherEntityType, INCOMING).stream()
-                        .map(
-                            fromEntityIdColumn -> createFilter(
-                                fromEntityIdColumn, Operator.NEQ, createStringNullLiteralExpression()))
-                        .collect(Collectors.toList()));
+                Operator.AND,
+                getEntityIdColumnsFromInteraction(otherEntityType, INCOMING).stream()
+                    .map(
+                        fromEntityIdColumn ->
+                            createFilter(
+                                fromEntityIdColumn,
+                                Operator.NEQ,
+                                createStringNullLiteralExpression()))
+                    .collect(Collectors.toList()));
           case TO_ENTITY_TYPE_ATTRIBUTE_ID:
             return QueryRequestUtil.createCompositeFilter(
-                    Operator.AND,
-                    getEntityIdColumnsFromInteraction(otherEntityType, OUTGOING).stream()
-                        .map(
-                            fromEntityIdColumn ->
-                                createFilter(
-                                    fromEntityIdColumn,
-                                    Operator.NEQ,
-                                    createStringNullLiteralExpression()))
-                        .collect(Collectors.toList()));
+                Operator.AND,
+                getEntityIdColumnsFromInteraction(otherEntityType, OUTGOING).stream()
+                    .map(
+                        fromEntityIdColumn ->
+                            createFilter(
+                                fromEntityIdColumn,
+                                Operator.NEQ,
+                                createStringNullLiteralExpression()))
+                    .collect(Collectors.toList()));
           case FROM_ENTITY_ID_ATTRIBUTE_ID:
             return createFilterForEntityKeys(
-                    getEntityIdColumnsFromInteraction(otherEntityType, INCOMING),
-                    getEntityKeyValues(filter.getRhs()));
+                getEntityIdColumnsFromInteraction(otherEntityType, INCOMING),
+                getEntityKeyValues(filter.getRhs()));
           case TO_ENTITY_ID_ATTRIBUTE_ID:
             return createFilterForEntityKeys(
-                    getEntityIdColumnsFromInteraction(otherEntityType, OUTGOING),
-                    getEntityKeyValues(filter.getRhs()));
+                getEntityIdColumnsFromInteraction(otherEntityType, OUTGOING),
+                getEntityKeyValues(filter.getRhs()));
           default:
             // Do nothing, fall through to default case
         }
@@ -316,7 +321,8 @@ public class EntityInteractionsFetcher {
             entityKeys.stream()
                 .map(
                     entityKey ->
-                        org.hypertrace.core.query.service.util.QueryRequestUtil.createValueEQFilter(idColumns, entityKey.getAttributes()))
+                        org.hypertrace.core.query.service.util.QueryRequestUtil.createValueEQFilter(
+                            idColumns, entityKey.getAttributes()))
                 .collect(Collectors.toList()))
         .build();
   }
@@ -345,7 +351,8 @@ public class EntityInteractionsFetcher {
             .setOperator(Operator.AND)
             .addChildFilter(
                 QueryRequestUtil.createBetweenTimesFilter(
-                    AttributeMetadataUtil.getTimestampAttributeId(metadataProvider, requestContext, SCOPE),
+                    AttributeMetadataUtil.getTimestampAttributeId(
+                        metadataProvider, requestContext, SCOPE),
                     startTime,
                     endTime));
 
@@ -381,8 +388,8 @@ public class EntityInteractionsFetcher {
     // so we add count(*) as a dummy placeholder if there are no explicit selectors.
     if (selections.isEmpty()) {
       selections.add(
-          QueryRequestUtil.createCountByColumnSelection(Optional.ofNullable(idColumns.get(0)).orElseThrow())
-      );
+          QueryRequestUtil.createCountByColumnSelection(
+              Optional.ofNullable(idColumns.get(0)).orElseThrow()));
     }
 
     QueryRequest protoType = builder.build();
@@ -567,19 +574,22 @@ public class EntityInteractionsFetcher {
     }
   }
 
-  private Optional<Filter> buildSpaceQueryFilterIfNeeded(RequestContext requestContext, String spaceId) {
+  private Optional<Filter> buildSpaceQueryFilterIfNeeded(
+      RequestContext requestContext, String spaceId) {
     if (Strings.isNullOrEmpty(spaceId)) {
       return Optional.empty();
     }
 
-    String fromSpaceId = this.metadataProvider
-        .getAttributeMetadata(requestContext, SCOPE, FROM_SPACE_ATTRIBUTE_KEY)
-        .orElseThrow()
-        .getId();
-    String toSpaceId = this.metadataProvider
-        .getAttributeMetadata(requestContext, SCOPE, TO_SPACE_ATTRIBUTE_KEY)
-        .orElseThrow()
-        .getId();
+    String fromSpaceId =
+        this.metadataProvider
+            .getAttributeMetadata(requestContext, SCOPE, FROM_SPACE_ATTRIBUTE_KEY)
+            .orElseThrow()
+            .getId();
+    String toSpaceId =
+        this.metadataProvider
+            .getAttributeMetadata(requestContext, SCOPE, TO_SPACE_ATTRIBUTE_KEY)
+            .orElseThrow()
+            .getId();
     // For interactions, consider it in space only if both incoming and outgoing event spaces match
     return Optional.of(
         QueryRequestUtil.createCompositeFilter(

@@ -7,7 +7,6 @@ import java.util.Set;
 import org.hypertrace.gateway.service.common.AttributeMetadataProvider;
 import org.hypertrace.gateway.service.common.RequestContext;
 import org.hypertrace.gateway.service.common.config.ScopeFilterConfigs;
-import org.hypertrace.gateway.service.common.util.TimeRangeFilterUtil;
 import org.hypertrace.gateway.service.entity.EntitiesRequestContext;
 import org.hypertrace.gateway.service.trace.TraceScope;
 import org.hypertrace.gateway.service.v1.common.Expression;
@@ -28,8 +27,8 @@ public class RequestPreProcessor {
   private final AttributeMetadataProvider attributeMetadataProvider;
   private final ScopeFilterConfigs scopeFilterConfigs;
 
-  public RequestPreProcessor(AttributeMetadataProvider attributeMetadataProvider,
-      ScopeFilterConfigs scopeFilterConfigs) {
+  public RequestPreProcessor(
+      AttributeMetadataProvider attributeMetadataProvider, ScopeFilterConfigs scopeFilterConfigs) {
     this.attributeMetadataProvider = attributeMetadataProvider;
     this.scopeFilterConfigs = scopeFilterConfigs;
   }
@@ -44,11 +43,12 @@ public class RequestPreProcessor {
       EntitiesRequest originalRequest, EntitiesRequestContext context) {
     EntitiesRequest.Builder entitiesRequestBuilder = EntitiesRequest.newBuilder(originalRequest);
     // Add any additional filters that maybe defined in the scope filters config
-    Filter filter = scopeFilterConfigs.createScopeFilter(
-        originalRequest.getEntityType(),
-        originalRequest.getFilter(),
-        attributeMetadataProvider,
-        context);
+    Filter filter =
+        scopeFilterConfigs.createScopeFilter(
+            originalRequest.getEntityType(),
+            originalRequest.getFilter(),
+            attributeMetadataProvider,
+            context);
 
     return entitiesRequestBuilder
         .clearSelection()
@@ -64,16 +64,15 @@ public class RequestPreProcessor {
    * @param originalRequest The original request received
    * @return The modified request with any additional filters in scope filters config
    */
-  public TracesRequest transformFilter(TracesRequest originalRequest, RequestContext requestContext) {
+  public TracesRequest transformFilter(
+      TracesRequest originalRequest, RequestContext requestContext) {
     TracesRequest.Builder tracesRequestBuilder = TracesRequest.newBuilder(originalRequest);
 
     // Add any additional filters that maybe defined in the scope filters config
     TraceScope scope = TraceScope.valueOf(originalRequest.getScope());
-    Filter filter = scopeFilterConfigs.createScopeFilter(
-        scope.name(),
-        originalRequest.getFilter(),
-        attributeMetadataProvider,
-        requestContext);
+    Filter filter =
+        scopeFilterConfigs.createScopeFilter(
+            scope.name(), originalRequest.getFilter(), attributeMetadataProvider, requestContext);
     tracesRequestBuilder.setFilter(filter);
 
     return tracesRequestBuilder.build();

@@ -12,7 +12,6 @@ import java.util.Map;
 import java.util.Set;
 import java.util.stream.Collectors;
 import java.util.stream.IntStream;
-
 import org.hypertrace.core.attribute.service.v1.AttributeMetadata;
 import org.hypertrace.core.attribute.service.v1.AttributeSource;
 import org.hypertrace.gateway.service.common.AttributeMetadataProvider;
@@ -40,12 +39,13 @@ public class ExecutionContext {
 
   /** Following fields are immutable and set in the constructor * */
   private final AttributeMetadataProvider attributeMetadataProvider;
+
   private final EntityIdColumnsConfigs entityIdColumnsConfigs;
 
   private final EntitiesRequest entitiesRequest;
   private final EntitiesRequestContext entitiesRequestContext;
 
-  //selections
+  // selections
   private ImmutableMap<String, List<Expression>> sourceToSelectionExpressionMap;
   private ImmutableMap<String, Set<String>> sourceToSelectionAttributeMap;
 
@@ -95,7 +95,8 @@ public class ExecutionContext {
       EntityIdColumnsConfigs entityIdColumnsConfigs,
       EntitiesRequest entitiesRequest,
       EntitiesRequestContext entitiesRequestContext) {
-    return new ExecutionContext(metadataProvider, entityIdColumnsConfigs, entitiesRequest, entitiesRequestContext);
+    return new ExecutionContext(
+        metadataProvider, entityIdColumnsConfigs, entitiesRequest, entitiesRequestContext);
   }
 
   public String getTenantId() {
@@ -273,14 +274,16 @@ public class ExecutionContext {
                     Collectors.toList()));
     sourceToSelectionOrderByExpressionMap =
         getDataSourceToOrderByExpressionMap(
-            orderByExpressionTypeToExpressionMap.getOrDefault(ValueCase.COLUMNIDENTIFIER, Collections.emptyList()));
+            orderByExpressionTypeToExpressionMap.getOrDefault(
+                ValueCase.COLUMNIDENTIFIER, Collections.emptyList()));
     sourceToSelectionOrderByAttributeMap =
         buildSourceToAttributesMap(
             convertOrderByExpressionToExpression(sourceToSelectionOrderByExpressionMap));
 
     sourceToMetricOrderByExpressionMap =
         getDataSourceToOrderByExpressionMap(
-            orderByExpressionTypeToExpressionMap.getOrDefault(ValueCase.FUNCTION, Collections.emptyList()));
+            orderByExpressionTypeToExpressionMap.getOrDefault(
+                ValueCase.FUNCTION, Collections.emptyList()));
     sourceToMetricOrderByAttributeMap =
         buildSourceToAttributesMap(
             convertOrderByExpressionToExpression(sourceToMetricOrderByExpressionMap));
@@ -421,29 +424,51 @@ public class ExecutionContext {
 
   @Override
   public String toString() {
-    return "ExecutionContext{" +
-        "attributeMetadataProvider=" + attributeMetadataProvider +
-        ", entityIdColumnsConfigs=" + entityIdColumnsConfigs +
-        ", entitiesRequest=" + entitiesRequest +
-        ", entitiesRequestContext=" + entitiesRequestContext +
-        ", sourceToSelectionExpressionMap=" + sourceToSelectionExpressionMap +
-        ", sourceToSelectionAttributeMap=" + sourceToSelectionAttributeMap +
-        ", sourceToMetricExpressionMap=" + sourceToMetricExpressionMap +
-        ", sourceToTimeAggregationMap=" + sourceToTimeAggregationMap +
-        ", sourceToSelectionOrderByExpressionMap=" + sourceToSelectionOrderByExpressionMap +
-        ", sourceToSelectionOrderByAttributeMap=" + sourceToSelectionOrderByAttributeMap +
-        ", sourceToMetricOrderByExpressionMap=" + sourceToMetricOrderByExpressionMap +
-        ", sourceToMetricOrderByAttributeMap=" + sourceToMetricOrderByAttributeMap +
-        ", sourceToFilterExpressionMap=" + sourceToFilterExpressionMap +
-        ", sourceToFilterAttributeMap=" + sourceToFilterAttributeMap +
-        ", filterAttributeToSourceMap=" + filterAttributeToSourceMap +
-        ", pendingSelectionSources=" + pendingSelectionSources +
-        ", pendingMetricAggregationSources=" + pendingMetricAggregationSources +
-        ", pendingTimeAggregationSources=" + pendingTimeAggregationSources +
-        ", pendingSelectionSourcesForOrderBy=" + pendingSelectionSourcesForOrderBy +
-        ", pendingMetricAggregationSourcesForOrderBy=" + pendingMetricAggregationSourcesForOrderBy +
-        ", sortAndPaginationNodeAdded=" + sortAndPaginationNodeAdded +
-        ", allAttributesToSourcesMap=" + allAttributesToSourcesMap +
-        '}';
+    return "ExecutionContext{"
+        + "attributeMetadataProvider="
+        + attributeMetadataProvider
+        + ", entityIdColumnsConfigs="
+        + entityIdColumnsConfigs
+        + ", entitiesRequest="
+        + entitiesRequest
+        + ", entitiesRequestContext="
+        + entitiesRequestContext
+        + ", sourceToSelectionExpressionMap="
+        + sourceToSelectionExpressionMap
+        + ", sourceToSelectionAttributeMap="
+        + sourceToSelectionAttributeMap
+        + ", sourceToMetricExpressionMap="
+        + sourceToMetricExpressionMap
+        + ", sourceToTimeAggregationMap="
+        + sourceToTimeAggregationMap
+        + ", sourceToSelectionOrderByExpressionMap="
+        + sourceToSelectionOrderByExpressionMap
+        + ", sourceToSelectionOrderByAttributeMap="
+        + sourceToSelectionOrderByAttributeMap
+        + ", sourceToMetricOrderByExpressionMap="
+        + sourceToMetricOrderByExpressionMap
+        + ", sourceToMetricOrderByAttributeMap="
+        + sourceToMetricOrderByAttributeMap
+        + ", sourceToFilterExpressionMap="
+        + sourceToFilterExpressionMap
+        + ", sourceToFilterAttributeMap="
+        + sourceToFilterAttributeMap
+        + ", filterAttributeToSourceMap="
+        + filterAttributeToSourceMap
+        + ", pendingSelectionSources="
+        + pendingSelectionSources
+        + ", pendingMetricAggregationSources="
+        + pendingMetricAggregationSources
+        + ", pendingTimeAggregationSources="
+        + pendingTimeAggregationSources
+        + ", pendingSelectionSourcesForOrderBy="
+        + pendingSelectionSourcesForOrderBy
+        + ", pendingMetricAggregationSourcesForOrderBy="
+        + pendingMetricAggregationSourcesForOrderBy
+        + ", sortAndPaginationNodeAdded="
+        + sortAndPaginationNodeAdded
+        + ", allAttributesToSourcesMap="
+        + allAttributesToSourcesMap
+        + '}';
   }
 }

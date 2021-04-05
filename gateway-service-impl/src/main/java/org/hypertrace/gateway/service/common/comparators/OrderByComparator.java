@@ -7,13 +7,14 @@ import org.hypertrace.gateway.service.v1.common.OrderByExpression;
 import org.hypertrace.gateway.service.v1.common.SortOrder;
 
 /**
- * This will be used to compare two values, denoted by the generic type T, based on the OrderByExpressions list. It
- * switches on the OrderByExpression type, whether it's a Function or a Column. The extensions of this class implement:
- * 1. compareFunctionExpressionValues(T o1, T o2, String alias) which compares two objects given an alias of the function.
- *    It is expected that T has a way to determine the order given the alias and that this function will execute on a
- *    value that is a result of some aggregation.
- * 2. compareColummnExpressionValues(T o1, T o2, String columnName) which compares two objects based on simple column
- *    names. This is expected to be applied to a simple column read.
+ * This will be used to compare two values, denoted by the generic type T, based on the
+ * OrderByExpressions list. It switches on the OrderByExpression type, whether it's a Function or a
+ * Column. The extensions of this class implement: 1. compareFunctionExpressionValues(T o1, T o2,
+ * String alias) which compares two objects given an alias of the function. It is expected that T
+ * has a way to determine the order given the alias and that this function will execute on a value
+ * that is a result of some aggregation. 2. compareColummnExpressionValues(T o1, T o2, String
+ * columnName) which compares two objects based on simple column names. This is expected to be
+ * applied to a simple column read.
  *
  * <p>This class is used to fix Pinot's limitation of not being able to do Order By when Group By is
  * specified in the query. It will be useful for Entities and Explore Requests.

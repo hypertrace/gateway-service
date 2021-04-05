@@ -1,7 +1,8 @@
 package org.hypertrace.gateway.service.entity.query;
 
-import com.google.common.collect.Sets;
+import static org.hypertrace.gateway.service.common.util.ExpressionReader.buildAttributeToSourcesMap;
 
+import com.google.common.collect.Sets;
 import java.util.Collections;
 import java.util.HashMap;
 import java.util.HashSet;
@@ -10,8 +11,6 @@ import java.util.Optional;
 import java.util.Set;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
-
-import static org.hypertrace.gateway.service.common.util.ExpressionReader.buildAttributeToSourcesMap;
 
 public class ExecutionTreeUtils {
   /**
@@ -162,27 +161,23 @@ public class ExecutionTreeUtils {
   }
 
   /**
-   * Computes intersecting source sets from 2 attribute to sources map
-   * i.e. computes intersection source sets across all attributes from the map
+   * Computes intersecting source sets from 2 attribute to sources map i.e. computes intersection
+   * source sets across all attributes from the map
    *
-   * Examples:
-   * 1.
-   * ("API.id" -> ["EDS", "QS"], "API.name" -> ["QS", "EDS"])
-   * ("API.id" -> ["EDS", "QS"], "API.discoveryState" -> ["EDS"])
+   * <p>Examples: 1. ("API.id" -> ["EDS", "QS"], "API.name" -> ["QS", "EDS"]) ("API.id" -> ["EDS",
+   * "QS"], "API.discoveryState" -> ["EDS"])
    *
-   * The intersecting source set across all the attributes would be ["EDS"]
+   * <p>The intersecting source set across all the attributes would be ["EDS"]
    *
-   * 2.
-   * ("API.id" -> ["EDS", "QS"], "API.name" -> ["QS", "EDS"])
-   * ("API.id" -> ["EDS", "QS"], "API.discoveryState" -> ["EDS", "QS"])
+   * <p>2. ("API.id" -> ["EDS", "QS"], "API.name" -> ["QS", "EDS"]) ("API.id" -> ["EDS", "QS"],
+   * "API.discoveryState" -> ["EDS", "QS"])
    *
-   * The intersecting source set across all the attributes would be ["EDS", "QS"]
+   * <p>The intersecting source set across all the attributes would be ["EDS", "QS"]
    *
-   * 3.
-   * ("API.id" -> ["EDS"], "API.name" -> ["EDS"])
-   * ("API.id" -> ["EDS"], "API.discoveryState" -> ["QS"])
+   * <p>3. ("API.id" -> ["EDS"], "API.name" -> ["EDS"]) ("API.id" -> ["EDS"], "API.discoveryState"
+   * -> ["QS"])
    *
-   * The intersecting source set across all the attributes would be []
+   * <p>The intersecting source set across all the attributes would be []
    */
   private static Set<String> getIntersectingSourceSets(
       Map<String, Set<String>> attributeToSourcesMapFirst,
@@ -209,10 +204,9 @@ public class ExecutionTreeUtils {
   /**
    * Computes source sets intersection from attribute to sources map
    *
-   * Examples:
-   * ("API.id" -> ["EDS", "QS], "API.name" -> ["QS", "EDS]) => ["QS", "EDS]
-   * ("API.id" -> ["EDS", "QS], "API.name" -> ["QS"]) => ["QS"]
-   * ("API.id" -> ["EDS"], "API.name" -> ["QS]) => []
+   * <p>Examples: ("API.id" -> ["EDS", "QS], "API.name" -> ["QS", "EDS]) => ["QS", "EDS] ("API.id"
+   * -> ["EDS", "QS], "API.name" -> ["QS"]) => ["QS"] ("API.id" -> ["EDS"], "API.name" -> ["QS]) =>
+   * []
    */
   private static Set<String> getIntersectingSourceSets(
       Map<String, Set<String>> attributeToSourcesMap) {

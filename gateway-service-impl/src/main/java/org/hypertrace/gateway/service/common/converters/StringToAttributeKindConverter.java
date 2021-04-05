@@ -17,8 +17,10 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 public class StringToAttributeKindConverter extends ToAttributeKindConverter<String> {
-  private static final Logger LOGGER = LoggerFactory.getLogger(StringToAttributeKindConverter.class);
-  private static final TypeReference<Map<String, String>> MAP_TYPE_REFERENCE = new TypeReference<>() {};
+  private static final Logger LOGGER =
+      LoggerFactory.getLogger(StringToAttributeKindConverter.class);
+  private static final TypeReference<Map<String, String>> MAP_TYPE_REFERENCE =
+      new TypeReference<>() {};
   private static final TypeReference<List<String>> LIST_TYPE_REFERENCE = new TypeReference<>() {};
   public static StringToAttributeKindConverter INSTANCE = new StringToAttributeKindConverter();
   private final ObjectMapper objectMapper = new ObjectMapper();
@@ -35,11 +37,11 @@ public class StringToAttributeKindConverter extends ToAttributeKindConverter<Str
       case TYPE_DOUBLE:
         valueBuilder.setValueType(ValueType.DOUBLE);
         /*
-        * In proto, by default, field with missing value will be set to empty string. As a result,
-        * optional attributes that could return empty string will cause java.lang.NumberFormatException.
-        * Instead, convert this to 0, which is default value for double and long in proto if
-        * field is missing.
-        */
+         * In proto, by default, field with missing value will be set to empty string. As a result,
+         * optional attributes that could return empty string will cause java.lang.NumberFormatException.
+         * Instead, convert this to 0, which is default value for double and long in proto if
+         * field is missing.
+         */
         if (value.isEmpty()) {
           valueBuilder.setDouble(0.0d);
         } else {
@@ -106,7 +108,10 @@ public class StringToAttributeKindConverter extends ToAttributeKindConverter<Str
         mapData = objectMapper.readValue(jsonString, MAP_TYPE_REFERENCE);
       }
     } catch (IOException e) {
-      LOGGER.warn("Unable to read Map JSON String data from: {}. Setting data as empty map instead. With error:", jsonString, e);
+      LOGGER.warn(
+          "Unable to read Map JSON String data from: {}. Setting data as empty map instead. With error:",
+          jsonString,
+          e);
     }
     return mapData;
   }

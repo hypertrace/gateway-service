@@ -1,26 +1,6 @@
 package org.hypertrace.gateway.service.baseline;
 
 import com.google.common.annotations.VisibleForTesting;
-import org.hypertrace.core.attribute.service.v1.AttributeMetadata;
-import org.hypertrace.core.query.service.api.QueryRequest;
-import org.hypertrace.core.query.service.api.ResultSetChunk;
-import org.hypertrace.gateway.service.common.AttributeMetadataProvider;
-import org.hypertrace.gateway.service.common.util.AttributeMetadataUtil;
-import org.hypertrace.gateway.service.common.util.QueryExpressionUtil;
-import org.hypertrace.gateway.service.entity.config.EntityIdColumnsConfigs;
-import org.hypertrace.gateway.service.v1.baseline.Baseline;
-import org.hypertrace.gateway.service.v1.baseline.BaselineInterval;
-import org.hypertrace.gateway.service.v1.baseline.BaselineMetricSeries;
-import org.hypertrace.gateway.service.v1.baseline.BaselineTimeAggregation;
-import org.hypertrace.gateway.service.v1.common.Expression;
-import org.hypertrace.gateway.service.v1.common.FunctionExpression;
-import org.hypertrace.gateway.service.v1.common.Period;
-import org.hypertrace.gateway.service.v1.common.TimeAggregation;
-import org.hypertrace.gateway.service.v1.baseline.BaselineEntity;
-import org.hypertrace.gateway.service.v1.baseline.BaselineEntitiesRequest;
-import org.hypertrace.gateway.service.v1.baseline.BaselineEntitiesResponse;
-import org.hypertrace.gateway.service.v1.common.Value;
-
 import java.time.Duration;
 import java.time.temporal.ChronoUnit;
 import java.util.ArrayList;
@@ -30,6 +10,25 @@ import java.util.List;
 import java.util.Map;
 import java.util.concurrent.TimeUnit;
 import java.util.stream.Collectors;
+import org.hypertrace.core.attribute.service.v1.AttributeMetadata;
+import org.hypertrace.core.query.service.api.QueryRequest;
+import org.hypertrace.core.query.service.api.ResultSetChunk;
+import org.hypertrace.gateway.service.common.AttributeMetadataProvider;
+import org.hypertrace.gateway.service.common.util.AttributeMetadataUtil;
+import org.hypertrace.gateway.service.common.util.QueryExpressionUtil;
+import org.hypertrace.gateway.service.entity.config.EntityIdColumnsConfigs;
+import org.hypertrace.gateway.service.v1.baseline.Baseline;
+import org.hypertrace.gateway.service.v1.baseline.BaselineEntitiesRequest;
+import org.hypertrace.gateway.service.v1.baseline.BaselineEntitiesResponse;
+import org.hypertrace.gateway.service.v1.baseline.BaselineEntity;
+import org.hypertrace.gateway.service.v1.baseline.BaselineInterval;
+import org.hypertrace.gateway.service.v1.baseline.BaselineMetricSeries;
+import org.hypertrace.gateway.service.v1.baseline.BaselineTimeAggregation;
+import org.hypertrace.gateway.service.v1.common.Expression;
+import org.hypertrace.gateway.service.v1.common.FunctionExpression;
+import org.hypertrace.gateway.service.v1.common.Period;
+import org.hypertrace.gateway.service.v1.common.TimeAggregation;
+import org.hypertrace.gateway.service.v1.common.Value;
 
 /**
  * This service calculates baseline values for an Entity across time range. This converts both

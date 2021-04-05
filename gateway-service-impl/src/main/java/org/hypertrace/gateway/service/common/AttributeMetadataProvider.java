@@ -38,8 +38,7 @@ public class AttributeMetadataProvider {
     CacheLoader<AttributeCacheKey<String>, Map<String, AttributeMetadata>> cacheLoader =
         new CacheLoader<>() {
           @Override
-          public Map<String, AttributeMetadata> load(
-              AttributeCacheKey<String> scopeBasedCacheKey) {
+          public Map<String, AttributeMetadata> load(AttributeCacheKey<String> scopeBasedCacheKey) {
             Iterator<AttributeMetadata> attributeMetadataIterator =
                 attributesServiceClient.findAttributes(
                     scopeBasedCacheKey.getHeaders(),
@@ -57,29 +56,28 @@ public class AttributeMetadataProvider {
 
     CacheLoader<AttributeCacheKey<Map.Entry<String, String>>, AttributeMetadata>
         scopeAndAliasToAttrMetadataCacheLoader =
-        new CacheLoader<>() {
-          @Override
-          public AttributeMetadata load(
-              AttributeCacheKey<Map.Entry<String, String>>
-                  scopeAndKeyPairBasedCacheKey) {
-            Iterator<AttributeMetadata> attributeMetadataIterator =
-                attributesServiceClient.findAttributes(
-                    scopeAndKeyPairBasedCacheKey.getHeaders(),
-                    AttributeMetadataFilter.newBuilder()
-                        .addScopeString(scopeAndKeyPairBasedCacheKey.getDataKey().getKey())
-                        .build());
+            new CacheLoader<>() {
+              @Override
+              public AttributeMetadata load(
+                  AttributeCacheKey<Map.Entry<String, String>> scopeAndKeyPairBasedCacheKey) {
+                Iterator<AttributeMetadata> attributeMetadataIterator =
+                    attributesServiceClient.findAttributes(
+                        scopeAndKeyPairBasedCacheKey.getHeaders(),
+                        AttributeMetadataFilter.newBuilder()
+                            .addScopeString(scopeAndKeyPairBasedCacheKey.getDataKey().getKey())
+                            .build());
 
-            while (attributeMetadataIterator.hasNext()) {
-              AttributeMetadata metadata = attributeMetadataIterator.next();
-              if (metadata
-                  .getKey()
-                  .equals(scopeAndKeyPairBasedCacheKey.getDataKey().getValue())) {
-                return metadata;
+                while (attributeMetadataIterator.hasNext()) {
+                  AttributeMetadata metadata = attributeMetadataIterator.next();
+                  if (metadata
+                      .getKey()
+                      .equals(scopeAndKeyPairBasedCacheKey.getDataKey().getValue())) {
+                    return metadata;
+                  }
+                }
+                return null;
               }
-            }
-            return null;
-          }
-        };
+            };
 
     scopeToMapOfIdAndAttributeMetadataCache =
         CacheBuilder.newBuilder()

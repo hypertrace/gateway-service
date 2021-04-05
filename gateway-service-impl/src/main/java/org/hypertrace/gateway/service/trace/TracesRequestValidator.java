@@ -8,12 +8,9 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 /**
- * This contains logic to validate TracesRequest object. Currently the following rules are
- * checked:
- * 1) Validate that the attributes in the selection criteria exist as part of attribute
- *    metadata
- * 2) Validate that the attributes used in aggregations exist and the aggregations themselves are valid
- *
+ * This contains logic to validate TracesRequest object. Currently the following rules are checked:
+ * 1) Validate that the attributes in the selection criteria exist as part of attribute metadata 2)
+ * Validate that the attributes used in aggregations exist and the aggregations themselves are valid
  */
 public class TracesRequestValidator extends RequestValidator<TracesRequest> {
   private static final Logger LOG = LoggerFactory.getLogger(TracesRequestValidator.class);

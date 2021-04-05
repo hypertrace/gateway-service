@@ -27,14 +27,16 @@ public class ExploreService {
   private Timer queryExecutionTimer;
 
   public ExploreService(
-      QueryServiceClient queryServiceClient, int requestTimeout,
+      QueryServiceClient queryServiceClient,
+      int requestTimeout,
       AttributeMetadataProvider attributeMetadataProvider,
       ScopeFilterConfigs scopeFiltersConfig) {
     this.attributeMetadataProvider = attributeMetadataProvider;
-    this.normalRequestHandler = new RequestHandler(queryServiceClient, requestTimeout,
-        attributeMetadataProvider);
-    this.timeAggregationsRequestHandler = new TimeAggregationsRequestHandler(
-        queryServiceClient, requestTimeout, attributeMetadataProvider);
+    this.normalRequestHandler =
+        new RequestHandler(queryServiceClient, requestTimeout, attributeMetadataProvider);
+    this.timeAggregationsRequestHandler =
+        new TimeAggregationsRequestHandler(
+            queryServiceClient, requestTimeout, attributeMetadataProvider);
     this.timeAggregationsWithGroupByRequestHandler =
         new TimeAggregationsWithGroupByRequestHandler(
             queryServiceClient, requestTimeout, attributeMetadataProvider);
@@ -43,8 +45,9 @@ public class ExploreService {
   }
 
   private void initMetrics() {
-    queryExecutionTimer = PlatformMetricsRegistry
-        .registerTimer("hypertrace.explore.query.execution", ImmutableMap.of());
+    queryExecutionTimer =
+        PlatformMetricsRegistry.registerTimer(
+            "hypertrace.explore.query.execution", ImmutableMap.of());
   }
 
   public ExploreResponse explore(
@@ -69,8 +72,8 @@ public class ExploreService {
           new ExploreRequestContext(tenantId, request, requestHeaders);
 
       Map<String, AttributeMetadata> attributeMetadataMap =
-          attributeMetadataProvider
-              .getAttributesMetadata(newExploreRequestContext, request.getContext());
+          attributeMetadataProvider.getAttributesMetadata(
+              newExploreRequestContext, request.getContext());
       exploreRequestValidator.validate(request, attributeMetadataMap);
 
       IRequestHandler requestHandler = getRequestHandler(request);
@@ -80,8 +83,8 @@ public class ExploreService {
 
       return responseBuilder.build();
     } finally {
-      queryExecutionTimer
-          .record(Duration.between(start, Instant.now()).toMillis(), TimeUnit.MILLISECONDS);
+      queryExecutionTimer.record(
+          Duration.between(start, Instant.now()).toMillis(), TimeUnit.MILLISECONDS);
     }
   }
 

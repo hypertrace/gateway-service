@@ -19,24 +19,9 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 /**
- * Sample scope filters config
- * scopeFiltersConfig = [
- *   {
- *     scope = API_TRACE
- *     filters = [
- *       {
- *         key = apiBoundaryType
- *         op = EQ
- *         value = ENTRY
- *       },
- *       {
- *         key = apiId
- *         op = NEQ
- *         value = "null" // Quotes are important to distinguish it from null config value.
- *       }
- *     ]
- *   }
- * ]
+ * Sample scope filters config scopeFiltersConfig = [ { scope = API_TRACE filters = [ { key =
+ * apiBoundaryType op = EQ value = ENTRY }, { key = apiId op = NEQ value = "null" // Quotes are
+ * important to distinguish it from null config value. } ] } ]
  */
 public class ScopeFilterConfigs {
 
@@ -119,9 +104,7 @@ public class ScopeFilterConfigs {
             (scopeFilter ->
                 filterBuilder.addChildFilter(
                     createScopeChildFilter(
-                        scopeFilter,
-                        attributeMetadataProvider,
-                        requestContext))));
+                        scopeFilter, attributeMetadataProvider, requestContext))));
 
     return filterBuilder;
   }
@@ -131,8 +114,8 @@ public class ScopeFilterConfigs {
       AttributeMetadataProvider attributeMetadataProvider,
       RequestContext requestContext) {
     AttributeMetadata attributeMetadata =
-        attributeMetadataProvider.getAttributeMetadata(
-            requestContext, scopeFilter.getScope(), scopeFilter.getKey())
+        attributeMetadataProvider
+            .getAttributeMetadata(requestContext, scopeFilter.getScope(), scopeFilter.getKey())
             .orElseThrow();
     return Filter.newBuilder()
         .setLhs(
@@ -147,10 +130,6 @@ public class ScopeFilterConfigs {
                         .setValue(
                             Value.newBuilder()
                                 .setValueType(ValueType.STRING)
-                                .setString(
-                                    (String)
-                                        scopeFilter
-                                            .getFilterValue())
-                        )));
+                                .setString((String) scopeFilter.getFilterValue()))));
   }
 }
