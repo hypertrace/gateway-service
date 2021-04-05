@@ -19,9 +19,27 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 /**
- * Sample scope filters config scopeFiltersConfig = [ { scope = API_TRACE filters = [ { key =
- * apiBoundaryType op = EQ value = ENTRY }, { key = apiId op = NEQ value = "null" // Quotes are
- * important to distinguish it from null config value. } ] } ]
+ * Sample scope filters config
+ *
+ * <pre>
+ * scopeFiltersConfig = [
+ *   {
+ *     scope = API_TRACE
+ *     filters = [
+ *       {
+ *         key = apiBoundaryType
+ *         op = EQ
+ *         value = ENTRY
+ *       },
+ *       {
+ *         key = apiId
+ *         op = NEQ
+ *         value = "null" // Quotes are important to distinguish it from null config value.
+ *       }
+ *     ]
+ *   }
+ * ]
+ * </pre>
  */
 public class ScopeFilterConfigs {
 

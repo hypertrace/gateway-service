@@ -9,10 +9,15 @@ import org.slf4j.LoggerFactory;
 
 /**
  * This contains logic to validate EntitiesRequest object. Currently the following rules are
- * checked: 1) Validate that the attributes in the selection criteria exist as part of attribute
- * metadata 2) Validate that the attributes used in aggregations exist and the aggregations
- * themselves are valid Note that we don't validate that aggregation attributes are of type METRIC
- * instead of ATTRIBUTE since there are some like 'duration' that are defined as ATTRIBUTE.
+ * checked:
+ *
+ * <ul>
+ *   <li>1) Validate that the attributes in the selection criteria exist as part of attribute
+ *       metadata
+ *   <li>2) Validate that the attributes used in aggregations exist and the aggregations themselves
+ *       are valid Note that we don't validate that aggregation attributes are of type METRIC
+ *       instead of ATTRIBUTE since there are some like 'duration' that are defined as ATTRIBUTE.
+ * </ul>
  */
 public class EntitiesRequestValidator extends RequestValidator<EntitiesRequest> {
   private static final Logger LOG = LoggerFactory.getLogger(EntitiesRequestValidator.class);

@@ -164,20 +164,28 @@ public class ExecutionTreeUtils {
    * Computes intersecting source sets from 2 attribute to sources map i.e. computes intersection
    * source sets across all attributes from the map
    *
-   * <p>Examples: 1. ("API.id" -> ["EDS", "QS"], "API.name" -> ["QS", "EDS"]) ("API.id" -> ["EDS",
-   * "QS"], "API.discoveryState" -> ["EDS"])
+   * <pre>
+   * Examples:
    *
-   * <p>The intersecting source set across all the attributes would be ["EDS"]
+   * 1.
+   * ("API.id" -> ["EDS", "QS"], "API.name" -> ["QS", "EDS"])
+   * ("API.id" -> ["EDS", "QS"], "API.discoveryState" -> ["EDS"])
    *
-   * <p>2. ("API.id" -> ["EDS", "QS"], "API.name" -> ["QS", "EDS"]) ("API.id" -> ["EDS", "QS"],
-   * "API.discoveryState" -> ["EDS", "QS"])
+   * The intersecting source set across all the attributes would be ["EDS"]
    *
-   * <p>The intersecting source set across all the attributes would be ["EDS", "QS"]
+   * 2.
+   * ("API.id" -> ["EDS", "QS"], "API.name" -> ["QS", "EDS"])
+   * ("API.id" -> ["EDS", "QS"], "API.discoveryState" -> ["EDS", "QS"])
    *
-   * <p>3. ("API.id" -> ["EDS"], "API.name" -> ["EDS"]) ("API.id" -> ["EDS"], "API.discoveryState"
-   * -> ["QS"])
+   * The intersecting source set across all the attributes would be ["EDS", "QS"]
    *
-   * <p>The intersecting source set across all the attributes would be []
+   * 3.
+   * ("API.id" -> ["EDS"], "API.name" -> ["EDS"])
+   * ("API.id" -> ["EDS"], "API.discoveryState" -> ["QS"])
+   *
+   * The intersecting source set across all the attributes would be []
+   *
+   * </pre>
    */
   private static Set<String> getIntersectingSourceSets(
       Map<String, Set<String>> attributeToSourcesMapFirst,
@@ -204,9 +212,12 @@ public class ExecutionTreeUtils {
   /**
    * Computes source sets intersection from attribute to sources map
    *
-   * <p>Examples: ("API.id" -> ["EDS", "QS], "API.name" -> ["QS", "EDS]) => ["QS", "EDS] ("API.id"
-   * -> ["EDS", "QS], "API.name" -> ["QS"]) => ["QS"] ("API.id" -> ["EDS"], "API.name" -> ["QS]) =>
-   * []
+   * <pre>
+   * Examples:
+   * ("API.id" -> ["EDS", "QS], "API.name" -> ["QS", "EDS]) => ["QS", "EDS]
+   * ("API.id" -> ["EDS", "QS], "API.name" -> ["QS"]) => ["QS"]
+   * ("API.id" -> ["EDS"], "API.name" -> ["QS]) => []
+   * </pre>
    */
   private static Set<String> getIntersectingSourceSets(
       Map<String, Set<String>> attributeToSourcesMap) {

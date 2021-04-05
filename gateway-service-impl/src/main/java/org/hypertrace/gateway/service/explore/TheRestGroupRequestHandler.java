@@ -142,14 +142,23 @@ class TheRestGroupRequestHandler {
   /**
    * We need to create a filter that excludes all the group tuples found in the original response.
    * Suppose we are dealing with a table where we group on the column names "c2" and "c3" and we got
-   * back the group tuples below in the original response. c2 | c3 --------- v10 | v11 v20 | v21
+   * back the group tuples below in the original response.
    *
-   * <p>So for "The Rest" request we need to exclude rows with the (c2,c3) tuples (v10, v11) or
-   * (v20, v21). So the filter should be ("=" is for equality): ( NOT ( ( c2 = 'v10' AND c3 = 'v11'
-   * ) OR ( c2 = 'v20' AND c3 = 'v21' ) ) ) However, since the query-service(Pinot) does not support
-   * NOT(unless it's NOT IN), then this does not work. So we can use DeMorgan's law to create a
-   * filter that Pinot will support by pushing the NOT into the filter expression: ( ( ( c2 != 'v10'
-   * OR c3 != 'v11' ) AND ( c2 != 'v20' OR c3 != 'v21' ) ) ) We will create the filter above.
+   * <pre>
+   * c2  | c3
+   * ---------
+   * v10 | v11
+   * v20 | v21
+   *
+   * So for "The Rest" request we need to exclude rows with the (c2,c3) tuples (v10, v11) or
+   * (v20, v21). So the filter should be ("=" is for equality):
+   *     ( NOT ( ( c2 = 'v10' AND c3 = 'v11' ) OR ( c2 = 'v20' AND c3 = 'v21' ) ) )
+   * However, since the query-service(Pinot) does not support NOT(unless it's NOT IN), then this does
+   * not work. So we can use DeMorgan's law to create a filter that Pinot will support by pushing
+   * the NOT into the filter expression:
+   *     ( ( ( c2 != 'v10' OR c3 != 'v11' ) AND ( c2 != 'v20' OR c3 != 'v21' ) ) )
+   * We will create the filter above.
+   * </pre>
    *
    * @param originalRequest
    * @param originalResponse

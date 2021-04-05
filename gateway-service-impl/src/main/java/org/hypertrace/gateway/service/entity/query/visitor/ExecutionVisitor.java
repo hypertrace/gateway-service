@@ -221,8 +221,7 @@ public class ExecutionVisitor implements Visitor<EntityResponse> {
                           .clearFilter()
                           // TODO: Should we push order by, limit and offet down to the data source?
                           // If we want to push the order by down, we would also have to divide
-                          // order by into
-                          // sourceToOrderBySelectionExpressionMap,
+                          // order by into sourceToOrderBySelectionExpressionMap,
                           // sourceToOrderByMetricExpressionMap, sourceToOrderByTimeAggregationMap
                           .clearOrderBy()
                           .clearLimit()

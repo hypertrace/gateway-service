@@ -52,7 +52,9 @@ public class ExpressionReader {
    * Given a source to attributes, builds an attribute to sources map. Basically, a reverse map of
    * the map provided as input
    *
-   * <p>Example: ("QS" -> API.id, "QS" -> API.name, "EDS" -> API.id) =>
+   * <p>Example:
+   *
+   * <p>("QS" -> API.id, "QS" -> API.name, "EDS" -> API.id) =>
    *
    * <p>("API.id" -> ["QS", "EDS"], "API.name" -> "QS")
    */

@@ -113,10 +113,15 @@ public class EntityService {
 
   /**
    * Method to get entities along with the requested attributes and metrics. Does it in multiple
-   * steps: 1) Construct the filter tree from the filter condition in the query 2) Optimize the
-   * filter tree by merging nodes corresponding to the same data source 3) Constructs the complete
-   * execution tree 4) Passes the execution tree through the ExecutionVisitor to get the result 5)
-   * Adds entity interaction data if requested for
+   * steps:
+   *
+   * <ul>
+   *   <li>1) Construct the filter tree from the filter condition in the query
+   *   <li>2) Optimize the filter tree by merging nodes corresponding to the same data source
+   *   <li>3) Constructs the complete execution tree
+   *   <li>4) Passes the execution tree through the ExecutionVisitor to get the result
+   *   <li>5) Adds entity interaction data if requested for
+   * </ul>
    */
   public EntitiesResponse getEntities(
       String tenantId, EntitiesRequest originalRequest, Map<String, String> requestHeaders) {
