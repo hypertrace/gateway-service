@@ -2,7 +2,6 @@ package org.hypertrace.gateway.service.common.datafetcher;
 
 import java.util.LinkedHashMap;
 import java.util.Map;
-
 import org.hypertrace.gateway.service.entity.EntityKey;
 import org.hypertrace.gateway.service.v1.entity.Entity.Builder;
 

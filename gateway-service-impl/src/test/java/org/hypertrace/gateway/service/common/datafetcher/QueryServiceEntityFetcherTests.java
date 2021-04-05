@@ -68,7 +68,7 @@ public class QueryServiceEntityFetcherTests {
   private QueryServiceEntityFetcher queryServiceEntityFetcher;
 
   @BeforeEach
-  public void setup () {
+  public void setup() {
     queryServiceClient = mock(QueryServiceClient.class);
     attributeMetadataProvider = mock(AttributeMetadataProvider.class);
     mockAttributeMetadataProvider(AttributeScope.API.name());
@@ -76,8 +76,9 @@ public class QueryServiceEntityFetcherTests {
     entityIdColumnsConfigs = mock(EntityIdColumnsConfigs.class);
     when(entityIdColumnsConfigs.getIdKey("API")).thenReturn(Optional.of("id"));
 
-    queryServiceEntityFetcher = new QueryServiceEntityFetcher(queryServiceClient, 500,
-        attributeMetadataProvider, entityIdColumnsConfigs);
+    queryServiceEntityFetcher =
+        new QueryServiceEntityFetcher(
+            queryServiceClient, 500, attributeMetadataProvider, entityIdColumnsConfigs);
   }
 
   @Test
@@ -148,20 +149,22 @@ public class QueryServiceEntityFetcherTests {
     assertEquals(2, response.size());
 
     Map<EntityKey, Builder> expectedEntityKeyBuilderResponseMap = new LinkedHashMap<>();
-    expectedEntityKeyBuilderResponseMap.put(EntityKey.of("apiId1"), Entity.newBuilder()
-        .setId("apiId1")
-        .setEntityType("API")
-        .putAttribute("API.id", getStringValue("apiId1"))
-        .putAttribute("API.name", getStringValue("api 1"))
-        .putMetric("Sum_numCalls", getAggregatedMetricValue(FunctionType.SUM, 3))
-    );
-    expectedEntityKeyBuilderResponseMap.put(EntityKey.of("apiId2"), Entity.newBuilder()
-        .setId("apiId2")
-        .setEntityType("API")
-        .putAttribute("API.id", getStringValue("apiId2"))
-        .putAttribute("API.name", getStringValue("api 2"))
-        .putMetric("Sum_numCalls", getAggregatedMetricValue(FunctionType.SUM, 5))
-    );
+    expectedEntityKeyBuilderResponseMap.put(
+        EntityKey.of("apiId1"),
+        Entity.newBuilder()
+            .setId("apiId1")
+            .setEntityType("API")
+            .putAttribute("API.id", getStringValue("apiId1"))
+            .putAttribute("API.name", getStringValue("api 1"))
+            .putMetric("Sum_numCalls", getAggregatedMetricValue(FunctionType.SUM, 3)));
+    expectedEntityKeyBuilderResponseMap.put(
+        EntityKey.of("apiId2"),
+        Entity.newBuilder()
+            .setId("apiId2")
+            .setEntityType("API")
+            .putAttribute("API.id", getStringValue("apiId2"))
+            .putAttribute("API.name", getStringValue("api 2"))
+            .putMetric("Sum_numCalls", getAggregatedMetricValue(FunctionType.SUM, 5)));
     compareEntityFetcherResponses(
         new EntityFetcherResponse(expectedEntityKeyBuilderResponseMap), response);
   }
@@ -286,7 +289,7 @@ public class QueryServiceEntityFetcherTests {
     assertEquals(
         2, queryServiceEntityFetcher.getEntities(entitiesRequestContext, entitiesRequest).size());
   }
-  
+
   @Test
   public void test_getEntitiesBySpace() {
     long startTime = 1L;
@@ -299,28 +302,23 @@ public class QueryServiceEntityFetcherTests {
     AttributeScope entityType = AttributeScope.API;
     EntitiesRequest entitiesRequest =
         EntitiesRequest.newBuilder()
-                       .setEntityType(entityType.name())
-                       .setStartTimeMillis(startTime)
-                       .setEndTimeMillis(endTime)
-                       .addSelection(buildExpression(API_NAME_ATTR))
-                       .setSpaceId(space)
-                       .setLimit(limit)
-                       .setOffset(offset)
-                       .build();
-    EntitiesRequestContext entitiesRequestContext = new EntitiesRequestContext(
-        tenantId,
-        startTime,
-        endTime,
-        entityType.name(),
-        "API.startTime",
-        requestHeaders);
+            .setEntityType(entityType.name())
+            .setStartTimeMillis(startTime)
+            .setEndTimeMillis(endTime)
+            .addSelection(buildExpression(API_NAME_ATTR))
+            .setSpaceId(space)
+            .setLimit(limit)
+            .setOffset(offset)
+            .build();
+    EntitiesRequestContext entitiesRequestContext =
+        new EntitiesRequestContext(
+            tenantId, startTime, endTime, entityType.name(), "API.startTime", requestHeaders);
 
     QueryRequest expectedQueryRequest =
         QueryRequest.newBuilder()
             .addSelection(createColumnExpression(API_ID_ATTR))
             .addSelection(createColumnExpression(API_NAME_ATTR))
-            .addSelection(
-                QueryRequestUtil.createCountByColumnSelection("API.id"))
+            .addSelection(QueryRequestUtil.createCountByColumnSelection("API.id"))
             .setFilter(
                 createQsRequestFilter(
                     API_START_TIME_ATTR,
@@ -334,28 +332,27 @@ public class QueryServiceEntityFetcherTests {
             .setLimit(QueryServiceClient.DEFAULT_QUERY_SERVICE_GROUP_BY_LIMIT)
             .build();
 
-    List<ResultSetChunk> resultSetChunks = List.of(
-        getResultSetChunk(
-            List.of(API_ID_ATTR, API_NAME_ATTR),
-            new String[][]{
-                {"api-id-0", "api-0"}
-            }
-        )
-    );
+    List<ResultSetChunk> resultSetChunks =
+        List.of(
+            getResultSetChunk(
+                List.of(API_ID_ATTR, API_NAME_ATTR), new String[][] {{"api-id-0", "api-0"}}));
 
-    Map<EntityKey, Builder> expectedEntityKeyBuilderResponseMap = Map.of(
-        EntityKey.of("api-id-0"), Entity.newBuilder()
-                                        .setEntityType(AttributeScope.API.name())
-                                        .setId("api-id-0")
-                                        .putAttribute(API_NAME_ATTR, getStringValue("api-0"))
-                                        .putAttribute(API_ID_ATTR, getStringValue("api-id-0"))
-    );
+    Map<EntityKey, Builder> expectedEntityKeyBuilderResponseMap =
+        Map.of(
+            EntityKey.of("api-id-0"),
+            Entity.newBuilder()
+                .setEntityType(AttributeScope.API.name())
+                .setId("api-id-0")
+                .putAttribute(API_NAME_ATTR, getStringValue("api-0"))
+                .putAttribute(API_ID_ATTR, getStringValue("api-id-0")));
 
-    EntityFetcherResponse expectedEntityFetcherResponse = new EntityFetcherResponse(expectedEntityKeyBuilderResponseMap);
+    EntityFetcherResponse expectedEntityFetcherResponse =
+        new EntityFetcherResponse(expectedEntityKeyBuilderResponseMap);
     when(queryServiceClient.executeQuery(eq(expectedQueryRequest), eq(requestHeaders), eq(500)))
         .thenReturn(resultSetChunks.iterator());
 
-    compareEntityFetcherResponses(expectedEntityFetcherResponse,
+    compareEntityFetcherResponses(
+        expectedEntityFetcherResponse,
         queryServiceEntityFetcher.getEntities(entitiesRequestContext, entitiesRequest));
   }
 
@@ -416,6 +413,7 @@ public class QueryServiceEntityFetcherTests {
           100, queryServiceEntityFetcher.getTotal(entitiesRequestContext, entitiesRequest));
     }
   }
+
   private void mockAttributeMetadataProvider(String attributeScope) {
     AttributeMetadata idAttributeMetadata =
         AttributeMetadata.newBuilder()
@@ -438,25 +436,61 @@ public class QueryServiceEntityFetcherTests {
             .setScopeString(AttributeScope.EVENT.name())
             .setValueKind(AttributeKind.TYPE_STRING_ARRAY)
             .build();
-    when(attributeMetadataProvider.getAttributesMetadata(any(RequestContext.class), eq(attributeScope)))
-        .thenReturn(Map.of(
-            API_ID_ATTR, idAttributeMetadata,
-            API_NAME_ATTR, AttributeMetadata.newBuilder().setId(API_NAME_ATTR).setKey("name").setScopeString(attributeScope)
-                .setValueKind(AttributeKind.TYPE_STRING).build(),
-            API_TYPE_ATTR, AttributeMetadata.newBuilder().setId(API_TYPE_ATTR).setKey("type").setScopeString(attributeScope)
-                .setValueKind(AttributeKind.TYPE_STRING).build(),
-            API_PATTERN_ATTR, AttributeMetadata.newBuilder().setId(API_PATTERN_ATTR).setKey("urlPattern").setScopeString(attributeScope)
-                .setValueKind(AttributeKind.TYPE_STRING).build(),
-            API_START_TIME_ATTR, startTimeAttributeMetadata,
-            API_END_TIME_ATTR, AttributeMetadata.newBuilder().setId(API_END_TIME_ATTR).setKey("endTime").setScopeString(attributeScope)
-                .setValueKind(AttributeKind.TYPE_TIMESTAMP).build(),
-            API_NUM_CALLS_ATTR, AttributeMetadata.newBuilder().setId(API_NUM_CALLS_ATTR).setKey("numCalls").setScopeString(attributeScope)
-                .setValueKind(AttributeKind.TYPE_INT64).build(),
-            API_DURATION_ATTR, AttributeMetadata.newBuilder().setId(API_DURATION_ATTR).setKey("duration").setScopeString(attributeScope)
-                .setValueKind(AttributeKind.TYPE_DOUBLE).build(),
-            API_DISCOVERY_STATE_ATTR, AttributeMetadata.newBuilder().setId(API_DISCOVERY_STATE_ATTR).setKey("apiDiscoveryState").setScopeString(attributeScope)
-                .setValueKind(AttributeKind.TYPE_STRING).build()
-        ));
+    when(attributeMetadataProvider.getAttributesMetadata(
+            any(RequestContext.class), eq(attributeScope)))
+        .thenReturn(
+            Map.of(
+                API_ID_ATTR, idAttributeMetadata,
+                API_NAME_ATTR,
+                    AttributeMetadata.newBuilder()
+                        .setId(API_NAME_ATTR)
+                        .setKey("name")
+                        .setScopeString(attributeScope)
+                        .setValueKind(AttributeKind.TYPE_STRING)
+                        .build(),
+                API_TYPE_ATTR,
+                    AttributeMetadata.newBuilder()
+                        .setId(API_TYPE_ATTR)
+                        .setKey("type")
+                        .setScopeString(attributeScope)
+                        .setValueKind(AttributeKind.TYPE_STRING)
+                        .build(),
+                API_PATTERN_ATTR,
+                    AttributeMetadata.newBuilder()
+                        .setId(API_PATTERN_ATTR)
+                        .setKey("urlPattern")
+                        .setScopeString(attributeScope)
+                        .setValueKind(AttributeKind.TYPE_STRING)
+                        .build(),
+                API_START_TIME_ATTR, startTimeAttributeMetadata,
+                API_END_TIME_ATTR,
+                    AttributeMetadata.newBuilder()
+                        .setId(API_END_TIME_ATTR)
+                        .setKey("endTime")
+                        .setScopeString(attributeScope)
+                        .setValueKind(AttributeKind.TYPE_TIMESTAMP)
+                        .build(),
+                API_NUM_CALLS_ATTR,
+                    AttributeMetadata.newBuilder()
+                        .setId(API_NUM_CALLS_ATTR)
+                        .setKey("numCalls")
+                        .setScopeString(attributeScope)
+                        .setValueKind(AttributeKind.TYPE_INT64)
+                        .build(),
+                API_DURATION_ATTR,
+                    AttributeMetadata.newBuilder()
+                        .setId(API_DURATION_ATTR)
+                        .setKey("duration")
+                        .setScopeString(attributeScope)
+                        .setValueKind(AttributeKind.TYPE_DOUBLE)
+                        .build(),
+                API_DISCOVERY_STATE_ATTR,
+                    AttributeMetadata.newBuilder()
+                        .setId(API_DISCOVERY_STATE_ATTR)
+                        .setKey("apiDiscoveryState")
+                        .setScopeString(attributeScope)
+                        .setValueKind(AttributeKind.TYPE_STRING)
+                        .build()));
     when(attributeMetadataProvider.getAttributeMetadata(
             any(RequestContext.class), eq(attributeScope), eq("id")))
         .thenReturn(Optional.of(idAttributeMetadata));

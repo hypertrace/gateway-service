@@ -7,9 +7,7 @@ import org.hypertrace.gateway.service.entity.config.InteractionConfigs;
 import org.hypertrace.gateway.service.entity.config.TimestampConfigs;
 import org.junit.jupiter.api.BeforeEach;
 
-/**
- * Abstract class with common setup needed for tests. Initializes InteractionConfigs
- */
+/** Abstract class with common setup needed for tests. Initializes InteractionConfigs */
 public class AbstractGatewayServiceTest {
   protected static final String TENANT_ID = "tenant1";
 

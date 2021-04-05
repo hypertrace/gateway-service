@@ -19,8 +19,7 @@ import org.junit.jupiter.api.Test;
 import org.mockito.Mock;
 
 public class AttributeMetadataUtilTest {
-  @Mock
-  private EntityIdColumnsConfigs entityIdColumnsConfigs;
+  @Mock private EntityIdColumnsConfigs entityIdColumnsConfigs;
 
   @BeforeEach
   public void setup() {
@@ -36,7 +35,8 @@ public class AttributeMetadataUtilTest {
 
     Assertions.assertEquals(
         List.of(),
-        AttributeMetadataUtil.getIdAttributeIds(provider, entityIdColumnsConfigs, mock(RequestContext.class), entityType));
+        AttributeMetadataUtil.getIdAttributeIds(
+            provider, entityIdColumnsConfigs, mock(RequestContext.class), entityType));
   }
 
   @Test
@@ -50,7 +50,8 @@ public class AttributeMetadataUtilTest {
 
     Assertions.assertEquals(
         List.of("API.apiId"),
-        AttributeMetadataUtil.getIdAttributeIds(provider, entityIdColumnsConfigs, mock(RequestContext.class), entityType));
+        AttributeMetadataUtil.getIdAttributeIds(
+            provider, entityIdColumnsConfigs, mock(RequestContext.class), entityType));
   }
 
   @Test
@@ -73,20 +74,32 @@ public class AttributeMetadataUtilTest {
     Assertions.assertEquals(
         List.of("API.apiId"),
         AttributeMetadataUtil.getIdAttributeIds(
-            provider, entityIdColumnsConfigs, mock(RequestContext.class), DomainEntityType.API.name()));
+            provider,
+            entityIdColumnsConfigs,
+            mock(RequestContext.class),
+            DomainEntityType.API.name()));
     Assertions.assertEquals(
         List.of("SERVICE.id"),
         AttributeMetadataUtil.getIdAttributeIds(
-            provider, entityIdColumnsConfigs, mock(RequestContext.class), DomainEntityType.SERVICE.name()));
+            provider,
+            entityIdColumnsConfigs,
+            mock(RequestContext.class),
+            DomainEntityType.SERVICE.name()));
     Assertions.assertEquals(
         List.of("BACKEND.id"),
         AttributeMetadataUtil.getIdAttributeIds(
-            provider, entityIdColumnsConfigs, mock(RequestContext.class), DomainEntityType.BACKEND.name()));
+            provider,
+            entityIdColumnsConfigs,
+            mock(RequestContext.class),
+            DomainEntityType.BACKEND.name()));
 
     // Unsupported entities
     Assertions.assertEquals(
         List.of(),
         AttributeMetadataUtil.getIdAttributeIds(
-            provider, entityIdColumnsConfigs, mock(RequestContext.class), DomainEntityType.NAMESPACE.name()));
+            provider,
+            entityIdColumnsConfigs,
+            mock(RequestContext.class),
+            DomainEntityType.NAMESPACE.name()));
   }
 }

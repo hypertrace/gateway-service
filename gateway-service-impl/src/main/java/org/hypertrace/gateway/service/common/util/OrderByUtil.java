@@ -37,7 +37,7 @@ public class OrderByUtil {
                         orderByExpression, selectionList, timeAggregationList);
                 if (matchingSelectionExpression
                     == null) { // Didn't find a matching expression. Just return the order by
-                               // expression
+                  // expression
                   return orderByExpression;
                 }
 

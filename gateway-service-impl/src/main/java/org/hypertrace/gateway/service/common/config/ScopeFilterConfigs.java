@@ -20,6 +20,8 @@ import org.slf4j.LoggerFactory;
 
 /**
  * Sample scope filters config
+ *
+ * <pre>
  * scopeFiltersConfig = [
  *   {
  *     scope = API_TRACE
@@ -37,6 +39,7 @@ import org.slf4j.LoggerFactory;
  *     ]
  *   }
  * ]
+ * </pre>
  */
 public class ScopeFilterConfigs {
 
@@ -119,9 +122,7 @@ public class ScopeFilterConfigs {
             (scopeFilter ->
                 filterBuilder.addChildFilter(
                     createScopeChildFilter(
-                        scopeFilter,
-                        attributeMetadataProvider,
-                        requestContext))));
+                        scopeFilter, attributeMetadataProvider, requestContext))));
 
     return filterBuilder;
   }
@@ -131,8 +132,8 @@ public class ScopeFilterConfigs {
       AttributeMetadataProvider attributeMetadataProvider,
       RequestContext requestContext) {
     AttributeMetadata attributeMetadata =
-        attributeMetadataProvider.getAttributeMetadata(
-            requestContext, scopeFilter.getScope(), scopeFilter.getKey())
+        attributeMetadataProvider
+            .getAttributeMetadata(requestContext, scopeFilter.getScope(), scopeFilter.getKey())
             .orElseThrow();
     return Filter.newBuilder()
         .setLhs(
@@ -147,10 +148,6 @@ public class ScopeFilterConfigs {
                         .setValue(
                             Value.newBuilder()
                                 .setValueType(ValueType.STRING)
-                                .setString(
-                                    (String)
-                                        scopeFilter
-                                            .getFilterValue())
-                        )));
+                                .setString((String) scopeFilter.getFilterValue()))));
   }
 }

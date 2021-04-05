@@ -1,17 +1,16 @@
 package org.hypertrace.gateway.service.entity.query;
 
+import java.util.Collections;
+import java.util.List;
 import org.hypertrace.gateway.service.entity.query.visitor.Visitor;
 import org.hypertrace.gateway.service.v1.common.Filter;
 import org.hypertrace.gateway.service.v1.common.OrderByExpression;
-
-import java.util.Collections;
-import java.util.List;
 
 /**
  * Node in the execution tree that applies the encapsulated filters and fetches attributes
  * corresponding to a specific source
  *
- * Also, applies limit, offset and orderBys, if present
+ * <p>Also, applies limit, offset and orderBys, if present
  */
 public class DataFetcherNode implements QueryNode {
 
@@ -79,13 +78,20 @@ public class DataFetcherNode implements QueryNode {
 
   @Override
   public String toString() {
-    return "DataFetcherNode{" +
-        "source='" + source + '\'' +
-        ", filter=" + filter +
-        ", limit=" + limit +
-        ", offset=" + offset +
-        ", orderByExpressionList=" + orderByExpressionList +
-        ", fetchTotal=" + canFetchTotal +
-        '}';
+    return "DataFetcherNode{"
+        + "source='"
+        + source
+        + '\''
+        + ", filter="
+        + filter
+        + ", limit="
+        + limit
+        + ", offset="
+        + offset
+        + ", orderByExpressionList="
+        + orderByExpressionList
+        + ", fetchTotal="
+        + canFetchTotal
+        + '}';
   }
 }

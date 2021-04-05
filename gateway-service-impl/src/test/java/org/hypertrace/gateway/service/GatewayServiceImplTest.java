@@ -6,9 +6,7 @@ import java.io.File;
 import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.Test;
 
-/**
- * Unit tests for {@link GatewayServiceImpl}
- */
+/** Unit tests for {@link GatewayServiceImpl} */
 public class GatewayServiceImplTest {
   private static Config appConfig;
 

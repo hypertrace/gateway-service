@@ -3,7 +3,6 @@ package org.hypertrace.gateway.service.entity.query.visitor;
 import com.google.common.annotations.VisibleForTesting;
 import com.google.common.collect.MapDifference;
 import com.google.common.collect.Maps;
-
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collections;
@@ -16,7 +15,6 @@ import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 import java.util.stream.Collectors;
 import java.util.stream.IntStream;
-
 import org.hypertrace.gateway.service.common.datafetcher.EntityFetcherResponse;
 import org.hypertrace.gateway.service.common.datafetcher.EntityResponse;
 import org.hypertrace.gateway.service.common.datafetcher.IEntityFetcher;
@@ -46,9 +44,7 @@ import org.hypertrace.gateway.service.v1.entity.Entity.Builder;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-/**
- * Visitor that executes each QueryNode in the execution tree.
- */
+/** Visitor that executes each QueryNode in the execution tree. */
 public class ExecutionVisitor implements Visitor<EntityResponse> {
 
   private static final int THREAD_COUNT = 20;
@@ -58,8 +54,8 @@ public class ExecutionVisitor implements Visitor<EntityResponse> {
   private final ExecutionContext executionContext;
   private static final Logger LOG = LoggerFactory.getLogger(ExecutionVisitor.class);
 
-  public ExecutionVisitor(ExecutionContext executionContext,
-                          EntityQueryHandlerRegistry queryHandlerRegistry) {
+  public ExecutionVisitor(
+      ExecutionContext executionContext, EntityQueryHandlerRegistry queryHandlerRegistry) {
     this.executionContext = executionContext;
     this.queryHandlerRegistry = queryHandlerRegistry;
   }
@@ -214,36 +210,38 @@ public class ExecutionVisitor implements Visitor<EntityResponse> {
     List<EntityFetcherResponse> resultMapList = new ArrayList<>();
     // if data are coming from multiple sources, then, get entities and aggregated metrics
     // needs to be separated
-    resultMapList.addAll(selectionNode.getAttrSelectionSources().parallelStream()
-        .map(
-            source -> {
-              EntitiesRequest request =
-                  EntitiesRequest.newBuilder(executionContext.getEntitiesRequest())
-                      .clearSelection()
-                      .clearTimeAggregation()
-                      .clearFilter()
-                      // TODO: Should we push order by, limit and offet down to the data source?
-                      // If we want to push the order by down, we would also have to divide order by into
-                      // sourceToOrderBySelectionExpressionMap, sourceToOrderByMetricExpressionMap, sourceToOrderByTimeAggregationMap
-                      .clearOrderBy()
-                      .clearLimit()
-                      .clearOffset()
-                      .addAllSelection(
-                          executionContext.getSourceToSelectionExpressionMap().get(source))
-                      .setFilter(filter)
-                      .build();
-              IEntityFetcher entityFetcher = queryHandlerRegistry.getEntityFetcher(source);
-              EntitiesRequestContext context =
-                  new EntitiesRequestContext(
-                      executionContext.getTenantId(),
-                      request.getStartTimeMillis(),
-                      request.getEndTimeMillis(),
-                      request.getEntityType(),
-                      executionContext.getTimestampAttributeId(),
-                      executionContext.getRequestHeaders());
-              return entityFetcher.getEntities(context, request);
-            })
-        .collect(Collectors.toList()));
+    resultMapList.addAll(
+        selectionNode.getAttrSelectionSources().parallelStream()
+            .map(
+                source -> {
+                  EntitiesRequest request =
+                      EntitiesRequest.newBuilder(executionContext.getEntitiesRequest())
+                          .clearSelection()
+                          .clearTimeAggregation()
+                          .clearFilter()
+                          // TODO: Should we push order by, limit and offet down to the data source?
+                          // If we want to push the order by down, we would also have to divide
+                          // order by into sourceToOrderBySelectionExpressionMap,
+                          // sourceToOrderByMetricExpressionMap, sourceToOrderByTimeAggregationMap
+                          .clearOrderBy()
+                          .clearLimit()
+                          .clearOffset()
+                          .addAllSelection(
+                              executionContext.getSourceToSelectionExpressionMap().get(source))
+                          .setFilter(filter)
+                          .build();
+                  IEntityFetcher entityFetcher = queryHandlerRegistry.getEntityFetcher(source);
+                  EntitiesRequestContext context =
+                      new EntitiesRequestContext(
+                          executionContext.getTenantId(),
+                          request.getStartTimeMillis(),
+                          request.getEndTimeMillis(),
+                          request.getEntityType(),
+                          executionContext.getTimestampAttributeId(),
+                          executionContext.getRequestHeaders());
+                  return entityFetcher.getEntities(context, request);
+                })
+            .collect(Collectors.toList()));
     resultMapList.addAll(
         selectionNode.getAggMetricSelectionSources().parallelStream()
             .map(
@@ -411,9 +409,7 @@ public class ExecutionVisitor implements Visitor<EntityResponse> {
     // Sort the list
     List<Map.Entry<EntityKey, Entity.Builder>> sortedList =
         DataCollectionUtil.paginateAndLimit(
-            list.stream(),
-            paginateOnlyNode.getLimit(),
-            paginateOnlyNode.getOffset());
+            list.stream(), paginateOnlyNode.getLimit(), paginateOnlyNode.getOffset());
 
     // put data from sorted list to a linked hashmap
     Map<EntityKey, Builder> linkedHashMap = new LinkedHashMap<>();

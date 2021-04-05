@@ -2,7 +2,6 @@ package org.hypertrace.gateway.service.explore;
 
 import com.google.common.collect.ImmutableSet;
 import java.util.Set;
-import java.util.stream.Collectors;
 import org.hypertrace.core.query.service.client.QueryServiceClient;
 import org.hypertrace.gateway.service.common.AttributeMetadataProvider;
 import org.hypertrace.gateway.service.v1.common.ColumnIdentifier;
@@ -73,11 +72,11 @@ public class TimeAggregationsWithGroupByRequestHandler implements IRequestHandle
     ExploreRequest.Builder requestBuilder =
         ExploreRequest.newBuilder(originalRequest)
             .clearTimeAggregation() // Clear the time aggregations. We will move the time
-                                    // aggregations expressions into selections
+            // aggregations expressions into selections
             .clearOffset() // Overall request offset doesn't apply to getting the actual groups
             .setIncludeRestGroup(
                 false); // Set includeRestGroup to false. We will handle the Rest group results
-                        // separately
+    // separately
 
     // Move Time aggregation expressions to selections.
     originalRequest

@@ -1,5 +1,18 @@
 package org.hypertrace.gateway.service.baseline;
 
+import static org.hypertrace.gateway.service.common.converters.QueryRequestUtil.createFilter;
+import static org.hypertrace.gateway.service.common.converters.QueryRequestUtil.createStringArrayLiteralExpression;
+import static org.hypertrace.gateway.service.common.converters.QueryRequestUtil.createStringNullLiteralExpression;
+import static org.hypertrace.gateway.service.common.converters.QueryRequestUtil.createTimeColumnGroupByExpression;
+
+import java.util.ArrayList;
+import java.util.Comparator;
+import java.util.Iterator;
+import java.util.LinkedHashMap;
+import java.util.List;
+import java.util.Map;
+import java.util.stream.Collectors;
+import java.util.stream.IntStream;
 import org.hypertrace.core.attribute.service.v1.AttributeMetadata;
 import org.hypertrace.core.query.service.api.ColumnMetadata;
 import org.hypertrace.core.query.service.api.Filter;
@@ -9,9 +22,9 @@ import org.hypertrace.core.query.service.api.ResultSetChunk;
 import org.hypertrace.core.query.service.api.ResultSetMetadata;
 import org.hypertrace.core.query.service.api.Row;
 import org.hypertrace.core.query.service.client.QueryServiceClient;
-import org.hypertrace.gateway.service.common.converters.QueryRequestUtil;
 import org.hypertrace.gateway.service.common.AttributeMetadataProvider;
 import org.hypertrace.gateway.service.common.converters.QueryAndGatewayDtoConverter;
+import org.hypertrace.gateway.service.common.converters.QueryRequestUtil;
 import org.hypertrace.gateway.service.common.util.MetricAggregationFunctionUtil;
 import org.hypertrace.gateway.service.entity.EntityKey;
 import org.hypertrace.gateway.service.v1.baseline.Baseline;
@@ -25,20 +38,6 @@ import org.hypertrace.gateway.service.v1.common.Value;
 import org.hypertrace.gateway.service.v1.common.ValueType;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-
-import java.util.ArrayList;
-import java.util.Comparator;
-import java.util.Iterator;
-import java.util.LinkedHashMap;
-import java.util.List;
-import java.util.Map;
-import java.util.stream.Collectors;
-import java.util.stream.IntStream;
-
-import static org.hypertrace.gateway.service.common.converters.QueryRequestUtil.createFilter;
-import static org.hypertrace.gateway.service.common.converters.QueryRequestUtil.createStringArrayLiteralExpression;
-import static org.hypertrace.gateway.service.common.converters.QueryRequestUtil.createStringNullLiteralExpression;
-import static org.hypertrace.gateway.service.common.converters.QueryRequestUtil.createTimeColumnGroupByExpression;
 
 public class BaselineServiceQueryParser {
   private static final Logger LOG = LoggerFactory.getLogger(BaselineServiceQueryParser.class);
@@ -156,9 +155,7 @@ public class BaselineServiceQueryParser {
             QueryAndGatewayDtoConverter.convertQueryValueToGatewayValue(
                 row.getColumn(idColumnsSize));
         if (value.getValueType() == ValueType.STRING) {
-          for (int i = idColumnsSize + 1;
-              i < resultMetadata.getColumnMetadataCount();
-              i++) {
+          for (int i = idColumnsSize + 1; i < resultMetadata.getColumnMetadataCount(); i++) {
             ColumnMetadata metadata = resultMetadata.getColumnMetadata(i);
             BaselineTimeAggregation timeAggregation =
                 requestContext.getTimeAggregationByAlias(metadata.getColumnName());
@@ -168,8 +165,14 @@ public class BaselineServiceQueryParser {
               continue;
             }
 
-            Value convertedValue = MetricAggregationFunctionUtil.getValueFromFunction(startTime, endTime, attributeMetadataMap,
-                    row.getColumn(i), metadata, timeAggregation.getAggregation());
+            Value convertedValue =
+                MetricAggregationFunctionUtil.getValueFromFunction(
+                    startTime,
+                    endTime,
+                    attributeMetadataMap,
+                    row.getColumn(i),
+                    metadata,
+                    timeAggregation.getAggregation());
 
             BaselineMetricSeries.Builder seriesBuilder =
                 metricSeriesMap.computeIfAbsent(
@@ -202,7 +205,6 @@ public class BaselineServiceQueryParser {
     }
     return BaselineEntitiesResponse.newBuilder().addAllBaselineEntity(baselineEntities).build();
   }
-
 
   private BaselineMetricSeries getSortedMetricSeries(BaselineMetricSeries.Builder builder) {
     List<BaselineInterval> sortedIntervals = new ArrayList<>(builder.getBaselineValueList());

@@ -1,14 +1,13 @@
 package org.hypertrace.gateway.service.baseline;
 
 import com.google.common.base.Preconditions;
+import java.util.Map;
 import org.apache.commons.lang3.StringUtils;
 import org.hypertrace.core.attribute.service.v1.AttributeMetadata;
 import org.hypertrace.gateway.service.common.validators.request.RequestValidator;
 import org.hypertrace.gateway.service.v1.baseline.BaselineEntitiesRequest;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-
-import java.util.Map;
 
 public class BaselineEntitiesRequestValidator extends RequestValidator<BaselineEntitiesRequest> {
   private static final Logger LOG = LoggerFactory.getLogger(BaselineEntitiesRequestValidator.class);

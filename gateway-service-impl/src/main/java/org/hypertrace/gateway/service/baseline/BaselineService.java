@@ -1,11 +1,10 @@
 package org.hypertrace.gateway.service.baseline;
 
+import java.util.Map;
 import org.hypertrace.gateway.service.v1.baseline.BaselineEntitiesRequest;
 import org.hypertrace.gateway.service.v1.baseline.BaselineEntitiesResponse;
 
-import java.util.Map;
-
 public interface BaselineService {
   BaselineEntitiesResponse getBaselineForEntities(
-          String tenantId, BaselineEntitiesRequest originalRequest, Map<String, String> requestHeaders);
+      String tenantId, BaselineEntitiesRequest originalRequest, Map<String, String> requestHeaders);
 }

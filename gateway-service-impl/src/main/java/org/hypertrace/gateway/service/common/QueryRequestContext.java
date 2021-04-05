@@ -54,14 +54,19 @@ public class QueryRequestContext extends RequestContext {
     if (o == null || getClass() != o.getClass()) return false;
     if (!super.equals(o)) return false;
     QueryRequestContext that = (QueryRequestContext) o;
-    return startTimeMillis == that.startTimeMillis &&
-        endTimeMillis == that.endTimeMillis &&
-        aliasToFunctionExpressionMap.equals(that.aliasToFunctionExpressionMap) &&
-        aliasToTimeAggregation.equals(that.aliasToTimeAggregation);
+    return startTimeMillis == that.startTimeMillis
+        && endTimeMillis == that.endTimeMillis
+        && aliasToFunctionExpressionMap.equals(that.aliasToFunctionExpressionMap)
+        && aliasToTimeAggregation.equals(that.aliasToTimeAggregation);
   }
 
   @Override
   public int hashCode() {
-    return Objects.hash(super.hashCode(), aliasToFunctionExpressionMap, startTimeMillis, endTimeMillis, aliasToTimeAggregation);
+    return Objects.hash(
+        super.hashCode(),
+        aliasToFunctionExpressionMap,
+        startTimeMillis,
+        endTimeMillis,
+        aliasToTimeAggregation);
   }
 }

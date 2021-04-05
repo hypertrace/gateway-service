@@ -24,13 +24,17 @@ public class AttributeMetadataUtil {
           AttributeScope.EVENT.name());
 
   /**
-   *  This method will return an empty list for unsupported entities.
-   *  If you need to support a new entity type, add it to the
-   *    application.conf eg. For SERVICE id the config under entity.idcolumn.config is
+   * This method will return an empty list for unsupported entities. If you need to support a new
+   * entity type, add it to the application.conf eg. For SERVICE id the config under
+   * entity.idcolumn.config is
+   *
+   * <pre>
    *      {
    *       scope = SERVICE
    *       key = id
    *     },
+   * </pre>
+   *
    * @param attributeMetadataProvider
    * @param entityIdColumnsConfigs
    * @param requestContext
@@ -42,9 +46,10 @@ public class AttributeMetadataUtil {
       EntityIdColumnsConfigs entityIdColumnsConfigs,
       RequestContext requestContext,
       String entityType) {
-    return entityIdColumnsConfigs.getIdKey(entityType)
-        .stream()
-        .map(idKey -> attributeMetadataProvider.getAttributeMetadata(requestContext, entityType, idKey))
+    return entityIdColumnsConfigs.getIdKey(entityType).stream()
+        .map(
+            idKey ->
+                attributeMetadataProvider.getAttributeMetadata(requestContext, entityType, idKey))
         .filter(Optional::isPresent)
         .map(Optional::get)
         .map(AttributeMetadata::getId)
@@ -68,7 +73,6 @@ public class AttributeMetadataUtil {
         .orElse(START_TIME_ATTRIBUTE_KEY);
   }
 
-
   public static String getSpaceAttributeId(
       AttributeMetadataProvider attributeMetadataProvider,
       RequestContext requestContext,
@@ -82,7 +86,8 @@ public class AttributeMetadataUtil {
     }
     // Interactions have two space attributes, and is handled directly by interaction code
     if (AttributeScope.INTERACTION.equals(attributeScope)) {
-      throw new RuntimeException("Interaction space attribute must disambiguate between caller and callee");
+      throw new RuntimeException(
+          "Interaction space attribute must disambiguate between caller and callee");
     }
     // Every other scope is an aggregate of spans
     return attributeMetadataProvider

@@ -55,11 +55,7 @@ public class QueryRequestUtil {
   }
 
   public static Filter createFilter(Expression columnExpression, Operator op, Expression value) {
-    return Filter.newBuilder()
-                 .setLhs(columnExpression)
-                 .setOperator(op)
-                 .setRhs(value)
-                 .build();
+    return Filter.newBuilder().setLhs(columnExpression).setOperator(op).setRhs(value).build();
   }
 
   public static Filter createCompositeFilter(Operator operator, List<Filter> childFilters) {

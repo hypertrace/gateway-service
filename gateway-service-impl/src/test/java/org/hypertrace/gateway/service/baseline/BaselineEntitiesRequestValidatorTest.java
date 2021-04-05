@@ -1,14 +1,13 @@
 package org.hypertrace.gateway.service.baseline;
 
-import org.hypertrace.core.attribute.service.v1.AttributeMetadata;
-import org.hypertrace.gateway.service.v1.baseline.BaselineEntitiesRequest;
-import org.junit.jupiter.api.Assertions;
-import org.junit.jupiter.api.Test;
-
 import java.time.Instant;
 import java.util.Collections;
 import java.util.HashMap;
 import java.util.Map;
+import org.hypertrace.core.attribute.service.v1.AttributeMetadata;
+import org.hypertrace.gateway.service.v1.baseline.BaselineEntitiesRequest;
+import org.junit.jupiter.api.Assertions;
+import org.junit.jupiter.api.Test;
 
 public class BaselineEntitiesRequestValidatorTest {
   @Test

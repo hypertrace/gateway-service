@@ -1,13 +1,12 @@
 package org.hypertrace.gateway.service.baseline;
 
+import java.util.ArrayList;
+import java.util.List;
 import org.hypertrace.gateway.service.v1.baseline.Baseline;
 import org.hypertrace.gateway.service.v1.common.Value;
 import org.hypertrace.gateway.service.v1.common.ValueType;
 import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.Test;
-
-import java.util.ArrayList;
-import java.util.List;
 
 public class BaselineCalculatorTest {
 

@@ -102,57 +102,58 @@ public class EntitiesRequestValidatorTest {
   // We allow at most 10K intervals for time series. See TimeAggregationValidator.MAX_RESULTS for
   // the enforcement.
   @Test
-  public void whenTimeAggregationExpectedResultsIsWithinBounds_thenDontThrowIllegalArgumentException() {
+  public void
+      whenTimeAggregationExpectedResultsIsWithinBounds_thenDontThrowIllegalArgumentException() {
     TimeAggregation timeAggregation =
-            TimeAggregation.newBuilder()
-                    .setPeriod(Period.newBuilder().setValue(30).setUnit("SECONDS"))
-                    .setAggregation(
-                            QueryExpressionUtil.getAggregateFunctionExpression(
-                                    "duration", FunctionType.SUM, "SUM_duration"))
-                    .build();
+        TimeAggregation.newBuilder()
+            .setPeriod(Period.newBuilder().setValue(30).setUnit("SECONDS"))
+            .setAggregation(
+                QueryExpressionUtil.getAggregateFunctionExpression(
+                    "duration", FunctionType.SUM, "SUM_duration"))
+            .build();
 
     EntitiesRequest request =
-            EntitiesRequest.newBuilder()
-                    .setStartTimeMillis(0L)
-                    .setEndTimeMillis(900L)
-                    .setEntityType(DomainEntityType.SERVICE.name())
-                    .addAllTimeAggregation(Collections.singletonList(timeAggregation))
-                    .build();
+        EntitiesRequest.newBuilder()
+            .setStartTimeMillis(0L)
+            .setEndTimeMillis(900L)
+            .setEntityType(DomainEntityType.SERVICE.name())
+            .addAllTimeAggregation(Collections.singletonList(timeAggregation))
+            .build();
 
     Map<String, AttributeMetadata> attributeMetadataMap = new HashMap<>();
     attributeMetadataMap.put(
-            "duration",
-            AttributeMetadata.newBuilder().setFqn("duration").setType(AttributeType.ATTRIBUTE).build());
+        "duration",
+        AttributeMetadata.newBuilder().setFqn("duration").setType(AttributeType.ATTRIBUTE).build());
     validator.validate(request, attributeMetadataMap);
   }
 
   @Test
   public void whenTimeAggregationExpectedResultsNotWithinBounds_ThrowIllegalStateException() {
     TimeAggregation timeAggregation =
-            TimeAggregation.newBuilder()
-                    .setPeriod(Period.newBuilder().setValue(30).setUnit("SECONDS"))
-                    .setAggregation(
-                            QueryExpressionUtil.getAggregateFunctionExpression(
-                                    "duration", FunctionType.SUM, "SUM_duration"))
-                    .build();
+        TimeAggregation.newBuilder()
+            .setPeriod(Period.newBuilder().setValue(30).setUnit("SECONDS"))
+            .setAggregation(
+                QueryExpressionUtil.getAggregateFunctionExpression(
+                    "duration", FunctionType.SUM, "SUM_duration"))
+            .build();
 
     EntitiesRequest request =
-            EntitiesRequest.newBuilder()
-                    .setStartTimeMillis(0L)
-                    .setEndTimeMillis(300030L * 1000L)
-                    .setEntityType(DomainEntityType.SERVICE.name())
-                    .addAllTimeAggregation(Collections.singletonList(timeAggregation))
-                    .build();
+        EntitiesRequest.newBuilder()
+            .setStartTimeMillis(0L)
+            .setEndTimeMillis(300030L * 1000L)
+            .setEntityType(DomainEntityType.SERVICE.name())
+            .addAllTimeAggregation(Collections.singletonList(timeAggregation))
+            .build();
 
     Map<String, AttributeMetadata> attributeMetadataMap = new HashMap<>();
     attributeMetadataMap.put(
-            "duration",
-            AttributeMetadata.newBuilder().setFqn("duration").setType(AttributeType.ATTRIBUTE).build());
+        "duration",
+        AttributeMetadata.newBuilder().setFqn("duration").setType(AttributeType.ATTRIBUTE).build());
     Assertions.assertThrows(
-            IllegalStateException.class,
-            () -> {
-              validator.validate(request, attributeMetadataMap);
-            });
+        IllegalStateException.class,
+        () -> {
+          validator.validate(request, attributeMetadataMap);
+        });
   }
 
   @Test

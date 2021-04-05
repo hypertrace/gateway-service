@@ -53,9 +53,9 @@ enum FunctionType {
   // Percentile functions take 2 arguments: metric name, nth percentile
   // E.g: Percentile99 for Service.metrics.bytes_received would be
   // PERCENTILE(Service.metrics.bytes_received, 99)
-  // We will use only PERCENTILEEST as PERCENTILE in Pinot is know to be slow. 
-  // Dont see reason to expose something which is slow. 
-  // Have thought of introducing a parameter for estimate later. 
+  // We will use only PERCENTILEEST as PERCENTILE in Pinot is know to be slow.
+  // Dont see reason to expose something which is slow.
+  // Have thought of introducing a parameter for estimate later.
   PERCENTILE = 8;
   DISTINCTCOUNT = 9;
 }

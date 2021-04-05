@@ -34,8 +34,8 @@ public class EntitiesRequestContext extends QueryRequestContext {
     if (o == null || getClass() != o.getClass()) return false;
     if (!super.equals(o)) return false;
     EntitiesRequestContext that = (EntitiesRequestContext) o;
-    return entityType.equals(that.entityType) &&
-        timestampAttributeId.equals(that.timestampAttributeId);
+    return entityType.equals(that.entityType)
+        && timestampAttributeId.equals(that.timestampAttributeId);
   }
 
   @Override

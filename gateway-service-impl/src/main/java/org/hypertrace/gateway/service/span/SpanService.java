@@ -58,8 +58,8 @@ public class SpanService {
   }
 
   private void initMetrics() {
-    queryExecutionTimer = PlatformMetricsRegistry.registerTimer("hypertrace.span.query.execution",
-        ImmutableMap.of());
+    queryExecutionTimer =
+        PlatformMetricsRegistry.registerTimer("hypertrace.span.query.execution", ImmutableMap.of());
   }
 
   public SpansResponse getSpansByFilter(RequestContext context, SpansRequest request) {
@@ -79,8 +79,8 @@ public class SpanService {
 
       return response;
     } finally {
-      queryExecutionTimer
-          .record(Duration.between(start, Instant.now()).toMillis(), TimeUnit.MILLISECONDS);
+      queryExecutionTimer.record(
+          Duration.between(start, Instant.now()).toMillis(), TimeUnit.MILLISECONDS);
     }
   }
 

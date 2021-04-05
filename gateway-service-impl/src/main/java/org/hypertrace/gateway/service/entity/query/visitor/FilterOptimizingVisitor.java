@@ -167,15 +167,15 @@ public class FilterOptimizingVisitor implements Visitor<QueryNode> {
                     // There should always be at least one entry
                     if (!stringListEntry.getValue().isEmpty()) {
                       String source = stringListEntry.getKey();
-                      DataFetcherNode dataFetcherNode = (DataFetcherNode) stringListEntry.getValue().get(0);
-                      return
-                          new DataFetcherNode(
-                              source,
-                              filter,
-                              dataFetcherNode.getLimit(),
-                              dataFetcherNode.getOffset(),
-                              dataFetcherNode.getOrderByExpressionList(),
-                              dataFetcherNode.canFetchTotal());
+                      DataFetcherNode dataFetcherNode =
+                          (DataFetcherNode) stringListEntry.getValue().get(0);
+                      return new DataFetcherNode(
+                          source,
+                          filter,
+                          dataFetcherNode.getLimit(),
+                          dataFetcherNode.getOffset(),
+                          dataFetcherNode.getOrderByExpressionList(),
+                          dataFetcherNode.canFetchTotal());
                     } else {
                       return new NoOpNode();
                     }

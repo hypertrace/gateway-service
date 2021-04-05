@@ -32,11 +32,6 @@ public class PaginateOnlyNode implements QueryNode {
 
   @Override
   public String toString() {
-    return "PAGINATE_ONLY_NODE{"
-        + "limit="
-        + limit
-        + ", offset="
-        + offset
-        + '}';
+    return "PAGINATE_ONLY_NODE{" + "limit=" + limit + ", offset=" + offset + '}';
   }
 }

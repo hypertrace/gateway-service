@@ -11,7 +11,6 @@ import java.util.Optional;
 import java.util.Set;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
-
 import org.hypertrace.core.attribute.service.v1.AttributeMetadata;
 import org.hypertrace.core.attribute.service.v1.AttributeSource;
 import org.hypertrace.gateway.service.common.util.TimeRangeFilterUtil;
@@ -25,9 +24,7 @@ import org.hypertrace.gateway.service.v1.entity.EntitiesRequest;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-/**
- * Helper class used to build the execution tree.
- */
+/** Helper class used to build the execution tree. */
 public class ExecutionTreeBuilder {
 
   private static final Logger LOG = LoggerFactory.getLogger(ExecutionTreeBuilder.class);
@@ -77,7 +74,8 @@ public class ExecutionTreeBuilder {
         ExecutionTreeUtils.areFiltersOnlyOnCurrentDataSource(executionContext, EDS.name());
     if (entitiesRequest.getIncludeNonLiveEntities() && areFiltersOnlyOnEds) {
       QueryNode rootNode = new DataFetcherNode(EDS.name(), entitiesRequest.getFilter());
-      // if the filter by and order by are from the same source, pagination can be pushed down to EDS
+      // if the filter by and order by are from the same source, pagination can be pushed down to
+      // EDS
       if (sourceSetsIfFilterAndOrderByAreFromSameSourceSets.contains(EDS.name())) {
         rootNode =
             new DataFetcherNode(
@@ -139,9 +137,9 @@ public class ExecutionTreeBuilder {
     }
 
     /**
-     * {@link FilterOptimizingVisitor} is needed to merge filters corresponding to the same source into
-     * one {@link DataFetcherNode}, instead of having multiple {@link DataFetcherNode}s for each
-     * filter
+     * {@link FilterOptimizingVisitor} is needed to merge filters corresponding to the same source
+     * into one {@link DataFetcherNode}, instead of having multiple {@link DataFetcherNode}s for
+     * each filter
      */
     QueryNode optimizedFilterTree = filterTree.acceptVisitor(new FilterOptimizingVisitor());
     if (LOG.isDebugEnabled()) {
@@ -162,7 +160,8 @@ public class ExecutionTreeBuilder {
     } else if (source.equals(EDS.name())) {
       return buildExecutionTreeForEdsFilterAndSelection();
     } else {
-      throw new UnsupportedOperationException("Unknown Entities data source. No fetcher for this source.");
+      throw new UnsupportedOperationException(
+          "Unknown Entities data source. No fetcher for this source.");
     }
   }
 
@@ -349,9 +348,6 @@ public class ExecutionTreeBuilder {
   }
 
   private QueryNode createPaginateOnlyNode(QueryNode queryNode, EntitiesRequest entitiesRequest) {
-    return new PaginateOnlyNode(
-        queryNode,
-        entitiesRequest.getLimit(),
-        entitiesRequest.getOffset());
+    return new PaginateOnlyNode(queryNode, entitiesRequest.getLimit(), entitiesRequest.getOffset());
   }
 }

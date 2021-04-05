@@ -33,7 +33,8 @@ public class TimeAggregationsRequestHandler extends RequestHandler {
   private static final Logger LOG = LoggerFactory.getLogger(TimeAggregationsRequestHandler.class);
 
   TimeAggregationsRequestHandler(
-      QueryServiceClient queryServiceClient, int qsRequestTimeout,
+      QueryServiceClient queryServiceClient,
+      int qsRequestTimeout,
       AttributeMetadataProvider attributeMetadataProvider) {
     super(queryServiceClient, qsRequestTimeout, attributeMetadataProvider);
   }
@@ -81,12 +82,9 @@ public class TimeAggregationsRequestHandler extends RequestHandler {
    * @return
    */
   @Override
-  public List<OrderByExpression>
-      getRequestOrderByExpressions(ExploreRequest request) {
-    List<OrderByExpression> existingOrderBys =
-        super.getRequestOrderByExpressions(request);
-    List<OrderByExpression> resolvedOrderBys =
-        new ArrayList<>();
+  public List<OrderByExpression> getRequestOrderByExpressions(ExploreRequest request) {
+    List<OrderByExpression> existingOrderBys = super.getRequestOrderByExpressions(request);
+    List<OrderByExpression> resolvedOrderBys = new ArrayList<>();
 
     if (!this.containsIntervalOrdering(existingOrderBys)) {
       // Create an OrderBy Expression based on the interval start time column name. We will need to
