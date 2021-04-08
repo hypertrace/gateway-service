@@ -9,9 +9,9 @@ dependencies {
   implementation(project(":gateway-service-impl"))
 
   implementation("org.hypertrace.core.grpcutils:grpc-server-utils:0.3.4")
-  implementation("org.hypertrace.core.serviceframework:platform-service-framework:0.1.21")
+  implementation("org.hypertrace.core.serviceframework:platform-service-framework:0.1.23")
 
-  implementation("io.grpc:grpc-netty:1.36.1")
+  implementation("io.grpc:grpc-netty:1.37.0")
 
   // Logging
   implementation("org.slf4j:slf4j-api:1.7.30")
@@ -23,10 +23,10 @@ dependencies {
   implementation("com.typesafe:config:1.4.1")
 
   constraints {
-    runtimeOnly("io.netty:netty-codec-http2:4.1.60.Final") {
+    runtimeOnly("io.netty:netty-codec-http2:4.1.61.Final") {
       because("https://snyk.io/vuln/SNYK-JAVA-IONETTY-1083991")
     }
-    runtimeOnly("io.netty:netty-handler-proxy:4.1.60.Final") {
+    runtimeOnly("io.netty:netty-handler-proxy:4.1.61.Final") {
       because("https://snyk.io/vuln/SNYK-JAVA-IONETTY-1083991")
     }
   }
