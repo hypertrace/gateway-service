@@ -10,6 +10,7 @@ import "org/hypertrace/gateway/service/v1/explore.proto";
 import "org/hypertrace/gateway/service/v1/spans.proto";
 import "org/hypertrace/gateway/service/v1/traces.proto";
 import "org/hypertrace/gateway/service/v1/baseline.proto";
+import "org/hypertrace/gateway/service/v1/log_event.proto";
 
 service GatewayService {
   rpc getEntities (org.hypertrace.gateway.service.v1.entity.EntitiesRequest)
@@ -24,4 +25,6 @@ service GatewayService {
     returns (org.hypertrace.gateway.service.v1.trace.TracesResponse) {}
   rpc getSpans (org.hypertrace.gateway.service.v1.span.SpansRequest)
     returns (org.hypertrace.gateway.service.v1.span.SpansResponse) {}
+  rpc getLogs (org.hypertrace.gateway.service.v1.log.event.LogEventRequest)
+    returns (org.hypertrace.gateway.service.v1.log.event.LogEventResponse) {}
 }

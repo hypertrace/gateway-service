@@ -1,0 +1,22 @@
+syntax = "proto3";
+
+option java_multiple_files = true;
+option java_package = "org.hypertrace.gateway.service.v1.log.events";
+
+package org.hypertrace.gateway.service.v1.log.event;
+
+import "org/hypertrace/gateway/service/v1/gateway_query.proto";
+
+message LogEventRequest {
+  org.hypertrace.gateway.service.v1.common.Filter filter = 1;
+  repeated org.hypertrace.gateway.service.v1.common.Expression selection = 2;
+}
+
+message LogEvent {
+  map<string, org.hypertrace.gateway.service.v1.common.Value> attributes = 1;
+}
+
+message LogEventResponse {
+  repeated LogEvent logEvents = 1;
+  int32 total = 2;
+}
