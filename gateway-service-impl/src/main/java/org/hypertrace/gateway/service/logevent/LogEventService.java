@@ -53,79 +53,80 @@ public class LogEventService {
   }
 
   public LogEventResponse getSpansByFilter(RequestContext context, LogEventRequest request) {
-    Instant start = Instant.now();
-    try {
-      Map<String, AttributeMetadata> attributeMap =
-          attributeMetadataProvider.getAttributesMetadata(context, AttributeScope.EVENT.name());
-      LogEventResponse.Builder logEventResponseBuilder = LogEventResponse.newBuilder();
-
-      Collection<LogEvent> filteredLogEvents = filterLogEvents(context, request, attributeMap);
-
-      logEventResponseBuilder.addAllLogEvents(filteredLogEvents);
-      logEventResponseBuilder.setTotal(filteredLogEvents.size());
-
-      LogEventResponse response = logEventResponseBuilder.build();
-      LOG.debug("Span Service Response: {}", response);
-
-      return response;
-    } finally {
-      queryExecutionTimer.record(
-          Duration.between(start, Instant.now()).toMillis(), TimeUnit.MILLISECONDS);
-    }
+//    Instant start = Instant.now();
+//    try {
+//      Map<String, AttributeMetadata> attributeMap =
+//          attributeMetadataProvider.getAttributesMetadata(context, AttributeScope.EVENT.name());
+//      LogEventResponse.Builder logEventResponseBuilder = LogEventResponse.newBuilder();
+//
+//      Collection<LogEvent> filteredLogEvents = filterLogEvents(context, request, attributeMap);
+//
+//      logEventResponseBuilder.addAllLogEvents(filteredLogEvents);
+//      logEventResponseBuilder.setTotal(filteredLogEvents.size());
+//
+//      LogEventResponse response = logEventResponseBuilder.build();
+//      LOG.debug("Span Service Response: {}", response);
+//
+//      return response;
+//    } finally {
+//      queryExecutionTimer.record(
+//          Duration.between(start, Instant.now()).toMillis(), TimeUnit.MILLISECONDS);
+//    }
+    return null;
   }
 
-  @VisibleForTesting
-  List<LogEvent> filterLogEvents(
-      RequestContext context,
-      LogEventRequest request,
-      Map<String, AttributeMetadata> attributeMetadataMap) {
-
-    QueryRequest.Builder queryBuilder = createQueryWithFilter(request, context);
-
-    if (!request.getSelectionList().isEmpty()) {
-      request
-          .getSelectionList()
-          .forEach(
-              exp ->
-                  queryBuilder.addSelection(
-                      QueryAndGatewayDtoConverter.convertToQueryExpression(exp)));
-    }
-
-
-    List<LogEvent> logEventResult = new ArrayList<>();
-    QueryRequest queryRequest = queryBuilder.build();
-
-    Iterator<ResultSetChunk> resultSetChunkIterator =
-        queryServiceClient.executeQuery(queryRequest, context.getHeaders(), requestTimeout);
-
-    while (resultSetChunkIterator.hasNext()) {
-      ResultSetChunk chunk = resultSetChunkIterator.next();
-      LOG.debug("Received chunk: {}", chunk);
-
-      if (chunk.getRowCount() < 1) {
-        break;
-      }
-
-      for (Row row : chunk.getRowList()) {
-        LogEvent.Builder logEventBuilder = LogEvent.newBuilder();
-        for (int i = 0; i < chunk.getResultSetMetadata().getColumnMetadataCount(); i++) {
-          ColumnMetadata metadata = chunk.getResultSetMetadata().getColumnMetadata(i);
-          String attrName = metadata.getColumnName();
-          logEventBuilder.putAttributes(
-              metadata.getColumnName(),
-              QueryAndGatewayDtoConverter.convertToGatewayValue(
-                  attrName, row.getColumn(i), attributeMetadataMap));
-        }
-
-        logEventResult.add(logEventBuilder.build());
-      }
-    }
-    return logEventResult;
-  }
-
-  private QueryRequest.Builder createQueryWithFilter(
-      LogEventRequest request, RequestContext requestContext) {
-    // create filter
-    return QueryRequest.newBuilder();
-  }
+//  @VisibleForTesting
+//  List<LogEvent> filterLogEvents(
+//      RequestContext context,
+//      LogEventRequest request,
+//      Map<String, AttributeMetadata> attributeMetadataMap) {
+//
+//    QueryRequest.Builder queryBuilder = createQueryWithFilter(request, context);
+//
+//    if (!request.getSelectionList().isEmpty()) {
+//      request
+//          .getSelectionList()
+//          .forEach(
+//              exp ->
+//                  queryBuilder.addSelection(
+//                      QueryAndGatewayDtoConverter.convertToQueryExpression(exp)));
+//    }
+//
+//
+//    List<LogEvent> logEventResult = new ArrayList<>();
+//    QueryRequest queryRequest = queryBuilder.build();
+//
+//    Iterator<ResultSetChunk> resultSetChunkIterator =
+//        queryServiceClient.executeQuery(queryRequest, context.getHeaders(), requestTimeout);
+//
+//    while (resultSetChunkIterator.hasNext()) {
+//      ResultSetChunk chunk = resultSetChunkIterator.next();
+//      LOG.debug("Received chunk: {}", chunk);
+//
+//      if (chunk.getRowCount() < 1) {
+//        break;
+//      }
+//
+//      for (Row row : chunk.getRowList()) {
+//        LogEvent.Builder logEventBuilder = LogEvent.newBuilder();
+//        for (int i = 0; i < chunk.getResultSetMetadata().getColumnMetadataCount(); i++) {
+//          ColumnMetadata metadata = chunk.getResultSetMetadata().getColumnMetadata(i);
+//          String attrName = metadata.getColumnName();
+//          logEventBuilder.putAttributes(
+//              metadata.getColumnName(),
+//              QueryAndGatewayDtoConverter.convertToGatewayValue(
+//                  attrName, row.getColumn(i), attributeMetadataMap));
+//        }
+//
+//        logEventResult.add(logEventBuilder.build());
+//      }
+//    }
+//    return logEventResult;
+//  }
+//
+//  private QueryRequest.Builder createQueryWithFilter(
+//      LogEventRequest request, RequestContext requestContext) {
+//    // create filter
+//    return QueryRequest.newBuilder();
+//  }
 }
