@@ -16,7 +16,7 @@ dependencies {
   implementation("org.hypertrace.entity.service:entity-service-client:0.5.6")
   implementation("org.hypertrace.entity.service:entity-service-api:0.5.6")
   implementation("org.hypertrace.core.grpcutils:grpc-context-utils:0.3.4")
-  implementation("org.hypertrace.core.serviceframework:platform-metrics:0.1.21")
+  implementation("org.hypertrace.core.serviceframework:platform-metrics:0.1.23")
 
   // Config
   implementation("com.typesafe:config:1.4.1")
@@ -33,5 +33,5 @@ dependencies {
   testImplementation("org.junit.jupiter:junit-jupiter:5.7.0")
   testImplementation("org.mockito:mockito-core:3.6.28")
   testImplementation("org.apache.logging.log4j:log4j-slf4j-impl:2.14.0")
-  testImplementation("io.grpc:grpc-netty:1.36.1")
+  testImplementation("io.grpc:grpc-netty:1.37.0")
 }
