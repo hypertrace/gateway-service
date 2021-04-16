@@ -18,5 +18,4 @@ message LogEvent {
 
 message LogEventResponse {
   repeated LogEvent logEvents = 1;
-  int32 total = 2;
 }
