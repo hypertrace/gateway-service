@@ -10,6 +10,9 @@ import "org/hypertrace/gateway/service/v1/gateway_query.proto";
 message LogEventRequest {
   org.hypertrace.gateway.service.v1.common.Filter filter = 1;
   repeated org.hypertrace.gateway.service.v1.common.Expression selection = 2;
+  repeated org.hypertrace.gateway.service.v1.common.OrderByExpression orderBy = 3;
+  int32 offset = 4;
+  int32 limit = 5;
 }
 
 message LogEvent {
