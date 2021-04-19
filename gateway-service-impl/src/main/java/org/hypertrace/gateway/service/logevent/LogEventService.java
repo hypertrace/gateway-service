@@ -1,5 +1,7 @@
 package org.hypertrace.gateway.service.logevent;
 
+import static org.hypertrace.gateway.service.common.util.AttributeMetadataUtil.getTimestampAttributeId;
+
 import com.google.common.annotations.VisibleForTesting;
 import com.google.common.collect.ImmutableMap;
 import io.micrometer.core.instrument.Timer;
@@ -12,7 +14,6 @@ import java.util.List;
 import java.util.Map;
 import java.util.concurrent.TimeUnit;
 import org.hypertrace.core.attribute.service.v1.AttributeMetadata;
-import org.hypertrace.core.attribute.service.v1.AttributeScope;
 import org.hypertrace.core.query.service.api.ColumnMetadata;
 import org.hypertrace.core.query.service.api.QueryRequest;
 import org.hypertrace.core.query.service.api.ResultSetChunk;
@@ -26,7 +27,6 @@ import org.hypertrace.gateway.service.v1.common.OrderByExpression;
 import org.hypertrace.gateway.service.v1.log.events.LogEvent;
 import org.hypertrace.gateway.service.v1.log.events.LogEventRequest;
 import org.hypertrace.gateway.service.v1.log.events.LogEventResponse;
-import org.hypertrace.gateway.service.v1.span.SpansRequest;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -62,8 +62,7 @@ public class LogEventService {
           attributeMetadataProvider.getAttributesMetadata(context, "LOG_EVENT");
       LogEventResponse.Builder logEventResponseBuilder = LogEventResponse.newBuilder();
 
-      Collection<LogEvent> filteredLogEvents = filterLogEvents(context, request,
-          attributeMap);
+      Collection<LogEvent> filteredLogEvents = filterLogEvents(context, request, attributeMap);
 
       logEventResponseBuilder.addAllLogEvents(filteredLogEvents);
 
@@ -82,8 +81,16 @@ public class LogEventService {
       LogEventRequest request,
       Map<String, AttributeMetadata> attributeMetadataMap) {
 
-    QueryRequest.Builder queryBuilder = QueryRequest.newBuilder()
-        .setFilter(QueryAndGatewayDtoConverter.convertToQueryFilter(request.getFilter()));
+    QueryRequest.Builder queryBuilder =
+        QueryRequest.newBuilder()
+            .setFilter(
+                QueryAndGatewayDtoConverter.addTimeAndSpaceFiltersAndConvertToQueryFilter(
+                    request.getStartTimeMillis(),
+                    request.getEndTimeMillis(),
+                    "",
+                    getTimestampAttributeId(this.attributeMetadataProvider, context, "LOG_EVENT"),
+                    "",
+                    request.getFilter()));
 
     if (!request.getSelectionList().isEmpty()) {
       request
