@@ -1,7 +1,7 @@
 # Each line is a file pattern followed by one or more owners.
 
 # global
-*  @hypertrace/query-layer-owners
+* @hypertrace/query-layer-owners
 
 # GH action
 .github/ @hypertrace/ci-owners
