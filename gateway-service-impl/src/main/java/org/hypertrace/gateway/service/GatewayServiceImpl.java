@@ -25,6 +25,7 @@ import org.hypertrace.gateway.service.entity.EntityService;
 import org.hypertrace.gateway.service.entity.config.EntityIdColumnsConfigs;
 import org.hypertrace.gateway.service.entity.config.LogConfig;
 import org.hypertrace.gateway.service.explore.ExploreService;
+import org.hypertrace.gateway.service.logevent.LogEventsService;
 import org.hypertrace.gateway.service.span.SpanService;
 import org.hypertrace.gateway.service.trace.TracesService;
 import org.hypertrace.gateway.service.v1.baseline.BaselineEntitiesRequest;
@@ -34,6 +35,8 @@ import org.hypertrace.gateway.service.v1.entity.UpdateEntityRequest;
 import org.hypertrace.gateway.service.v1.entity.UpdateEntityResponse;
 import org.hypertrace.gateway.service.v1.explore.ExploreRequest;
 import org.hypertrace.gateway.service.v1.explore.ExploreResponse;
+import org.hypertrace.gateway.service.v1.log.events.LogEventsRequest;
+import org.hypertrace.gateway.service.v1.log.events.LogEventsResponse;
 import org.hypertrace.gateway.service.v1.span.SpansResponse;
 import org.hypertrace.gateway.service.v1.trace.TracesResponse;
 import org.slf4j.Logger;
@@ -58,6 +61,7 @@ public class GatewayServiceImpl extends GatewayServiceGrpc.GatewayServiceImplBas
   private final EntityService entityService;
   private final ExploreService exploreService;
   private final BaselineService baselineService;
+  private final LogEventsService logEventsService;
 
   public GatewayServiceImpl(Config appConfig) {
     AttributeServiceClientConfig asConfig = AttributeServiceClientConfig.from(appConfig);
@@ -110,6 +114,8 @@ public class GatewayServiceImpl extends GatewayServiceGrpc.GatewayServiceImplBas
             baselineServiceQueryParser,
             baselineServiceQueryExecutor,
             entityIdColumnsConfigs);
+    this.logEventsService =
+        new LogEventsService(queryServiceClient, qsRequestTimeout, attributeMetadataProvider);
   }
 
   private static int getRequestTimeoutMillis(Config config) {
@@ -308,6 +314,32 @@ public class GatewayServiceImpl extends GatewayServiceGrpc.GatewayServiceImplBas
       responseObserver.onCompleted();
     } catch (Exception e) {
       LOG.error("Error while handling explore request: {}", request, e);
+      responseObserver.onError(e);
+    }
+  }
+
+  @Override
+  public void getLogEvents(
+      LogEventsRequest request, StreamObserver<LogEventsResponse> responseObserver) {
+    Optional<String> tenantId =
+        org.hypertrace.core.grpcutils.context.RequestContext.CURRENT.get().getTenantId();
+    if (tenantId.isEmpty()) {
+      responseObserver.onError(new ServiceException("Tenant id is missing in the request."));
+      return;
+    }
+
+    try {
+      RequestContext context =
+          new RequestContext(
+              tenantId.get(),
+              org.hypertrace.core.grpcutils.context.RequestContext.CURRENT
+                  .get()
+                  .getRequestHeaders());
+      LogEventsResponse response = logEventsService.getLogEventsByFilter(context, request);
+      responseObserver.onNext(response);
+      responseObserver.onCompleted();
+    } catch (Exception e) {
+      LOG.error("Error while handling logEvents request: {}", request, e);
       responseObserver.onError(e);
     }
   }

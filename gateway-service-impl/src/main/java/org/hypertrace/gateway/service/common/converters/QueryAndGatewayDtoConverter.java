@@ -417,8 +417,8 @@ public class QueryAndGatewayDtoConverter {
   }
 
   public static Filter addTimeAndSpaceFiltersAndConvertToQueryFilter(
-      long startTimeMillis,
-      long endTimeMillis,
+      long startTime,
+      long endTime,
       String spaceId,
       String timestampAttributeId,
       String spacesAttributeId,
@@ -432,8 +432,7 @@ public class QueryAndGatewayDtoConverter {
 
     if (!hasTimeRangeFilter(convertedProvidedFilter, timestampAttributeId)) {
       compositeFilter.addChildFilter(
-          QueryRequestUtil.createBetweenTimesFilter(
-              timestampAttributeId, startTimeMillis, endTimeMillis));
+          QueryRequestUtil.createBetweenTimesFilter(timestampAttributeId, startTime, endTime));
     }
 
     if (isNonDefaultFilter(convertedProvidedFilter)) {

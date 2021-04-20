@@ -2,13 +2,11 @@ package org.hypertrace.gateway.service.logevent;
 
 import static org.hypertrace.gateway.service.common.util.AttributeMetadataUtil.getTimestampAttributeId;
 
-import com.google.common.annotations.VisibleForTesting;
 import com.google.common.collect.ImmutableMap;
 import io.micrometer.core.instrument.Timer;
 import java.time.Duration;
 import java.time.Instant;
 import java.util.ArrayList;
-import java.util.Collection;
 import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
@@ -17,6 +15,7 @@ import org.hypertrace.core.attribute.service.v1.AttributeMetadata;
 import org.hypertrace.core.query.service.api.ColumnMetadata;
 import org.hypertrace.core.query.service.api.QueryRequest;
 import org.hypertrace.core.query.service.api.ResultSetChunk;
+import org.hypertrace.core.query.service.api.ResultSetMetadata;
 import org.hypertrace.core.query.service.api.Row;
 import org.hypertrace.core.query.service.client.QueryServiceClient;
 import org.hypertrace.core.serviceframework.metrics.PlatformMetricsRegistry;
@@ -25,21 +24,23 @@ import org.hypertrace.gateway.service.common.RequestContext;
 import org.hypertrace.gateway.service.common.converters.QueryAndGatewayDtoConverter;
 import org.hypertrace.gateway.service.v1.common.OrderByExpression;
 import org.hypertrace.gateway.service.v1.log.events.LogEvent;
-import org.hypertrace.gateway.service.v1.log.events.LogEventRequest;
-import org.hypertrace.gateway.service.v1.log.events.LogEventResponse;
+import org.hypertrace.gateway.service.v1.log.events.LogEventsRequest;
+import org.hypertrace.gateway.service.v1.log.events.LogEventsResponse;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-public class LogEventService {
+public class LogEventsService {
 
-  private static final Logger LOG = LoggerFactory.getLogger(LogEventService.class);
+  private static final Logger LOG = LoggerFactory.getLogger(LogEventsService.class);
+
+  private static final String LOG_EVENT_SCOPE = "LOG_EVENT";
   private final QueryServiceClient queryServiceClient;
   private final int requestTimeout;
   private final AttributeMetadataProvider attributeMetadataProvider;
 
   private Timer queryExecutionTimer;
 
-  public LogEventService(
+  public LogEventsService(
       QueryServiceClient queryServiceClient,
       int requestTimeout,
       AttributeMetadataProvider attributeMetadataProvider) {
@@ -55,18 +56,18 @@ public class LogEventService {
             "hypertrace.log.event.query.execution", ImmutableMap.of());
   }
 
-  public LogEventResponse getLogEventsByFilter(RequestContext context, LogEventRequest request) {
+  public LogEventsResponse getLogEventsByFilter(RequestContext context, LogEventsRequest request) {
     Instant start = Instant.now();
     try {
       Map<String, AttributeMetadata> attributeMap =
-          attributeMetadataProvider.getAttributesMetadata(context, "LOG_EVENT");
-      LogEventResponse.Builder logEventResponseBuilder = LogEventResponse.newBuilder();
+          attributeMetadataProvider.getAttributesMetadata(context, LOG_EVENT_SCOPE);
+      LogEventsResponse.Builder logEventResponseBuilder = LogEventsResponse.newBuilder();
 
-      Collection<LogEvent> filteredLogEvents = filterLogEvents(context, request, attributeMap);
+      List<LogEvent> logEvents = fetchLogEvents(context, request, attributeMap);
 
-      logEventResponseBuilder.addAllLogEvents(filteredLogEvents);
+      logEventResponseBuilder.addAllLogEvents(logEvents);
 
-      LogEventResponse response = logEventResponseBuilder.build();
+      LogEventsResponse response = logEventResponseBuilder.build();
       LOG.debug("Log Event Service Response: {}", response);
       return response;
     } finally {
@@ -75,20 +76,20 @@ public class LogEventService {
     }
   }
 
-  @VisibleForTesting
-  List<LogEvent> filterLogEvents(
+  private List<LogEvent> fetchLogEvents(
       RequestContext context,
-      LogEventRequest request,
+      LogEventsRequest request,
       Map<String, AttributeMetadata> attributeMetadataMap) {
 
     QueryRequest.Builder queryBuilder =
         QueryRequest.newBuilder()
             .setFilter(
                 QueryAndGatewayDtoConverter.addTimeAndSpaceFiltersAndConvertToQueryFilter(
-                    request.getStartTimeMillis(),
-                    request.getEndTimeMillis(),
+                    request.getStartTimeNanos(),
+                    request.getEndTimeNanos(),
                     "",
-                    getTimestampAttributeId(this.attributeMetadataProvider, context, "LOG_EVENT"),
+                    getTimestampAttributeId(
+                        this.attributeMetadataProvider, context, LOG_EVENT_SCOPE),
                     "",
                     request.getFilter()));
 
@@ -109,18 +110,24 @@ public class LogEventService {
     Iterator<ResultSetChunk> resultSetChunkIterator =
         queryServiceClient.executeQuery(queryRequest, context.getHeaders(), requestTimeout);
 
+    ResultSetMetadata resultSetMetadata = null;
     while (resultSetChunkIterator.hasNext()) {
       ResultSetChunk chunk = resultSetChunkIterator.next();
+
       LOG.debug("Received chunk: {}", chunk);
 
       if (chunk.getRowCount() < 1) {
         break;
       }
 
+      if (null == resultSetMetadata && chunk.hasResultSetMetadata()) {
+        resultSetMetadata = chunk.getResultSetMetadata();
+      }
+
       for (Row row : chunk.getRowList()) {
         LogEvent.Builder logEventBuilder = LogEvent.newBuilder();
-        for (int i = 0; i < chunk.getResultSetMetadata().getColumnMetadataCount(); i++) {
-          ColumnMetadata metadata = chunk.getResultSetMetadata().getColumnMetadata(i);
+        for (int i = 0; i < resultSetMetadata.getColumnMetadataCount(); i++) {
+          ColumnMetadata metadata = resultSetMetadata.getColumnMetadata(i);
           String attrName = metadata.getColumnName();
           logEventBuilder.putAttributes(
               metadata.getColumnName(),
@@ -135,7 +142,7 @@ public class LogEventService {
   }
 
   // Adds the sort, limit and offset information to the QueryService if it is requested
-  private void addSortLimitAndOffset(LogEventRequest request, QueryRequest.Builder queryBuilder) {
+  private void addSortLimitAndOffset(LogEventsRequest request, QueryRequest.Builder queryBuilder) {
     if (request.getOrderByCount() > 0) {
       List<OrderByExpression> orderByExpressions = request.getOrderByList();
       queryBuilder.addAllOrderBy(
