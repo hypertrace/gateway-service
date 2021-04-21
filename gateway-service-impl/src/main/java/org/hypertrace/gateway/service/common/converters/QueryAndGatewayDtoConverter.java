@@ -163,8 +163,19 @@ public class QueryAndGatewayDtoConverter {
 
     switch (value.getValueType()) {
       case STRING:
-        converter = StringToAttributeKindConverter.INSTANCE;
-        retValue = converter.convert(value.getString(), attributeMetadata.getValueKind());
+        if (attributeMetadata.getValueKind() == AttributeKind.TYPE_TIMESTAMP) {
+          org.hypertrace.gateway.service.v1.common.Value.Builder valueBuilder =
+              org.hypertrace.gateway.service.v1.common.Value.newBuilder();
+          valueBuilder.setValueType(org.hypertrace.gateway.service.v1.common.ValueType.TIMESTAMP);
+          valueBuilder.setTimestamp(Long.parseLong(value.getString()));
+          if (!StringUtils.isEmpty(attributeMetadata.getUnit())) {
+            valueBuilder.setTimestampUnit(attributeMetadata.getUnit());
+          }
+          return valueBuilder.build();
+        } else {
+          converter = StringToAttributeKindConverter.INSTANCE;
+          retValue = converter.convert(value.getString(), attributeMetadata.getValueKind());
+        }
         break;
       case INT:
         converter = IntegerToAttributeKindConverter.INSTANCE;
@@ -187,19 +198,8 @@ public class QueryAndGatewayDtoConverter {
         retValue = converter.convert(value.getDouble(), attributeMetadata.getValueKind());
         break;
       case TIMESTAMP:
-        if (attributeMetadata.getValueKind() == AttributeKind.TYPE_TIMESTAMP) {
-          org.hypertrace.gateway.service.v1.common.Value.Builder valueBuilder =
-              org.hypertrace.gateway.service.v1.common.Value.newBuilder();
-          valueBuilder.setValueType(org.hypertrace.gateway.service.v1.common.ValueType.TIMESTAMP);
-          valueBuilder.setTimestamp(value.getTimestamp());
-          if (!StringUtils.isEmpty(attributeMetadata.getUnit())) {
-            valueBuilder.setTimestampUnit(attributeMetadata.getUnit());
-          }
-          return valueBuilder.build();
-        } else {
-          converter = TimestampArrayToAttributeKindConverter.INSTANCE;
-          retValue = converter.convert(value.getTimestamp(), attributeMetadata.getValueKind());
-        }
+        converter = TimestampToAttributeKindConverter.INSTANCE;
+        retValue = converter.convert(value.getTimestamp(), attributeMetadata.getValueKind());
         break;
       case INT_ARRAY:
         converter = IntegerArrayToAttributeKindConverter.INSTANCE;

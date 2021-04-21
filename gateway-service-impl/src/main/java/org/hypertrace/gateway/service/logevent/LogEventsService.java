@@ -1,6 +1,6 @@
 package org.hypertrace.gateway.service.logevent;
 
-import static org.hypertrace.gateway.service.common.util.AttributeMetadataUtil.getTimestampAttributeId;
+import static org.hypertrace.gateway.service.common.util.AttributeMetadataUtil.getTimestampAttributeMetadata;
 
 import com.google.common.collect.ImmutableMap;
 import io.micrometer.core.instrument.Timer;
@@ -81,15 +81,18 @@ public class LogEventsService {
       LogEventsRequest request,
       Map<String, AttributeMetadata> attributeMetadataMap) {
 
+    AttributeMetadata timestampAttributeMetadata =
+        getTimestampAttributeMetadata(attributeMetadataProvider, context, LOG_EVENT_SCOPE);
     QueryRequest.Builder queryBuilder =
         QueryRequest.newBuilder()
             .setFilter(
                 QueryAndGatewayDtoConverter.addTimeAndSpaceFiltersAndConvertToQueryFilter(
-                    request.getStartTimeNanos(),
-                    request.getEndTimeNanos(),
+                    convertFromMillis(
+                        request.getStartTimeMillis(), timestampAttributeMetadata.getUnit()),
+                    convertFromMillis(
+                        request.getEndTimeMillis(), timestampAttributeMetadata.getUnit()),
                     "",
-                    getTimestampAttributeId(
-                        this.attributeMetadataProvider, context, LOG_EVENT_SCOPE),
+                    timestampAttributeMetadata.getId(),
                     "",
                     request.getFilter()));
 
@@ -158,5 +161,12 @@ public class LogEventsService {
     if (offset > 0) {
       queryBuilder.setOffset(offset);
     }
+  }
+
+  private static long convertFromMillis(long timestamp, String toUnit) {
+    if ("ns".equals(toUnit)) {
+      return timestamp * 1000;
+    }
+    return timestamp;
   }
 }

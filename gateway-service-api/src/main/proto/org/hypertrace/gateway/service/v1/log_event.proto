@@ -9,8 +9,8 @@ import "org/hypertrace/gateway/service/v1/gateway_query.proto";
 
 message LogEventsRequest {
   // todo change this to nano
-  sfixed64 start_time_nanos = 1;
-  sfixed64 end_time_nanos = 2;
+  sfixed64 start_time_millis = 1;
+  sfixed64 end_time_millis = 2;
 
   org.hypertrace.gateway.service.v1.common.Filter filter = 3;
   repeated org.hypertrace.gateway.service.v1.common.Expression selection = 4;

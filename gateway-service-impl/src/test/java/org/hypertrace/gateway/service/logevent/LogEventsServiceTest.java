@@ -100,8 +100,9 @@ public class LogEventsServiceTest extends AbstractGatewayServiceTest {
   void testGetLogEventsByFilter() throws Exception {
     LogEventsRequest logEventRequest =
         LogEventsRequest.newBuilder()
-            .setStartTimeNanos(System.nanoTime() - Durations.toNanos(Durations.fromHours(1)))
-            .setEndTimeNanos(System.nanoTime())
+            .setStartTimeMillis(
+                System.currentTimeMillis() - Durations.toMillis(Durations.fromHours(1)))
+            .setEndTimeMillis(System.currentTimeMillis())
             .addSelection(getColumnSelectionExpression("LOG_EVENT.spanId"))
             .addSelection(getColumnSelectionExpression("LOG_EVENT.traceId"))
             .addSelection(getColumnSelectionExpression("LOG_EVENT.timestamp"))
