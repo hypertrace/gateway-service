@@ -94,6 +94,7 @@ message Value {
   repeated double double_array = 13;
   repeated bool boolean_array = 14;
   map<string, string> string_map = 15;
+  string timestamp_unit = 16;
 }
 
 message Expression {

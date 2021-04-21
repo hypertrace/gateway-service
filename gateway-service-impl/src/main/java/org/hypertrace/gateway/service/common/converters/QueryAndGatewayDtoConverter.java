@@ -4,6 +4,7 @@ import com.google.common.base.Strings;
 import java.util.List;
 import java.util.Map;
 import java.util.stream.Collectors;
+import org.apache.commons.lang3.StringUtils;
 import org.hypertrace.core.attribute.service.v1.AttributeKind;
 import org.hypertrace.core.attribute.service.v1.AttributeMetadata;
 import org.hypertrace.core.attribute.service.v1.AttributeType;
@@ -186,8 +187,19 @@ public class QueryAndGatewayDtoConverter {
         retValue = converter.convert(value.getDouble(), attributeMetadata.getValueKind());
         break;
       case TIMESTAMP:
-        converter = TimestampToAttributeKindConverter.INSTANCE;
-        retValue = converter.convert(value.getTimestamp(), attributeMetadata.getValueKind());
+        if (attributeMetadata.getValueKind() == AttributeKind.TYPE_TIMESTAMP) {
+          org.hypertrace.gateway.service.v1.common.Value.Builder valueBuilder =
+              org.hypertrace.gateway.service.v1.common.Value.newBuilder();
+          valueBuilder.setValueType(org.hypertrace.gateway.service.v1.common.ValueType.TIMESTAMP);
+          valueBuilder.setTimestamp(value.getTimestamp());
+          if (!StringUtils.isEmpty(attributeMetadata.getUnit())) {
+            valueBuilder.setTimestampUnit(attributeMetadata.getUnit());
+          }
+          return valueBuilder.build();
+        } else {
+          converter = TimestampArrayToAttributeKindConverter.INSTANCE;
+          retValue = converter.convert(value.getTimestamp(), attributeMetadata.getValueKind());
+        }
         break;
       case INT_ARRAY:
         converter = IntegerArrayToAttributeKindConverter.INSTANCE;
