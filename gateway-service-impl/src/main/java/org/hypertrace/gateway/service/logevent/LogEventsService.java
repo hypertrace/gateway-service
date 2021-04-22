@@ -119,10 +119,6 @@ public class LogEventsService {
 
       LOG.debug("Received chunk: {}", chunk);
 
-      if (chunk.getRowCount() < 1) {
-        break;
-      }
-
       if (null == resultSetMetadata && chunk.hasResultSetMetadata()) {
         resultSetMetadata = chunk.getResultSetMetadata();
       }
