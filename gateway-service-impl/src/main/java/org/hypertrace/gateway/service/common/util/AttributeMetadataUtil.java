@@ -56,16 +56,22 @@ public class AttributeMetadataUtil {
         .collect(Collectors.toList());
   }
 
-  public static String getTimestampAttributeId(
+  public static AttributeMetadata getTimestampAttributeMetadata(
       AttributeMetadataProvider attributeMetadataProvider,
       RequestContext requestContext,
       String attributeScope) {
     String key = getStartTimeAttributeKeyName(attributeScope);
-    AttributeMetadata timeId =
-        attributeMetadataProvider
-            .getAttributeMetadata(requestContext, attributeScope, key)
-            .orElseThrow(() -> new UnknownScopeAndKeyForAttributeException(attributeScope, key));
-    return timeId.getId();
+    return attributeMetadataProvider
+        .getAttributeMetadata(requestContext, attributeScope, key)
+        .orElseThrow(() -> new UnknownScopeAndKeyForAttributeException(attributeScope, key));
+  }
+
+  public static String getTimestampAttributeId(
+      AttributeMetadataProvider attributeMetadataProvider,
+      RequestContext requestContext,
+      String attributeScope) {
+    return getTimestampAttributeMetadata(attributeMetadataProvider, requestContext, attributeScope)
+        .getId();
   }
 
   private static String getStartTimeAttributeKeyName(String attributeScope) {
