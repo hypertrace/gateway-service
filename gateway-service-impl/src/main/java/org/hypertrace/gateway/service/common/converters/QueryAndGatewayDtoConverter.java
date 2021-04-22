@@ -4,7 +4,6 @@ import com.google.common.base.Strings;
 import java.util.List;
 import java.util.Map;
 import java.util.stream.Collectors;
-import org.apache.commons.lang3.StringUtils;
 import org.hypertrace.core.attribute.service.v1.AttributeKind;
 import org.hypertrace.core.attribute.service.v1.AttributeMetadata;
 import org.hypertrace.core.attribute.service.v1.AttributeType;
@@ -163,19 +162,8 @@ public class QueryAndGatewayDtoConverter {
 
     switch (value.getValueType()) {
       case STRING:
-        if (attributeMetadata.getValueKind() == AttributeKind.TYPE_TIMESTAMP) {
-          org.hypertrace.gateway.service.v1.common.Value.Builder valueBuilder =
-              org.hypertrace.gateway.service.v1.common.Value.newBuilder();
-          valueBuilder.setValueType(org.hypertrace.gateway.service.v1.common.ValueType.TIMESTAMP);
-          valueBuilder.setTimestamp(Long.parseLong(value.getString()));
-          if (!StringUtils.isEmpty(attributeMetadata.getUnit())) {
-            valueBuilder.setTimestampUnit(attributeMetadata.getUnit());
-          }
-          return valueBuilder.build();
-        } else {
-          converter = StringToAttributeKindConverter.INSTANCE;
-          retValue = converter.convert(value.getString(), attributeMetadata.getValueKind());
-        }
+        converter = StringToAttributeKindConverter.INSTANCE;
+        retValue = converter.convert(value.getString(), attributeMetadata.getValueKind());
         break;
       case INT:
         converter = IntegerToAttributeKindConverter.INSTANCE;
@@ -429,8 +417,8 @@ public class QueryAndGatewayDtoConverter {
   }
 
   public static Filter addTimeAndSpaceFiltersAndConvertToQueryFilter(
-      long startTime,
-      long endTime,
+      long startTimeMillis,
+      long endTimeMillis,
       String spaceId,
       String timestampAttributeId,
       String spacesAttributeId,
@@ -444,7 +432,8 @@ public class QueryAndGatewayDtoConverter {
 
     if (!hasTimeRangeFilter(convertedProvidedFilter, timestampAttributeId)) {
       compositeFilter.addChildFilter(
-          QueryRequestUtil.createBetweenTimesFilter(timestampAttributeId, startTime, endTime));
+          QueryRequestUtil.createBetweenTimesFilter(
+              timestampAttributeId, startTimeMillis, endTimeMillis));
     }
 
     if (isNonDefaultFilter(convertedProvidedFilter)) {
