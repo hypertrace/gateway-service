@@ -161,7 +161,7 @@ public class LogEventsService {
 
   private static long convertFromMillis(long timestamp, String toUnit) {
     if ("ns".equals(toUnit)) {
-      return timestamp * 1_000_000;
+      return Duration.ofMillis(timestamp).toNanos();
     }
     return timestamp;
   }
