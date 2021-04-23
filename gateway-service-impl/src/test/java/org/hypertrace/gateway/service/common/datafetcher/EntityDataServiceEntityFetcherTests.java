@@ -4,14 +4,18 @@ import static org.hypertrace.gateway.service.common.EntitiesRequestAndResponseUt
 import static org.hypertrace.gateway.service.common.EntitiesRequestAndResponseUtils.generateEQFilter;
 import static org.hypertrace.gateway.service.common.converters.EntityServiceAndGatewayServiceConverter.convertToEntityServiceExpression;
 import static org.hypertrace.gateway.service.common.converters.EntityServiceAndGatewayServiceConverter.convertToEntityServiceFilter;
+import static org.hypertrace.gateway.service.common.converters.EntityServiceAndGatewayServiceConverter.createColumnExpression;
 import static org.hypertrace.gateway.service.v1.common.Operator.AND;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.mock;
+import static org.mockito.Mockito.times;
+import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
+import java.util.Collections;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
@@ -19,9 +23,12 @@ import java.util.stream.Collectors;
 import org.hypertrace.core.attribute.service.v1.AttributeKind;
 import org.hypertrace.core.attribute.service.v1.AttributeMetadata;
 import org.hypertrace.core.attribute.service.v1.AttributeScope;
+import org.hypertrace.core.grpcutils.context.RequestContext;
 import org.hypertrace.entity.query.service.client.EntityQueryServiceClient;
 import org.hypertrace.entity.query.service.v1.ColumnMetadata;
 import org.hypertrace.entity.query.service.v1.EntityQueryRequest;
+import org.hypertrace.entity.query.service.v1.LiteralConstant;
+import org.hypertrace.entity.query.service.v1.Operator;
 import org.hypertrace.entity.query.service.v1.ResultSetChunk;
 import org.hypertrace.entity.query.service.v1.ResultSetMetadata;
 import org.hypertrace.entity.query.service.v1.Row;
@@ -30,10 +37,10 @@ import org.hypertrace.entity.query.service.v1.TotalEntitiesResponse;
 import org.hypertrace.entity.query.service.v1.Value;
 import org.hypertrace.entity.query.service.v1.ValueType;
 import org.hypertrace.gateway.service.common.AttributeMetadataProvider;
-import org.hypertrace.gateway.service.common.RequestContext;
 import org.hypertrace.gateway.service.common.converters.EntityServiceAndGatewayServiceConverter;
 import org.hypertrace.gateway.service.entity.EntitiesRequestContext;
 import org.hypertrace.gateway.service.entity.config.EntityIdColumnsConfigs;
+import org.hypertrace.gateway.service.entity.config.TimestampConfigs;
 import org.hypertrace.gateway.service.v1.common.ColumnIdentifier;
 import org.hypertrace.gateway.service.v1.common.Expression;
 import org.hypertrace.gateway.service.v1.common.Filter;
@@ -42,6 +49,8 @@ import org.hypertrace.gateway.service.v1.entity.EntitiesRequest;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Nested;
 import org.junit.jupiter.api.Test;
+import org.mockito.MockedStatic;
+import org.mockito.Mockito;
 
 public class EntityDataServiceEntityFetcherTests {
   private static final String TENANT_ID = "tenant-id";
@@ -233,6 +242,161 @@ public class EntityDataServiceEntityFetcherTests {
     }
   }
 
+  @Nested
+  class TimeBounds {
+    @Test
+    public void test_getEntities_WithLiveness() {
+      List<OrderByExpression> orderByExpressions = List.of(buildOrderByExpression(API_ID_ATTR));
+      long startTime = 1L;
+      long endTime = 10L;
+      int limit = 0;
+      int offset = 0;
+      RequestContext requestContext = RequestContext.forTenantId(TENANT_ID);
+      AttributeScope entityType = AttributeScope.API;
+      EntitiesRequest entitiesRequest =
+          EntitiesRequest.newBuilder()
+              .setEntityType(entityType.name())
+              .setStartTimeMillis(startTime)
+              .setEndTimeMillis(endTime)
+              .setIncludeNonLiveEntities(false)
+              .addAllOrderBy(orderByExpressions)
+              .setLimit(limit)
+              .setOffset(offset)
+              .build();
+      EntitiesRequestContext entitiesRequestContext =
+          new EntitiesRequestContext(
+              requestContext.getTenantId().get(),
+              startTime,
+              endTime,
+              entityType.name(),
+              "API.startTime",
+              requestContext.getRequestHeaders());
+
+      EntityQueryRequest expectedQueryRequest =
+          EntityQueryRequest.newBuilder()
+              .setEntityType("API")
+              .addSelection(
+                  convertToEntityServiceExpression(
+                      Expression.newBuilder()
+                          .setColumnIdentifier(
+                              ColumnIdentifier.newBuilder().setColumnName(API_ID_ATTR))
+                          .build()))
+              .setFilter(buildTimeRangeFilter("API.startTime", startTime, endTime))
+              .addAllOrderBy(
+                  EntityServiceAndGatewayServiceConverter.convertToOrderByExpressions(
+                      orderByExpressions))
+              .build();
+
+      when(entityQueryServiceClient.execute(any(), any())).thenReturn(Collections.emptyIterator());
+
+      mockTimestamp("startTime");
+      try (MockedStatic<TimestampConfigs> mockedTimestamps =
+          Mockito.mockStatic(TimestampConfigs.class)) {
+        mockedTimestamps
+            .when(() -> TimestampConfigs.getTimestampColumn("API"))
+            .thenReturn("startTime");
+        entityDataServiceEntityFetcher.getEntities(entitiesRequestContext, entitiesRequest);
+        verify(entityQueryServiceClient, times(1)).execute(eq(expectedQueryRequest), any());
+      }
+    }
+
+    private void mockTimestamp(String key) {
+      AttributeMetadata timestampMetadata =
+          AttributeMetadata.newBuilder()
+              .setId("API." + key)
+              .setKey(key)
+              .setScopeString("API")
+              .setValueKind(AttributeKind.TYPE_TIMESTAMP)
+              .build();
+
+      when(attributeMetadataProvider.getAttributeMetadata(
+              any(EntitiesRequestContext.class), eq("API"), eq(key)))
+          .thenReturn(Optional.of(timestampMetadata));
+    }
+
+    @Test
+    public void test_getEntities_NonLive() {
+      List<OrderByExpression> orderByExpressions = List.of(buildOrderByExpression(API_ID_ATTR));
+      long startTime = 1L;
+      long endTime = 10L;
+      int limit = 0;
+      int offset = 0;
+      RequestContext requestContext = RequestContext.forTenantId(TENANT_ID);
+      AttributeScope entityType = AttributeScope.API;
+      EntitiesRequest entitiesRequest =
+          EntitiesRequest.newBuilder()
+              .setEntityType(entityType.name())
+              .setStartTimeMillis(startTime)
+              .setEndTimeMillis(endTime)
+              .setIncludeNonLiveEntities(true)
+              .addAllOrderBy(orderByExpressions)
+              .setLimit(limit)
+              .setOffset(offset)
+              .build();
+      EntitiesRequestContext entitiesRequestContext =
+          new EntitiesRequestContext(
+              requestContext.getTenantId().get(),
+              startTime,
+              endTime,
+              entityType.name(),
+              "API.startTime",
+              requestContext.getRequestHeaders());
+
+      EntityQueryRequest expectedQueryRequest =
+          EntityQueryRequest.newBuilder()
+              .setEntityType("API")
+              .addSelection(
+                  convertToEntityServiceExpression(
+                      Expression.newBuilder()
+                          .setColumnIdentifier(
+                              ColumnIdentifier.newBuilder().setColumnName(API_ID_ATTR))
+                          .build()))
+              .setFilter(org.hypertrace.entity.query.service.v1.Filter.getDefaultInstance())
+              .addAllOrderBy(
+                  EntityServiceAndGatewayServiceConverter.convertToOrderByExpressions(
+                      orderByExpressions))
+              .build();
+
+      when(entityQueryServiceClient.execute(any(), any())).thenReturn(Collections.emptyIterator());
+
+      entityDataServiceEntityFetcher.getEntities(entitiesRequestContext, entitiesRequest);
+      verify(entityQueryServiceClient, times(1)).execute(eq(expectedQueryRequest), any());
+    }
+
+    private org.hypertrace.entity.query.service.v1.Filter buildTimeRangeFilter(
+        String id, long start, long end) {
+      org.hypertrace.entity.query.service.v1.Expression.Builder startTimeConstant =
+          org.hypertrace.entity.query.service.v1.Expression.newBuilder()
+              .setLiteral(
+                  LiteralConstant.newBuilder()
+                      .setValue(Value.newBuilder().setValueType(ValueType.LONG).setLong(start)));
+
+      org.hypertrace.entity.query.service.v1.Expression.Builder endTimeConstant =
+          org.hypertrace.entity.query.service.v1.Expression.newBuilder()
+              .setLiteral(
+                  LiteralConstant.newBuilder()
+                      .setValue(Value.newBuilder().setValueType(ValueType.LONG).setLong(end)));
+
+      org.hypertrace.entity.query.service.v1.Filter.Builder startTimeFilterBuilder =
+          org.hypertrace.entity.query.service.v1.Filter.newBuilder();
+      startTimeFilterBuilder.setOperator(Operator.GE);
+      startTimeFilterBuilder.setLhs(createColumnExpression(id));
+      startTimeFilterBuilder.setRhs(startTimeConstant);
+
+      org.hypertrace.entity.query.service.v1.Filter.Builder endTimeFilterBuilder =
+          org.hypertrace.entity.query.service.v1.Filter.newBuilder();
+      endTimeFilterBuilder.setOperator(Operator.LT);
+      endTimeFilterBuilder.setLhs(createColumnExpression(id));
+      endTimeFilterBuilder.setRhs(endTimeConstant);
+
+      return org.hypertrace.entity.query.service.v1.Filter.newBuilder()
+          .setOperator(Operator.AND)
+          .addChildFilter(startTimeFilterBuilder)
+          .addChildFilter(endTimeFilterBuilder)
+          .build();
+    }
+  }
+
   private void mockAttributeMetadataProvider(String attributeScope) {
     AttributeMetadata idAttributeMetadata =
         AttributeMetadata.newBuilder()
@@ -242,7 +406,7 @@ public class EntityDataServiceEntityFetcherTests {
             .setValueKind(AttributeKind.TYPE_STRING)
             .build();
     when(attributeMetadataProvider.getAttributesMetadata(
-            any(RequestContext.class), eq(attributeScope)))
+            any(EntitiesRequestContext.class), eq(attributeScope)))
         .thenReturn(
             Map.of(
                 API_ID_ATTR, idAttributeMetadata,
@@ -261,7 +425,7 @@ public class EntityDataServiceEntityFetcherTests {
                         .setValueKind(AttributeKind.TYPE_STRING)
                         .build()));
     when(attributeMetadataProvider.getAttributeMetadata(
-            any(RequestContext.class), eq(attributeScope), eq("id")))
+            any(EntitiesRequestContext.class), eq(attributeScope), eq("id")))
         .thenReturn(Optional.of(idAttributeMetadata));
   }
 
