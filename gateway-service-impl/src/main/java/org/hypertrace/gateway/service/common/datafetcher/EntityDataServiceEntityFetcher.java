@@ -73,13 +73,15 @@ public class EntityDataServiceEntityFetcher implements IEntityFetcher {
                     .collect(Collectors.toList()));
 
     // add time filter for supported scope
-    EntityServiceAndGatewayServiceConverter.addBetweenTimeFilter(
-        entitiesRequest.getStartTimeMillis(),
-        entitiesRequest.getEndTimeMillis(),
-        attributeMetadataProvider,
-        entitiesRequest,
-        builder,
-        requestContext);
+    if (!entitiesRequest.getIncludeNonLiveEntities()) {
+      EntityServiceAndGatewayServiceConverter.addBetweenTimeFilter(
+          entitiesRequest.getStartTimeMillis(),
+          entitiesRequest.getEndTimeMillis(),
+          attributeMetadataProvider,
+          entitiesRequest,
+          builder,
+          requestContext);
+    }
 
     // Add all expressions in the select that are already not part of the EntityID attributes
     entitiesRequest.getSelectionList().stream()
