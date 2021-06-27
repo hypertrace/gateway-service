@@ -5,6 +5,7 @@ import static org.hypertrace.gateway.service.common.util.AttributeMetadataUtil.g
 import static org.hypertrace.gateway.service.common.util.AttributeMetadataUtil.getTimestampAttributeId;
 
 import com.google.common.annotations.VisibleForTesting;
+import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
 import io.micrometer.core.instrument.Timer;
 import java.time.Duration;
@@ -44,6 +45,7 @@ public class SpanService {
   private final QueryServiceClient queryServiceClient;
   private final int requestTimeout;
   private final AttributeMetadataProvider attributeMetadataProvider;
+  private final ClockskewAdjuster clockskewAdjuster;
 
   private Timer queryExecutionTimer;
 
@@ -54,6 +56,7 @@ public class SpanService {
     this.queryServiceClient = queryServiceClient;
     this.requestTimeout = requestTimeout;
     this.attributeMetadataProvider = attributeMetadataProvider;
+    this.clockskewAdjuster = new JaegarBasedClockskewAdjuster();
     initMetrics();
   }
 
@@ -139,7 +142,7 @@ public class SpanService {
         spanEventsResult.add(spanEventBuilder.build());
       }
     }
-    return spanEventsResult;
+    return clockskewAdjuster.adjustSpansForClockSkew(ImmutableList.copyOf(spanEventsResult));
   }
 
   // Adds the sort, limit and offset information to the QueryService if it is requested

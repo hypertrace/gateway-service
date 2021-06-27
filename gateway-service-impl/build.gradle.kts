@@ -29,6 +29,8 @@ dependencies {
   // Needed by clusters snapshots
   implementation("com.fasterxml.jackson.core:jackson-annotations:2.11.1")
   implementation("com.fasterxml.jackson.core:jackson-databind:2.11.1")
+  annotationProcessor("org.projectlombok:lombok:1.18.18")
+  compileOnly("org.projectlombok:lombok:1.18.18")
 
   testImplementation("org.junit.jupiter:junit-jupiter:5.7.0")
   testImplementation("org.mockito:mockito-core:3.9.0")
