@@ -5,7 +5,6 @@ import static org.hypertrace.gateway.service.common.util.AttributeMetadataUtil.g
 import static org.hypertrace.gateway.service.common.util.AttributeMetadataUtil.getTimestampAttributeId;
 
 import com.google.common.annotations.VisibleForTesting;
-import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
 import io.micrometer.core.instrument.Timer;
 import java.time.Duration;
@@ -45,24 +44,33 @@ public class SpanService {
   private final QueryServiceClient queryServiceClient;
   private final int requestTimeout;
   private final AttributeMetadataProvider attributeMetadataProvider;
-  private final ClockskewAdjuster clockskewAdjuster;
+  private final SpanTransformationPipeline pipeline;
 
   private Timer queryExecutionTimer;
 
   public SpanService(
       QueryServiceClient queryServiceClient,
       int requestTimeout,
-      AttributeMetadataProvider attributeMetadataProvider) {
+      AttributeMetadataProvider attributeMetadataProvider,
+      ClockskewAdjuster clockskewAdjuster) {
     this.queryServiceClient = queryServiceClient;
     this.requestTimeout = requestTimeout;
     this.attributeMetadataProvider = attributeMetadataProvider;
-    this.clockskewAdjuster = new JaegarBasedClockskewAdjuster();
+    pipeline = SpanTransformationPipeline.getNewPipeline().addProcessingStage(clockskewAdjuster);
     initMetrics();
   }
 
   private void initMetrics() {
     queryExecutionTimer =
         PlatformMetricsRegistry.registerTimer("hypertrace.span.query.execution", ImmutableMap.of());
+  }
+
+  public SpansResponse processSpans(List<SpanEvent> spans) {
+    List<SpanEvent> processedSpans = pipeline.execute(spans);
+    return SpansResponse.newBuilder()
+        .addAllSpans(processedSpans)
+        .setTotal(processedSpans.size())
+        .build();
   }
 
   public SpansResponse getSpansByFilter(RequestContext context, SpansRequest request) {
@@ -142,7 +150,7 @@ public class SpanService {
         spanEventsResult.add(spanEventBuilder.build());
       }
     }
-    return clockskewAdjuster.adjustSpansForClockSkew(ImmutableList.copyOf(spanEventsResult));
+    return spanEventsResult;
   }
 
   // Adds the sort, limit and offset information to the QueryService if it is requested

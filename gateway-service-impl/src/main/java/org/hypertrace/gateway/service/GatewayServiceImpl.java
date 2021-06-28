@@ -26,6 +26,7 @@ import org.hypertrace.gateway.service.entity.config.EntityIdColumnsConfigs;
 import org.hypertrace.gateway.service.entity.config.LogConfig;
 import org.hypertrace.gateway.service.explore.ExploreService;
 import org.hypertrace.gateway.service.logevent.LogEventsService;
+import org.hypertrace.gateway.service.span.ClockskewAdjuster;
 import org.hypertrace.gateway.service.span.SpanService;
 import org.hypertrace.gateway.service.trace.TracesService;
 import org.hypertrace.gateway.service.v1.baseline.BaselineEntitiesRequest;
@@ -78,6 +79,8 @@ public class GatewayServiceImpl extends GatewayServiceGrpc.GatewayServiceImplBas
         new QueryServiceClient(new QueryServiceConfig(qsConfig));
     int qsRequestTimeout = getRequestTimeoutMillis(qsConfig);
 
+    Config clockskewConfig = appConfig.getConfig("clockskew.adjuster");
+
     EntityServiceClientConfig esConfig = EntityServiceClientConfig.from(appConfig);
     ManagedChannel entityServiceChannel =
         ManagedChannelBuilder.forAddress(esConfig.getHost(), esConfig.getPort())
@@ -91,7 +94,11 @@ public class GatewayServiceImpl extends GatewayServiceGrpc.GatewayServiceImplBas
         new TracesService(
             queryServiceClient, qsRequestTimeout, attributeMetadataProvider, scopeFilterConfigs);
     this.spanService =
-        new SpanService(queryServiceClient, qsRequestTimeout, attributeMetadataProvider);
+        new SpanService(
+            queryServiceClient,
+            qsRequestTimeout,
+            attributeMetadataProvider,
+            ClockskewAdjuster.getAdjuster(appConfig));
     this.entityService =
         new EntityService(
             queryServiceClient,
@@ -174,8 +181,11 @@ public class GatewayServiceImpl extends GatewayServiceGrpc.GatewayServiceImplBas
               org.hypertrace.core.grpcutils.context.RequestContext.CURRENT
                   .get()
                   .getRequestHeaders());
+
       SpansResponse response = spanService.getSpansByFilter(context, request);
-      responseObserver.onNext(response);
+      SpansResponse spansResponse = spanService.processSpans(response.getSpansList());
+
+      responseObserver.onNext(spansResponse);
       responseObserver.onCompleted();
     } catch (Exception e) {
       LOG.error("Error while handling spans request: {}", request, e);

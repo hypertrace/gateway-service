@@ -4,7 +4,6 @@ import static java.util.stream.Collectors.toList;
 import static java.util.stream.Collectors.toMap;
 
 import com.google.common.base.Preconditions;
-import com.google.common.collect.ImmutableList;
 import java.time.Duration;
 import java.time.Instant;
 import java.util.List;
@@ -19,7 +18,7 @@ import org.hypertrace.gateway.service.v1.span.SpanEvent.Builder;
 class JaegarBasedClockskewAdjuster implements ClockskewAdjuster {
 
   @Override
-  public List<SpanEvent> adjustSpansForClockSkew(ImmutableList<SpanEvent> spans) {
+  public List<SpanEvent> process(List<? extends SpanEvent> spans) {
     Map<String, Span> idToSpanMap =
         spans.parallelStream()
             .map(
