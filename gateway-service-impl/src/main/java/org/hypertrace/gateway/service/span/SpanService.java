@@ -44,7 +44,7 @@ public class SpanService {
   private final QueryServiceClient queryServiceClient;
   private final int requestTimeout;
   private final AttributeMetadataProvider attributeMetadataProvider;
-  private final SpanTransformationPipeline pipeline;
+  private final SpanTransformationPipeline spanTransformationPipeline;
 
   private Timer queryExecutionTimer;
 
@@ -56,7 +56,7 @@ public class SpanService {
     this.queryServiceClient = queryServiceClient;
     this.requestTimeout = requestTimeout;
     this.attributeMetadataProvider = attributeMetadataProvider;
-    pipeline = SpanTransformationPipeline.getNewPipeline().addProcessingStage(clockskewAdjuster);
+    spanTransformationPipeline = SpanTransformationPipeline.getNewPipeline().addProcessingStage(clockskewAdjuster);
     initMetrics();
   }
 
@@ -66,7 +66,7 @@ public class SpanService {
   }
 
   public SpansResponse processSpans(List<SpanEvent> spans) {
-    List<SpanEvent> processedSpans = pipeline.execute(spans);
+    List<SpanEvent> processedSpans = spanTransformationPipeline.execute(spans);
     return SpansResponse.newBuilder()
         .addAllSpans(processedSpans)
         .setTotal(processedSpans.size())
@@ -100,7 +100,8 @@ public class SpanService {
       RequestContext context,
       SpansRequest request,
       Map<String, AttributeMetadata> attributeMetadataMap) {
-    return filterSpanEvents(context, request, attributeMetadataMap);
+    return spanTransformationPipeline
+        .execute(filterSpanEvents(context, request, attributeMetadataMap));
   }
 
   @VisibleForTesting

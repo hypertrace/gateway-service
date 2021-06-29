@@ -14,6 +14,10 @@ class ClockskewAdjusters {
   }
 
   static ClockskewAdjuster getAdjuster(String type) {
-    return REGISTRY.get(type).get();
+    Supplier<? extends ClockskewAdjuster> supplier = REGISTRY.get(type);
+    if (null == supplier) {
+      return REGISTRY.get("noop").get();
+    }
+    return supplier.get();
   }
 }

@@ -79,8 +79,6 @@ public class GatewayServiceImpl extends GatewayServiceGrpc.GatewayServiceImplBas
         new QueryServiceClient(new QueryServiceConfig(qsConfig));
     int qsRequestTimeout = getRequestTimeoutMillis(qsConfig);
 
-    Config clockskewConfig = appConfig.getConfig("clockskew.adjuster");
-
     EntityServiceClientConfig esConfig = EntityServiceClientConfig.from(appConfig);
     ManagedChannel entityServiceChannel =
         ManagedChannelBuilder.forAddress(esConfig.getHost(), esConfig.getPort())

@@ -3,9 +3,9 @@ package org.hypertrace.gateway.service.span;
 import static java.util.stream.Collectors.toList;
 import static java.util.stream.Collectors.toMap;
 
-import com.google.common.base.Preconditions;
 import java.time.Duration;
 import java.time.Instant;
+import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import lombok.Data;
@@ -13,47 +13,67 @@ import lombok.experimental.Accessors;
 import org.hypertrace.gateway.service.v1.common.Value;
 import org.hypertrace.gateway.service.v1.common.ValueType;
 import org.hypertrace.gateway.service.v1.span.SpanEvent;
-import org.hypertrace.gateway.service.v1.span.SpanEvent.Builder;
 
 class JaegarBasedClockskewAdjuster implements ClockskewAdjuster {
 
   @Override
-  public List<SpanEvent> process(List<? extends SpanEvent> spans) {
+  public List<SpanEvent.Builder> process(List<? extends SpanEvent.Builder> spans) {
+    Map<String, String> parentChildMap = new HashMap<>();
     Map<String, Span> idToSpanMap =
-        spans.parallelStream()
+        spans.stream()
             .map(
-                spanEvent -> {
-                  Map<String, Value> attrMap = spanEvent.getAttributesMap();
-                  String spanId = attrMap.get("EVENT.id").getString();
-                  String parentSpanId = attrMap.get("EVENT.parentSpanId").getString();
-                  long startTime = attrMap.get("EVENT.startTime").getLong();
-                  long endTime = attrMap.get("EVENT.endTime").getLong();
+                spanBuilder -> {
+                  Map<String, Value> attributesMap = spanBuilder.getAttributesMap();
+                  String spanId = attributesMap.get("EVENT.id").getString(),
+                      parentSpanId = attributesMap.get("EVENT.parentSpanId").getString();
+                  Instant
+                      startTime =
+                          Instant.ofEpochMilli(attributesMap.get("EVENT.startTime").getLong()),
+                      endTime = Instant.ofEpochMilli(attributesMap.get("EVENT.endTime").getLong());
+                  Duration duration = Duration.between(startTime, endTime);
                   return new Span()
                       .id(spanId)
-                      .startTime(Instant.ofEpochMilli(startTime))
-                      .endTime(Instant.ofEpochMilli(endTime))
                       .parentSpanId(parentSpanId)
-                      .duration(
-                          Duration.between(
-                              Instant.ofEpochMilli(endTime), Instant.ofEpochMilli(startTime)))
-                      .spanEvent(spanEvent);
+                      .startTime(startTime)
+                      .endTime(endTime)
+                      .duration(duration)
+                      .spanBuilder(spanBuilder);
+                })
+            .peek(
+                span -> {
+                  if (null != span.parentSpanId()) {
+                    parentChildMap.putIfAbsent(span.parentSpanId(), span.id());
+                  }
                 })
             .collect(toMap(Span::id, span -> span));
-    // update child spanId of each span
-    idToSpanMap.forEach((spanId, span) -> idToSpanMap.get(span.parentSpanId()).childSpanId(spanId));
     // Start from root spans, and adjust each parent-child pair
-    idToSpanMap.entrySet().stream()
-        .filter(entry -> null == entry.getValue().parentSpanId())
-        .forEach(entry -> adjustSpan(entry.getValue(), idToSpanMap));
-    return idToSpanMap.values().stream().map(Span::getAdjustedSpanEvent).collect(toList());
+    return idToSpanMap.entrySet().stream()
+        .filter(span -> null == span.getValue().parentSpanId())
+        .peek(entry -> adjustSpan(entry.getValue(), idToSpanMap, parentChildMap))
+        .map(
+            entry -> {
+              Span updatedSpan = entry.getValue();
+              entry
+                  .getValue()
+                  .spanBuilder()
+                  .putAttributes(
+                      "EVENT.startTime",
+                      Value.newBuilder()
+                          .setValueType(ValueType.LONG)
+                          .setLong(updatedSpan.startTime().toEpochMilli())
+                          .build());
+              return updatedSpan.spanBuilder();
+            })
+        .collect(toList());
   }
 
-  private void adjustSpan(Span span, Map<String, Span> idToSpanMap) {
-    if (null != span && null != span.childSpanId()) {
-      Span childSpan = idToSpanMap.get(span.childSpanId());
+  private void adjustSpan(
+      Span span, Map<String, Span> idToSpanMap, Map<String, String> parentToChildMap) {
+    if (null != span) {
+      Span childSpan = idToSpanMap.get(parentToChildMap.get(span.id()));
       Duration adjustment = getAdjustmentForChildSpan(childSpan, span);
       adjustTimestamp(childSpan, adjustment);
-      adjustSpan(childSpan, idToSpanMap);
+      adjustSpan(childSpan, idToSpanMap, parentToChildMap);
     }
   }
 
@@ -84,30 +104,9 @@ class JaegarBasedClockskewAdjuster implements ClockskewAdjuster {
   private static class Span {
     private String id;
     private String parentSpanId;
-    private String childSpanId;
     private Instant startTime;
     private Instant endTime;
     private Duration duration;
-    private SpanEvent spanEvent;
-
-    public SpanEvent getAdjustedSpanEvent() {
-      Preconditions.checkArgument(null != spanEvent);
-      Preconditions.checkArgument(null != startTime);
-      Preconditions.checkArgument(null != endTime);
-      Builder builder = SpanEvent.newBuilder().putAllAttributes(spanEvent.getAttributesMap());
-      builder.putAttributes(
-          "EVENT.startTime",
-          Value.newBuilder()
-              .setLong(startTime.toEpochMilli())
-              .setValueType(ValueType.LONG)
-              .build());
-      builder.putAttributes(
-          "EVENT.endTime",
-          Value.newBuilder()
-              .setLong(endTime.toEpochMilli())
-              .setValueType(ValueType.LONG)
-              .build());
-      return builder.build();
-    }
+    private SpanEvent.Builder spanBuilder;
   }
 }
