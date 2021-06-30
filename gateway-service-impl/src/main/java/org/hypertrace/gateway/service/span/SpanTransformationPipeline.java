@@ -8,6 +8,9 @@ import java.util.function.Function;
 import org.hypertrace.gateway.service.v1.span.SpanEvent;
 import org.hypertrace.gateway.service.v1.span.SpanEvent.Builder;
 
+/**
+ * A pipeline of handlers that transform a list of spans through it. This class is not thread-safe.
+ */
 class SpanTransformationPipeline {
 
   private final Function<List<? extends SpanEvent.Builder>, List<SpanEvent.Builder>> pipeline;
@@ -33,6 +36,7 @@ class SpanTransformationPipeline {
 
   /**
    * Processes the passed list of spans through the pipeline
+   *
    * @param spans list of spans to process
    * @return processed spans
    */

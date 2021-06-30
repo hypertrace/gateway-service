@@ -19,7 +19,7 @@ public abstract class ClockskewAdjuster implements SpanTransformationStage {
   /**
    * Returns a concrete implementation of {@link ClockskewAdjuster} based on the supplied type. If
    * an incorrect configuration is supplied, then it fallbacks to {@link NoOpClockskewAdjuster}.
-   * This method never throws and exception. Any exception propogated up from downstream is
+   * This method never throws an exception. Any exception propagated up from downstream is
    * swallowed and the fallback adjuster is returned
    *
    * @param appConfig the app configuration
@@ -45,6 +45,7 @@ public abstract class ClockskewAdjuster implements SpanTransformationStage {
     private Instant startTime;
     private Instant endTime;
     private Duration duration;
+    //the mutable builder object
     private SpanEvent.Builder spanBuilder;
   }
 }
