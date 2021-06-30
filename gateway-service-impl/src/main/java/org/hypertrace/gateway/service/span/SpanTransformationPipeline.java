@@ -31,6 +31,11 @@ class SpanTransformationPipeline {
     return new SpanTransformationPipeline(updatedPipeline);
   }
 
+  /**
+   * Processes the passed list of spans through the pipeline
+   * @param spans list of spans to process
+   * @return processed spans
+   */
   public List<SpanEvent> execute(List<SpanEvent> spans) {
     List<Builder> mutableSpans =
         spans.stream()

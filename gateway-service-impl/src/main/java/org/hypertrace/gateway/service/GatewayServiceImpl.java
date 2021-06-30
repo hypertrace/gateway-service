@@ -181,9 +181,8 @@ public class GatewayServiceImpl extends GatewayServiceGrpc.GatewayServiceImplBas
                   .getRequestHeaders());
 
       SpansResponse response = spanService.getSpansByFilter(context, request);
-      SpansResponse spansResponse = spanService.processSpans(response.getSpansList());
 
-      responseObserver.onNext(spansResponse);
+      responseObserver.onNext(response);
       responseObserver.onCompleted();
     } catch (Exception e) {
       LOG.error("Error while handling spans request: {}", request, e);

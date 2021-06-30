@@ -56,21 +56,14 @@ public class SpanService {
     this.queryServiceClient = queryServiceClient;
     this.requestTimeout = requestTimeout;
     this.attributeMetadataProvider = attributeMetadataProvider;
-    spanTransformationPipeline = SpanTransformationPipeline.getNewPipeline().addProcessingStage(clockskewAdjuster);
+    spanTransformationPipeline =
+        SpanTransformationPipeline.getNewPipeline().addProcessingStage(clockskewAdjuster);
     initMetrics();
   }
 
   private void initMetrics() {
     queryExecutionTimer =
         PlatformMetricsRegistry.registerTimer("hypertrace.span.query.execution", ImmutableMap.of());
-  }
-
-  public SpansResponse processSpans(List<SpanEvent> spans) {
-    List<SpanEvent> processedSpans = spanTransformationPipeline.execute(spans);
-    return SpansResponse.newBuilder()
-        .addAllSpans(processedSpans)
-        .setTotal(processedSpans.size())
-        .build();
   }
 
   public SpansResponse getSpansByFilter(RequestContext context, SpansRequest request) {
@@ -100,8 +93,8 @@ public class SpanService {
       RequestContext context,
       SpansRequest request,
       Map<String, AttributeMetadata> attributeMetadataMap) {
-    return spanTransformationPipeline
-        .execute(filterSpanEvents(context, request, attributeMetadataMap));
+    return spanTransformationPipeline.execute(
+        filterSpanEvents(context, request, attributeMetadataMap));
   }
 
   @VisibleForTesting

@@ -8,13 +8,11 @@ import java.time.Instant;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
-import lombok.Data;
-import lombok.experimental.Accessors;
 import org.hypertrace.gateway.service.v1.common.Value;
 import org.hypertrace.gateway.service.v1.common.ValueType;
 import org.hypertrace.gateway.service.v1.span.SpanEvent;
 
-class JaegarBasedClockskewAdjuster implements ClockskewAdjuster {
+class JaegarBasedClockskewAdjuster extends ClockskewAdjuster {
 
   @Override
   public List<SpanEvent.Builder> transform(List<? extends SpanEvent.Builder> spans) {
@@ -97,16 +95,5 @@ class JaegarBasedClockskewAdjuster implements ClockskewAdjuster {
     }
     var latency = (parentSpan.duration().minus(childSpan.duration()).toMillis()) >> 1;
     return Duration.between(childSpan.startTime(), parentSpan.startTime().plusMillis(latency));
-  }
-
-  @Data
-  @Accessors(chain = true, fluent = true)
-  private static class Span {
-    private String id;
-    private String parentSpanId;
-    private Instant startTime;
-    private Instant endTime;
-    private Duration duration;
-    private SpanEvent.Builder spanBuilder;
   }
 }
