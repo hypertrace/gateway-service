@@ -27,7 +27,7 @@ class SpanTransformationPipeline {
 
   public SpanTransformationPipeline addProcessingStage(SpanTransformationStage processingStage) {
     Function<List<? extends SpanEvent.Builder>, List<SpanEvent.Builder>> updatedPipeline =
-        pipeline.andThen(processingStage::process);
+        pipeline.andThen(processingStage::transform);
     return new SpanTransformationPipeline(updatedPipeline);
   }
 

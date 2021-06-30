@@ -17,7 +17,7 @@ import org.hypertrace.gateway.service.v1.span.SpanEvent;
 class JaegarBasedClockskewAdjuster implements ClockskewAdjuster {
 
   @Override
-  public List<SpanEvent.Builder> process(List<? extends SpanEvent.Builder> spans) {
+  public List<SpanEvent.Builder> transform(List<? extends SpanEvent.Builder> spans) {
     Map<String, String> parentChildMap = new HashMap<>();
     Map<String, Span> idToSpanMap =
         spans.stream()
