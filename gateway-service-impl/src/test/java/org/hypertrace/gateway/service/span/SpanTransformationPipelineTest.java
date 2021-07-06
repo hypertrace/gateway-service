@@ -32,12 +32,6 @@ class SpanTransformationPipelineTest {
 
   @Test
   void appliesMultipleTransformationsInOrderOfRegistry() {
-
-    var originalSpans =
-        List.of(
-            createSpanBuilder(Map.of(ATTRIBUTE_KEY_ID, "firstSpan")),
-            createSpanBuilder(Map.of(ATTRIBUTE_KEY_ID, "secondSpan")));
-
     // first transformation stage
     var firstTransformation = mock(SpanTransformationStage.class);
     var firstTransformationResult =

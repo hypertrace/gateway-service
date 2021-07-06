@@ -8,6 +8,7 @@ import java.time.Instant;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import lombok.NonNull;
 import org.hypertrace.gateway.service.v1.common.Value;
 import org.hypertrace.gateway.service.v1.common.ValueType;
 import org.hypertrace.gateway.service.v1.span.SpanEvent;
@@ -15,7 +16,7 @@ import org.hypertrace.gateway.service.v1.span.SpanEvent;
 class JaegarBasedClockskewAdjuster extends ClockskewAdjuster {
 
   @Override
-  public List<SpanEvent.Builder> transform(List<? extends SpanEvent.Builder> spans) {
+  public List<SpanEvent.Builder> transform(@NonNull List<? extends SpanEvent.Builder> spans) {
     Map<String, String> parentChildMap = new HashMap<>();
     Map<String, Span> idToSpanMap =
         spans.stream()
