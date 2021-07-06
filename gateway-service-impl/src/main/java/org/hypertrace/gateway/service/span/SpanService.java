@@ -44,16 +44,20 @@ public class SpanService {
   private final QueryServiceClient queryServiceClient;
   private final int requestTimeout;
   private final AttributeMetadataProvider attributeMetadataProvider;
+  private final SpanTransformationPipeline spanTransformationPipeline;
 
   private Timer queryExecutionTimer;
 
   public SpanService(
       QueryServiceClient queryServiceClient,
       int requestTimeout,
-      AttributeMetadataProvider attributeMetadataProvider) {
+      AttributeMetadataProvider attributeMetadataProvider,
+      ClockskewAdjuster clockskewAdjuster) {
     this.queryServiceClient = queryServiceClient;
     this.requestTimeout = requestTimeout;
     this.attributeMetadataProvider = attributeMetadataProvider;
+    spanTransformationPipeline =
+        SpanTransformationPipeline.getNewPipeline().addProcessingStage(clockskewAdjuster);
     initMetrics();
   }
 
@@ -89,7 +93,8 @@ public class SpanService {
       RequestContext context,
       SpansRequest request,
       Map<String, AttributeMetadata> attributeMetadataMap) {
-    return filterSpanEvents(context, request, attributeMetadataMap);
+    return spanTransformationPipeline.execute(
+        filterSpanEvents(context, request, attributeMetadataMap));
   }
 
   @VisibleForTesting

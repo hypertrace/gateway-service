@@ -8,6 +8,7 @@ import org.junit.jupiter.api.Test;
 
 /** Unit tests for {@link GatewayServiceImpl} */
 public class GatewayServiceImplTest {
+
   private static Config appConfig;
 
   @BeforeAll
