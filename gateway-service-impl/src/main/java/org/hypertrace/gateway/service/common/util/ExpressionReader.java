@@ -42,6 +42,7 @@ public class ExpressionReader {
         break;
       case ORDERBY:
         extractColumns(columns, expression.getOrderBy().getExpression());
+        break;
       case LITERAL:
       case VALUE_NOT_SET:
         break;

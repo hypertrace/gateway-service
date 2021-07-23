@@ -1,6 +1,7 @@
 package org.hypertrace.gateway.service.entity.query;
 
 import com.google.common.collect.ImmutableMap;
+import com.google.common.collect.Sets;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collection;
@@ -213,6 +214,36 @@ public class ExecutionContext {
 
   public void removePendingSelectionSourceForOrderBy(String source) {
     pendingSelectionSourcesForOrderBy.remove(source);
+  }
+
+  public void removeSelectionAttributes(String source, Set<String> attributes) {
+    if (!sourceToSelectionExpressionMap.containsKey(source)) {
+      return;
+    }
+
+    // converting to a mutable map
+    Map<String, List<Expression>> selectionExpressionMap =
+        new HashMap<>(sourceToSelectionExpressionMap);
+
+    List<Expression> expressions = selectionExpressionMap.get(source);
+    // get all the expressions which contains the attribute to be removed
+    List<Expression> removeExpressions =
+        expressions.stream()
+            .filter(
+                expression ->
+                    !Sets.intersection(ExpressionReader.extractColumns(expression), attributes)
+                        .isEmpty())
+            .collect(Collectors.toUnmodifiableList());
+
+    expressions.removeAll(removeExpressions);
+    if (expressions.isEmpty()) {
+      selectionExpressionMap.remove(source);
+    }
+
+    // converting back to immutable map
+    sourceToSelectionExpressionMap =
+        ImmutableMap.<String, List<Expression>>builder().putAll(selectionExpressionMap).build();
+    sourceToSelectionAttributeMap = buildSourceToAttributesMap(sourceToSelectionExpressionMap);
   }
 
   public Map<String, List<Expression>> getSourceToFilterExpressionMap() {

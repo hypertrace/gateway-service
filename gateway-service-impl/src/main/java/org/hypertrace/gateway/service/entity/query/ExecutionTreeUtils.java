@@ -229,4 +229,30 @@ public class ExecutionTreeUtils {
         .reduce(Sets::intersection)
         .orElse(Collections.emptySet());
   }
+
+  /**
+   * Removes duplicate selection attributes from other sources using {@param source} as the pivot
+   * source
+   */
+  public static void removeDuplicateSelectionAttributes(
+      ExecutionContext executionContext, String source) {
+    Map<String, Set<String>> sourceToSelectionAttributeMap =
+        Map.copyOf(executionContext.getSourceToSelectionAttributeMap());
+
+    if (!sourceToSelectionAttributeMap.containsKey(source)) {
+      return;
+    }
+
+    Set<String> fetchedAttributes = sourceToSelectionAttributeMap.get(source);
+
+    for (Map.Entry<String, Set<String>> entry : sourceToSelectionAttributeMap.entrySet()) {
+      String sourceKey = entry.getKey();
+      if (sourceKey.equals(source)) {
+        continue;
+      }
+
+      Set<String> duplicateAttributes = Sets.intersection(fetchedAttributes, entry.getValue());
+      executionContext.removeSelectionAttributes(sourceKey, duplicateAttributes);
+    }
+  }
 }
