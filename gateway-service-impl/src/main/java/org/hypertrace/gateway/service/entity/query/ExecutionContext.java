@@ -1,6 +1,7 @@
 package org.hypertrace.gateway.service.entity.query;
 
 import com.google.common.collect.ImmutableMap;
+import com.google.common.collect.Maps;
 import com.google.common.collect.Sets;
 import java.util.ArrayList;
 import java.util.Arrays;
@@ -11,6 +12,7 @@ import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
+import java.util.function.Predicate;
 import java.util.stream.Collectors;
 import java.util.stream.IntStream;
 import org.hypertrace.core.attribute.service.v1.AttributeMetadata;
@@ -221,28 +223,26 @@ public class ExecutionContext {
       return;
     }
 
-    // converting to a mutable map
-    Map<String, List<Expression>> selectionExpressionMap =
-        new HashMap<>(sourceToSelectionExpressionMap);
-
-    List<Expression> expressions = selectionExpressionMap.get(source);
-    // get all the expressions which contains the attribute to be removed
-    List<Expression> removeExpressions =
-        expressions.stream()
-            .filter(
-                expression ->
-                    !Sets.intersection(ExpressionReader.extractColumns(expression), attributes)
-                        .isEmpty())
+    Predicate<Expression> retainExpressionPredicate =
+        expression ->
+            Sets.intersection(ExpressionReader.extractColumns(expression), attributes).isEmpty();
+    List<Expression> expressions =
+        sourceToSelectionExpressionMap.get(source).stream()
+            .filter(retainExpressionPredicate)
             .collect(Collectors.toUnmodifiableList());
 
-    expressions.removeAll(removeExpressions);
-    if (expressions.isEmpty()) {
-      selectionExpressionMap.remove(source);
-    }
-
-    // converting back to immutable map
+    Map<String, List<Expression>> sourceToRetainedSelectionExpressionMap =
+        sourceToSelectionExpressionMap.entrySet().stream()
+            .map(
+                entry ->
+                    entry.getKey().equals(source) ? Map.entry(entry.getKey(), expressions) : entry)
+            .filter(entry -> !entry.getValue().isEmpty())
+            .collect(Collectors.toUnmodifiableMap(Map.Entry::getKey, Map.Entry::getValue));
     sourceToSelectionExpressionMap =
-        ImmutableMap.<String, List<Expression>>builder().putAll(selectionExpressionMap).build();
+        ImmutableMap.<String, List<Expression>>builder()
+            .putAll(sourceToRetainedSelectionExpressionMap)
+            .build();
+
     sourceToSelectionAttributeMap = buildSourceToAttributesMap(sourceToSelectionExpressionMap);
   }
 
@@ -501,5 +501,11 @@ public class ExecutionContext {
         + ", allAttributesToSourcesMap="
         + allAttributesToSourcesMap
         + '}';
+  }
+
+  public static void main(String[] args) {
+    Map<String, List<Integer>> map =
+        Map.of("a", List.of(1, 2), "b", List.of(2, 3), "c", List.of(3, 4));
+    System.out.println(Maps.filterValues(map, i -> i.stream().anyMatch(j -> j > 1)));
   }
 }

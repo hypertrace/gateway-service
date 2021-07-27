@@ -5,7 +5,11 @@ import static org.hypertrace.core.attribute.service.v1.AttributeSource.QS;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertTrue;
+import static org.mockito.ArgumentMatchers.anySet;
+import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.mock;
+import static org.mockito.Mockito.never;
+import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
 import java.util.Collections;
@@ -20,9 +24,9 @@ import org.hypertrace.gateway.service.v1.common.TimeAggregation;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 
-public class ExecutionTreeUtilsTest {
+class ExecutionTreeUtilsTest {
   @Test
-  public void testGetSingleSourceForAllAttributes_allSourceExpressionMapKeySetsHaveOneSource() {
+  void testGetSingleSourceForAllAttributes_allSourceExpressionMapKeySetsHaveOneSource() {
     // All source expression map keysets have one source.
     ExecutionContext executionContext =
         getMockExecutionContext(
@@ -43,8 +47,7 @@ public class ExecutionTreeUtilsTest {
   }
 
   @Test
-  public void
-      testGetSingleSourceForAllAttributes_someSourceExpressionMapKeySetsHaveMultipleSources() {
+  void testGetSingleSourceForAllAttributes_someSourceExpressionMapKeySetsHaveMultipleSources() {
     ExecutionContext executionContext =
         getMockExecutionContext(
             createSourceToExpressionsMap(List.of("QS")),
@@ -64,8 +67,7 @@ public class ExecutionTreeUtilsTest {
   }
 
   @Test
-  public void
-      testGetSingleSourceForAllAttributes_someSourceExpressionMapKeySetsHaveDifferentSources() {
+  void testGetSingleSourceForAllAttributes_someSourceExpressionMapKeySetsHaveDifferentSources() {
     ExecutionContext executionContext =
         getMockExecutionContext(
             createSourceToExpressionsMap(List.of("QS")),
@@ -85,7 +87,7 @@ public class ExecutionTreeUtilsTest {
   }
 
   @Test
-  public void testGetSingleSourceForAllAttributes_someSourceExpressionMapKeySetsAreEmpty() {
+  void testGetSingleSourceForAllAttributes_someSourceExpressionMapKeySetsAreEmpty() {
     // All source expression map keysets have one source but dont have sources defined.
     ExecutionContext executionContext =
         getMockExecutionContext(
@@ -107,8 +109,7 @@ public class ExecutionTreeUtilsTest {
 
   // This scenario is not possible but for academic purposes let's test it.
   @Test
-  public void
-      testGetSingleSourceForAllAttributes_allEmptySourceExpressionMapKeySetsAndAttributes() {
+  void testGetSingleSourceForAllAttributes_allEmptySourceExpressionMapKeySetsAndAttributes() {
     ExecutionContext executionContext =
         getMockExecutionContext(
             createSourceToExpressionsMap(List.of()),
@@ -128,7 +129,7 @@ public class ExecutionTreeUtilsTest {
   }
 
   @Test
-  public void test_filtersAndOrderByFromSameSingleSourceSet() {
+  void test_filtersAndOrderByFromSameSingleSourceSet() {
     ExecutionContext executionContext = mock(ExecutionContext.class);
     // filters
     // API.id -> ["QS", "EDS"]
@@ -150,7 +151,7 @@ public class ExecutionTreeUtilsTest {
   }
 
   @Test
-  public void test_filtersAndOrderByFromSameMultipleSourceSets() {
+  void test_filtersAndOrderByFromSameMultipleSourceSets() {
     ExecutionContext executionContext = mock(ExecutionContext.class);
     // filters
     // API.id -> ["QS", "EDS"]
@@ -175,7 +176,7 @@ public class ExecutionTreeUtilsTest {
   }
 
   @Test
-  public void test_filtersAndOrderByFromEmptyOrderBy() {
+  void test_filtersAndOrderByFromEmptyOrderBy() {
     ExecutionContext executionContext = mock(ExecutionContext.class);
     // filters
     // API.id -> ["QS", "EDS"]
@@ -200,7 +201,7 @@ public class ExecutionTreeUtilsTest {
   }
 
   @Test
-  public void test_filtersAndOrderByFromEmptyFilters() {
+  void test_filtersAndOrderByFromEmptyFilters() {
     ExecutionContext executionContext = mock(ExecutionContext.class);
     // filters
     when(executionContext.getSourceToFilterAttributeMap()).thenReturn(Collections.emptyMap());
@@ -220,7 +221,7 @@ public class ExecutionTreeUtilsTest {
   }
 
   @Test
-  public void test_filtersAndOrderByFromDifferentSourceSets() {
+  void test_filtersAndOrderByFromDifferentSourceSets() {
     ExecutionContext executionContext = mock(ExecutionContext.class);
     // filters
     // API.id -> ["QS", "EDS"]
@@ -246,7 +247,7 @@ public class ExecutionTreeUtilsTest {
   @Test
   @DisplayName(
       "filters are applied on a single data source, for filters check on other data source")
-  public void test_areFiltersOnCurrentDataSource_onlyPresentOnTheCurrentDataSource() {
+  void test_areFiltersOnCurrentDataSource_onlyPresentOnTheCurrentDataSource() {
     ExecutionContext executionContext = mock(ExecutionContext.class);
     // filters
     // API.id -> ["QS", "EDS"]
@@ -263,7 +264,7 @@ public class ExecutionTreeUtilsTest {
   @Test
   @DisplayName(
       "are filters applied on a single data source, if attributes are on multiple data sources")
-  public void test_areFiltersOnCurrentDataSource_multipleSourcesForAttributes() {
+  void test_areFiltersOnCurrentDataSource_multipleSourcesForAttributes() {
     ExecutionContext executionContext = mock(ExecutionContext.class);
     // filters
     // API.id -> ["QS", "EDS"]
@@ -281,7 +282,7 @@ public class ExecutionTreeUtilsTest {
   @Test
   @DisplayName(
       "are filters applied on a single data source, if attributes are on different data sources")
-  public void test_areFiltersOnCurrentDataSource_attributesOnDifferentSources() {
+  void test_areFiltersOnCurrentDataSource_attributesOnDifferentSources() {
     ExecutionContext executionContext = mock(ExecutionContext.class);
     // filters
     // API.id -> ["QS"]
@@ -297,13 +298,44 @@ public class ExecutionTreeUtilsTest {
 
   @Test
   @DisplayName("are filters applied on a single data source, if no filters")
-  public void test_areFiltersOnCurrentDataSource_noFilters() {
+  void test_areFiltersOnCurrentDataSource_noFilters() {
     ExecutionContext executionContext = mock(ExecutionContext.class);
     // filters
     when(executionContext.getSourceToFilterAttributeMap()).thenReturn(Collections.emptyMap());
 
     assertTrue(ExecutionTreeUtils.areFiltersOnlyOnCurrentDataSource(executionContext, "QS"));
     assertTrue(ExecutionTreeUtils.areFiltersOnlyOnCurrentDataSource(executionContext, "EDS"));
+  }
+
+  @Test
+  void removeDuplicateSelectionAttributes_invalidSource() {
+    ExecutionContext executionContext = mock(ExecutionContext.class);
+    when(executionContext.getSourceToSelectionAttributeMap()).thenReturn(Collections.emptyMap());
+
+    ExecutionTreeUtils.removeDuplicateSelectionAttributes(executionContext, "INVALID");
+    verify(executionContext, never()).removeSelectionAttributes(eq("INVALID"), anySet());
+  }
+
+  @Test
+  void removeDuplicateSelectionAttributes() {
+    ExecutionContext executionContext = mock(ExecutionContext.class);
+    // API.id -> ["QS"]
+    // API.name -> ["QS", "EDS"]
+    // API.status -> ["EDS", "AS"]
+    // API.latency -> ["QS", "AS"]
+    when(executionContext.getSourceToSelectionAttributeMap())
+        .thenReturn(
+            Map.of(
+                "QS",
+                Set.of("API.id", "API.name", "API.latency"),
+                "EDS",
+                Set.of("API.name", "API.status"),
+                "AS",
+                Set.of("API.status", "API.latency")));
+
+    ExecutionTreeUtils.removeDuplicateSelectionAttributes(executionContext, "QS");
+    verify(executionContext).removeSelectionAttributes("EDS", Set.of("API.name"));
+    verify(executionContext).removeSelectionAttributes("AS", Set.of("API.latency"));
   }
 
   private ExecutionContext getMockExecutionContext(

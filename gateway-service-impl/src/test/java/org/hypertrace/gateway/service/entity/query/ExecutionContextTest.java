@@ -1,5 +1,6 @@
 package org.hypertrace.gateway.service.entity.query;
 
+import static org.hypertrace.gateway.service.common.EntitiesRequestAndResponseUtils.buildExpression;
 import static org.hypertrace.gateway.service.common.EntitiesRequestAndResponseUtils.generateEQFilter;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertTrue;
@@ -13,10 +14,12 @@ import java.util.List;
 import java.util.Map;
 import java.util.Optional;
 import java.util.Set;
+import java.util.stream.Collectors;
 import org.hypertrace.core.attribute.service.v1.AttributeMetadata;
 import org.hypertrace.core.attribute.service.v1.AttributeScope;
 import org.hypertrace.core.attribute.service.v1.AttributeSource;
 import org.hypertrace.gateway.service.common.AttributeMetadataProvider;
+import org.hypertrace.gateway.service.common.EntitiesRequestAndResponseUtils;
 import org.hypertrace.gateway.service.common.RequestContext;
 import org.hypertrace.gateway.service.entity.EntitiesRequestContext;
 import org.hypertrace.gateway.service.entity.config.EntityIdColumnsConfigs;
@@ -27,7 +30,7 @@ import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.mockito.Mock;
 
-public class ExecutionContextTest {
+class ExecutionContextTest {
   private static final String TENANT_ID = "tenant1";
 
   private static final String API_API_ID_ATTR = "API.apiId";
@@ -66,7 +69,7 @@ public class ExecutionContextTest {
   }
 
   @Test
-  public void testFilterExpressionMaps() {
+  void testFilterExpressionMaps() {
     Filter filter =
         Filter.newBuilder()
             .addChildFilter(generateEQFilter(API_NAME_ATTR, "api1")) // EDS
@@ -106,6 +109,79 @@ public class ExecutionContextTest {
     assertEquals(Set.of("EDS"), filterAttributeToSourcesMap.get(API_NAME_ATTR));
     assertEquals(Set.of("QS"), filterAttributeToSourcesMap.get(API_NUM_CALLS_ATTR));
     assertEquals(Set.of("QS", "EDS"), filterAttributeToSourcesMap.get(API_DISCOVERY_STATE));
+  }
+
+  @Test
+  void removeSelectionAttributes_sourceNotPresent() {
+    List<Expression> selections = List.of(buildExpression(API_API_ID_ATTR));
+    EntitiesRequest entitiesRequest =
+        EntitiesRequest.newBuilder().setEntityType("API").addAllSelection(selections).build();
+    ExecutionContext executionContext =
+        ExecutionContext.from(
+            attributeMetadataProvider,
+            entityIdColumnsConfigs,
+            entitiesRequest,
+            entitiesRequestContext);
+
+    int size = executionContext.getSourceToSelectionExpressionMap().get("EDS").size();
+    executionContext.removeSelectionAttributes("INVALID", Set.of("apiId"));
+
+    assertTrue(executionContext.getSourceToSelectionExpressionMap().containsKey("EDS"));
+    assertEquals(size, executionContext.getSourceToSelectionExpressionMap().get("EDS").size());
+    assertEquals(size, executionContext.getSourceToSelectionAttributeMap().get("EDS").size());
+  }
+
+  @Test
+  void removeSelectionAttributes() {
+    List<Expression> selections =
+        List.of(
+            buildExpression(API_ID_ATTR), // QS and EDS
+            buildExpression(API_NAME_ATTR), // EDS
+            buildExpression(API_DISCOVERY_STATE), // QS and EDS
+            buildExpression(API_END_TIME_ATTR), // QS
+            buildExpression(API_TYPE_ATTR)); // EDS
+    EntitiesRequest entitiesRequest =
+        EntitiesRequest.newBuilder().setEntityType("API").addAllSelection(selections).build();
+    ExecutionContext executionContext =
+        ExecutionContext.from(
+            attributeMetadataProvider,
+            entityIdColumnsConfigs,
+            entitiesRequest,
+            entitiesRequestContext);
+
+    Set<String> removeAttributes = Set.of(API_ID_ATTR, API_NAME_ATTR, API_END_TIME_ATTR);
+
+    executionContext.removeSelectionAttributes("QS", removeAttributes);
+    assertEquals(1, executionContext.getSourceToSelectionExpressionMap().get("QS").size());
+    assertEquals(1, executionContext.getSourceToSelectionAttributeMap().get("QS").size());
+
+    assertEquals(4, executionContext.getSourceToSelectionExpressionMap().get("EDS").size());
+    assertEquals(4, executionContext.getSourceToSelectionAttributeMap().get("EDS").size());
+  }
+
+  @Test
+  void removeAllSelectionAttributes() {
+    Set<String> attributes =
+        Set.of(API_ID_ATTR, API_NAME_ATTR, API_DISCOVERY_STATE, API_END_TIME_ATTR, API_TYPE_ATTR);
+    List<Expression> selections =
+        attributes.stream()
+            .map(EntitiesRequestAndResponseUtils::buildExpression)
+            .collect(Collectors.toUnmodifiableList());
+    EntitiesRequest entitiesRequest =
+        EntitiesRequest.newBuilder().setEntityType("API").addAllSelection(selections).build();
+    ExecutionContext executionContext =
+        ExecutionContext.from(
+            attributeMetadataProvider,
+            entityIdColumnsConfigs,
+            entitiesRequest,
+            entitiesRequestContext);
+
+    executionContext.removeSelectionAttributes("EDS", attributes);
+    assertEquals(1, executionContext.getSourceToSelectionExpressionMap().size());
+    assertEquals(1, executionContext.getSourceToSelectionAttributeMap().size());
+
+    assertEquals(3, executionContext.getSourceToSelectionExpressionMap().get("QS").size());
+    assertEquals(3, executionContext.getSourceToSelectionAttributeMap().get("QS").size());
   }
 
   private static final Map<String, AttributeMetadata> attributeSources =

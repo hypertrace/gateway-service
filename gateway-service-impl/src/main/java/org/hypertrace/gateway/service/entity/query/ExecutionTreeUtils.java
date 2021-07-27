@@ -231,23 +231,23 @@ public class ExecutionTreeUtils {
   }
 
   /**
-   * Removes duplicate selection attributes from other sources using {@param source} as the pivot
-   * source
+   * Removes duplicate selection attributes from other sources using {@param pivotSource} as the
+   * pivot source
    */
   public static void removeDuplicateSelectionAttributes(
-      ExecutionContext executionContext, String source) {
-    Map<String, Set<String>> sourceToSelectionAttributeMap =
-        Map.copyOf(executionContext.getSourceToSelectionAttributeMap());
-
-    if (!sourceToSelectionAttributeMap.containsKey(source)) {
+      ExecutionContext executionContext, String pivotSource) {
+    if (!executionContext.getSourceToSelectionAttributeMap().containsKey(pivotSource)) {
       return;
     }
 
-    Set<String> fetchedAttributes = sourceToSelectionAttributeMap.get(source);
+    Map<String, Set<String>> sourceToSelectionAttributeMap =
+        Map.copyOf(executionContext.getSourceToSelectionAttributeMap());
+
+    Set<String> fetchedAttributes = sourceToSelectionAttributeMap.get(pivotSource);
 
     for (Map.Entry<String, Set<String>> entry : sourceToSelectionAttributeMap.entrySet()) {
       String sourceKey = entry.getKey();
-      if (sourceKey.equals(source)) {
+      if (sourceKey.equals(pivotSource)) {
         continue;
       }
 
