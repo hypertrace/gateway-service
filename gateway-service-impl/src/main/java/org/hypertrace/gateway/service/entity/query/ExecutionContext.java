@@ -502,10 +502,4 @@ public class ExecutionContext {
         + allAttributesToSourcesMap
         + '}';
   }
-
-  public static void main(String[] args) {
-    Map<String, List<Integer>> map =
-        Map.of("a", List.of(1, 2), "b", List.of(2, 3), "c", List.of(3, 4));
-    System.out.println(Maps.filterValues(map, i -> i.stream().anyMatch(j -> j > 1)));
-  }
 }
