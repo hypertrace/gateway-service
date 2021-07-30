@@ -73,6 +73,8 @@ public class ExecutionTreeBuilder {
     boolean areFiltersOnlyOnEds =
         ExecutionTreeUtils.areFiltersOnlyOnCurrentDataSource(executionContext, EDS.name());
     if (entitiesRequest.getIncludeNonLiveEntities() && areFiltersOnlyOnEds) {
+      ExecutionTreeUtils.removeDuplicateSelectionAttributes(executionContext, EDS.name());
+
       QueryNode rootNode = new DataFetcherNode(EDS.name(), entitiesRequest.getFilter());
       // if the filter by and order by are from the same source, pagination can be pushed down to
       // EDS
@@ -116,6 +118,8 @@ public class ExecutionTreeBuilder {
 
       return executionTree;
     }
+
+    ExecutionTreeUtils.removeDuplicateSelectionAttributes(executionContext, QS.name());
 
     QueryNode filterTree = buildFilterTree(executionContext, entitiesRequest.getFilter());
     if (LOG.isDebugEnabled()) {

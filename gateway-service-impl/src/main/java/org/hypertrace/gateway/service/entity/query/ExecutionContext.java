@@ -1,6 +1,7 @@
 package org.hypertrace.gateway.service.entity.query;
 
 import com.google.common.collect.ImmutableMap;
+import com.google.common.collect.Sets;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collection;
@@ -10,6 +11,7 @@ import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
+import java.util.function.Predicate;
 import java.util.stream.Collectors;
 import java.util.stream.IntStream;
 import org.hypertrace.core.attribute.service.v1.AttributeMetadata;
@@ -213,6 +215,34 @@ public class ExecutionContext {
 
   public void removePendingSelectionSourceForOrderBy(String source) {
     pendingSelectionSourcesForOrderBy.remove(source);
+  }
+
+  public void removeSelectionAttributes(String source, Set<String> attributes) {
+    if (!sourceToSelectionExpressionMap.containsKey(source)) {
+      return;
+    }
+
+    Predicate<Expression> retainExpressionPredicate =
+        expression ->
+            Sets.intersection(ExpressionReader.extractColumns(expression), attributes).isEmpty();
+    List<Expression> expressions =
+        sourceToSelectionExpressionMap.get(source).stream()
+            .filter(retainExpressionPredicate)
+            .collect(Collectors.toUnmodifiableList());
+
+    Map<String, List<Expression>> sourceToRetainedSelectionExpressionMap =
+        sourceToSelectionExpressionMap.entrySet().stream()
+            .map(
+                entry ->
+                    entry.getKey().equals(source) ? Map.entry(entry.getKey(), expressions) : entry)
+            .filter(entry -> !entry.getValue().isEmpty())
+            .collect(Collectors.toUnmodifiableMap(Map.Entry::getKey, Map.Entry::getValue));
+    sourceToSelectionExpressionMap =
+        ImmutableMap.<String, List<Expression>>builder()
+            .putAll(sourceToRetainedSelectionExpressionMap)
+            .build();
+
+    sourceToSelectionAttributeMap = buildSourceToAttributesMap(sourceToSelectionExpressionMap);
   }
 
   public Map<String, List<Expression>> getSourceToFilterExpressionMap() {
