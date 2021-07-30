@@ -1,6 +1,7 @@
 package org.hypertrace.gateway.service.common.converters;
 
 import java.util.List;
+import java.util.concurrent.TimeUnit;
 import org.hypertrace.core.query.service.api.ColumnIdentifier;
 import org.hypertrace.core.query.service.api.Expression;
 import org.hypertrace.core.query.service.api.Filter;
@@ -116,6 +117,14 @@ public class QueryRequestUtil {
   }
 
   public static Expression createTimeColumnGroupByExpression(String timeColumn, long periodSecs) {
+    // pinot expects the time size portion to be an int. So, if it's outside the integer limit, we
+    // need to increase the time unit so that the time size fits in the integer limit.
+    String period;
+    if (periodSecs <= Integer.MAX_VALUE) {
+      period = periodSecs + ":SECONDS";
+    } else {
+      period = TimeUnit.SECONDS.toHours(periodSecs) + ":HOURS";
+    }
     return Expression.newBuilder()
         .setFunction(
             Function.newBuilder()
@@ -123,7 +132,7 @@ public class QueryRequestUtil {
                 .addArguments(createColumnExpression(timeColumn))
                 .addArguments(createStringLiteralExpression("1:MILLISECONDS:EPOCH"))
                 .addArguments(createStringLiteralExpression("1:MILLISECONDS:EPOCH"))
-                .addArguments(createStringLiteralExpression(periodSecs + ":SECONDS")))
+                .addArguments(createStringLiteralExpression(period)))
         .build();
   }
 }
