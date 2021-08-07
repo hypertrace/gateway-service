@@ -21,6 +21,7 @@ import java.util.Set;
 import java.util.stream.Collectors;
 import java.util.stream.IntStream;
 import org.apache.commons.lang3.StringUtils;
+import org.apache.commons.lang3.tuple.Pair;
 import org.hypertrace.core.attribute.service.v1.AttributeKind;
 import org.hypertrace.core.attribute.service.v1.AttributeMetadata;
 import org.hypertrace.core.attribute.service.v1.AttributeScope;
@@ -181,20 +182,25 @@ public class EntityInteractionsFetcher {
     Map<String, FunctionExpression> metricToAggFunction =
         MetricAggregationFunctionUtil.getAggMetricToFunction(
             interactionsRequest.getSelectionList());
-    for (Map.Entry<String, QueryRequest> entry : requests.entrySet()) {
-      Iterator<ResultSetChunk> resultSet =
-          queryServiceClient.executeQuery(
-              entry.getValue(), context.getHeaders(), queryServiceRequestTimeout);
-      parseResultSet(
-          request.getEntityType(),
-          entry.getKey(),
-          selectedColumns,
-          metricToAggFunction,
-          resultSet,
-          incoming,
-          entityIdToBuilders,
-          context);
-    }
+    requests.entrySet().parallelStream()
+        .map(
+            entry ->
+                Pair.of(
+                    entry.getKey(),
+                    queryServiceClient.executeQuery(
+                        entry.getValue(), context.getHeaders(), queryServiceRequestTimeout)))
+        .collect(Collectors.toSet())
+        .forEach(
+            resultPair ->
+                parseResultSet(
+                    request.getEntityType(),
+                    resultPair.getKey(),
+                    selectedColumns,
+                    metricToAggFunction,
+                    resultPair.getValue(),
+                    incoming,
+                    entityIdToBuilders,
+                    context));
   }
 
   private Set<String> getOtherEntityTypes(org.hypertrace.gateway.service.v1.common.Filter filter) {
