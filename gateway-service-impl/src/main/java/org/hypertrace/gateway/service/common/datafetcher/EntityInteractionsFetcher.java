@@ -182,13 +182,21 @@ public class EntityInteractionsFetcher {
     Map<String, FunctionExpression> metricToAggFunction =
         MetricAggregationFunctionUtil.getAggMetricToFunction(
             interactionsRequest.getSelectionList());
+    long startTimeMillis = System.currentTimeMillis();
     requests.entrySet().parallelStream()
         .map(
-            entry ->
-                Pair.of(
-                    entry.getKey(),
-                    queryServiceClient.executeQuery(
-                        entry.getValue(), context.getHeaders(), queryServiceRequestTimeout)))
+            entry -> {
+              long queryStartTime = System.currentTimeMillis();
+              Pair<String, Iterator<ResultSetChunk>> pair =
+                  Pair.of(
+                      entry.getKey(),
+                      queryServiceClient.executeQuery(
+                          entry.getValue(), context.getHeaders(), queryServiceRequestTimeout));
+              LOG.error(
+                  "Individual QueryRequest took {} ms",
+                  System.currentTimeMillis() - queryStartTime);
+              return pair;
+            })
         .collect(Collectors.toSet())
         .forEach(
             resultPair ->
@@ -201,6 +209,10 @@ public class EntityInteractionsFetcher {
                     incoming,
                     entityIdToBuilders,
                     context));
+    LOG.error(
+        "Interactions query for {} requests took:{} ms",
+        requests.size(),
+        System.currentTimeMillis() - startTimeMillis);
   }
 
   private Set<String> getOtherEntityTypes(org.hypertrace.gateway.service.v1.common.Filter filter) {
