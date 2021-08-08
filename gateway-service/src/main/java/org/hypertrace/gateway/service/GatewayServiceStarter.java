@@ -1,8 +1,12 @@
 package org.hypertrace.gateway.service;
 
+import com.google.common.util.concurrent.ThreadFactoryBuilder;
 import io.grpc.Server;
 import io.grpc.ServerBuilder;
 import java.io.IOException;
+import java.util.concurrent.LinkedBlockingQueue;
+import java.util.concurrent.ThreadPoolExecutor;
+import java.util.concurrent.TimeUnit;
 import org.hypertrace.core.grpcutils.server.InterceptorUtil;
 import org.hypertrace.core.serviceframework.PlatformService;
 import org.hypertrace.core.serviceframework.config.ConfigClient;
@@ -38,7 +42,18 @@ public class GatewayServiceStarter extends PlatformService {
 
     GatewayServiceImpl ht = new GatewayServiceImpl(getAppConfig());
 
-    server = ServerBuilder.forPort(port).addService(InterceptorUtil.wrapInterceptors(ht)).build();
+    server =
+        ServerBuilder.forPort(port)
+            .addService(InterceptorUtil.wrapInterceptors(ht))
+            .executor(
+                new ThreadPoolExecutor(
+                    4,
+                    16,
+                    60L,
+                    TimeUnit.SECONDS,
+                    new LinkedBlockingQueue<>(),
+                    new ThreadFactoryBuilder().setNameFormat("gateway-service-worker-%d").build()))
+            .build();
   }
 
   @Override
