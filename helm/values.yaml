@@ -69,8 +69,8 @@ configMap:
         host = attribute-service
       }
       executor.service.config = {
-        corePoolSize = 2
-        maxPoolSize = 2
+        corePoolSize = 3
+        maxPoolSize = 3
       }
 logConfig:
   name: gateway-service-log-config
