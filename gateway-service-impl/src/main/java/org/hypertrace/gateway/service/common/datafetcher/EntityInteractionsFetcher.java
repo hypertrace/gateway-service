@@ -16,6 +16,7 @@ import java.util.HashSet;
 import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
+import java.util.Map.Entry;
 import java.util.Optional;
 import java.util.Set;
 import java.util.stream.Collectors;
@@ -120,99 +121,161 @@ public class EntityInteractionsFetcher {
 
   public void populateEntityInteractions(
       RequestContext context, EntitiesRequest request, Map<EntityKey, Builder> entityBuilders) {
-    // Process the incoming interactions
-    if (!InteractionsRequest.getDefaultInstance().equals(request.getIncomingInteractions())) {
-      addInteractions(
-          context,
-          request,
-          entityBuilders,
-          request.getIncomingInteractions(),
-          INCOMING,
-          "fromEntityType filter is mandatory for incoming interactions.");
-    }
 
-    // Process the outgoing interactions
-    if (!InteractionsRequest.getDefaultInstance().equals(request.getOutgoingInteractions())) {
-      addInteractions(
-          context,
-          request,
-          entityBuilders,
-          request.getOutgoingInteractions(),
-          OUTGOING,
-          "toEntityType filter is mandatory for outgoing interactions.");
-    }
+    addInteractions(context, request, entityBuilders);
   }
 
   private void addInteractions(
-      RequestContext context,
-      EntitiesRequest request,
-      Map<EntityKey, Builder> entityIdToBuilders,
-      InteractionsRequest interactionsRequest,
-      boolean incoming,
-      String errorMsg) {
+      RequestContext context, EntitiesRequest request, Map<EntityKey, Builder> entityIdToBuilders) {
 
-    if (!interactionsRequest.hasFilter()) {
-      throw new IllegalArgumentException(errorMsg);
-    }
-    if (interactionsRequest.getSelectionCount() == 0) {
-      throw new IllegalArgumentException("Interactions request should have non-empty selections.");
-    }
+    Map<Pair<Boolean, String>, QueryRequest> queries = new HashMap<>();
 
-    Map<String, QueryRequest> requests =
-        buildQueryRequests(
-            request.getStartTimeMillis(),
-            request.getEndTimeMillis(),
-            request.getSpaceId(),
-            request.getEntityType(),
-            interactionsRequest,
-            entityIdToBuilders.keySet(),
-            incoming,
-            context);
-    if (requests.isEmpty()) {
-      throw new IllegalArgumentException(errorMsg);
-    }
-
-    Set<String> selectedColumns = new HashSet<>();
-    for (Expression expression : interactionsRequest.getSelectionList()) {
-      if (expression.getValueCase() == ValueCase.COLUMNIDENTIFIER) {
-        selectedColumns.add(expression.getColumnIdentifier().getColumnName());
+    InteractionsRequest incomingInteractionsRequest = request.getIncomingInteractions();
+    if (!InteractionsRequest.getDefaultInstance().equals(incomingInteractionsRequest)) {
+      if (!incomingInteractionsRequest.hasFilter()) {
+        throw new IllegalArgumentException(
+            "fromEntityType filter is mandatory for incoming interactions.");
       }
+      if (incomingInteractionsRequest.getSelectionCount() == 0) {
+        throw new IllegalArgumentException(
+            "Interactions request should have non-empty selections.");
+      }
+
+      Map<String, QueryRequest> requests =
+          buildQueryRequests(
+              request.getStartTimeMillis(),
+              request.getEndTimeMillis(),
+              request.getSpaceId(),
+              request.getEntityType(),
+              incomingInteractionsRequest,
+              entityIdToBuilders.keySet(),
+              INCOMING,
+              context);
+      if (requests.isEmpty()) {
+        throw new IllegalArgumentException(
+            "fromEntityType filter is mandatory for incoming interactions.");
+      }
+
+      requests.forEach(
+          (entityType, queryRequest) -> queries.put(Pair.of(INCOMING, entityType), queryRequest));
     }
 
-    Map<String, FunctionExpression> metricToAggFunction =
-        MetricAggregationFunctionUtil.getAggMetricToFunction(
-            interactionsRequest.getSelectionList());
+    InteractionsRequest outgoingInteractionsRequest = request.getOutgoingInteractions();
+    if (!InteractionsRequest.getDefaultInstance().equals(outgoingInteractionsRequest)) {
+      if (!outgoingInteractionsRequest.hasFilter()) {
+        throw new IllegalArgumentException(
+            "toEntityType filter is mandatory for outgoing interactions.");
+      }
+      if (outgoingInteractionsRequest.getSelectionCount() == 0) {
+        throw new IllegalArgumentException(
+            "Interactions request should have non-empty selections.");
+      }
+
+      Map<String, QueryRequest> requests =
+          buildQueryRequests(
+              request.getStartTimeMillis(),
+              request.getEndTimeMillis(),
+              request.getSpaceId(),
+              request.getEntityType(),
+              outgoingInteractionsRequest,
+              entityIdToBuilders.keySet(),
+              OUTGOING,
+              context);
+      if (requests.isEmpty()) {
+        throw new IllegalArgumentException(
+            "toEntityType filter is mandatory for outgoing interactions.");
+      }
+
+      requests.forEach(
+          (entityType, queryRequest) -> queries.put(Pair.of(OUTGOING, entityType), queryRequest));
+    }
+
     long startTimeMillis = System.currentTimeMillis();
-    requests.entrySet().parallelStream()
-        .map(
-            entry -> {
-              long queryStartTime = System.currentTimeMillis();
-              Pair<String, Iterator<ResultSetChunk>> pair =
-                  Pair.of(
-                      entry.getKey(),
-                      queryServiceClient.executeQuery(
-                          entry.getValue(), context.getHeaders(), queryServiceRequestTimeout));
-              LOG.error(
-                  "Individual QueryRequest took {} ms",
-                  System.currentTimeMillis() - queryStartTime);
-              return pair;
-            })
-        .collect(Collectors.toSet())
-        .forEach(
-            resultPair ->
-                parseResultSet(
-                    request.getEntityType(),
-                    resultPair.getKey(),
-                    selectedColumns,
-                    metricToAggFunction,
-                    resultPair.getValue(),
-                    incoming,
-                    entityIdToBuilders,
-                    context));
+
+    Map<Pair<Boolean, String>, List<ResultSetChunk>> responses =
+        queries.entrySet().parallelStream()
+            .map(
+                entry -> {
+                  long queryStartTime = System.currentTimeMillis();
+                  Map.Entry<Pair<Boolean, String>, List<ResultSetChunk>> pair =
+                      Map.entry(
+                          entry.getKey(),
+                          convert(
+                              queryServiceClient.executeQuery(
+                                  entry.getValue(),
+                                  context.getHeaders(),
+                                  queryServiceRequestTimeout)));
+                  LOG.error(
+                      "Individual QueryRequest took {} ms",
+                      System.currentTimeMillis() - queryStartTime);
+                  return pair;
+                })
+            .collect(Collectors.toMap(Entry::getKey, Entry::getValue));
+
+    for (Map.Entry<Pair<Boolean, String>, List<ResultSetChunk>> responseEntry :
+        responses.entrySet()) {
+      boolean incoming = responseEntry.getKey().getKey();
+      String entityType = responseEntry.getKey().getValue();
+      List<ResultSetChunk> resultSet = responseEntry.getValue();
+
+      Set<String> selectedColumns = new HashSet<>();
+      Map<String, FunctionExpression> metricToAggFunction = new HashMap<>();
+      if (incoming) {
+        for (Expression expression : incomingInteractionsRequest.getSelectionList()) {
+          if (expression.getValueCase() == ValueCase.COLUMNIDENTIFIER) {
+            selectedColumns.add(expression.getColumnIdentifier().getColumnName());
+          }
+        }
+
+        metricToAggFunction =
+            MetricAggregationFunctionUtil.getAggMetricToFunction(
+                incomingInteractionsRequest.getSelectionList());
+      } else {
+        for (Expression expression : outgoingInteractionsRequest.getSelectionList()) {
+          if (expression.getValueCase() == ValueCase.COLUMNIDENTIFIER) {
+            selectedColumns.add(expression.getColumnIdentifier().getColumnName());
+          }
+        }
+
+        metricToAggFunction =
+            MetricAggregationFunctionUtil.getAggMetricToFunction(
+                outgoingInteractionsRequest.getSelectionList());
+      }
+
+      parseResultSet(
+          request.getEntityType(),
+          entityType,
+          selectedColumns,
+          metricToAggFunction,
+          resultSet,
+          incoming,
+          entityIdToBuilders,
+          context);
+    }
+
     LOG.error(
         "Interactions query for {} requests took:{} ms",
-        requests.size(),
+        queries.size(),
         System.currentTimeMillis() - startTimeMillis);
+  }
+
+  private List<ResultSetChunk> convert(Iterator<ResultSetChunk> resultSet) {
+    List<ResultSetChunk> resultSetChunks = new ArrayList<>();
+
+    while (resultSet.hasNext()) {
+      ResultSetChunk chunk = resultSet.next();
+      if (LOG.isDebugEnabled()) {
+        LOG.debug("Received chunk: " + chunk.toString());
+      }
+
+      if (chunk.getRowCount() < 1) {
+        break;
+      }
+
+      resultSetChunks.add(chunk);
+    }
+
+    return resultSetChunks;
   }
 
   private Set<String> getOtherEntityTypes(org.hypertrace.gateway.service.v1.common.Filter filter) {
@@ -460,7 +523,7 @@ public class EntityInteractionsFetcher {
       String otherEntityType,
       Set<String> selectedColumns,
       Map<String, FunctionExpression> metricToAggFunction,
-      Iterator<ResultSetChunk> resultset,
+      List<ResultSetChunk> resultset,
       boolean incoming,
       Map<EntityKey, Builder> entityIdToBuilders,
       RequestContext requestContext) {
@@ -472,16 +535,7 @@ public class EntityInteractionsFetcher {
         MetricAggregationFunctionUtil.getValueTypeFromFunction(
             metricToAggFunction, attributeMetadataMap);
 
-    while (resultset.hasNext()) {
-      ResultSetChunk chunk = resultset.next();
-      if (LOG.isDebugEnabled()) {
-        LOG.debug("Received chunk: " + chunk.toString());
-      }
-
-      if (chunk.getRowCount() < 1) {
-        break;
-      }
-
+    for (ResultSetChunk chunk : resultset) {
       for (Row row : chunk.getRowList()) {
         // Construct the from/to EntityKeys from the columns
         List<String> idColumns =
