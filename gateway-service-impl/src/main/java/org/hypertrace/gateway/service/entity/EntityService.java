@@ -8,6 +8,7 @@ import java.time.Instant;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
+import java.util.concurrent.ExecutorService;
 import java.util.concurrent.TimeUnit;
 import org.apache.commons.lang3.StringUtils;
 import org.hypertrace.core.attribute.service.v1.AttributeMetadata;
@@ -74,11 +75,13 @@ public class EntityService {
       AttributeMetadataProvider metadataProvider,
       EntityIdColumnsConfigs entityIdColumnsConfigs,
       ScopeFilterConfigs scopeFilterConfigs,
-      LogConfig logConfig) {
+      LogConfig logConfig,
+      ExecutorService executorService) {
     this.metadataProvider = metadataProvider;
     this.entityIdColumnsConfigs = entityIdColumnsConfigs;
     this.interactionsFetcher =
-        new EntityInteractionsFetcher(qsClient, qsRequestTimeout, metadataProvider);
+        new EntityInteractionsFetcher(
+            qsClient, qsRequestTimeout, metadataProvider, executorService);
     this.requestPreProcessor = new RequestPreProcessor(metadataProvider, scopeFilterConfigs);
     this.responsePostProcessor = new ResponsePostProcessor();
     this.edsEntityUpdater = new EdsEntityUpdater(edsQueryServiceClient);

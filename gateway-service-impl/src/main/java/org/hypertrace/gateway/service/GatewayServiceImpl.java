@@ -1,12 +1,17 @@
 package org.hypertrace.gateway.service;
 
 import com.google.common.base.Preconditions;
+import com.google.common.util.concurrent.ThreadFactoryBuilder;
 import com.google.protobuf.ServiceException;
 import com.typesafe.config.Config;
 import io.grpc.ManagedChannel;
 import io.grpc.ManagedChannelBuilder;
 import io.grpc.stub.StreamObserver;
 import java.util.Optional;
+import java.util.concurrent.ExecutorService;
+import java.util.concurrent.LinkedBlockingQueue;
+import java.util.concurrent.ThreadPoolExecutor;
+import java.util.concurrent.TimeUnit;
 import org.apache.commons.lang3.StringUtils;
 import org.hypertrace.core.attribute.service.client.AttributeServiceClient;
 import org.hypertrace.core.attribute.service.client.config.AttributeServiceClientConfig;
@@ -53,6 +58,7 @@ public class GatewayServiceImpl extends GatewayServiceGrpc.GatewayServiceImplBas
   private static final Logger LOG = LoggerFactory.getLogger(GatewayServiceImpl.class);
 
   private static final String QUERY_SERVICE_CONFIG_KEY = "query.service.config";
+  private static final String EXECUTOR_SERVICE_CONFIG_KEY = "executor.service.config";
   private static final String REQUEST_TIMEOUT_CONFIG_KEY = "request.timeout";
   private static final int DEFAULT_REQUEST_TIMEOUT_MILLIS = 10000;
 
@@ -72,6 +78,24 @@ public class GatewayServiceImpl extends GatewayServiceGrpc.GatewayServiceImplBas
     AttributeServiceClient asClient = new AttributeServiceClient(attributeServiceChannel);
     AttributeMetadataProvider attributeMetadataProvider = new AttributeMetadataProvider(asClient);
     EntityIdColumnsConfigs entityIdColumnsConfigs = EntityIdColumnsConfigs.fromConfig(appConfig);
+
+    Config executorServiceConfig = appConfig.getConfig(EXECUTOR_SERVICE_CONFIG_KEY);
+    int corePoolSize =
+        executorServiceConfig.hasPath("corePoolSize")
+            ? executorServiceConfig.getInt("corePoolSize")
+            : 1;
+    int maxPoolSize =
+        executorServiceConfig.hasPath("maxPoolSize")
+            ? executorServiceConfig.getInt("maxPoolSize")
+            : 1;
+    ExecutorService executorService =
+        new ThreadPoolExecutor(
+            corePoolSize,
+            maxPoolSize,
+            0L,
+            TimeUnit.MILLISECONDS,
+            new LinkedBlockingQueue<>(),
+            new ThreadFactoryBuilder().setNameFormat("gateway-worker-executor-thread-%d").build());
 
     Config qsConfig = appConfig.getConfig(QUERY_SERVICE_CONFIG_KEY);
     QueryServiceClient queryServiceClient =
@@ -100,7 +124,8 @@ public class GatewayServiceImpl extends GatewayServiceGrpc.GatewayServiceImplBas
             attributeMetadataProvider,
             entityIdColumnsConfigs,
             scopeFilterConfigs,
-            logConfig);
+            logConfig,
+            executorService);
     this.exploreService =
         new ExploreService(
             queryServiceClient, qsRequestTimeout, attributeMetadataProvider, scopeFilterConfigs);

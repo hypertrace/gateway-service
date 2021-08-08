@@ -68,6 +68,10 @@ configMap:
       attributes.service.config = {
         host = attribute-service
       }
+      executor.service.config = {
+        corePoolSize = 2
+        maxPoolSize = 2
+      }
 logConfig:
   name: gateway-service-log-config
   monitorInterval: 30

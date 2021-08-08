@@ -19,6 +19,10 @@ import java.util.Map;
 import java.util.Map.Entry;
 import java.util.Optional;
 import java.util.Set;
+import java.util.concurrent.CountDownLatch;
+import java.util.concurrent.ExecutionException;
+import java.util.concurrent.ExecutorService;
+import java.util.concurrent.Future;
 import java.util.stream.Collectors;
 import java.util.stream.IntStream;
 import org.apache.commons.lang3.StringUtils;
@@ -89,14 +93,17 @@ public class EntityInteractionsFetcher {
   private final QueryServiceClient queryServiceClient;
   private final int queryServiceRequestTimeout;
   private final AttributeMetadataProvider metadataProvider;
+  private final ExecutorService executorService;
 
   public EntityInteractionsFetcher(
       QueryServiceClient queryServiceClient,
       int qsRequestTimeout,
-      AttributeMetadataProvider metadataProvider) {
+      AttributeMetadataProvider metadataProvider,
+      ExecutorService executorService) {
     this.queryServiceClient = queryServiceClient;
     this.queryServiceRequestTimeout = qsRequestTimeout;
     this.metadataProvider = metadataProvider;
+    this.executorService = executorService;
   }
 
   private List<String> getEntityIdColumnsFromInteraction(
@@ -121,12 +128,17 @@ public class EntityInteractionsFetcher {
 
   public void populateEntityInteractions(
       RequestContext context, EntitiesRequest request, Map<EntityKey, Builder> entityBuilders) {
-
-    addInteractions(context, request, entityBuilders);
+    try {
+      addInteractions(context, request, entityBuilders);
+    } catch (ExecutionException | InterruptedException e) {
+      throw new RuntimeException(
+          String.format("Unable to fetch interactions for request %s. Exception %s", request, e));
+    }
   }
 
   private void addInteractions(
-      RequestContext context, EntitiesRequest request, Map<EntityKey, Builder> entityIdToBuilders) {
+      RequestContext context, EntitiesRequest request, Map<EntityKey, Builder> entityIdToBuilders)
+      throws InterruptedException, ExecutionException {
 
     Map<Pair<Boolean, String>, QueryRequest> queries = new HashMap<>();
 
@@ -192,28 +204,37 @@ public class EntityInteractionsFetcher {
 
     long startTimeMillis = System.currentTimeMillis();
 
-    Map<Pair<Boolean, String>, List<ResultSetChunk>> responses =
-        queries.entrySet().parallelStream()
-            .map(
-                entry -> {
-                  long queryStartTime = System.currentTimeMillis();
-                  Map.Entry<Pair<Boolean, String>, List<ResultSetChunk>> pair =
-                      Map.entry(
-                          entry.getKey(),
-                          convert(
-                              queryServiceClient.executeQuery(
-                                  entry.getValue(),
-                                  context.getHeaders(),
-                                  queryServiceRequestTimeout)));
-                  LOG.error(
-                      "Individual QueryRequest took {} ms",
-                      System.currentTimeMillis() - queryStartTime);
-                  return pair;
-                })
-            .collect(Collectors.toMap(Entry::getKey, Entry::getValue));
+    CountDownLatch latch = new CountDownLatch(queries.size());
+    List<Future<Entry<Pair<Boolean, String>, List<ResultSetChunk>>>> futures = new ArrayList<>();
+    queries.forEach(
+        (key, queryRequest) -> {
+          var future =
+              executorService.submit(
+                  () -> {
+                    long queryStartTime = System.currentTimeMillis();
+                    var entry =
+                        Map.entry(
+                            key,
+                            convert(
+                                queryServiceClient.executeQuery(
+                                    queryRequest,
+                                    context.getHeaders(),
+                                    queryServiceRequestTimeout)));
 
-    for (Map.Entry<Pair<Boolean, String>, List<ResultSetChunk>> responseEntry :
-        responses.entrySet()) {
+                    LOG.error(
+                        "Individual QueryRequest took {} ms",
+                        System.currentTimeMillis() - queryStartTime);
+
+                    return entry;
+                  });
+          futures.add(future);
+          latch.countDown();
+        });
+
+    latch.await();
+
+    for (var futureEntry : futures) {
+      var responseEntry = futureEntry.get();
       boolean incoming = responseEntry.getKey().getKey();
       String entityType = responseEntry.getKey().getValue();
       List<ResultSetChunk> resultSet = responseEntry.getValue();
