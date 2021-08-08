@@ -95,9 +95,7 @@ public class GatewayServiceImpl extends GatewayServiceGrpc.GatewayServiceImplBas
             0L,
             TimeUnit.MILLISECONDS,
             new LinkedBlockingQueue<>(),
-            new ThreadFactoryBuilder()
-                .setNameFormat("gateway-service-executor-thread-%d")
-                .build());
+            new ThreadFactoryBuilder().setNameFormat("gateway-service-executor-thread-%d").build());
 
     Config qsConfig = appConfig.getConfig(QUERY_SERVICE_CONFIG_KEY);
     QueryServiceClient queryServiceClient =

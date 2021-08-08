@@ -23,6 +23,7 @@ import java.util.Arrays;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
+import java.util.concurrent.ExecutorService;
 import org.hypertrace.core.attribute.service.v1.AttributeKind;
 import org.hypertrace.core.attribute.service.v1.AttributeMetadata;
 import org.hypertrace.core.attribute.service.v1.AttributeScope;
@@ -278,7 +279,8 @@ public class EntityServiceTest extends AbstractGatewayServiceTest {
             attributeMetadataProvider,
             entityIdColumnsConfigs,
             scopeFilterConfigs,
-            logConfig);
+            logConfig,
+            Mockito.mock(ExecutorService.class));
     EntitiesResponse response = entityService.getEntities(TENANT_ID, entitiesRequest, Map.of());
     Assertions.assertNotNull(response);
     Assertions.assertEquals(2, response.getTotal());
@@ -312,7 +314,8 @@ public class EntityServiceTest extends AbstractGatewayServiceTest {
             attributeMetadataProvider,
             entityIdColumnsConfigs,
             scopeFilterConfigs,
-            logConfig);
+            logConfig,
+            Mockito.mock(ExecutorService.class));
     EntitiesRequest entitiesRequest =
         EntitiesRequest.newBuilder()
             .setEntityType("API")
