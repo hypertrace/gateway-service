@@ -47,7 +47,7 @@ public class GatewayServiceStarter extends PlatformService {
             .addService(InterceptorUtil.wrapInterceptors(ht))
             .executor(
                 new ThreadPoolExecutor(
-                    4,
+                    16,
                     16,
                     60L,
                     TimeUnit.SECONDS,

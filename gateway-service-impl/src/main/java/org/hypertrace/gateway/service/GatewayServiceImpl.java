@@ -155,7 +155,7 @@ public class GatewayServiceImpl extends GatewayServiceGrpc.GatewayServiceImplBas
       org.hypertrace.gateway.service.v1.trace.TracesRequest request,
       io.grpc.stub.StreamObserver<org.hypertrace.gateway.service.v1.trace.TracesResponse>
           responseObserver) {
-
+    long startTimeMillis = System.currentTimeMillis();
     Optional<String> tenantId =
         org.hypertrace.core.grpcutils.context.RequestContext.CURRENT.get().getTenantId();
     if (tenantId.isEmpty()) {
@@ -174,6 +174,7 @@ public class GatewayServiceImpl extends GatewayServiceGrpc.GatewayServiceImplBas
       TracesResponse response = traceService.getTracesByFilter(requestContext, request);
       responseObserver.onNext(response);
       responseObserver.onCompleted();
+      LOG.error("getTraces query took:{} ms", System.currentTimeMillis() - startTimeMillis);
     } catch (Exception e) {
       LOG.error("Error while handling traces request: {}", request, e);
       responseObserver.onError(e);
@@ -185,6 +186,7 @@ public class GatewayServiceImpl extends GatewayServiceGrpc.GatewayServiceImplBas
       org.hypertrace.gateway.service.v1.span.SpansRequest request,
       io.grpc.stub.StreamObserver<org.hypertrace.gateway.service.v1.span.SpansResponse>
           responseObserver) {
+    long startTimeMillis = System.currentTimeMillis();
     Optional<String> tenantId =
         org.hypertrace.core.grpcutils.context.RequestContext.CURRENT.get().getTenantId();
     if (tenantId.isEmpty()) {
@@ -202,6 +204,7 @@ public class GatewayServiceImpl extends GatewayServiceGrpc.GatewayServiceImplBas
       SpansResponse response = spanService.getSpansByFilter(context, request);
       responseObserver.onNext(response);
       responseObserver.onCompleted();
+      LOG.error("getSpans query took:{} ms", System.currentTimeMillis() - startTimeMillis);
     } catch (Exception e) {
       LOG.error("Error while handling spans request: {}", request, e);
       responseObserver.onError(e);
@@ -215,7 +218,7 @@ public class GatewayServiceImpl extends GatewayServiceGrpc.GatewayServiceImplBas
     if (LOG.isDebugEnabled()) {
       LOG.debug("Received request: {}", request);
     }
-
+    long startTimeMillis = System.currentTimeMillis();
     Optional<String> tenantId =
         org.hypertrace.core.grpcutils.context.RequestContext.CURRENT.get().getTenantId();
     if (tenantId.isEmpty()) {
@@ -249,6 +252,7 @@ public class GatewayServiceImpl extends GatewayServiceGrpc.GatewayServiceImplBas
 
       responseObserver.onNext(response);
       responseObserver.onCompleted();
+      LOG.error("getEntities query took:{} ms", System.currentTimeMillis() - startTimeMillis);
     } catch (Exception e) {
       LOG.error("Error while handling entities request: {}.", request, e);
       responseObserver.onError(e);
