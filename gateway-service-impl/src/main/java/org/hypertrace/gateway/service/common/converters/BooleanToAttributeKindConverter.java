@@ -5,7 +5,8 @@ import org.hypertrace.gateway.service.v1.common.Value;
 import org.hypertrace.gateway.service.v1.common.ValueType;
 
 public class BooleanToAttributeKindConverter extends ToAttributeKindConverter<Boolean> {
-  public static BooleanToAttributeKindConverter INSTANCE = new BooleanToAttributeKindConverter();
+  public static final BooleanToAttributeKindConverter INSTANCE =
+      new BooleanToAttributeKindConverter();
 
   private BooleanToAttributeKindConverter() {}
 

@@ -5,7 +5,7 @@ import org.hypertrace.gateway.service.v1.common.Value;
 import org.hypertrace.gateway.service.v1.common.ValueType;
 
 public class LongToAttributeKindConverter extends ToAttributeKindConverter<Long> {
-  public static LongToAttributeKindConverter INSTANCE = new LongToAttributeKindConverter();
+  public static final LongToAttributeKindConverter INSTANCE = new LongToAttributeKindConverter();
 
   private LongToAttributeKindConverter() {}
 
@@ -24,6 +24,11 @@ public class LongToAttributeKindConverter extends ToAttributeKindConverter<Long>
       case TYPE_STRING:
         valueBuilder.setValueType(ValueType.STRING);
         valueBuilder.setString(value.toString());
+        return valueBuilder.build();
+
+      case TYPE_TIMESTAMP:
+        valueBuilder.setValueType(ValueType.TIMESTAMP);
+        valueBuilder.setTimestamp(value);
         return valueBuilder.build();
 
       default:

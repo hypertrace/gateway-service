@@ -5,7 +5,8 @@ import org.hypertrace.gateway.service.v1.common.Value;
 import org.hypertrace.gateway.service.v1.common.ValueType;
 
 public class IntegerToAttributeKindConverter extends ToAttributeKindConverter<Integer> {
-  public static IntegerToAttributeKindConverter INSTANCE = new IntegerToAttributeKindConverter();
+  public static final IntegerToAttributeKindConverter INSTANCE =
+      new IntegerToAttributeKindConverter();
 
   private IntegerToAttributeKindConverter() {}
 

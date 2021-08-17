@@ -5,7 +5,8 @@ import org.hypertrace.gateway.service.v1.common.Value;
 import org.hypertrace.gateway.service.v1.common.ValueType;
 
 public class DoubleToAttributeKindConverter extends ToAttributeKindConverter<Double> {
-  public static DoubleToAttributeKindConverter INSTANCE = new DoubleToAttributeKindConverter();
+  public static final DoubleToAttributeKindConverter INSTANCE =
+      new DoubleToAttributeKindConverter();
 
   private DoubleToAttributeKindConverter() {}
 

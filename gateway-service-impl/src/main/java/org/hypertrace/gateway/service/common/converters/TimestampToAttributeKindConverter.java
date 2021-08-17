@@ -5,7 +5,7 @@ import org.hypertrace.gateway.service.v1.common.Value;
 import org.hypertrace.gateway.service.v1.common.ValueType;
 
 public class TimestampToAttributeKindConverter extends ToAttributeKindConverter<Long> {
-  public static TimestampToAttributeKindConverter INSTANCE =
+  public static final TimestampToAttributeKindConverter INSTANCE =
       new TimestampToAttributeKindConverter();
 
   private TimestampToAttributeKindConverter() {}
