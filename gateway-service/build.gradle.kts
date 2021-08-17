@@ -8,10 +8,10 @@ plugins {
 dependencies {
   implementation(project(":gateway-service-impl"))
 
-  implementation("org.hypertrace.core.grpcutils:grpc-server-utils:0.3.4")
-  implementation("org.hypertrace.core.serviceframework:platform-service-framework:0.1.28")
+  implementation("org.hypertrace.core.grpcutils:grpc-server-utils:0.5.2")
+  implementation("org.hypertrace.core.serviceframework:platform-service-framework:0.1.29")
 
-  implementation("io.grpc:grpc-netty:1.37.0")
+  implementation("io.grpc:grpc-netty:1.39.0")
 
   // Logging
   implementation("org.slf4j:slf4j-api:1.7.30")

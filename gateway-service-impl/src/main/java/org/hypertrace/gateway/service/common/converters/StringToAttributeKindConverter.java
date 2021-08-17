@@ -22,7 +22,8 @@ public class StringToAttributeKindConverter extends ToAttributeKindConverter<Str
   private static final TypeReference<Map<String, String>> MAP_TYPE_REFERENCE =
       new TypeReference<>() {};
   private static final TypeReference<List<String>> LIST_TYPE_REFERENCE = new TypeReference<>() {};
-  public static StringToAttributeKindConverter INSTANCE = new StringToAttributeKindConverter();
+  public static final StringToAttributeKindConverter INSTANCE =
+      new StringToAttributeKindConverter();
   private final ObjectMapper objectMapper = new ObjectMapper();
 
   private StringToAttributeKindConverter() {}

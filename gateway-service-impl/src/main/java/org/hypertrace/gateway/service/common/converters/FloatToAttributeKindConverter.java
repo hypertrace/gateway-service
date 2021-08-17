@@ -5,7 +5,7 @@ import org.hypertrace.gateway.service.v1.common.Value;
 import org.hypertrace.gateway.service.v1.common.ValueType;
 
 public class FloatToAttributeKindConverter extends ToAttributeKindConverter<Float> {
-  public static FloatToAttributeKindConverter INSTANCE = new FloatToAttributeKindConverter();
+  public static final FloatToAttributeKindConverter INSTANCE = new FloatToAttributeKindConverter();
 
   private FloatToAttributeKindConverter() {}
 

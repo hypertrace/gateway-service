@@ -15,14 +15,14 @@ val generateLocalGoGrpcFiles = false
 
 protobuf {
   protoc {
-    artifact = "com.google.protobuf:protoc:3.13.0"
+    artifact = "com.google.protobuf:protoc:3.17.3"
   }
   plugins {
     // Optional: an artifact spec for a protoc plugin, with "grpc" as
     // the identifier, which can be referred to in the "plugins"
     // container of the "generateProtoTasks" closure.
     id("grpc_java") {
-      artifact = "io.grpc:protoc-gen-grpc-java:1.36.1"
+      artifact = "io.grpc:protoc-gen-grpc-java:1.39.0"
     }
   }
   generateProtoTasks {
@@ -47,13 +47,13 @@ sourceSets {
 }
 
 dependencies {
-  api("io.grpc:grpc-protobuf:1.36.1")
-  api("com.google.api.grpc:proto-google-common-protos:1.18.1")
-  api("io.grpc:grpc-stub:1.36.1")
+  api("io.grpc:grpc-protobuf:1.39.0")
+  api("com.google.api.grpc:proto-google-common-protos:2.3.2")
+  api("io.grpc:grpc-stub:1.39.0")
   api("javax.annotation:javax.annotation-api:1.3.2")
 
   constraints {
-    api("com.google.guava:guava:30.0-jre") {
+    api("com.google.guava:guava:30.1.1-jre") {
       because("Information Disclosure [Medium Severity][https://snyk.io/vuln/SNYK-JAVA-COMGOOGLEGUAVA-1015415] in com.google.guava:guava@29.0-android")
     }
   }

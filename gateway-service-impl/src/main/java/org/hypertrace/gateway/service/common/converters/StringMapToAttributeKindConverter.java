@@ -5,14 +5,10 @@ import org.hypertrace.core.attribute.service.v1.AttributeKind;
 import org.hypertrace.gateway.service.v1.common.Value;
 import org.hypertrace.gateway.service.v1.common.Value.Builder;
 import org.hypertrace.gateway.service.v1.common.ValueType;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
 
 public class StringMapToAttributeKindConverter
     extends ToAttributeKindConverter<Map<String, String>> {
-  private static final Logger log =
-      LoggerFactory.getLogger(StringMapToAttributeKindConverter.class);
-  public static StringMapToAttributeKindConverter INSTANCE =
+  public static final StringMapToAttributeKindConverter INSTANCE =
       new StringMapToAttributeKindConverter();
 
   private StringMapToAttributeKindConverter() {}

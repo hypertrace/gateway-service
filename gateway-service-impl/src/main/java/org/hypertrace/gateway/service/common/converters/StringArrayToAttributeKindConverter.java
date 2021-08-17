@@ -6,7 +6,7 @@ import org.hypertrace.gateway.service.v1.common.Value;
 import org.hypertrace.gateway.service.v1.common.ValueType;
 
 public class StringArrayToAttributeKindConverter extends ToAttributeKindConverter<List<String>> {
-  public static StringArrayToAttributeKindConverter INSTANCE =
+  public static final StringArrayToAttributeKindConverter INSTANCE =
       new StringArrayToAttributeKindConverter();
 
   private StringArrayToAttributeKindConverter() {}
