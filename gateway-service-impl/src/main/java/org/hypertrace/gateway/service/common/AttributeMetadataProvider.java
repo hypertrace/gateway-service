@@ -67,15 +67,22 @@ public class AttributeMetadataProvider {
                             .addScopeString(scopeAndKeyPairBasedCacheKey.getDataKey().getKey())
                             .build());
 
+                AttributeMetadata result = null;
                 while (attributeMetadataIterator.hasNext()) {
                   AttributeMetadata metadata = attributeMetadataIterator.next();
+                  // metadata already found
+                  if (result != null) {
+                    continue;
+                  }
+                  // DON'T short-circuit the iterator.
+                  // Continue to iterate fully to avoid netty leak
                   if (metadata
                       .getKey()
                       .equals(scopeAndKeyPairBasedCacheKey.getDataKey().getValue())) {
-                    return metadata;
+                    result = metadata;
                   }
                 }
-                return null;
+                return result;
               }
             };
 
