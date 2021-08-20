@@ -11,7 +11,7 @@ dependencies {
   implementation("org.hypertrace.core.grpcutils:grpc-server-utils:0.5.2")
   implementation("org.hypertrace.core.serviceframework:platform-service-framework:0.1.29")
 
-  implementation("io.grpc:grpc-netty-shaded:1.39.0")
+  implementation("io.grpc:grpc-netty:1.39.0")
 
   // Logging
   implementation("org.slf4j:slf4j-api:1.7.30")
@@ -22,14 +22,14 @@ dependencies {
   // Config
   implementation("com.typesafe:config:1.4.1")
 
-//  constraints {
-//    runtimeOnly("io.netty:netty-codec-http2:4.1.61.Final") {
-//      because("https://snyk.io/vuln/SNYK-JAVA-IONETTY-1083991")
-//    }
-//    runtimeOnly("io.netty:netty-handler-proxy:4.1.61.Final") {
-//      because("https://snyk.io/vuln/SNYK-JAVA-IONETTY-1083991")
-//    }
-//  }
+  constraints {
+    runtimeOnly("io.netty:netty-codec-http2:4.1.63.Final") {
+      because("https://snyk.io/vuln/SNYK-JAVA-IONETTY-1083991")
+    }
+    runtimeOnly("io.netty:netty-handler-proxy:4.1.63.Final") {
+      because("https://snyk.io/vuln/SNYK-JAVA-IONETTY-1083991")
+    }
+  }
 }
 
 application {
