@@ -71,7 +71,7 @@ public class AttributeMetadataProvider {
                 while (attributeMetadataIterator.hasNext()) {
                   AttributeMetadata metadata = attributeMetadataIterator.next();
                   // metadata already found
-                  if(result != null) {
+                  if (result != null) {
                     continue;
                   }
                   // DON'T short-circuit the iterator.
