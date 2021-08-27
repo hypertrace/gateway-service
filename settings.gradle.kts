@@ -1,4 +1,4 @@
-rootProject.name = "gateway-service"
+rootProject.name = "gateway-service-root"
 
 pluginManagement {
   repositories {
