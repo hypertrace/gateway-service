@@ -27,4 +27,6 @@ service GatewayService {
     returns (org.hypertrace.gateway.service.v1.span.SpansResponse) {}
   rpc getLogEvents (org.hypertrace.gateway.service.v1.log.event.LogEventsRequest)
     returns (org.hypertrace.gateway.service.v1.log.event.LogEventsResponse) {}
+  rpc calculateBaselineForMetricValues (org.hypertrace.gateway.service.v1.baseline.BaselineCalculationRequest)
+    returns (org.hypertrace.gateway.service.v1.baseline.Baseline) {}
 }

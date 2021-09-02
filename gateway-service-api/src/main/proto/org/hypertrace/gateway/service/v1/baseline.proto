@@ -43,6 +43,10 @@ message BaselineMetricSeries {
   repeated BaselineInterval baseline_value = 1;
 }
 
+message BaselineCalculationRequest {
+  repeated double values = 1;
+}
+
 message BaselineInterval {
   sfixed64 start_time_millis = 1;
   sfixed64 end_time_millis = 2;

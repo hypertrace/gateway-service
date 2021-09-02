@@ -166,6 +166,11 @@ public class BaselineServiceImpl implements BaselineService {
     return mergeEntities(baselineEntityAggregatedMetricsMap, baselineEntityTimeSeriesMap);
   }
 
+  @Override
+  public Baseline calculateBaseline(double[] values) {
+    return BaselineCalculator.getBaseline(values);
+  }
+
   private void updateAliasMap(
       BaselineRequestContext requestContext, List<TimeAggregation> timeAggregations) {
     timeAggregations.forEach(
