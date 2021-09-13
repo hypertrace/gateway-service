@@ -20,6 +20,7 @@ import java.util.concurrent.TimeUnit;
 import java.util.stream.Collectors;
 import java.util.stream.IntStream;
 import org.apache.commons.lang3.StringUtils;
+import org.hypertrace.core.attribute.service.v1.AttributeKind;
 import org.hypertrace.core.attribute.service.v1.AttributeMetadata;
 import org.hypertrace.core.query.service.api.ColumnMetadata;
 import org.hypertrace.core.query.service.api.Expression;
@@ -422,13 +423,15 @@ public class QueryServiceEntityFetcher implements IEntityFetcher {
                   row.getColumn(idColumns.size()));
           if (value.getValueType() == ValueType.STRING) {
             long time = Long.parseLong(value.getString());
+            long endTime = time + TimeUnit.SECONDS.toMillis(periodSecs);
             intervalBuilder.setStartTimeMillis(time);
-            intervalBuilder.setEndTimeMillis(time + TimeUnit.SECONDS.toMillis(periodSecs));
+            intervalBuilder.setEndTimeMillis(endTime);
 
             for (int i = idColumns.size() + 1;
                 i < chunk.getResultSetMetadata().getColumnMetadataCount();
                 i++) {
               ColumnMetadata metadata = chunk.getResultSetMetadata().getColumnMetadata(i);
+              // this where we have to add the values.
               TimeAggregation timeAggregation =
                   requestContext.getTimeAggregationByAlias(metadata.getColumnName());
 
@@ -437,13 +440,21 @@ public class QueryServiceEntityFetcher implements IEntityFetcher {
                 continue;
               }
 
-              Value convertedValue =
-                  QueryAndGatewayDtoConverter.convertToGatewayValueForMetricValue(
-                      MetricAggregationFunctionUtil.getValueTypeFromFunction(
-                          timeAggregation.getAggregation().getFunction(), attributeMetadataMap),
-                      attributeMetadataMap,
-                      metadata,
-                      row.getColumn(i));
+              Value convertedValue = MetricAggregationFunctionUtil.getValueFromFunction(time,
+                  endTime,
+                  attributeMetadataMap,
+                  row.getColumn(i),
+                  metadata,
+                  timeAggregation.getAggregation().getFunction());
+
+//              AttributeKind attributeKind = MetricAggregationFunctionUtil.getValueTypeFromFunction(
+//                  timeAggregation.getAggregation().getFunction(), attributeMetadataMap);
+//              Value convertedValue =
+//                  QueryAndGatewayDtoConverter.convertToGatewayValueForMetricValue(
+//                      attributeKind,
+//                      attributeMetadataMap,
+//                      metadata,
+//                      row.getColumn(i));
 
               List<org.hypertrace.gateway.service.v1.common.Expression> healthExpressions =
                   timeAggregation.getAggregation().getFunction().getArgumentsList().stream()
