@@ -42,9 +42,11 @@ import org.hypertrace.gateway.service.common.converters.QueryRequestUtil;
 import org.hypertrace.gateway.service.entity.EntitiesRequestContext;
 import org.hypertrace.gateway.service.entity.EntityKey;
 import org.hypertrace.gateway.service.entity.config.EntityIdColumnsConfigs;
+import org.hypertrace.gateway.service.v1.common.Expression;
 import org.hypertrace.gateway.service.v1.common.Filter;
 import org.hypertrace.gateway.service.v1.common.FunctionType;
 import org.hypertrace.gateway.service.v1.common.Interval;
+import org.hypertrace.gateway.service.v1.common.LiteralConstant;
 import org.hypertrace.gateway.service.v1.common.MetricSeries;
 import org.hypertrace.gateway.service.v1.common.OrderByExpression;
 import org.hypertrace.gateway.service.v1.common.Period;
@@ -100,12 +102,23 @@ public class QueryServiceEntityFetcherTests {
     String tenantId = "TENANT_ID";
     Map<String, String> requestHeaders = Map.of("x-tenant-id", tenantId);
     AttributeScope entityType = AttributeScope.API;
+
     TimeAggregation timeAggregation1 =
         buildTimeAggregation(
             30, API_NUM_CALLS_ATTR, FunctionType.SUM, "SUM_API.numCalls", List.of());
+
     TimeAggregation timeAggregation2 =
         buildTimeAggregation(
-            30, API_NUM_CALLS_ATTR, FunctionType.SUM, "SUM_API.numCalls", List.of());
+            30,
+            API_NUM_CALLS_ATTR,
+            FunctionType.AVGRATE,
+            "AVGRATE_API.numCalls",
+            List.of(
+                Expression.newBuilder()
+                    .setLiteral(
+                        LiteralConstant.newBuilder()
+                            .setValue(Value.newBuilder().setLong(60).setValueType(ValueType.LONG)))
+                    .build()));
 
     EntitiesRequest entitiesRequest =
         EntitiesRequest.newBuilder()
@@ -157,7 +170,7 @@ public class QueryServiceEntityFetcherTests {
     List<ResultSetChunk> resultSetChunks =
         List.of(
             getResultSetChunk(
-                List.of("API.apiId", "time_attr", "SUM_API.numCalls", "SUM_API.numCalls"),
+                List.of("API.apiId", "timeColumn", "SUM_API.numCalls", "AVGRATE_API.numCalls"),
                 new String[][] {
                   {"apiId1", "10000", "34", "43"},
                   {"apiId2", "20000", "34", "43"}
@@ -173,6 +186,17 @@ public class QueryServiceEntityFetcherTests {
 
     Map<String, MetricSeries> metricSeriesMap1 = new LinkedHashMap<>();
     metricSeriesMap1.put(
+        "AVGRATE_API.numCalls",
+        MetricSeries.newBuilder()
+            .addValue(
+                Interval.newBuilder()
+                    .setStartTimeMillis(10000)
+                    .setEndTimeMillis(40000)
+                    .setValue(Value.newBuilder().setValueType(ValueType.DOUBLE).setDouble(86.0)))
+            .setAggregation("AVGRATE")
+            .setPeriod(Period.newBuilder().setUnit("SECONDS").setValue(30).build())
+            .build());
+    metricSeriesMap1.put(
         "SUM_API.numCalls",
         MetricSeries.newBuilder()
             .addValue(
@@ -180,16 +204,22 @@ public class QueryServiceEntityFetcherTests {
                     .setStartTimeMillis(10000)
                     .setEndTimeMillis(40000)
                     .setValue(Value.newBuilder().setValueType(ValueType.LONG).setLong(34)))
-            .addValue(
-                Interval.newBuilder()
-                    .setStartTimeMillis(10000)
-                    .setEndTimeMillis(40000)
-                    .setValue(Value.newBuilder().setValueType(ValueType.LONG).setLong(43)))
             .setAggregation("SUM")
             .setPeriod(Period.newBuilder().setUnit("SECONDS").setValue(30).build())
             .build());
 
     Map<String, MetricSeries> metricSeriesMap2 = new LinkedHashMap<>();
+    metricSeriesMap2.put(
+        "AVGRATE_API.numCalls",
+        MetricSeries.newBuilder()
+            .addValue(
+                Interval.newBuilder()
+                    .setStartTimeMillis(20000)
+                    .setEndTimeMillis(50000)
+                    .setValue(Value.newBuilder().setValueType(ValueType.DOUBLE).setDouble(86.0)))
+            .setAggregation("AVGRATE")
+            .setPeriod(Period.newBuilder().setUnit("SECONDS").setValue(30).build())
+            .build());
     metricSeriesMap2.put(
         "SUM_API.numCalls",
         MetricSeries.newBuilder()
@@ -198,11 +228,6 @@ public class QueryServiceEntityFetcherTests {
                     .setStartTimeMillis(20000)
                     .setEndTimeMillis(50000)
                     .setValue(Value.newBuilder().setValueType(ValueType.LONG).setLong(34)))
-            .addValue(
-                Interval.newBuilder()
-                    .setStartTimeMillis(20000)
-                    .setEndTimeMillis(50000)
-                    .setValue(Value.newBuilder().setValueType(ValueType.LONG).setLong(43)))
             .setAggregation("SUM")
             .setPeriod(Period.newBuilder().setUnit("SECONDS").setValue(30).build())
             .build());
