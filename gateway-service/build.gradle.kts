@@ -23,10 +23,10 @@ dependencies {
   implementation("com.typesafe:config:1.4.1")
 
   constraints {
-    runtimeOnly("io.netty:netty-codec-http2:4.1.63.Final") {
+    runtimeOnly("io.netty:netty-codec-http2:4.1.68.Final") {
       because("https://snyk.io/vuln/SNYK-JAVA-IONETTY-1083991")
     }
-    runtimeOnly("io.netty:netty-handler-proxy:4.1.63.Final") {
+    runtimeOnly("io.netty:netty-handler-proxy:4.1.68.Final") {
       because("https://snyk.io/vuln/SNYK-JAVA-IONETTY-1083991")
     }
   }
