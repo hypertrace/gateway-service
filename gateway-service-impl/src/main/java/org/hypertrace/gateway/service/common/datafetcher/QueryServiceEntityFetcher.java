@@ -430,7 +430,6 @@ public class QueryServiceEntityFetcher implements IEntityFetcher {
                 i < chunk.getResultSetMetadata().getColumnMetadataCount();
                 i++) {
               ColumnMetadata metadata = chunk.getResultSetMetadata().getColumnMetadata(i);
-              // this where we have to add the values.
               TimeAggregation timeAggregation =
                   requestContext.getTimeAggregationByAlias(metadata.getColumnName());
 
