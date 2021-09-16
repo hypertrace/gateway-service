@@ -421,9 +421,10 @@ public class QueryServiceEntityFetcher implements IEntityFetcher {
               QueryAndGatewayDtoConverter.convertQueryValueToGatewayValue(
                   row.getColumn(idColumns.size()));
           if (value.getValueType() == ValueType.STRING) {
-            long time = Long.parseLong(value.getString());
-            intervalBuilder.setStartTimeMillis(time);
-            intervalBuilder.setEndTimeMillis(time + TimeUnit.SECONDS.toMillis(periodSecs));
+            long startTime = Long.parseLong(value.getString());
+            long endTime = startTime + TimeUnit.SECONDS.toMillis(periodSecs);
+            intervalBuilder.setStartTimeMillis(startTime);
+            intervalBuilder.setEndTimeMillis(endTime);
 
             for (int i = idColumns.size() + 1;
                 i < chunk.getResultSetMetadata().getColumnMetadataCount();
@@ -438,12 +439,13 @@ public class QueryServiceEntityFetcher implements IEntityFetcher {
               }
 
               Value convertedValue =
-                  QueryAndGatewayDtoConverter.convertToGatewayValueForMetricValue(
-                      MetricAggregationFunctionUtil.getValueTypeFromFunction(
-                          timeAggregation.getAggregation().getFunction(), attributeMetadataMap),
+                  MetricAggregationFunctionUtil.getValueFromFunction(
+                      startTime,
+                      endTime,
                       attributeMetadataMap,
+                      row.getColumn(i),
                       metadata,
-                      row.getColumn(i));
+                      timeAggregation.getAggregation().getFunction());
 
               List<org.hypertrace.gateway.service.v1.common.Expression> healthExpressions =
                   timeAggregation.getAggregation().getFunction().getArgumentsList().stream()
