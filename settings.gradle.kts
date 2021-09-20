@@ -15,4 +15,4 @@ plugins {
 include(":gateway-service-api")
 include(":gateway-service-impl")
 include(":gateway-service")
-include("gateway-service-baseline-lib")
+include(":gateway-service-baseline-lib")
