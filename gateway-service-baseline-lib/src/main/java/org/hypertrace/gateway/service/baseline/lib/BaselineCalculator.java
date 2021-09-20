@@ -18,7 +18,7 @@ public class BaselineCalculator {
     return getBaseline(values);
   }
 
-  public static Baseline getBaseline(double[] metricValueArray) {
+  private static Baseline getBaseline(double[] metricValueArray) {
     Median median = new Median();
     StandardDeviation standardDeviation = new StandardDeviation();
     double medianValue = median.evaluate(metricValueArray);
