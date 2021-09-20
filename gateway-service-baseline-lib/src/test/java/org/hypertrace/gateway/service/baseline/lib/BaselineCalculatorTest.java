@@ -1,4 +1,4 @@
-package org.hypertrace.gateway.service.baseline;
+package org.hypertrace.gateway.service.baseline.lib;
 
 import java.util.ArrayList;
 import java.util.List;
