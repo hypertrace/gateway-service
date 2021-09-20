@@ -10,6 +10,7 @@ tasks.test {
 
 dependencies {
   api(project(":gateway-service-api"))
+  api(project(":gateway-service-baseline-lib"))
 
   implementation("org.hypertrace.core.query.service:query-service-client:0.6.2")
   implementation("org.hypertrace.core.attribute.service:attribute-service-client:0.12.5")
