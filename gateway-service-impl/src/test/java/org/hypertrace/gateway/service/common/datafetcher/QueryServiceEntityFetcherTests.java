@@ -117,7 +117,10 @@ public class QueryServiceEntityFetcherTests {
                 Expression.newBuilder()
                     .setLiteral(
                         LiteralConstant.newBuilder()
-                            .setValue(Value.newBuilder().setLong(60).setValueType(ValueType.LONG)))
+                            .setValue(
+                                Value.newBuilder()
+                                    .setString("PT1M")
+                                    .setValueType(ValueType.STRING)))
                     .build()));
 
     EntitiesRequest entitiesRequest =
@@ -192,7 +195,7 @@ public class QueryServiceEntityFetcherTests {
                 Interval.newBuilder()
                     .setStartTimeMillis(10000)
                     .setEndTimeMillis(40000)
-                    .setValue(Value.newBuilder().setValueType(ValueType.DOUBLE).setDouble(68.0)))
+                    .setValue(Value.newBuilder().setValueType(ValueType.DOUBLE).setDouble(34.0)))
             .setAggregation("AVGRATE")
             .setPeriod(Period.newBuilder().setUnit("SECONDS").setValue(30).build())
             .build());
@@ -216,7 +219,7 @@ public class QueryServiceEntityFetcherTests {
                 Interval.newBuilder()
                     .setStartTimeMillis(20000)
                     .setEndTimeMillis(50000)
-                    .setValue(Value.newBuilder().setValueType(ValueType.DOUBLE).setDouble(68.0)))
+                    .setValue(Value.newBuilder().setValueType(ValueType.DOUBLE).setDouble(34.0)))
             .setAggregation("AVGRATE")
             .setPeriod(Period.newBuilder().setUnit("SECONDS").setValue(30).build())
             .build());

@@ -29,7 +29,9 @@ public class AvgRateValidatorTest {
                     .setLiteral(
                         LiteralConstant.newBuilder()
                             .setValue(
-                                Value.newBuilder().setLong(20L).setValueType(ValueType.LONG))))
+                                Value.newBuilder()
+                                    .setString("PT1S")
+                                    .setValueType(ValueType.STRING))))
             .build();
     var avgRateFunctionValidator = new AvgRateValidator();
     avgRateFunctionValidator.validate(functionExpression);
@@ -50,7 +52,9 @@ public class AvgRateValidatorTest {
                     .setLiteral(
                         LiteralConstant.newBuilder()
                             .setValue(
-                                Value.newBuilder().setLong(20L).setValueType(ValueType.LONG))))
+                                Value.newBuilder()
+                                    .setString("PT1S")
+                                    .setValueType(ValueType.STRING))))
             .addArguments(Expression.newBuilder().setHealth(HealthExpression.newBuilder()))
             .build();
     var avgRateFunctionValidator = new AvgRateValidator();
@@ -72,7 +76,9 @@ public class AvgRateValidatorTest {
                     .setLiteral(
                         LiteralConstant.newBuilder()
                             .setValue(
-                                Value.newBuilder().setLong(20L).setValueType(ValueType.LONG))))
+                                Value.newBuilder()
+                                    .setString("PT1S")
+                                    .setValueType(ValueType.STRING))))
             .addArguments(Expression.newBuilder().setOrderBy(OrderByExpression.newBuilder()))
             .build();
     var avgRateFunctionValidator = new AvgRateValidator();
@@ -99,7 +105,9 @@ public class AvgRateValidatorTest {
                     .setLiteral(
                         LiteralConstant.newBuilder()
                             .setValue(
-                                Value.newBuilder().setLong(20L).setValueType(ValueType.LONG))))
+                                Value.newBuilder()
+                                    .setString("PT1S")
+                                    .setValueType(ValueType.STRING))))
             .build();
     var avgRateFunctionValidator = new AvgRateValidator();
 
@@ -121,7 +129,9 @@ public class AvgRateValidatorTest {
                     .setLiteral(
                         LiteralConstant.newBuilder()
                             .setValue(
-                                Value.newBuilder().setLong(20L).setValueType(ValueType.LONG))))
+                                Value.newBuilder()
+                                    .setString("PT1S")
+                                    .setValueType(ValueType.STRING))))
             .build();
     var avgRateFunctionValidator = new AvgRateValidator();
 
@@ -166,7 +176,9 @@ public class AvgRateValidatorTest {
                     .setLiteral(
                         LiteralConstant.newBuilder()
                             .setValue(
-                                Value.newBuilder().setLong(20L).setValueType(ValueType.LONG))))
+                                Value.newBuilder()
+                                    .setString("PT1S")
+                                    .setValueType(ValueType.STRING))))
             .build();
     var avgRateFunctionValidator = new AvgRateValidator();
 
@@ -190,7 +202,9 @@ public class AvgRateValidatorTest {
                     .setLiteral(
                         LiteralConstant.newBuilder()
                             .setValue(
-                                Value.newBuilder().setLong(20L).setValueType(ValueType.LONG))))
+                                Value.newBuilder()
+                                    .setString("PT1S")
+                                    .setValueType(ValueType.STRING))))
             .build();
     var avgRateFunctionValidator = new AvgRateValidator();
 
@@ -224,7 +238,7 @@ public class AvgRateValidatorTest {
   }
 
   @Test
-  public void avgRateFunctionWithNonLongPeriod_shouldThrowIllegalArgException() {
+  public void avgRateFunctionWithNonIsoPeriod_shouldThrowIllegalArgException() {
     FunctionExpression functionExpression =
         FunctionExpression.newBuilder()
             .setFunction(FunctionType.AVGRATE)
@@ -239,7 +253,7 @@ public class AvgRateValidatorTest {
                         LiteralConstant.newBuilder()
                             .setValue(
                                 Value.newBuilder()
-                                    .setString("not long")
+                                    .setString("not iso format")
                                     .setValueType(ValueType.STRING))))
             .build();
     var avgRateFunctionValidator = new AvgRateValidator();
@@ -265,7 +279,10 @@ public class AvgRateValidatorTest {
                 Expression.newBuilder()
                     .setLiteral(
                         LiteralConstant.newBuilder()
-                            .setValue(Value.newBuilder().setLong(0L).setValueType(ValueType.LONG))))
+                            .setValue(
+                                Value.newBuilder()
+                                    .setString("PT0S")
+                                    .setValueType(ValueType.STRING))))
             .build();
     var avgRateFunctionValidator = new AvgRateValidator();
 
@@ -290,7 +307,9 @@ public class AvgRateValidatorTest {
                     .setLiteral(
                         LiteralConstant.newBuilder()
                             .setValue(
-                                Value.newBuilder().setLong(20L).setValueType(ValueType.LONG))))
+                                Value.newBuilder()
+                                    .setString("PT1S")
+                                    .setValueType(ValueType.STRING))))
             .build();
     var avgRateFunctionValidator = new AvgRateValidator();
 
@@ -316,7 +335,9 @@ public class AvgRateValidatorTest {
                     .setLiteral(
                         LiteralConstant.newBuilder()
                             .setValue(
-                                Value.newBuilder().setLong(20L).setValueType(ValueType.LONG))))
+                                Value.newBuilder()
+                                    .setString("PT1S")
+                                    .setValueType(ValueType.STRING))))
             .build();
     var avgRateFunctionValidator = new AvgRateValidator();
 

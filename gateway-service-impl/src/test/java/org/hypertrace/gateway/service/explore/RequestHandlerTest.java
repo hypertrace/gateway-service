@@ -54,8 +54,8 @@ public class RequestHandlerTest {
                                         LiteralConstant.newBuilder()
                                             .setValue(
                                                 Value.newBuilder()
-                                                    .setValueType(ValueType.LONG)
-                                                    .setLong(30))))))
+                                                    .setValueType(ValueType.STRING)
+                                                    .setString("PT30S"))))))
             .addOrderBy(
                 OrderByExpression.newBuilder()
                     .setOrder(SortOrder.ASC)
@@ -131,8 +131,8 @@ public class RequestHandlerTest {
                                         LiteralConstant.newBuilder()
                                             .setValue(
                                                 Value.newBuilder()
-                                                    .setValueType(ValueType.LONG)
-                                                    .setLong(30))))))
+                                                    .setValueType(ValueType.STRING)
+                                                    .setString("PT30S"))))))
             .addOrderBy(
                 OrderByExpression.newBuilder()
                     .setOrder(SortOrder.ASC)

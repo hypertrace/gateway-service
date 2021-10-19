@@ -106,8 +106,8 @@ public class ExploreRequestValidatorTest {
                                         LiteralConstant.newBuilder()
                                             .setValue(
                                                 Value.newBuilder()
-                                                    .setValueType(ValueType.LONG)
-                                                    .setLong(30))))))
+                                                    .setValueType(ValueType.STRING)
+                                                    .setString("PT30S"))))))
             .setLimit(10)
             .build();
 

@@ -144,7 +144,8 @@ public class BaselineServiceImplTest {
     BaselineEntity baselineEntity = baselineResponse.getBaselineEntityList().get(0);
     // verify the baseline for AVG RATE (medianValue/60)
     Assertions.assertEquals(
-        1.0, baselineEntity.getBaselineAggregateMetricMap().get("numCalls").getValue().getDouble());
+        60.0,
+        baselineEntity.getBaselineAggregateMetricMap().get("numCalls").getValue().getDouble());
   }
 
   @Test
@@ -229,7 +230,8 @@ public class BaselineServiceImplTest {
             Expression.newBuilder()
                 .setLiteral(
                     LiteralConstant.newBuilder()
-                        .setValue(Value.newBuilder().setLong(60).setValueType(ValueType.LONG))))
+                        .setValue(
+                            Value.newBuilder().setString("PT1M").setValueType(ValueType.STRING))))
         .build();
   }
 
