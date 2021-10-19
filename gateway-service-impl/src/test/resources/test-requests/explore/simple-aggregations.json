@@ -64,8 +64,8 @@
           {
             "literal": {
               "value": {
-                "valueType": "LONG",
-                "long": "2"
+                "valueType": "STRING",
+                "long": "PT2S"
               }
             }
           }

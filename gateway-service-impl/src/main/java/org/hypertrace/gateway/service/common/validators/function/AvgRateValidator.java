@@ -2,6 +2,9 @@ package org.hypertrace.gateway.service.common.validators.function;
 
 import static org.hypertrace.gateway.service.v1.common.Expression.ValueCase.HEALTH;
 
+import java.time.Duration;
+import java.time.format.DateTimeParseException;
+import java.time.temporal.ChronoUnit;
 import org.hypertrace.gateway.service.v1.common.FunctionExpression;
 import org.hypertrace.gateway.service.v1.common.FunctionType;
 import org.hypertrace.gateway.service.v1.common.ValueType;
@@ -30,13 +33,13 @@ public class AvgRateValidator extends FunctionExpressionValidator {
           columnIdentifierArgSet = true;
           break;
         case LITERAL:
-          // Need the Period to be set
+          // Need the Period to be set in ISO format
           checkArgument(
               argument.getLiteral().hasValue()
-                  && argument.getLiteral().getValue().getValueType() == ValueType.LONG,
-              "Period not set as a Long Type");
-          Long period = argument.getLiteral().getValue().getLong();
-          checkArgument(period > 0L, "Period should be > 0");
+                  && argument.getLiteral().getValue().getValueType() == ValueType.STRING,
+              "Period not set as a STRING Type");
+          String period = argument.getLiteral().getValue().getString();
+          checkArgument(isoDurationToSeconds(period) > 0L, "Period should be > 0");
           periodArgSet = true;
           break;
         default:
@@ -52,5 +55,16 @@ public class AvgRateValidator extends FunctionExpressionValidator {
   @Override
   protected Logger getLogger() {
     return LOG;
+  }
+
+  private static long isoDurationToSeconds(String duration) {
+    try {
+      Duration d = java.time.Duration.parse(duration);
+      return d.get(ChronoUnit.SECONDS);
+    } catch (DateTimeParseException ex) {
+      throw new IllegalArgumentException(
+          String.format(
+              "Unsupported string format for duration: %s, expects iso string format", duration));
+    }
   }
 }

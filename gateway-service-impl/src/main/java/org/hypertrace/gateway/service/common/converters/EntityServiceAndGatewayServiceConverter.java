@@ -19,7 +19,6 @@ import org.hypertrace.gateway.service.common.AttributeMetadataProvider;
 import org.hypertrace.gateway.service.common.util.AttributeMetadataUtil;
 import org.hypertrace.gateway.service.entity.EntitiesRequestContext;
 import org.hypertrace.gateway.service.entity.config.TimestampConfigs;
-import org.hypertrace.gateway.service.v1.common.FunctionType;
 import org.hypertrace.gateway.service.v1.entity.EntitiesRequest;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -165,21 +164,7 @@ public class EntityServiceAndGatewayServiceConverter {
             .setFunctionName(function.getFunction().name())
             .setAlias(function.getAlias());
 
-    // AVGRATE is adding a specific implementation because Pinot does not directly support this
-    // function
     switch (function.getFunction()) {
-      case AVGRATE:
-        {
-          builder.setFunctionName(FunctionType.SUM.name()).setAlias(function.getAlias());
-
-          // Adds only the argument that is a column identifier for now.
-          List<org.hypertrace.gateway.service.v1.common.Expression> columns =
-              function.getArgumentsList().stream()
-                  .filter(org.hypertrace.gateway.service.v1.common.Expression::hasColumnIdentifier)
-                  .collect(Collectors.toList());
-          columns.forEach(e -> builder.addArguments(convertToEntityServiceExpression(e)));
-          break;
-        }
       case PERCENTILE:
         {
           org.hypertrace.gateway.service.v1.common.Expression percentileExp =
