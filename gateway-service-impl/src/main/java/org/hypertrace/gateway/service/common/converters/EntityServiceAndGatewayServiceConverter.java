@@ -1,5 +1,6 @@
 package org.hypertrace.gateway.service.common.converters;
 
+import java.time.Duration;
 import java.util.List;
 import java.util.Map;
 import java.util.stream.Collectors;
@@ -19,6 +20,7 @@ import org.hypertrace.gateway.service.common.AttributeMetadataProvider;
 import org.hypertrace.gateway.service.common.util.AttributeMetadataUtil;
 import org.hypertrace.gateway.service.entity.EntitiesRequestContext;
 import org.hypertrace.gateway.service.entity.config.TimestampConfigs;
+import org.hypertrace.gateway.service.v1.common.FunctionType;
 import org.hypertrace.gateway.service.v1.entity.EntitiesRequest;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -157,6 +159,11 @@ public class EntityServiceAndGatewayServiceConverter {
         .build();
   }
 
+  private static String longToIso(org.hypertrace.gateway.service.v1.common.Expression expression) {
+    long val = expression.getLiteral().getValue().getLong();
+    return Duration.ofSeconds(val).toString();
+  }
+
   private static Function convertToQueryFunction(
       org.hypertrace.gateway.service.v1.common.FunctionExpression function) {
     Function.Builder builder =
@@ -189,6 +196,34 @@ public class EntityServiceAndGatewayServiceConverter {
       default:
         {
           builder.setFunctionName(function.getFunction().name()).setAlias(function.getAlias());
+
+          // Backward compatibility to handle long values
+          if (function.getFunction() == FunctionType.AVGRATE) {
+            List<org.hypertrace.gateway.service.v1.common.Expression> columns =
+                function.getArgumentsList().stream()
+                    .filter(
+                        e ->
+                            e.hasLiteral()
+                                && e.getLiteral().getValue().getValueType()
+                                    == org.hypertrace.gateway.service.v1.common.ValueType.LONG)
+                    .collect(Collectors.toList());
+
+            if (columns.size() > 0) {
+              columns.forEach(
+                  e ->
+                      builder.addArguments(
+                          Expression.newBuilder()
+                              .setLiteral(
+                                  LiteralConstant.newBuilder()
+                                      .setValue(
+                                          Value.newBuilder()
+                                              .setString(longToIso(e))
+                                              .setValueType(ValueType.STRING))
+                                      .build())
+                              .build()));
+              break;
+            }
+          }
 
           if (function.getArgumentsCount() > 0) {
             function
