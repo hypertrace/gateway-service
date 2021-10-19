@@ -34,12 +34,23 @@ public class AvgRateValidator extends FunctionExpressionValidator {
           break;
         case LITERAL:
           // Need the Period to be set in ISO format
+          // Added support for backward compatibility so can be long as well (do not use)
+
           checkArgument(
               argument.getLiteral().hasValue()
-                  && argument.getLiteral().getValue().getValueType() == ValueType.STRING,
-              "Period not set as a STRING Type");
-          String period = argument.getLiteral().getValue().getString();
-          checkArgument(isoDurationToSeconds(period) > 0L, "Period should be > 0");
+                  && (argument.getLiteral().getValue().getValueType() == ValueType.STRING
+                      || argument.getLiteral().getValue().getValueType() == ValueType.LONG),
+              "Period not set as a STRING/LONG Type");
+
+          long period;
+          if (argument.getLiteral().getValue().getValueType() == ValueType.STRING) {
+            String periodInIso = argument.getLiteral().getValue().getString();
+            period = isoDurationToSeconds(periodInIso);
+          } else {
+            period = argument.getLiteral().getValue().getLong();
+          }
+
+          checkArgument(period > 0L, "Period should be > 0");
           periodArgSet = true;
           break;
         default:

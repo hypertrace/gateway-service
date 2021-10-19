@@ -117,10 +117,7 @@ public class QueryServiceEntityFetcherTests {
                 Expression.newBuilder()
                     .setLiteral(
                         LiteralConstant.newBuilder()
-                            .setValue(
-                                Value.newBuilder()
-                                    .setString("PT1M")
-                                    .setValueType(ValueType.STRING)))
+                            .setValue(Value.newBuilder().setLong(60).setValueType(ValueType.LONG)))
                     .build()));
 
     EntitiesRequest entitiesRequest =
