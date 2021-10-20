@@ -9,13 +9,10 @@ import org.apache.commons.lang3.StringUtils;
 import org.apache.commons.lang3.tuple.ImmutablePair;
 import org.hypertrace.core.attribute.service.v1.AttributeKind;
 import org.hypertrace.core.attribute.service.v1.AttributeMetadata;
-import org.hypertrace.core.query.service.api.ColumnMetadata;
-import org.hypertrace.gateway.service.common.converters.QueryAndGatewayDtoConverter;
 import org.hypertrace.gateway.service.v1.common.Expression;
 import org.hypertrace.gateway.service.v1.common.Expression.ValueCase;
 import org.hypertrace.gateway.service.v1.common.FunctionExpression;
 import org.hypertrace.gateway.service.v1.common.FunctionType;
-import org.hypertrace.gateway.service.v1.common.Value;
 
 /** Class with some utility methods around Aggregated metrics, alias in the entity requests. */
 public class MetricAggregationFunctionUtil {
@@ -113,20 +110,5 @@ public class MetricAggregationFunctionUtil {
       default:
         return metadata.getValueKind();
     }
-  }
-
-  public static Value getValueFromFunction(
-      long startTime,
-      long endTime,
-      Map<String, AttributeMetadata> attributeMetadataMap,
-      org.hypertrace.core.query.service.api.Value column,
-      ColumnMetadata metadata,
-      FunctionExpression functionExpression) {
-    return QueryAndGatewayDtoConverter.convertToGatewayValueForMetricValue(
-        MetricAggregationFunctionUtil.getValueTypeFromFunction(
-            functionExpression, attributeMetadataMap),
-        attributeMetadataMap,
-        metadata,
-        column);
   }
 }
