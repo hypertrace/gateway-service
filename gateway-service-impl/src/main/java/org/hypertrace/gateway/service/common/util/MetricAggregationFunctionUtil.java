@@ -122,14 +122,11 @@ public class MetricAggregationFunctionUtil {
       org.hypertrace.core.query.service.api.Value column,
       ColumnMetadata metadata,
       FunctionExpression functionExpression) {
-    Value convertedValue;
-    convertedValue =
-        QueryAndGatewayDtoConverter.convertToGatewayValueForMetricValue(
-            MetricAggregationFunctionUtil.getValueTypeFromFunction(
-                functionExpression, attributeMetadataMap),
-            attributeMetadataMap,
-            metadata,
-            column);
-    return convertedValue;
+    return QueryAndGatewayDtoConverter.convertToGatewayValueForMetricValue(
+        MetricAggregationFunctionUtil.getValueTypeFromFunction(
+            functionExpression, attributeMetadataMap),
+        attributeMetadataMap,
+        metadata,
+        column);
   }
 }

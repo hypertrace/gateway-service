@@ -159,11 +159,6 @@ public class EntityServiceAndGatewayServiceConverter {
         .build();
   }
 
-  private static String longToIso(org.hypertrace.gateway.service.v1.common.Expression expression) {
-    long val = expression.getLiteral().getValue().getLong();
-    return Duration.ofSeconds(val).toString();
-  }
-
   private static Function convertToQueryFunction(
       org.hypertrace.gateway.service.v1.common.FunctionExpression function) {
     Function.Builder builder =
@@ -210,17 +205,21 @@ public class EntityServiceAndGatewayServiceConverter {
 
             if (columns.size() > 0) {
               columns.forEach(
-                  e ->
-                      builder.addArguments(
-                          Expression.newBuilder()
-                              .setLiteral(
-                                  LiteralConstant.newBuilder()
-                                      .setValue(
-                                          Value.newBuilder()
-                                              .setString(longToIso(e))
-                                              .setValueType(ValueType.STRING))
-                                      .build())
-                              .build()));
+                  e -> {
+                    builder.addArguments(
+                        Expression.newBuilder()
+                            .setLiteral(
+                                LiteralConstant.newBuilder()
+                                    .setValue(
+                                        Value.newBuilder()
+                                            .setString(
+                                                Duration.ofSeconds(
+                                                        e.getLiteral().getValue().getLong())
+                                                    .toString())
+                                            .setValueType(ValueType.STRING))
+                                    .build())
+                            .build());
+                  });
               break;
             }
           }
