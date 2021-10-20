@@ -1,7 +1,8 @@
 package org.hypertrace.gateway.service.common.converters;
 
+import static org.hypertrace.gateway.service.common.util.QueryExpressionUtil.convertLongToIsoFormat;
+
 import com.google.common.base.Strings;
-import java.time.Duration;
 import java.util.List;
 import java.util.Map;
 import java.util.stream.Collectors;
@@ -19,7 +20,6 @@ import org.hypertrace.core.query.service.api.OrderByExpression;
 import org.hypertrace.core.query.service.api.SortOrder;
 import org.hypertrace.core.query.service.api.Value;
 import org.hypertrace.core.query.service.api.ValueType;
-import org.hypertrace.gateway.service.v1.common.FunctionType;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -341,6 +341,17 @@ public class QueryAndGatewayDtoConverter {
             .setAlias(function.getAlias());
 
     switch (function.getFunction()) {
+      case AVGRATE:
+        {
+          builder.setFunctionName(function.getFunction().name()).setAlias(function.getAlias());
+          if (function.getArgumentsCount() > 0) {
+            function
+                .getArgumentsList()
+                .forEach(
+                    e -> builder.addArguments(convertToQueryExpression(convertLongToIsoFormat(e))));
+          }
+          break;
+        }
       case PERCENTILE:
         {
           org.hypertrace.gateway.service.v1.common.Expression percentileExp =
@@ -365,38 +376,6 @@ public class QueryAndGatewayDtoConverter {
       default:
         {
           builder.setFunctionName(function.getFunction().name()).setAlias(function.getAlias());
-
-          // Backward compatibility to handle long values
-          if (function.getFunction() == FunctionType.AVGRATE) {
-            List<org.hypertrace.gateway.service.v1.common.Expression> columns =
-                function.getArgumentsList().stream()
-                    .filter(
-                        e ->
-                            e.hasLiteral()
-                                && e.getLiteral().getValue().getValueType()
-                                    == org.hypertrace.gateway.service.v1.common.ValueType.LONG)
-                    .collect(Collectors.toList());
-
-            if (columns.size() > 0) {
-              columns.forEach(
-                  e -> {
-                    builder.addArguments(
-                        Expression.newBuilder()
-                            .setLiteral(
-                                LiteralConstant.newBuilder()
-                                    .setValue(
-                                        Value.newBuilder()
-                                            .setString(
-                                                Duration.ofSeconds(
-                                                        e.getLiteral().getValue().getLong())
-                                                    .toString())
-                                            .setValueType(ValueType.STRING))
-                                    .build())
-                            .build());
-                  });
-              break;
-            }
-          }
 
           if (function.getArgumentsCount() > 0) {
             function
