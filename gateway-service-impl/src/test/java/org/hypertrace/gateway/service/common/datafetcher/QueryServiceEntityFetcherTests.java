@@ -172,8 +172,8 @@ public class QueryServiceEntityFetcherTests {
             getResultSetChunk(
                 List.of("API.apiId", "timeColumn", "SUM_API.numCalls", "AVGRATE_API.numCalls"),
                 new String[][] {
-                  {"apiId1", "10000", "34", "34"},
-                  {"apiId2", "20000", "34", "34"}
+                  {"apiId1", "10000", "34", "68"},
+                  {"apiId2", "20000", "34", "68"}
                 }));
 
     when(queryServiceClient.executeQuery(eq(expectedQueryRequest), eq(requestHeaders), eq(500)))
@@ -192,7 +192,7 @@ public class QueryServiceEntityFetcherTests {
                 Interval.newBuilder()
                     .setStartTimeMillis(10000)
                     .setEndTimeMillis(40000)
-                    .setValue(Value.newBuilder().setValueType(ValueType.DOUBLE).setDouble(34.0)))
+                    .setValue(Value.newBuilder().setValueType(ValueType.DOUBLE).setDouble(68.0)))
             .setAggregation("AVGRATE")
             .setPeriod(Period.newBuilder().setUnit("SECONDS").setValue(30).build())
             .build());
@@ -216,7 +216,7 @@ public class QueryServiceEntityFetcherTests {
                 Interval.newBuilder()
                     .setStartTimeMillis(20000)
                     .setEndTimeMillis(50000)
-                    .setValue(Value.newBuilder().setValueType(ValueType.DOUBLE).setDouble(34.0)))
+                    .setValue(Value.newBuilder().setValueType(ValueType.DOUBLE).setDouble(68.0)))
             .setAggregation("AVGRATE")
             .setPeriod(Period.newBuilder().setUnit("SECONDS").setValue(30).build())
             .build());

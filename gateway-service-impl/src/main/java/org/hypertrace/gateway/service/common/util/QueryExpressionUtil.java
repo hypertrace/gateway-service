@@ -150,9 +150,8 @@ public class QueryExpressionUtil {
         : alignToNext ? timeMillis + (periodMillis - delta) : timeMillis - delta;
   }
 
-  public static Expression convertLongToIsoFormat(Expression expression) {
-    if (expression.hasLiteral()
-        && expression.getLiteral().getValue().getValueType() == ValueType.LONG) {
+  public static Expression convertLiteralExpressionToIsoFormat(Expression expression) {
+    if (expression.getLiteral().getValue().getValueType() == ValueType.LONG) {
       return Expression.newBuilder()
           .setLiteral(
               LiteralConstant.newBuilder()

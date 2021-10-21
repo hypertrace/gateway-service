@@ -1,6 +1,6 @@
 package org.hypertrace.gateway.service.common.converters;
 
-import static org.hypertrace.gateway.service.common.util.QueryExpressionUtil.convertLongToIsoFormat;
+import static org.hypertrace.gateway.service.common.util.QueryExpressionUtil.convertLiteralExpressionToIsoFormat;
 
 import com.google.common.base.Strings;
 import java.util.List;
@@ -344,12 +344,9 @@ public class QueryAndGatewayDtoConverter {
       case AVGRATE:
         {
           builder.setFunctionName(function.getFunction().name()).setAlias(function.getAlias());
-          if (function.getArgumentsCount() > 0) {
-            function
-                .getArgumentsList()
-                .forEach(
-                    e -> builder.addArguments(convertToQueryExpression(convertLongToIsoFormat(e))));
-          }
+          function.getArgumentsList().stream()
+              .map(e -> e.hasLiteral() ? convertLiteralExpressionToIsoFormat(e) : e)
+              .forEach(e -> builder.addArguments(convertToQueryExpression(e)));
           break;
         }
       case PERCENTILE:
