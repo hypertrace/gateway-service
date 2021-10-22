@@ -28,6 +28,7 @@ import org.hypertrace.gateway.service.v1.common.Expression;
 import org.hypertrace.gateway.service.v1.common.LiteralConstant;
 import org.hypertrace.gateway.service.v1.common.Value;
 import org.hypertrace.gateway.service.v1.common.ValueType;
+import org.hypertrace.gateway.service.v1.entity.BulkEntityArrayAttributeUpdateRequest;
 import org.hypertrace.gateway.service.v1.entity.SetAttribute;
 import org.hypertrace.gateway.service.v1.entity.UpdateEntityOperation;
 import org.hypertrace.gateway.service.v1.entity.UpdateEntityRequest;
@@ -126,6 +127,53 @@ public class EdsEntityUpdaterTest {
                             .setColumnName("Test.status")))
             .build();
     verify(mockEqsClient, times(1)).update(eq(expectedEqsUpdateRequest), any());
+  }
+
+  @Test
+  void testBulkUpdateEntityArrayAttribute() {
+    EntityQueryServiceClient mockEqsClient = mock(EntityQueryServiceClient.class);
+    EdsEntityUpdater entityUpdater = new EdsEntityUpdater(mockEqsClient);
+    BulkEntityArrayAttributeUpdateRequest request =
+        BulkEntityArrayAttributeUpdateRequest.newBuilder()
+            .setEntityType("test-entity-type")
+            .addAllEntityIds(List.of("entity-id-1", "entity-id-2"))
+            .setOperation(BulkEntityArrayAttributeUpdateRequest.Operation.OPERATION_ADD)
+            .setAttribute(ColumnIdentifier.newBuilder().setColumnName("labels").build())
+            .addAllValues(
+                List.of(
+                    LiteralConstant.newBuilder()
+                        .setValue(
+                            Value.newBuilder()
+                                .setValueType(ValueType.STRING)
+                                .setString("test-value")
+                                .build())
+                        .build()))
+            .build();
+    UpdateExecutionContext context = mock(UpdateExecutionContext.class);
+    entityUpdater.bulkUpdateEntityArrayAttribute(request, context);
+    org.hypertrace.entity.query.service.v1.BulkEntityArrayAttributeUpdateRequest expectedRequest =
+        org.hypertrace.entity.query.service.v1.BulkEntityArrayAttributeUpdateRequest.newBuilder()
+            .setEntityType("test-entity-type")
+            .addAllEntityIds(List.of("entity-id-1", "entity-id-2"))
+            .setOperation(
+                org.hypertrace.entity.query.service.v1.BulkEntityArrayAttributeUpdateRequest
+                    .Operation.OPERATION_ADD)
+            .setAttribute(
+                org.hypertrace.entity.query.service.v1.ColumnIdentifier.newBuilder()
+                    .setColumnName("labels")
+                    .build())
+            .addAllValues(
+                List.of(
+                    org.hypertrace.entity.query.service.v1.LiteralConstant.newBuilder()
+                        .setValue(
+                            org.hypertrace.entity.query.service.v1.Value.newBuilder()
+                                .setValueType(
+                                    org.hypertrace.entity.query.service.v1.ValueType.STRING)
+                                .setString("test-value")
+                                .build())
+                        .build()))
+            .build();
+    verify(mockEqsClient).bulkUpdateEntityArrayAttribute(eq(expectedRequest), any());
   }
 
   private UpdateEntityRequest createResolveTestRequest(String entityId) {

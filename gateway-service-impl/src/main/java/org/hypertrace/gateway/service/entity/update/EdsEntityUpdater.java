@@ -1,6 +1,7 @@
 package org.hypertrace.gateway.service.entity.update;
 
 import java.util.Iterator;
+import java.util.stream.Collectors;
 import org.hypertrace.entity.query.service.client.EntityQueryServiceClient;
 import org.hypertrace.entity.query.service.v1.ColumnMetadata;
 import org.hypertrace.entity.query.service.v1.EntityUpdateRequest;
@@ -9,6 +10,8 @@ import org.hypertrace.entity.query.service.v1.Row;
 import org.hypertrace.entity.query.service.v1.SetAttribute;
 import org.hypertrace.entity.query.service.v1.UpdateOperation;
 import org.hypertrace.gateway.service.common.converters.EntityServiceAndGatewayServiceConverter;
+import org.hypertrace.gateway.service.v1.entity.BulkEntityArrayAttributeUpdateRequest;
+import org.hypertrace.gateway.service.v1.entity.BulkEntityArrayAttributeUpdateResponse;
 import org.hypertrace.gateway.service.v1.entity.Entity;
 import org.hypertrace.gateway.service.v1.entity.UpdateEntityRequest;
 import org.hypertrace.gateway.service.v1.entity.UpdateEntityResponse;
@@ -71,6 +74,31 @@ public class EdsEntityUpdater {
     responseBuilder.setEntity(entityBuilder);
 
     return responseBuilder;
+  }
+
+  public BulkEntityArrayAttributeUpdateResponse.Builder bulkUpdateEntityArrayAttribute(
+      BulkEntityArrayAttributeUpdateRequest request,
+      UpdateExecutionContext updateExecutionContext) {
+    org.hypertrace.entity.query.service.v1.BulkEntityArrayAttributeUpdateRequest updateRequest =
+        org.hypertrace.entity.query.service.v1.BulkEntityArrayAttributeUpdateRequest.newBuilder()
+            .setEntityType(request.getEntityType())
+            .addAllEntityIds(request.getEntityIdsList())
+            .setOperation(
+                EntityServiceAndGatewayServiceConverter
+                    .convertToBulkEntityArrayAttributeUpdateOperation(request.getOperation()))
+            .setAttribute(
+                EntityServiceAndGatewayServiceConverter.convertToQueryColumnIdentifier(
+                    request.getAttribute()))
+            .addAllValues(
+                request.getValuesList().stream()
+                    .map(
+                        value ->
+                            EntityServiceAndGatewayServiceConverter.convertToQueryLiteral(value))
+                    .collect(Collectors.toList()))
+            .build();
+    eqsClient.bulkUpdateEntityArrayAttribute(
+        updateRequest, updateExecutionContext.getRequestHeaders());
+    return BulkEntityArrayAttributeUpdateResponse.newBuilder();
   }
 
   private EntityUpdateRequest convertToEqsUpdateRequest(UpdateEntityRequest updateRequest) {

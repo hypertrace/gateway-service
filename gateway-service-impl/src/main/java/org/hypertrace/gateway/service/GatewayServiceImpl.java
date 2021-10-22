@@ -30,6 +30,8 @@ import org.hypertrace.gateway.service.span.SpanService;
 import org.hypertrace.gateway.service.trace.TracesService;
 import org.hypertrace.gateway.service.v1.baseline.BaselineEntitiesRequest;
 import org.hypertrace.gateway.service.v1.baseline.BaselineEntitiesResponse;
+import org.hypertrace.gateway.service.v1.entity.BulkEntityArrayAttributeUpdateRequest;
+import org.hypertrace.gateway.service.v1.entity.BulkEntityArrayAttributeUpdateResponse;
 import org.hypertrace.gateway.service.v1.entity.EntitiesResponse;
 import org.hypertrace.gateway.service.v1.entity.UpdateEntityRequest;
 import org.hypertrace.gateway.service.v1.entity.UpdateEntityResponse;
@@ -260,6 +262,41 @@ public class GatewayServiceImpl extends GatewayServiceGrpc.GatewayServiceImplBas
       responseObserver.onCompleted();
     } catch (Exception e) {
       LOG.error("Error while handling UpdateEntityRequest: {}.", request, e);
+      responseObserver.onError(e);
+    }
+  }
+
+  @Override
+  public void bulkUpdateEntityArrayAttribute(
+      BulkEntityArrayAttributeUpdateRequest request,
+      StreamObserver<BulkEntityArrayAttributeUpdateResponse> responseObserver) {
+    if (LOG.isDebugEnabled()) {
+      LOG.debug("Received request: {}", request);
+    }
+
+    Optional<String> tenantId =
+        org.hypertrace.core.grpcutils.context.RequestContext.CURRENT.get().getTenantId();
+    if (tenantId.isEmpty()) {
+      responseObserver.onError(new ServiceException("Tenant id is missing in the request."));
+      return;
+    }
+
+    try {
+      BulkEntityArrayAttributeUpdateResponse response =
+          entityService.bulkUpdateEntityArrayAttribute(
+              tenantId.get(),
+              request,
+              org.hypertrace.core.grpcutils.context.RequestContext.CURRENT
+                  .get()
+                  .getRequestHeaders());
+
+      if (LOG.isDebugEnabled()) {
+        LOG.debug("Received response: {}", response);
+      }
+      responseObserver.onNext(response);
+      responseObserver.onCompleted();
+    } catch (Exception e) {
+      LOG.error("Error while handling bulkUpdateEntityArrayAttribute: {}.", request, e);
       responseObserver.onError(e);
     }
   }

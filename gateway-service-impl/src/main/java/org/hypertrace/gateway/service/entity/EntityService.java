@@ -35,6 +35,8 @@ import org.hypertrace.gateway.service.entity.query.QueryNode;
 import org.hypertrace.gateway.service.entity.query.visitor.ExecutionVisitor;
 import org.hypertrace.gateway.service.entity.update.EdsEntityUpdater;
 import org.hypertrace.gateway.service.entity.update.UpdateExecutionContext;
+import org.hypertrace.gateway.service.v1.entity.BulkEntityArrayAttributeUpdateRequest;
+import org.hypertrace.gateway.service.v1.entity.BulkEntityArrayAttributeUpdateResponse;
 import org.hypertrace.gateway.service.v1.entity.EntitiesRequest;
 import org.hypertrace.gateway.service.v1.entity.EntitiesResponse;
 import org.hypertrace.gateway.service.v1.entity.Entity;
@@ -56,6 +58,9 @@ public class EntityService {
 
   private static final UpdateEntityRequestValidator updateEntityRequestValidator =
       new UpdateEntityRequestValidator();
+  private static final BulkEntityArrayAttributeUpdateRequestValidator
+      bulkEntityArrayAttributeUpdateRequestValidator =
+          new BulkEntityArrayAttributeUpdateRequestValidator();
   private final AttributeMetadataProvider metadataProvider;
   private final EntityIdColumnsConfigs entityIdColumnsConfigs;
   private final EntityInteractionsFetcher interactionsFetcher;
@@ -216,6 +221,32 @@ public class EntityService {
     // to add the capability similar to what we have for querying.
     UpdateEntityResponse.Builder responseBuilder =
         edsEntityUpdater.update(request, updateExecutionContext);
+    return responseBuilder.build();
+  }
+
+  public BulkEntityArrayAttributeUpdateResponse bulkUpdateEntityArrayAttribute(
+      String tenantId,
+      BulkEntityArrayAttributeUpdateRequest request,
+      Map<String, String> requestHeaders) {
+    Preconditions.checkArgument(
+        StringUtils.isNotBlank(request.getEntityType()),
+        "entity_type is mandatory in the request.");
+
+    RequestContext requestContext = new RequestContext(tenantId, requestHeaders);
+
+    Map<String, AttributeMetadata> attributeMetadataMap =
+        metadataProvider.getAttributesMetadata(requestContext, request.getEntityType());
+
+    bulkEntityArrayAttributeUpdateRequestValidator.validate(request, attributeMetadataMap);
+
+    UpdateExecutionContext updateExecutionContext =
+        new UpdateExecutionContext(requestHeaders, attributeMetadataMap);
+
+    // Validations have ensured that only EDS update operation is supported.
+    // If in the future we need more sophisticated update across data sources, we'll need
+    // to add the capability similar to what we have for querying.
+    BulkEntityArrayAttributeUpdateResponse.Builder responseBuilder =
+        edsEntityUpdater.bulkUpdateEntityArrayAttribute(request, updateExecutionContext);
     return responseBuilder.build();
   }
 

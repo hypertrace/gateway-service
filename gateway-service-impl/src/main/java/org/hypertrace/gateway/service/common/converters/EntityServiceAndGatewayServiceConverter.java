@@ -4,6 +4,7 @@ import java.util.List;
 import java.util.Map;
 import java.util.stream.Collectors;
 import org.hypertrace.core.attribute.service.v1.AttributeMetadata;
+import org.hypertrace.entity.query.service.v1.BulkEntityArrayAttributeUpdateRequest.Operation;
 import org.hypertrace.entity.query.service.v1.ColumnIdentifier;
 import org.hypertrace.entity.query.service.v1.EntityQueryRequest;
 import org.hypertrace.entity.query.service.v1.Expression;
@@ -456,5 +457,20 @@ public class EntityServiceAndGatewayServiceConverter {
       return convertQueryValueToGatewayValue(value);
     }
     return retValue;
+  }
+
+  public static Operation convertToBulkEntityArrayAttributeUpdateOperation(
+      org.hypertrace.gateway.service.v1.entity.BulkEntityArrayAttributeUpdateRequest.Operation
+          operation) {
+    switch (operation) {
+      case OPERATION_ADD:
+        return Operation.OPERATION_ADD;
+      case OPERATION_REMOVE:
+        return Operation.OPERATION_REMOVE;
+      case OPERATION_SET:
+        return Operation.OPERATION_SET;
+      default:
+        throw new IllegalArgumentException("Unexpected value: " + operation);
+    }
   }
 }
