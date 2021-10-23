@@ -1,6 +1,6 @@
 package org.hypertrace.gateway.service.common.converters;
 
-import static org.hypertrace.gateway.service.common.util.QueryExpressionUtil.convertLiteralExpressionToIsoFormat;
+import static org.hypertrace.gateway.service.common.util.QueryExpressionUtil.convertLiteralExpressionToIsoDurationString;
 
 import com.google.common.base.Strings;
 import java.util.List;
@@ -345,7 +345,7 @@ public class QueryAndGatewayDtoConverter {
         {
           builder.setFunctionName(function.getFunction().name()).setAlias(function.getAlias());
           function.getArgumentsList().stream()
-              .map(e -> e.hasLiteral() ? convertLiteralExpressionToIsoFormat(e) : e)
+              .map(e -> e.hasLiteral() ? convertLiteralExpressionToIsoDurationString(e) : e)
               .forEach(e -> builder.addArguments(convertToQueryExpression(e)));
           break;
         }
