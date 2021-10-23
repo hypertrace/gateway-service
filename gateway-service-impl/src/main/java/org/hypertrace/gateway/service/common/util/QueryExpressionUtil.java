@@ -1,6 +1,5 @@
 package org.hypertrace.gateway.service.common.util;
 
-import java.time.Duration;
 import java.util.Collections;
 import java.util.List;
 import java.util.concurrent.TimeUnit;
@@ -148,22 +147,5 @@ public class QueryExpressionUtil {
     return delta == 0
         ? timeMillis
         : alignToNext ? timeMillis + (periodMillis - delta) : timeMillis - delta;
-  }
-
-  public static Expression convertLiteralExpressionToIsoDurationString(Expression expression) {
-    // expression can be either long or an iso string
-    if (expression.getLiteral().getValue().getValueType() == ValueType.LONG) {
-      return Expression.newBuilder()
-          .setLiteral(
-              LiteralConstant.newBuilder()
-                  .setValue(
-                      Value.newBuilder()
-                          .setString(
-                              Duration.ofSeconds(expression.getLiteral().getValue().getLong())
-                                  .toString())
-                          .setValueType(ValueType.STRING)))
-          .build();
-    }
-    return expression;
   }
 }

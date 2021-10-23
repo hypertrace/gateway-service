@@ -384,28 +384,6 @@ public class AvgRateValidatorTest {
     }
 
     @Test
-    public void avgRateFunctionWithUnsetPeriod_shouldThrowIllegalArgException() {
-      FunctionExpression functionExpression =
-          FunctionExpression.newBuilder()
-              .setFunction(FunctionType.AVGRATE)
-              .setAlias("avg-rate-alias")
-              .addArguments(
-                  Expression.newBuilder()
-                      .setColumnIdentifier(
-                          ColumnIdentifier.newBuilder().setColumnName("test-column")))
-              .addArguments(Expression.newBuilder().setLiteral(LiteralConstant.newBuilder()))
-              .build();
-
-      var avgRateFunctionValidator = new AvgRateValidator();
-
-      Assertions.assertThrows(
-          IllegalArgumentException.class,
-          () -> {
-            avgRateFunctionValidator.validate(functionExpression);
-          });
-    }
-
-    @Test
     public void avgRateFunctionWithZeroPeriod_shouldThrowIllegalArgException() {
       FunctionExpression functionExpression =
           FunctionExpression.newBuilder()

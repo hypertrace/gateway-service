@@ -19,7 +19,6 @@ import org.hypertrace.gateway.service.common.AttributeMetadataProvider;
 import org.hypertrace.gateway.service.common.util.AttributeMetadataUtil;
 import org.hypertrace.gateway.service.entity.EntitiesRequestContext;
 import org.hypertrace.gateway.service.entity.config.TimestampConfigs;
-import org.hypertrace.gateway.service.v1.common.FunctionType;
 import org.hypertrace.gateway.service.v1.entity.EntitiesRequest;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -165,38 +164,48 @@ public class EntityServiceAndGatewayServiceConverter {
             .setFunctionName(function.getFunction().name())
             .setAlias(function.getAlias());
 
-    if (function.getFunction() == FunctionType.PERCENTILE) {
-      org.hypertrace.gateway.service.v1.common.Expression percentileExp =
-          function.getArgumentsList().stream()
-              .filter(org.hypertrace.gateway.service.v1.common.Expression::hasLiteral)
-              .findFirst()
-              .orElseThrow(); // Should have validated arguments using PercentileValidator
+    switch (function.getFunction()) {
+      case AVGRATE:
+        {
+          throw new IllegalArgumentException("Doesn't support AVGRATE on entity queries");
+        }
+      case PERCENTILE:
+        {
+          org.hypertrace.gateway.service.v1.common.Expression percentileExp =
+              function.getArgumentsList().stream()
+                  .filter(org.hypertrace.gateway.service.v1.common.Expression::hasLiteral)
+                  .findFirst()
+                  .orElseThrow(); // Should have validated arguments using PercentileValidator
 
-      long percentile = percentileExp.getLiteral().getValue().getLong();
-      String functionName = function.getFunction().name() + percentile;
-      builder.setFunctionName(functionName).setAlias(function.getAlias());
+          long percentile = percentileExp.getLiteral().getValue().getLong();
+          String functionName = function.getFunction().name() + percentile;
+          builder.setFunctionName(functionName).setAlias(function.getAlias());
 
-      // Adds only the argument that is a literal identifier. This will bring the required nth
-      // percentile.
-      List<org.hypertrace.gateway.service.v1.common.Expression> columns =
-          function.getArgumentsList().stream()
-              .filter(org.hypertrace.gateway.service.v1.common.Expression::hasColumnIdentifier)
-              .collect(Collectors.toList());
-      columns.forEach(e -> builder.addArguments(convertToEntityServiceExpression(e)));
-    } else {
-      builder.setFunctionName(function.getFunction().name()).setAlias(function.getAlias());
+          // Adds only the argument that is a literal identifier. This will bring the required nth
+          // percentile.
+          List<org.hypertrace.gateway.service.v1.common.Expression> columns =
+              function.getArgumentsList().stream()
+                  .filter(org.hypertrace.gateway.service.v1.common.Expression::hasColumnIdentifier)
+                  .collect(Collectors.toList());
+          columns.forEach(e -> builder.addArguments(convertToEntityServiceExpression(e)));
+          break;
+        }
+      default:
+        {
+          builder.setFunctionName(function.getFunction().name()).setAlias(function.getAlias());
 
-      if (function.getArgumentsCount() > 0) {
-        function
-            .getArgumentsList()
-            .forEach(
-                e -> {
-                  // Health expressions are treated differently so ignore them.
-                  if (!e.hasHealth()) {
-                    builder.addArguments(convertToEntityServiceExpression(e));
-                  }
-                });
-      }
+          if (function.getArgumentsCount() > 0) {
+            function
+                .getArgumentsList()
+                .forEach(
+                    e -> {
+                      // Health expressions are treated differently so ignore them.
+                      if (!e.hasHealth()) {
+                        builder.addArguments(convertToEntityServiceExpression(e));
+                      }
+                    });
+          }
+        }
     }
     return builder.build();
   }

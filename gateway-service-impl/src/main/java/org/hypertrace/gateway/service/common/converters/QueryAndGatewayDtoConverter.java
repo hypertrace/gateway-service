@@ -1,8 +1,7 @@
 package org.hypertrace.gateway.service.common.converters;
 
-import static org.hypertrace.gateway.service.common.util.QueryExpressionUtil.convertLiteralExpressionToIsoDurationString;
-
 import com.google.common.base.Strings;
+import java.time.Duration;
 import java.util.List;
 import java.util.Map;
 import java.util.stream.Collectors;
@@ -331,6 +330,26 @@ public class QueryAndGatewayDtoConverter {
     return LiteralConstant.newBuilder()
         .setValue(convertGatewayValueToQueryApiValue(literal.getValue()))
         .build();
+  }
+
+  private static org.hypertrace.gateway.service.v1.common.Expression
+      convertLiteralExpressionToIsoDurationString(
+          org.hypertrace.gateway.service.v1.common.Expression expression) {
+    // expression can be either long or an iso string
+    if (expression.getLiteral().getValue().getValueType()
+        == org.hypertrace.gateway.service.v1.common.ValueType.LONG) {
+      return org.hypertrace.gateway.service.v1.common.Expression.newBuilder()
+          .setLiteral(
+              org.hypertrace.gateway.service.v1.common.LiteralConstant.newBuilder()
+                  .setValue(
+                      org.hypertrace.gateway.service.v1.common.Value.newBuilder()
+                          .setString(
+                              Duration.ofSeconds(expression.getLiteral().getValue().getLong())
+                                  .toString())
+                          .setValueType(org.hypertrace.gateway.service.v1.common.ValueType.STRING)))
+          .build();
+    }
+    return expression;
   }
 
   private static Function convertToQueryFunction(
