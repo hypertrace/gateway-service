@@ -71,7 +71,7 @@ public class BaselineServiceImplTest {
     Mockito.when(
             baselineServiceQueryExecutor.executeQuery(
                 Mockito.anyMap(), Mockito.any(QueryRequest.class)))
-        .thenReturn(getResultSet("duration_ts").iterator());
+        .thenReturn(getResultSetForAvg("duration_ts").iterator());
     when(entityIdColumnsConfigs.getIdKey("SERVICE")).thenReturn(Optional.of("id"));
 
     Map<String, AttributeMetadata> attributeMap = new HashMap<>();
@@ -122,7 +122,7 @@ public class BaselineServiceImplTest {
     Mockito.when(
             baselineServiceQueryExecutor.executeQuery(
                 Mockito.anyMap(), Mockito.any(QueryRequest.class)))
-        .thenReturn(getResultSet("numCalls").iterator());
+        .thenReturn(getResultSetForAvgRate("numCalls").iterator());
     when(entityIdColumnsConfigs.getIdKey("SERVICE")).thenReturn(Optional.of("id"));
     // Attribute Metadata map contains mapping between Attributes and ID to query data.
     Map<String, AttributeMetadata> attributeMap = new HashMap<>();
@@ -148,8 +148,7 @@ public class BaselineServiceImplTest {
     BaselineEntity baselineEntity = baselineResponse.getBaselineEntityList().get(0);
     // verify the baseline for AVG RATE (medianValue/60)
     Assertions.assertEquals(
-        60.0,
-        baselineEntity.getBaselineAggregateMetricMap().get("numCalls").getValue().getDouble());
+        1.0, baselineEntity.getBaselineAggregateMetricMap().get("numCalls").getValue().getDouble());
   }
 
   @Test
@@ -172,7 +171,7 @@ public class BaselineServiceImplTest {
     Mockito.when(
             baselineServiceQueryExecutor.executeQuery(
                 Mockito.anyMap(), Mockito.any(QueryRequest.class)))
-        .thenReturn(getResultSet("duration_ts").iterator());
+        .thenReturn(getResultSetForAvg("duration_ts").iterator());
     Map<String, AttributeMetadata> attributeMap = new HashMap<>();
     AttributeMetadata attribute =
         AttributeMetadata.newBuilder().setFqn("Service.Latency").setId("Service.Id").build();
@@ -266,7 +265,7 @@ public class BaselineServiceImplTest {
         Arguments.arguments(functionExpression1), Arguments.arguments(functionExpression2));
   }
 
-  public List<ResultSetChunk> getResultSet(String alias) {
+  public List<ResultSetChunk> getResultSetForAvg(String alias) {
     long time = Instant.parse("2020-11-14T18:40:51.902Z").toEpochMilli();
 
     return List.of(
@@ -278,6 +277,21 @@ public class BaselineServiceImplTest {
               {"entity-1", String.valueOf(time - 120000), "60.0"},
               {"entity-1", String.valueOf(time - 180000), "80.0"},
               {"entity-1", String.valueOf(time - 180000), "100.0"},
+            }));
+  }
+
+  public List<ResultSetChunk> getResultSetForAvgRate(String alias) {
+    long time = Instant.parse("2020-11-14T18:40:51.902Z").toEpochMilli();
+
+    return List.of(
+        getResultSetChunk(
+            List.of("SERVICE.id", "dateTimeConvert", alias),
+            new String[][] {
+              {"entity-1", String.valueOf(time), "0.3333333333333333"},
+              {"entity-1", String.valueOf(time - 60000), "0.6666666666666666"},
+              {"entity-1", String.valueOf(time - 120000), "1.0"},
+              {"entity-1", String.valueOf(time - 180000), "1.3333333333333333"},
+              {"entity-1", String.valueOf(time - 180000), "1.6666666666666667"},
             }));
   }
 
