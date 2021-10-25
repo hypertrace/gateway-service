@@ -16,7 +16,7 @@
         },
         "RATE#results/rateLatency:Api.Trace|duration": {
           "valueType": "DOUBLE",
-          "double": 8594971.0
+          "double": 4774.983888888889
         }
       }
     }

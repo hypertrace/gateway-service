@@ -2,9 +2,6 @@ package org.hypertrace.gateway.service.common.validators.function;
 
 import static org.hypertrace.gateway.service.v1.common.Expression.ValueCase.HEALTH;
 
-import java.time.Duration;
-import java.time.format.DateTimeParseException;
-import java.time.temporal.ChronoUnit;
 import org.hypertrace.gateway.service.v1.common.FunctionExpression;
 import org.hypertrace.gateway.service.v1.common.FunctionType;
 import org.hypertrace.gateway.service.v1.common.ValueType;
@@ -33,23 +30,12 @@ public class AvgRateValidator extends FunctionExpressionValidator {
           columnIdentifierArgSet = true;
           break;
         case LITERAL:
-          // Need the Period to be set in ISO format
-          // Added support for backward compatibility so can be long as well (do not use)
-
+          // Need the Period to be set
           checkArgument(
               argument.getLiteral().hasValue()
-                  && (argument.getLiteral().getValue().getValueType() == ValueType.STRING
-                      || argument.getLiteral().getValue().getValueType() == ValueType.LONG),
-              "Period not set as a STRING/LONG Type");
-
-          long period;
-          if (argument.getLiteral().getValue().getValueType() == ValueType.STRING) {
-            String periodInIso = argument.getLiteral().getValue().getString();
-            period = isoDurationToSeconds(periodInIso);
-          } else {
-            period = argument.getLiteral().getValue().getLong();
-          }
-
+                  && argument.getLiteral().getValue().getValueType() == ValueType.LONG,
+              "Period not set as a Long Type");
+          Long period = argument.getLiteral().getValue().getLong();
           checkArgument(period > 0L, "Period should be > 0");
           periodArgSet = true;
           break;
@@ -66,16 +52,5 @@ public class AvgRateValidator extends FunctionExpressionValidator {
   @Override
   protected Logger getLogger() {
     return LOG;
-  }
-
-  private static long isoDurationToSeconds(String duration) {
-    try {
-      Duration d = java.time.Duration.parse(duration);
-      return d.get(ChronoUnit.SECONDS);
-    } catch (DateTimeParseException ex) {
-      throw new IllegalArgumentException(
-          String.format(
-              "Unsupported string format for duration: %s, expects iso string format", duration));
-    }
   }
 }
