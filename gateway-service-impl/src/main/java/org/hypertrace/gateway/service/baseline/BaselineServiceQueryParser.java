@@ -166,13 +166,12 @@ public class BaselineServiceQueryParser {
             }
 
             Value convertedValue =
-                MetricAggregationFunctionUtil.getValueFromFunction(
-                    startTime,
-                    endTime,
+                QueryAndGatewayDtoConverter.convertToGatewayValueForMetricValue(
+                    MetricAggregationFunctionUtil.getValueTypeFromFunction(
+                        timeAggregation.getAggregation(), attributeMetadataMap),
                     attributeMetadataMap,
-                    row.getColumn(i),
                     metadata,
-                    timeAggregation.getAggregation());
+                    row.getColumn(i));
 
             BaselineMetricSeries.Builder seriesBuilder =
                 metricSeriesMap.computeIfAbsent(

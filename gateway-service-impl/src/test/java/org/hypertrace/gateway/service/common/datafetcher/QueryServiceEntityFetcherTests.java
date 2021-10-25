@@ -172,8 +172,8 @@ public class QueryServiceEntityFetcherTests {
             getResultSetChunk(
                 List.of("API.apiId", "timeColumn", "SUM_API.numCalls", "AVGRATE_API.numCalls"),
                 new String[][] {
-                  {"apiId1", "10000", "34", "34"},
-                  {"apiId2", "20000", "34", "34"}
+                  {"apiId1", "10000", "34", "68"},
+                  {"apiId2", "20000", "34", "68"}
                 }));
 
     when(queryServiceClient.executeQuery(eq(expectedQueryRequest), eq(requestHeaders), eq(500)))
@@ -229,6 +229,140 @@ public class QueryServiceEntityFetcherTests {
                     .setEndTimeMillis(50000)
                     .setValue(Value.newBuilder().setValueType(ValueType.LONG).setLong(34)))
             .setAggregation("SUM")
+            .setPeriod(Period.newBuilder().setUnit("SECONDS").setValue(30).build())
+            .build());
+
+    Map<EntityKey, Builder> expectedEntityKeyBuilderResponseMap = new LinkedHashMap<>();
+    expectedEntityKeyBuilderResponseMap.put(
+        EntityKey.of("apiId1"),
+        Entity.newBuilder()
+            .setId("apiId1")
+            .setEntityType("API")
+            .putAllMetricSeries(metricSeriesMap1)
+            .putAttribute("API.id", getStringValue("apiId1")));
+    expectedEntityKeyBuilderResponseMap.put(
+        EntityKey.of("apiId2"),
+        Entity.newBuilder()
+            .setId("apiId2")
+            .setEntityType("API")
+            .putAllMetricSeries(metricSeriesMap2)
+            .putAttribute("API.id", getStringValue("apiId2")));
+
+    compareEntityFetcherResponses(
+        new EntityFetcherResponse(expectedEntityKeyBuilderResponseMap), response);
+  }
+
+  @Test
+  public void testGetTimeAggregatedMetricsForAvgRateInIsoFormat() {
+
+    List<OrderByExpression> orderByExpressions = List.of(buildOrderByExpression(API_ID_ATTR));
+    long startTime = 1L;
+    long endTime = 10L;
+    int limit = 10;
+    int offset = 5;
+    String tenantId = "TENANT_ID";
+    Map<String, String> requestHeaders = Map.of("x-tenant-id", tenantId);
+    AttributeScope entityType = AttributeScope.API;
+
+    TimeAggregation timeAggregation =
+        buildTimeAggregation(
+            30,
+            API_NUM_CALLS_ATTR,
+            FunctionType.AVGRATE,
+            "AVGRATE_API.numCalls",
+            List.of(
+                Expression.newBuilder()
+                    .setLiteral(
+                        LiteralConstant.newBuilder()
+                            .setValue(
+                                Value.newBuilder()
+                                    .setString("PT1M")
+                                    .setValueType(ValueType.STRING)))
+                    .build()));
+
+    EntitiesRequest entitiesRequest =
+        EntitiesRequest.newBuilder()
+            .setEntityType(entityType.name())
+            .setStartTimeMillis(startTime)
+            .setEndTimeMillis(endTime)
+            .addTimeAggregation(timeAggregation)
+            .setFilter(
+                Filter.newBuilder()
+                    .setOperator(AND)
+                    .addChildFilter(
+                        EntitiesRequestAndResponseUtils.getTimeRangeFilter(
+                            "API.startTime", startTime, endTime))
+                    .addChildFilter(generateEQFilter(API_DISCOVERY_STATE_ATTR, "DISCOVERED")))
+            .addAllOrderBy(orderByExpressions)
+            .setLimit(limit)
+            .setOffset(offset)
+            .build();
+
+    EntitiesRequestContext entitiesRequestContext =
+        new EntitiesRequestContext(
+            tenantId, startTime, endTime, entityType.name(), "API.startTime", requestHeaders);
+
+    QueryRequest expectedQueryRequest =
+        QueryRequest.newBuilder()
+            .addSelection(
+                QueryAndGatewayDtoConverter.convertToQueryExpression(
+                    timeAggregation.getAggregation()))
+            .setFilter(
+                createQsRequestFilter(
+                    API_START_TIME_ATTR,
+                    API_ID_ATTR,
+                    startTime,
+                    endTime,
+                    createStringFilter(API_DISCOVERY_STATE_ATTR, Operator.EQ, "DISCOVERED")))
+            .addAllGroupBy(
+                List.of(API_ID_ATTR).stream()
+                    .map(QueryRequestUtil::createColumnExpression)
+                    .collect(Collectors.toList()))
+            .addGroupBy(createTimeColumnGroupByExpression(API_START_TIME_ATTR, 30))
+            .setOffset(0)
+            .setLimit(10000)
+            .build();
+
+    List<ResultSetChunk> resultSetChunks =
+        List.of(
+            getResultSetChunk(
+                List.of("API.apiId", "timeColumn", "AVGRATE_API.numCalls"),
+                new String[][] {
+                  {"apiId1", "10000", "34"},
+                  {"apiId2", "20000", "34"}
+                }));
+
+    when(queryServiceClient.executeQuery(eq(expectedQueryRequest), eq(requestHeaders), eq(500)))
+        .thenReturn(resultSetChunks.iterator());
+
+    EntityFetcherResponse response =
+        queryServiceEntityFetcher.getTimeAggregatedMetrics(entitiesRequestContext, entitiesRequest);
+
+    assertEquals(2, response.size());
+
+    Map<String, MetricSeries> metricSeriesMap1 = new LinkedHashMap<>();
+    metricSeriesMap1.put(
+        "AVGRATE_API.numCalls",
+        MetricSeries.newBuilder()
+            .addValue(
+                Interval.newBuilder()
+                    .setStartTimeMillis(10000)
+                    .setEndTimeMillis(40000)
+                    .setValue(Value.newBuilder().setValueType(ValueType.DOUBLE).setDouble(34.0)))
+            .setAggregation("AVGRATE")
+            .setPeriod(Period.newBuilder().setUnit("SECONDS").setValue(30).build())
+            .build());
+
+    Map<String, MetricSeries> metricSeriesMap2 = new LinkedHashMap<>();
+    metricSeriesMap2.put(
+        "AVGRATE_API.numCalls",
+        MetricSeries.newBuilder()
+            .addValue(
+                Interval.newBuilder()
+                    .setStartTimeMillis(20000)
+                    .setEndTimeMillis(50000)
+                    .setValue(Value.newBuilder().setValueType(ValueType.DOUBLE).setDouble(34.0)))
+            .setAggregation("AVGRATE")
             .setPeriod(Period.newBuilder().setUnit("SECONDS").setValue(30).build())
             .build());
 
