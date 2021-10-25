@@ -312,11 +312,13 @@ public class QueryServiceEntityFetcher implements IEntityFetcher {
     Health health = Health.NOT_COMPUTED;
 
     Value convertedValue =
-        QueryAndGatewayDtoConverter.convertToGatewayValueForMetricValue(
-            MetricAggregationFunctionUtil.getValueTypeFromFunction(function, attributeMetadataMap),
+        MetricAggregationFunctionUtil.getValueFromFunction(
+            entitiesRequest.getStartTimeMillis(),
+            entitiesRequest.getEndTimeMillis(),
             attributeMetadataMap,
+            columnValue,
             metadata,
-            columnValue);
+            function);
 
     entityBuilder.putMetric(
         metadata.getColumnName(),
@@ -437,12 +439,13 @@ public class QueryServiceEntityFetcher implements IEntityFetcher {
               }
 
               Value convertedValue =
-                  QueryAndGatewayDtoConverter.convertToGatewayValueForMetricValue(
-                      MetricAggregationFunctionUtil.getValueTypeFromFunction(
-                          timeAggregation.getAggregation().getFunction(), attributeMetadataMap),
+                  MetricAggregationFunctionUtil.getValueFromFunction(
+                      startTime,
+                      endTime,
                       attributeMetadataMap,
+                      row.getColumn(i),
                       metadata,
-                      row.getColumn(i));
+                      timeAggregation.getAggregation().getFunction());
 
               List<org.hypertrace.gateway.service.v1.common.Expression> healthExpressions =
                   timeAggregation.getAggregation().getFunction().getArgumentsList().stream()
