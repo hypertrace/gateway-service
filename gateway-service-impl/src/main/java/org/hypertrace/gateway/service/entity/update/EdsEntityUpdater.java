@@ -10,8 +10,8 @@ import org.hypertrace.entity.query.service.v1.Row;
 import org.hypertrace.entity.query.service.v1.SetAttribute;
 import org.hypertrace.entity.query.service.v1.UpdateOperation;
 import org.hypertrace.gateway.service.common.converters.EntityServiceAndGatewayServiceConverter;
-import org.hypertrace.gateway.service.v1.entity.BulkEntityArrayAttributeUpdateRequest;
-import org.hypertrace.gateway.service.v1.entity.BulkEntityArrayAttributeUpdateResponse;
+import org.hypertrace.gateway.service.v1.entity.BulkUpdateEntityArrayAttributeRequest;
+import org.hypertrace.gateway.service.v1.entity.BulkUpdateEntityArrayAttributeResponse;
 import org.hypertrace.gateway.service.v1.entity.Entity;
 import org.hypertrace.gateway.service.v1.entity.UpdateEntityRequest;
 import org.hypertrace.gateway.service.v1.entity.UpdateEntityResponse;
@@ -76,8 +76,8 @@ public class EdsEntityUpdater {
     return responseBuilder;
   }
 
-  public BulkEntityArrayAttributeUpdateResponse.Builder bulkUpdateEntityArrayAttribute(
-      BulkEntityArrayAttributeUpdateRequest request,
+  public BulkUpdateEntityArrayAttributeResponse bulkUpdateEntityArrayAttribute(
+      BulkUpdateEntityArrayAttributeRequest request,
       UpdateExecutionContext updateExecutionContext) {
     org.hypertrace.entity.query.service.v1.BulkEntityArrayAttributeUpdateRequest updateRequest =
         org.hypertrace.entity.query.service.v1.BulkEntityArrayAttributeUpdateRequest.newBuilder()
@@ -98,7 +98,7 @@ public class EdsEntityUpdater {
             .build();
     eqsClient.bulkUpdateEntityArrayAttribute(
         updateRequest, updateExecutionContext.getRequestHeaders());
-    return BulkEntityArrayAttributeUpdateResponse.newBuilder();
+    return BulkUpdateEntityArrayAttributeResponse.newBuilder().build();
   }
 
   private EntityUpdateRequest convertToEqsUpdateRequest(UpdateEntityRequest updateRequest) {

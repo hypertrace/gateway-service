@@ -94,11 +94,11 @@ message SetAttribute {
   org.hypertrace.gateway.service.v1.common.LiteralConstant value = 2;
 }
 
-message BulkEntityArrayAttributeUpdateRequest {
+message BulkUpdateEntityArrayAttributeRequest {
   string entity_type = 1;
   repeated string entity_ids = 2;
-  org.hypertrace.gateway.service.v1.common.ColumnIdentifier attribute = 3;
-  Operation operation = 4;
+  Operation operation = 3;
+  org.hypertrace.gateway.service.v1.common.ColumnIdentifier attribute = 4;
   repeated org.hypertrace.gateway.service.v1.common.LiteralConstant values = 5;
 
   enum Operation {
@@ -109,5 +109,5 @@ message BulkEntityArrayAttributeUpdateRequest {
   }
 }
 
-message BulkEntityArrayAttributeUpdateResponse {
+message BulkUpdateEntityArrayAttributeResponse {
 }

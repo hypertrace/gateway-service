@@ -28,7 +28,7 @@ import org.hypertrace.gateway.service.v1.common.Expression;
 import org.hypertrace.gateway.service.v1.common.LiteralConstant;
 import org.hypertrace.gateway.service.v1.common.Value;
 import org.hypertrace.gateway.service.v1.common.ValueType;
-import org.hypertrace.gateway.service.v1.entity.BulkEntityArrayAttributeUpdateRequest;
+import org.hypertrace.gateway.service.v1.entity.BulkUpdateEntityArrayAttributeRequest;
 import org.hypertrace.gateway.service.v1.entity.SetAttribute;
 import org.hypertrace.gateway.service.v1.entity.UpdateEntityOperation;
 import org.hypertrace.gateway.service.v1.entity.UpdateEntityRequest;
@@ -133,11 +133,11 @@ public class EdsEntityUpdaterTest {
   void testBulkUpdateEntityArrayAttribute() {
     EntityQueryServiceClient mockEqsClient = mock(EntityQueryServiceClient.class);
     EdsEntityUpdater entityUpdater = new EdsEntityUpdater(mockEqsClient);
-    BulkEntityArrayAttributeUpdateRequest request =
-        BulkEntityArrayAttributeUpdateRequest.newBuilder()
+    BulkUpdateEntityArrayAttributeRequest request =
+        BulkUpdateEntityArrayAttributeRequest.newBuilder()
             .setEntityType("test-entity-type")
             .addAllEntityIds(List.of("entity-id-1", "entity-id-2"))
-            .setOperation(BulkEntityArrayAttributeUpdateRequest.Operation.OPERATION_ADD)
+            .setOperation(BulkUpdateEntityArrayAttributeRequest.Operation.OPERATION_ADD)
             .setAttribute(ColumnIdentifier.newBuilder().setColumnName("labels").build())
             .addAllValues(
                 List.of(

@@ -460,7 +460,7 @@ public class EntityServiceAndGatewayServiceConverter {
   }
 
   public static Operation convertToBulkEntityArrayAttributeUpdateOperation(
-      org.hypertrace.gateway.service.v1.entity.BulkEntityArrayAttributeUpdateRequest.Operation
+      org.hypertrace.gateway.service.v1.entity.BulkUpdateEntityArrayAttributeRequest.Operation
           operation) {
     switch (operation) {
       case OPERATION_ADD:

@@ -30,8 +30,8 @@ import org.hypertrace.gateway.service.span.SpanService;
 import org.hypertrace.gateway.service.trace.TracesService;
 import org.hypertrace.gateway.service.v1.baseline.BaselineEntitiesRequest;
 import org.hypertrace.gateway.service.v1.baseline.BaselineEntitiesResponse;
-import org.hypertrace.gateway.service.v1.entity.BulkEntityArrayAttributeUpdateRequest;
-import org.hypertrace.gateway.service.v1.entity.BulkEntityArrayAttributeUpdateResponse;
+import org.hypertrace.gateway.service.v1.entity.BulkUpdateEntityArrayAttributeRequest;
+import org.hypertrace.gateway.service.v1.entity.BulkUpdateEntityArrayAttributeResponse;
 import org.hypertrace.gateway.service.v1.entity.EntitiesResponse;
 import org.hypertrace.gateway.service.v1.entity.UpdateEntityRequest;
 import org.hypertrace.gateway.service.v1.entity.UpdateEntityResponse;
@@ -268,31 +268,26 @@ public class GatewayServiceImpl extends GatewayServiceGrpc.GatewayServiceImplBas
 
   @Override
   public void bulkUpdateEntityArrayAttribute(
-      BulkEntityArrayAttributeUpdateRequest request,
-      StreamObserver<BulkEntityArrayAttributeUpdateResponse> responseObserver) {
-    if (LOG.isDebugEnabled()) {
-      LOG.debug("Received request: {}", request);
-    }
-
-    Optional<String> tenantId =
-        org.hypertrace.core.grpcutils.context.RequestContext.CURRENT.get().getTenantId();
-    if (tenantId.isEmpty()) {
-      responseObserver.onError(new ServiceException("Tenant id is missing in the request."));
-      return;
-    }
+      BulkUpdateEntityArrayAttributeRequest request,
+      StreamObserver<BulkUpdateEntityArrayAttributeResponse> responseObserver) {
+    LOG.debug("Received request: {}", request);
 
     try {
-      BulkEntityArrayAttributeUpdateResponse response =
+      String tenantId =
+          org.hypertrace.core.grpcutils.context.RequestContext.CURRENT
+              .get()
+              .getTenantId()
+              .orElseThrow(() -> new ServiceException("Tenant id is missing in the request."));
+
+      BulkUpdateEntityArrayAttributeResponse response =
           entityService.bulkUpdateEntityArrayAttribute(
-              tenantId.get(),
+              tenantId,
               request,
               org.hypertrace.core.grpcutils.context.RequestContext.CURRENT
                   .get()
                   .getRequestHeaders());
 
-      if (LOG.isDebugEnabled()) {
-        LOG.debug("Received response: {}", response);
-      }
+      LOG.debug("Received response: {}", response);
       responseObserver.onNext(response);
       responseObserver.onCompleted();
     } catch (Exception e) {
