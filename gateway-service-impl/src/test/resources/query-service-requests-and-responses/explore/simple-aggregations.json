@@ -102,18 +102,14 @@
         },
         {
           "function": {
-            "functionName": "AVGRATE",
-            "arguments": [{
-              "columnIdentifier": {
-                "columnName": "API_TRACE.duration"
-              }
-            }, {
-              "literal": {
-                "value": {
-                  "string": "PT2S"
+            "functionName": "SUM",
+            "arguments": [
+              {
+                "columnIdentifier": {
+                  "columnName": "API_TRACE.duration"
                 }
               }
-            }],
+            ],
             "alias": "RATE#results/rateLatency:Api.Trace|duration"
           }
         }
