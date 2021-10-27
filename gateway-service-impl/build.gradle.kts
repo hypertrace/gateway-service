@@ -34,5 +34,5 @@ dependencies {
   testImplementation("org.mockito:mockito-core:3.9.0")
   testImplementation("org.mockito:mockito-inline:3.9.0")
   testImplementation("org.apache.logging.log4j:log4j-slf4j-impl:2.14.0")
-  testImplementation("io.grpc:grpc-netty:1.39.0")
+  testImplementation("io.grpc:grpc-netty:1.40.1")
 }
