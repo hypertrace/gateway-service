@@ -36,8 +36,8 @@ import org.hypertrace.gateway.service.entity.query.QueryNode;
 import org.hypertrace.gateway.service.entity.query.visitor.ExecutionVisitor;
 import org.hypertrace.gateway.service.entity.update.EdsEntityUpdater;
 import org.hypertrace.gateway.service.entity.update.UpdateExecutionContext;
-import org.hypertrace.gateway.service.v1.entity.BulkUpdateEntityArrayAttributeRequest;
-import org.hypertrace.gateway.service.v1.entity.BulkUpdateEntityArrayAttributeResponse;
+import org.hypertrace.gateway.service.v1.entity.BulkUpdateEntitiesRequest;
+import org.hypertrace.gateway.service.v1.entity.BulkUpdateEntitiesResponse;
 import org.hypertrace.gateway.service.v1.entity.EntitiesRequest;
 import org.hypertrace.gateway.service.v1.entity.EntitiesResponse;
 import org.hypertrace.gateway.service.v1.entity.Entity;
@@ -59,9 +59,8 @@ public class EntityService {
 
   private static final UpdateEntityRequestValidator updateEntityRequestValidator =
       new UpdateEntityRequestValidator();
-  private static final BulkUpdateEntityArrayAttributeRequestValidator
-      bulkEntityArrayAttributeUpdateRequestValidator =
-          new BulkUpdateEntityArrayAttributeRequestValidator();
+  private static final BulkUpdateEntitiesRequestValidator BULK_UPDATE_ENTITIES_REQUEST_VALIDATOR =
+      new BulkUpdateEntitiesRequestValidator();
   private final AttributeMetadataProvider metadataProvider;
   private final EntityIdColumnsConfigs entityIdColumnsConfigs;
   private final EntityInteractionsFetcher interactionsFetcher;
@@ -225,17 +224,14 @@ public class EntityService {
     return responseBuilder.build();
   }
 
-  public BulkUpdateEntityArrayAttributeResponse bulkUpdateEntityArrayAttribute(
-      String tenantId,
-      BulkUpdateEntityArrayAttributeRequest request,
-      Map<String, String> requestHeaders) {
+  public BulkUpdateEntitiesResponse bulkUpdateEntities(
+      String tenantId, BulkUpdateEntitiesRequest request, Map<String, String> requestHeaders) {
     RequestContext requestContext = new RequestContext(tenantId, requestHeaders);
 
     Map<String, AttributeMetadata> attributeMetadataMap =
         metadataProvider.getAttributesMetadata(requestContext, request.getEntityType());
 
-    Status status =
-        bulkEntityArrayAttributeUpdateRequestValidator.validate(request, attributeMetadataMap);
+    Status status = BULK_UPDATE_ENTITIES_REQUEST_VALIDATOR.validate(request, attributeMetadataMap);
     if (!status.isOk()) {
       LOG.error(
           "Bulk update entity array attribute request is not valid: {}", status.getDescription());
@@ -245,7 +241,7 @@ public class EntityService {
     UpdateExecutionContext updateExecutionContext =
         new UpdateExecutionContext(requestHeaders, attributeMetadataMap);
 
-    return edsEntityUpdater.bulkUpdateEntityArrayAttribute(request, updateExecutionContext);
+    return edsEntityUpdater.bulkUpdateEntities(request, updateExecutionContext);
   }
 
   private void addEntityInteractions(

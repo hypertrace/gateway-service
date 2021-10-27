@@ -94,20 +94,29 @@ message SetAttribute {
   org.hypertrace.gateway.service.v1.common.LiteralConstant value = 2;
 }
 
-message BulkUpdateEntityArrayAttributeRequest {
+message BulkUpdateEntitiesRequest {
   string entity_type = 1;
   repeated string entity_ids = 2;
-  Operation operation = 3;
-  org.hypertrace.gateway.service.v1.common.ColumnIdentifier attribute = 4;
-  repeated org.hypertrace.gateway.service.v1.common.LiteralConstant values = 5;
+  BulkUpdateEntitiesRequestOperation operation = 3;
+}
 
-  enum Operation {
-    OPERATION_UNSPECIFIED = 0;
-    OPERATION_ADD = 1;
-    OPERATION_REMOVE = 2;
-    OPERATION_SET = 3;
+message BulkUpdateEntitiesRequestOperation {
+  oneof operation {
+    MultiValuedAttributeOperation multi_valued_attribute_operation  = 1;
   }
 }
 
-message BulkUpdateEntityArrayAttributeResponse {
+message MultiValuedAttributeOperation {
+  org.hypertrace.gateway.service.v1.common.ColumnIdentifier attribute = 1;
+  repeated org.hypertrace.gateway.service.v1.common.LiteralConstant values = 2;
+  OperationType type = 3;
+  enum OperationType {
+    OPERATION_TYPE_UNSPECIFIED = 0;
+    OPERATION_TYPE_ADD = 1;
+    OPERATION_TYPE_REMOVE = 2;
+    OPERATION_TYPE_SET = 3;
+  }
+}
+
+message BulkUpdateEntitiesResponse {
 }

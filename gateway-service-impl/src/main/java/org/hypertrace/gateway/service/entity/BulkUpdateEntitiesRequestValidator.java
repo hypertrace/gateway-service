@@ -1,6 +1,6 @@
 package org.hypertrace.gateway.service.entity;
 
-import static org.hypertrace.gateway.service.v1.entity.BulkUpdateEntityArrayAttributeRequest.Operation.OPERATION_UNSPECIFIED;
+import static org.hypertrace.gateway.service.v1.entity.MultiValuedAttributeOperation.OperationType.OPERATION_TYPE_UNSPECIFIED;
 
 import io.grpc.Status;
 import java.util.Map;
@@ -8,14 +8,14 @@ import org.apache.commons.lang3.ObjectUtils;
 import org.apache.commons.lang3.StringUtils;
 import org.hypertrace.core.attribute.service.v1.AttributeMetadata;
 import org.hypertrace.core.attribute.service.v1.AttributeSource;
-import org.hypertrace.gateway.service.v1.entity.BulkUpdateEntityArrayAttributeRequest;
+import org.hypertrace.gateway.service.v1.entity.BulkUpdateEntitiesRequest;
+import org.hypertrace.gateway.service.v1.entity.MultiValuedAttributeOperation;
 
 /** Validator for bulk update for entity array attribute request. */
-public class BulkUpdateEntityArrayAttributeRequestValidator {
+public class BulkUpdateEntitiesRequestValidator {
 
   public Status validate(
-      BulkUpdateEntityArrayAttributeRequest request,
-      Map<String, AttributeMetadata> attributeMetadataMap) {
+      BulkUpdateEntitiesRequest request, Map<String, AttributeMetadata> attributeMetadataMap) {
     if (StringUtils.isBlank(request.getEntityType())) {
       return Status.INVALID_ARGUMENT.withDescription("entity_type is mandatory in the request.");
     }
@@ -24,14 +24,24 @@ public class BulkUpdateEntityArrayAttributeRequestValidator {
       return Status.INVALID_ARGUMENT.withDescription("entity_ids are mandatory in the request.");
     }
 
-    if (!request.hasAttribute()) {
+    if (!request.hasOperation()) {
+      return Status.INVALID_ARGUMENT.withDescription("operation is mandatory in the request.");
+    }
 
+    if (!request.getOperation().hasMultiValuedAttributeOperation()) {
+      return Status.INVALID_ARGUMENT.withDescription(
+          "multi valued operation is mandatory in the request.");
+    }
+
+    MultiValuedAttributeOperation multiValuedAttributeOperation =
+        request.getOperation().getMultiValuedAttributeOperation();
+    if (!multiValuedAttributeOperation.hasAttribute()) {
       return Status.INVALID_ARGUMENT.withDescription(
           "attribute needs to be specified in the request");
     }
 
     // check attribute exists
-    String attributeId = request.getAttribute().getColumnName();
+    String attributeId = multiValuedAttributeOperation.getAttribute().getColumnName();
     if (!attributeMetadataMap.containsKey(attributeId)) {
       return Status.INVALID_ARGUMENT.withDescription(attributeId + " attribute doesn't exist.");
     }
@@ -43,9 +53,9 @@ public class BulkUpdateEntityArrayAttributeRequestValidator {
           "Only EDS attributes are supported for update right now");
     }
 
-    if (request.getOperation() == OPERATION_UNSPECIFIED) {
+    if (multiValuedAttributeOperation.getType() == OPERATION_TYPE_UNSPECIFIED) {
       return Status.INVALID_ARGUMENT.withDescription(
-          "operation  needs to be correctly specified in the request");
+          "operation type needs to be correctly specified in the request");
     }
 
     return Status.OK;

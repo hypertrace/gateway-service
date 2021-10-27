@@ -30,8 +30,8 @@ import org.hypertrace.gateway.service.span.SpanService;
 import org.hypertrace.gateway.service.trace.TracesService;
 import org.hypertrace.gateway.service.v1.baseline.BaselineEntitiesRequest;
 import org.hypertrace.gateway.service.v1.baseline.BaselineEntitiesResponse;
-import org.hypertrace.gateway.service.v1.entity.BulkUpdateEntityArrayAttributeRequest;
-import org.hypertrace.gateway.service.v1.entity.BulkUpdateEntityArrayAttributeResponse;
+import org.hypertrace.gateway.service.v1.entity.BulkUpdateEntitiesRequest;
+import org.hypertrace.gateway.service.v1.entity.BulkUpdateEntitiesResponse;
 import org.hypertrace.gateway.service.v1.entity.EntitiesResponse;
 import org.hypertrace.gateway.service.v1.entity.UpdateEntityRequest;
 import org.hypertrace.gateway.service.v1.entity.UpdateEntityResponse;
@@ -267,9 +267,9 @@ public class GatewayServiceImpl extends GatewayServiceGrpc.GatewayServiceImplBas
   }
 
   @Override
-  public void bulkUpdateEntityArrayAttribute(
-      BulkUpdateEntityArrayAttributeRequest request,
-      StreamObserver<BulkUpdateEntityArrayAttributeResponse> responseObserver) {
+  public void bulkUpdateEntities(
+      BulkUpdateEntitiesRequest request,
+      StreamObserver<BulkUpdateEntitiesResponse> responseObserver) {
     LOG.debug("Received request: {}", request);
 
     try {
@@ -279,8 +279,8 @@ public class GatewayServiceImpl extends GatewayServiceGrpc.GatewayServiceImplBas
               .getTenantId()
               .orElseThrow(() -> new ServiceException("Tenant id is missing in the request."));
 
-      BulkUpdateEntityArrayAttributeResponse response =
-          entityService.bulkUpdateEntityArrayAttribute(
+      BulkUpdateEntitiesResponse response =
+          entityService.bulkUpdateEntities(
               tenantId,
               request,
               org.hypertrace.core.grpcutils.context.RequestContext.CURRENT
@@ -291,7 +291,7 @@ public class GatewayServiceImpl extends GatewayServiceGrpc.GatewayServiceImplBas
       responseObserver.onNext(response);
       responseObserver.onCompleted();
     } catch (Exception e) {
-      LOG.error("Error while handling bulkUpdateEntityArrayAttribute: {}.", request, e);
+      LOG.error("Error while handling bulkUpdateEntities: {}.", request, e);
       responseObserver.onError(e);
     }
   }

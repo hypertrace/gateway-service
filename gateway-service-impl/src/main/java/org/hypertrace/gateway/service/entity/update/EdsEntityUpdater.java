@@ -10,9 +10,10 @@ import org.hypertrace.entity.query.service.v1.Row;
 import org.hypertrace.entity.query.service.v1.SetAttribute;
 import org.hypertrace.entity.query.service.v1.UpdateOperation;
 import org.hypertrace.gateway.service.common.converters.EntityServiceAndGatewayServiceConverter;
-import org.hypertrace.gateway.service.v1.entity.BulkUpdateEntityArrayAttributeRequest;
-import org.hypertrace.gateway.service.v1.entity.BulkUpdateEntityArrayAttributeResponse;
+import org.hypertrace.gateway.service.v1.entity.BulkUpdateEntitiesRequest;
+import org.hypertrace.gateway.service.v1.entity.BulkUpdateEntitiesResponse;
 import org.hypertrace.gateway.service.v1.entity.Entity;
+import org.hypertrace.gateway.service.v1.entity.MultiValuedAttributeOperation;
 import org.hypertrace.gateway.service.v1.entity.UpdateEntityRequest;
 import org.hypertrace.gateway.service.v1.entity.UpdateEntityResponse;
 import org.slf4j.Logger;
@@ -76,21 +77,23 @@ public class EdsEntityUpdater {
     return responseBuilder;
   }
 
-  public BulkUpdateEntityArrayAttributeResponse bulkUpdateEntityArrayAttribute(
-      BulkUpdateEntityArrayAttributeRequest request,
-      UpdateExecutionContext updateExecutionContext) {
+  public BulkUpdateEntitiesResponse bulkUpdateEntities(
+      BulkUpdateEntitiesRequest request, UpdateExecutionContext updateExecutionContext) {
+    MultiValuedAttributeOperation multiValuedAttributeOperation =
+        request.getOperation().getMultiValuedAttributeOperation();
     org.hypertrace.entity.query.service.v1.BulkEntityArrayAttributeUpdateRequest updateRequest =
         org.hypertrace.entity.query.service.v1.BulkEntityArrayAttributeUpdateRequest.newBuilder()
             .setEntityType(request.getEntityType())
             .addAllEntityIds(request.getEntityIdsList())
             .setOperation(
                 EntityServiceAndGatewayServiceConverter
-                    .convertToBulkEntityArrayAttributeUpdateOperation(request.getOperation()))
+                    .convertToBulkEntityArrayAttributeUpdateOperation(
+                        multiValuedAttributeOperation.getType()))
             .setAttribute(
                 EntityServiceAndGatewayServiceConverter.convertToQueryColumnIdentifier(
-                    request.getAttribute()))
+                    multiValuedAttributeOperation.getAttribute()))
             .addAllValues(
-                request.getValuesList().stream()
+                multiValuedAttributeOperation.getValuesList().stream()
                     .map(
                         value ->
                             EntityServiceAndGatewayServiceConverter.convertToQueryLiteral(value))
@@ -98,7 +101,7 @@ public class EdsEntityUpdater {
             .build();
     eqsClient.bulkUpdateEntityArrayAttribute(
         updateRequest, updateExecutionContext.getRequestHeaders());
-    return BulkUpdateEntityArrayAttributeResponse.newBuilder().build();
+    return BulkUpdateEntitiesResponse.newBuilder().build();
   }
 
   private EntityUpdateRequest convertToEqsUpdateRequest(UpdateEntityRequest updateRequest) {

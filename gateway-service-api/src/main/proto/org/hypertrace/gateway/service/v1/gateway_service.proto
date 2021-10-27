@@ -17,8 +17,8 @@ service GatewayService {
     returns (org.hypertrace.gateway.service.v1.entity.EntitiesResponse) {}
   rpc updateEntity (org.hypertrace.gateway.service.v1.entity.UpdateEntityRequest)
     returns (org.hypertrace.gateway.service.v1.entity.UpdateEntityResponse) {}
-  rpc bulkUpdateEntityArrayAttribute (org.hypertrace.gateway.service.v1.entity.BulkUpdateEntityArrayAttributeRequest)
-    returns (org.hypertrace.gateway.service.v1.entity.BulkUpdateEntityArrayAttributeResponse) {}
+  rpc bulkUpdateEntities (org.hypertrace.gateway.service.v1.entity.BulkUpdateEntitiesRequest)
+    returns (org.hypertrace.gateway.service.v1.entity.BulkUpdateEntitiesResponse) {}
   rpc getBaselineForEntities(org.hypertrace.gateway.service.v1.baseline.BaselineEntitiesRequest)
     returns (org.hypertrace.gateway.service.v1.baseline.BaselineEntitiesResponse) {}
   rpc explore (org.hypertrace.gateway.service.v1.explore.ExploreRequest)

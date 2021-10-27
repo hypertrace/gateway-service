@@ -449,14 +449,14 @@ public class EntityServiceAndGatewayServiceConverter {
   }
 
   public static Operation convertToBulkEntityArrayAttributeUpdateOperation(
-      org.hypertrace.gateway.service.v1.entity.BulkUpdateEntityArrayAttributeRequest.Operation
+      org.hypertrace.gateway.service.v1.entity.MultiValuedAttributeOperation.OperationType
           operation) {
     switch (operation) {
-      case OPERATION_ADD:
+      case OPERATION_TYPE_ADD:
         return Operation.OPERATION_ADD;
-      case OPERATION_REMOVE:
+      case OPERATION_TYPE_REMOVE:
         return Operation.OPERATION_REMOVE;
-      case OPERATION_SET:
+      case OPERATION_TYPE_SET:
         return Operation.OPERATION_SET;
       default:
         throw new IllegalArgumentException("Unexpected value: " + operation);

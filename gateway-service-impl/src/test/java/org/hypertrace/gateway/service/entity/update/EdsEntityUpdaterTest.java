@@ -28,7 +28,9 @@ import org.hypertrace.gateway.service.v1.common.Expression;
 import org.hypertrace.gateway.service.v1.common.LiteralConstant;
 import org.hypertrace.gateway.service.v1.common.Value;
 import org.hypertrace.gateway.service.v1.common.ValueType;
-import org.hypertrace.gateway.service.v1.entity.BulkUpdateEntityArrayAttributeRequest;
+import org.hypertrace.gateway.service.v1.entity.BulkUpdateEntitiesRequest;
+import org.hypertrace.gateway.service.v1.entity.BulkUpdateEntitiesRequestOperation;
+import org.hypertrace.gateway.service.v1.entity.MultiValuedAttributeOperation;
 import org.hypertrace.gateway.service.v1.entity.SetAttribute;
 import org.hypertrace.gateway.service.v1.entity.UpdateEntityOperation;
 import org.hypertrace.gateway.service.v1.entity.UpdateEntityRequest;
@@ -133,24 +135,31 @@ public class EdsEntityUpdaterTest {
   void testBulkUpdateEntityArrayAttribute() {
     EntityQueryServiceClient mockEqsClient = mock(EntityQueryServiceClient.class);
     EdsEntityUpdater entityUpdater = new EdsEntityUpdater(mockEqsClient);
-    BulkUpdateEntityArrayAttributeRequest request =
-        BulkUpdateEntityArrayAttributeRequest.newBuilder()
+    BulkUpdateEntitiesRequest request =
+        BulkUpdateEntitiesRequest.newBuilder()
             .setEntityType("test-entity-type")
             .addAllEntityIds(List.of("entity-id-1", "entity-id-2"))
-            .setOperation(BulkUpdateEntityArrayAttributeRequest.Operation.OPERATION_ADD)
-            .setAttribute(ColumnIdentifier.newBuilder().setColumnName("labels").build())
-            .addAllValues(
-                List.of(
-                    LiteralConstant.newBuilder()
-                        .setValue(
-                            Value.newBuilder()
-                                .setValueType(ValueType.STRING)
-                                .setString("test-value")
-                                .build())
-                        .build()))
+            .setOperation(
+                BulkUpdateEntitiesRequestOperation.newBuilder()
+                    .setMultiValuedAttributeOperation(
+                        MultiValuedAttributeOperation.newBuilder()
+                            .setType(MultiValuedAttributeOperation.OperationType.OPERATION_TYPE_ADD)
+                            .setAttribute(
+                                ColumnIdentifier.newBuilder().setColumnName("labels").build())
+                            .addAllValues(
+                                List.of(
+                                    LiteralConstant.newBuilder()
+                                        .setValue(
+                                            Value.newBuilder()
+                                                .setValueType(ValueType.STRING)
+                                                .setString("test-value")
+                                                .build())
+                                        .build()))
+                            .build())
+                    .build())
             .build();
     UpdateExecutionContext context = mock(UpdateExecutionContext.class);
-    entityUpdater.bulkUpdateEntityArrayAttribute(request, context);
+    entityUpdater.bulkUpdateEntities(request, context);
     org.hypertrace.entity.query.service.v1.BulkEntityArrayAttributeUpdateRequest expectedRequest =
         org.hypertrace.entity.query.service.v1.BulkEntityArrayAttributeUpdateRequest.newBuilder()
             .setEntityType("test-entity-type")
