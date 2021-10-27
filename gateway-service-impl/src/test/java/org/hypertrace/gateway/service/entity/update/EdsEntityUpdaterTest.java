@@ -132,7 +132,7 @@ public class EdsEntityUpdaterTest {
   }
 
   @Test
-  void testBulkUpdateEntityArrayAttribute() {
+  void testBulkUpdateEntitiesRequestForMultiValueOperation() {
     EntityQueryServiceClient mockEqsClient = mock(EntityQueryServiceClient.class);
     EdsEntityUpdater entityUpdater = new EdsEntityUpdater(mockEqsClient);
     BulkUpdateEntitiesRequest request =

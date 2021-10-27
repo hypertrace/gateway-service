@@ -233,8 +233,7 @@ public class EntityService {
 
     Status status = BULK_UPDATE_ENTITIES_REQUEST_VALIDATOR.validate(request, attributeMetadataMap);
     if (!status.isOk()) {
-      LOG.error(
-          "Bulk update entity array attribute request is not valid: {}", status.getDescription());
+      LOG.error("Bulk update entities request is not valid: {}", status.getDescription());
       throw status.asRuntimeException();
     }
 
