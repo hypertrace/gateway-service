@@ -2,6 +2,7 @@ package org.hypertrace.gateway.service.entity;
 
 import com.google.common.base.Preconditions;
 import com.google.common.collect.ImmutableMap;
+import io.grpc.Status;
 import io.micrometer.core.instrument.Timer;
 import java.time.Duration;
 import java.time.Instant;
@@ -35,6 +36,8 @@ import org.hypertrace.gateway.service.entity.query.QueryNode;
 import org.hypertrace.gateway.service.entity.query.visitor.ExecutionVisitor;
 import org.hypertrace.gateway.service.entity.update.EdsEntityUpdater;
 import org.hypertrace.gateway.service.entity.update.UpdateExecutionContext;
+import org.hypertrace.gateway.service.v1.entity.BulkUpdateEntitiesRequest;
+import org.hypertrace.gateway.service.v1.entity.BulkUpdateEntitiesResponse;
 import org.hypertrace.gateway.service.v1.entity.EntitiesRequest;
 import org.hypertrace.gateway.service.v1.entity.EntitiesResponse;
 import org.hypertrace.gateway.service.v1.entity.Entity;
@@ -56,6 +59,8 @@ public class EntityService {
 
   private static final UpdateEntityRequestValidator updateEntityRequestValidator =
       new UpdateEntityRequestValidator();
+  private static final BulkUpdateEntitiesRequestValidator BULK_UPDATE_ENTITIES_REQUEST_VALIDATOR =
+      new BulkUpdateEntitiesRequestValidator();
   private final AttributeMetadataProvider metadataProvider;
   private final EntityIdColumnsConfigs entityIdColumnsConfigs;
   private final EntityInteractionsFetcher interactionsFetcher;
@@ -217,6 +222,25 @@ public class EntityService {
     UpdateEntityResponse.Builder responseBuilder =
         edsEntityUpdater.update(request, updateExecutionContext);
     return responseBuilder.build();
+  }
+
+  public BulkUpdateEntitiesResponse bulkUpdateEntities(
+      String tenantId, BulkUpdateEntitiesRequest request, Map<String, String> requestHeaders) {
+    RequestContext requestContext = new RequestContext(tenantId, requestHeaders);
+
+    Map<String, AttributeMetadata> attributeMetadataMap =
+        metadataProvider.getAttributesMetadata(requestContext, request.getEntityType());
+
+    Status status = BULK_UPDATE_ENTITIES_REQUEST_VALIDATOR.validate(request, attributeMetadataMap);
+    if (!status.isOk()) {
+      LOG.error("Bulk update entities request is not valid: {}", status.getDescription());
+      throw status.asRuntimeException();
+    }
+
+    UpdateExecutionContext updateExecutionContext =
+        new UpdateExecutionContext(requestHeaders, attributeMetadataMap);
+
+    return edsEntityUpdater.bulkUpdateEntities(request, updateExecutionContext);
   }
 
   private void addEntityInteractions(

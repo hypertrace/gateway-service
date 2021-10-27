@@ -30,6 +30,8 @@ import org.hypertrace.gateway.service.span.SpanService;
 import org.hypertrace.gateway.service.trace.TracesService;
 import org.hypertrace.gateway.service.v1.baseline.BaselineEntitiesRequest;
 import org.hypertrace.gateway.service.v1.baseline.BaselineEntitiesResponse;
+import org.hypertrace.gateway.service.v1.entity.BulkUpdateEntitiesRequest;
+import org.hypertrace.gateway.service.v1.entity.BulkUpdateEntitiesResponse;
 import org.hypertrace.gateway.service.v1.entity.EntitiesResponse;
 import org.hypertrace.gateway.service.v1.entity.UpdateEntityRequest;
 import org.hypertrace.gateway.service.v1.entity.UpdateEntityResponse;
@@ -260,6 +262,36 @@ public class GatewayServiceImpl extends GatewayServiceGrpc.GatewayServiceImplBas
       responseObserver.onCompleted();
     } catch (Exception e) {
       LOG.error("Error while handling UpdateEntityRequest: {}.", request, e);
+      responseObserver.onError(e);
+    }
+  }
+
+  @Override
+  public void bulkUpdateEntities(
+      BulkUpdateEntitiesRequest request,
+      StreamObserver<BulkUpdateEntitiesResponse> responseObserver) {
+    LOG.debug("Received request: {}", request);
+
+    try {
+      String tenantId =
+          org.hypertrace.core.grpcutils.context.RequestContext.CURRENT
+              .get()
+              .getTenantId()
+              .orElseThrow(() -> new ServiceException("Tenant id is missing in the request."));
+
+      BulkUpdateEntitiesResponse response =
+          entityService.bulkUpdateEntities(
+              tenantId,
+              request,
+              org.hypertrace.core.grpcutils.context.RequestContext.CURRENT
+                  .get()
+                  .getRequestHeaders());
+
+      LOG.debug("Received response: {}", response);
+      responseObserver.onNext(response);
+      responseObserver.onCompleted();
+    } catch (Exception e) {
+      LOG.error("Error while handling bulkUpdateEntities: {}.", request, e);
       responseObserver.onError(e);
     }
   }
