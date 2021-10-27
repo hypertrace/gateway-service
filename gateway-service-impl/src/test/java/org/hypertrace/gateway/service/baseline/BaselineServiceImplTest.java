@@ -10,7 +10,6 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
-import java.util.stream.Stream;
 import org.hypertrace.core.attribute.service.v1.AttributeMetadata;
 import org.hypertrace.core.query.service.api.QueryRequest;
 import org.hypertrace.core.query.service.api.ResultSetChunk;
@@ -31,9 +30,6 @@ import org.hypertrace.gateway.service.v1.common.Value;
 import org.hypertrace.gateway.service.v1.common.ValueType;
 import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.Test;
-import org.junit.jupiter.params.ParameterizedTest;
-import org.junit.jupiter.params.provider.Arguments;
-import org.junit.jupiter.params.provider.MethodSource;
 import org.mockito.Mockito;
 
 public class BaselineServiceImplTest {
@@ -71,7 +67,7 @@ public class BaselineServiceImplTest {
     Mockito.when(
             baselineServiceQueryExecutor.executeQuery(
                 Mockito.anyMap(), Mockito.any(QueryRequest.class)))
-        .thenReturn(getResultSetForAvg("duration_ts").iterator());
+        .thenReturn(getResultSet("duration_ts").iterator());
     when(entityIdColumnsConfigs.getIdKey("SERVICE")).thenReturn(Optional.of("id"));
 
     Map<String, AttributeMetadata> attributeMap = new HashMap<>();
@@ -99,17 +95,17 @@ public class BaselineServiceImplTest {
         baselineResponse.getBaselineEntityList().get(0).getBaselineAggregateMetricCount() > 0);
   }
 
-  @ParameterizedTest
-  @MethodSource("getFunctionExpressionForAvgRate")
-  public void testBaselineEntitiesForAggregatesForAvgRateFunction(
-      FunctionExpression functionExpression) {
+  @Test
+  public void testBaselineEntitiesForAggregatesForAvgRateFunction() {
     BaselineEntitiesRequest baselineEntitiesRequest =
         BaselineEntitiesRequest.newBuilder()
             .setEntityType("SERVICE")
             .setStartTimeMillis(Instant.parse("2020-11-14T17:40:51.902Z").toEpochMilli())
             .setEndTimeMillis(Instant.parse("2020-11-14T18:40:51.902Z").toEpochMilli())
             .addEntityIds("entity-1")
-            .addBaselineAggregateRequest(functionExpression)
+            .addBaselineAggregateRequest(
+                getFunctionExpressionForAvgRate(
+                    FunctionType.AVGRATE, "SERVICE.numCalls", "numCalls"))
             .build();
 
     // Mock section
@@ -122,7 +118,7 @@ public class BaselineServiceImplTest {
     Mockito.when(
             baselineServiceQueryExecutor.executeQuery(
                 Mockito.anyMap(), Mockito.any(QueryRequest.class)))
-        .thenReturn(getResultSetForAvgRate("numCalls").iterator());
+        .thenReturn(getResultSet("numCalls").iterator());
     when(entityIdColumnsConfigs.getIdKey("SERVICE")).thenReturn(Optional.of("id"));
     // Attribute Metadata map contains mapping between Attributes and ID to query data.
     Map<String, AttributeMetadata> attributeMap = new HashMap<>();
@@ -171,7 +167,7 @@ public class BaselineServiceImplTest {
     Mockito.when(
             baselineServiceQueryExecutor.executeQuery(
                 Mockito.anyMap(), Mockito.any(QueryRequest.class)))
-        .thenReturn(getResultSetForAvg("duration_ts").iterator());
+        .thenReturn(getResultSet("duration_ts").iterator());
     Map<String, AttributeMetadata> attributeMap = new HashMap<>();
     AttributeMetadata attribute =
         AttributeMetadata.newBuilder().setFqn("Service.Latency").setId("Service.Id").build();
@@ -220,52 +216,24 @@ public class BaselineServiceImplTest {
         .build();
   }
 
-  private static Stream<Arguments> getFunctionExpressionForAvgRate() {
-
-    FunctionType type = FunctionType.AVGRATE;
-    String columnName = "SERVICE.numCalls";
-    String alias = "numCalls";
-
-    // for iso support
-    FunctionExpression functionExpression1 =
-        FunctionExpression.newBuilder()
-            .setFunction(type)
-            .setAlias(alias)
-            .addArguments(
-                Expression.newBuilder()
-                    .setColumnIdentifier(
-                        ColumnIdentifier.newBuilder().setColumnName(columnName).setAlias(alias)))
-            .addArguments(
-                Expression.newBuilder()
-                    .setLiteral(
-                        LiteralConstant.newBuilder()
-                            .setValue(
-                                Value.newBuilder()
-                                    .setString("PT1M")
-                                    .setValueType(ValueType.STRING))))
-            .build();
-
-    // for long support
-    FunctionExpression functionExpression2 =
-        FunctionExpression.newBuilder()
-            .setFunction(type)
-            .setAlias(alias)
-            .addArguments(
-                Expression.newBuilder()
-                    .setColumnIdentifier(
-                        ColumnIdentifier.newBuilder().setColumnName(columnName).setAlias(alias)))
-            .addArguments(
-                Expression.newBuilder()
-                    .setLiteral(
-                        LiteralConstant.newBuilder()
-                            .setValue(Value.newBuilder().setLong(60).setValueType(ValueType.LONG))))
-            .build();
-
-    return Stream.of(
-        Arguments.arguments(functionExpression1), Arguments.arguments(functionExpression2));
+  private FunctionExpression getFunctionExpressionForAvgRate(
+      FunctionType type, String columnName, String alias) {
+    return FunctionExpression.newBuilder()
+        .setFunction(type)
+        .setAlias(alias)
+        .addArguments(
+            Expression.newBuilder()
+                .setColumnIdentifier(
+                    ColumnIdentifier.newBuilder().setColumnName(columnName).setAlias(alias)))
+        .addArguments(
+            Expression.newBuilder()
+                .setLiteral(
+                    LiteralConstant.newBuilder()
+                        .setValue(Value.newBuilder().setLong(60).setValueType(ValueType.LONG))))
+        .build();
   }
 
-  public List<ResultSetChunk> getResultSetForAvg(String alias) {
+  public List<ResultSetChunk> getResultSet(String alias) {
     long time = Instant.parse("2020-11-14T18:40:51.902Z").toEpochMilli();
 
     return List.of(
@@ -277,21 +245,6 @@ public class BaselineServiceImplTest {
               {"entity-1", String.valueOf(time - 120000), "60.0"},
               {"entity-1", String.valueOf(time - 180000), "80.0"},
               {"entity-1", String.valueOf(time - 180000), "100.0"},
-            }));
-  }
-
-  public List<ResultSetChunk> getResultSetForAvgRate(String alias) {
-    long time = Instant.parse("2020-11-14T18:40:51.902Z").toEpochMilli();
-
-    return List.of(
-        getResultSetChunk(
-            List.of("SERVICE.id", "dateTimeConvert", alias),
-            new String[][] {
-              {"entity-1", String.valueOf(time), "0.3333333333333333"},
-              {"entity-1", String.valueOf(time - 60000), "0.6666666666666666"},
-              {"entity-1", String.valueOf(time - 120000), "1.0"},
-              {"entity-1", String.valueOf(time - 180000), "1.3333333333333333"},
-              {"entity-1", String.valueOf(time - 180000), "1.6666666666666667"},
             }));
   }
 
