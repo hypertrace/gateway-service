@@ -30,7 +30,7 @@ public class BulkUpdateEntitiesRequestValidator {
 
     if (!request.getOperation().hasMultiValuedAttributeOperation()) {
       return Status.INVALID_ARGUMENT.withDescription(
-          "multi valued operation is mandatory in the request.");
+          "Currently, the only multi-valued operation is supported in the request.");
     }
 
     MultiValuedAttributeOperation multiValuedAttributeOperation =
