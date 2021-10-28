@@ -281,13 +281,12 @@ public class RequestHandler implements RequestHandlerWithSorting {
     org.hypertrace.gateway.service.v1.common.Value gwValue;
     if (function != null) { // Function expression value
       gwValue =
-          MetricAggregationFunctionUtil.getValueFromFunction(
-              requestContext.getStartTimeMillis(),
-              requestContext.getEndTimeMillis(),
+          QueryAndGatewayDtoConverter.convertToGatewayValueForMetricValue(
+              MetricAggregationFunctionUtil.getValueTypeFromFunction(
+                  function, attributeMetadataMap),
               attributeMetadataMap,
-              queryServiceValue,
               metadata,
-              function);
+              queryServiceValue);
     } else { // Simple columnId Expression value eg. groupBy columns or column selections
       gwValue = getValueForColumnIdExpression(queryServiceValue, metadata, attributeMetadataMap);
     }

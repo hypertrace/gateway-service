@@ -1,6 +1,7 @@
 package org.hypertrace.gateway.service.common.converters;
 
 import com.google.common.base.Strings;
+import java.time.Duration;
 import java.util.List;
 import java.util.Map;
 import java.util.stream.Collectors;
@@ -18,7 +19,6 @@ import org.hypertrace.core.query.service.api.OrderByExpression;
 import org.hypertrace.core.query.service.api.SortOrder;
 import org.hypertrace.core.query.service.api.Value;
 import org.hypertrace.core.query.service.api.ValueType;
-import org.hypertrace.gateway.service.v1.common.FunctionType;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -332,6 +332,26 @@ public class QueryAndGatewayDtoConverter {
         .build();
   }
 
+  private static org.hypertrace.gateway.service.v1.common.Expression
+      convertLiteralExpressionToIsoDurationString(
+          org.hypertrace.gateway.service.v1.common.Expression expression) {
+    // expression can be either long or an iso string
+    if (expression.getLiteral().getValue().getValueType()
+        == org.hypertrace.gateway.service.v1.common.ValueType.LONG) {
+      return org.hypertrace.gateway.service.v1.common.Expression.newBuilder()
+          .setLiteral(
+              org.hypertrace.gateway.service.v1.common.LiteralConstant.newBuilder()
+                  .setValue(
+                      org.hypertrace.gateway.service.v1.common.Value.newBuilder()
+                          .setString(
+                              Duration.ofSeconds(expression.getLiteral().getValue().getLong())
+                                  .toString())
+                          .setValueType(org.hypertrace.gateway.service.v1.common.ValueType.STRING)))
+          .build();
+    }
+    return expression;
+  }
+
   private static Function convertToQueryFunction(
       org.hypertrace.gateway.service.v1.common.FunctionExpression function) {
     Function.Builder builder =
@@ -339,19 +359,13 @@ public class QueryAndGatewayDtoConverter {
             .setFunctionName(function.getFunction().name())
             .setAlias(function.getAlias());
 
-    // AVGRATE is adding a specific implementation because Pinot does not directly support this
-    // function
     switch (function.getFunction()) {
       case AVGRATE:
         {
-          builder.setFunctionName(FunctionType.SUM.name()).setAlias(function.getAlias());
-
-          // Adds only the argument that is a column identifier for now.
-          List<org.hypertrace.gateway.service.v1.common.Expression> columns =
-              function.getArgumentsList().stream()
-                  .filter(org.hypertrace.gateway.service.v1.common.Expression::hasColumnIdentifier)
-                  .collect(Collectors.toList());
-          columns.forEach(e -> builder.addArguments(convertToQueryExpression(e)));
+          builder.setFunctionName(function.getFunction().name()).setAlias(function.getAlias());
+          function.getArgumentsList().stream()
+              .map(e -> e.hasLiteral() ? convertLiteralExpressionToIsoDurationString(e) : e)
+              .forEach(e -> builder.addArguments(convertToQueryExpression(e)));
           break;
         }
       case PERCENTILE:
