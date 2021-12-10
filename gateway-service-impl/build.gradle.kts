@@ -25,7 +25,7 @@ dependencies {
   // Common utilities
   implementation("org.apache.commons:commons-lang3:3.10")
   implementation("org.apache.commons:commons-math:2.2")
-  implementation("com.google.protobuf:protobuf-java-util:3.19.1")
+  implementation("com.google.protobuf:protobuf-java-util:3.17.3")
 
   implementation("com.fasterxml.jackson.core:jackson-annotations:2.12.4")
   implementation("com.fasterxml.jackson.core:jackson-databind:2.12.4")
