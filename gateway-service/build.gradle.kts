@@ -8,16 +8,16 @@ plugins {
 dependencies {
   implementation(project(":gateway-service-impl"))
 
-  implementation("org.hypertrace.core.grpcutils:grpc-server-utils:0.5.2")
+  implementation("org.hypertrace.core.grpcutils:grpc-server-utils:0.6.2")
   implementation("org.hypertrace.core.serviceframework:platform-service-framework:0.1.29")
 
-  implementation("io.grpc:grpc-netty:1.40.1")
+  implementation("io.grpc:grpc-netty:1.42.0")
 
   // Logging
   implementation("org.slf4j:slf4j-api:1.7.30")
-  implementation("org.apache.logging.log4j:log4j-api:2.13.3")
-  implementation("org.apache.logging.log4j:log4j-core:2.13.3")
-  implementation("org.apache.logging.log4j:log4j-slf4j-impl:2.13.3")
+  implementation("org.apache.logging.log4j:log4j-api:2.15.0")
+  implementation("org.apache.logging.log4j:log4j-core:2.15.0")
+  implementation("org.apache.logging.log4j:log4j-slf4j-impl:2.15.0")
 
   // Config
   implementation("com.typesafe:config:1.4.1")
