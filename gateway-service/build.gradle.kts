@@ -15,18 +15,18 @@ dependencies {
 
   // Logging
   implementation("org.slf4j:slf4j-api:1.7.30")
-  implementation("org.apache.logging.log4j:log4j-api:2.15.0")
-  implementation("org.apache.logging.log4j:log4j-core:2.15.0")
-  implementation("org.apache.logging.log4j:log4j-slf4j-impl:2.15.0")
+  implementation("org.apache.logging.log4j:log4j-api:2.16.0")
+  implementation("org.apache.logging.log4j:log4j-core:2.16.0")
+  implementation("org.apache.logging.log4j:log4j-slf4j-impl:2.16.0")
 
   // Config
   implementation("com.typesafe:config:1.4.1")
 
   constraints {
-    runtimeOnly("io.netty:netty-codec-http2:4.1.68.Final") {
+    runtimeOnly("io.netty:netty-codec-http2:4.1.71.Final") {
       because("https://snyk.io/vuln/SNYK-JAVA-IONETTY-1083991")
     }
-    runtimeOnly("io.netty:netty-handler-proxy:4.1.68.Final") {
+    runtimeOnly("io.netty:netty-handler-proxy:4.1.71.Final") {
       because("https://snyk.io/vuln/SNYK-JAVA-IONETTY-1083991")
     }
   }
