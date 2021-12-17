@@ -3,7 +3,7 @@ package org.hypertrace.gateway.service.common.util;
 import java.util.Collections;
 import java.util.List;
 import java.util.concurrent.TimeUnit;
-import org.hypertrace.gateway.service.v1.common.ColumnIdentifier;
+import org.hypertrace.gateway.service.v1.common.AttributeExpression;
 import org.hypertrace.gateway.service.v1.common.Expression;
 import org.hypertrace.gateway.service.v1.common.Expression.Builder;
 import org.hypertrace.gateway.service.v1.common.Filter;
@@ -19,9 +19,15 @@ import org.hypertrace.gateway.service.v1.common.ValueType;
 
 public class QueryExpressionUtil {
 
-  public static Builder getColumnExpression(String columnName) {
+  public static Builder buildAttributeExpression(String attributeId) {
     return Expression.newBuilder()
-        .setColumnIdentifier(ColumnIdentifier.newBuilder().setColumnName(columnName));
+        .setAttributeExpression(AttributeExpression.newBuilder().setAttributeId(attributeId));
+  }
+
+  public static Builder buildAttributeExpression(String attributeId, String alias) {
+    return Expression.newBuilder()
+        .setAttributeExpression(
+            AttributeExpression.newBuilder().setAttributeId(attributeId).setAlias(alias));
   }
 
   public static Expression.Builder getLiteralExpression(String value) {
@@ -51,7 +57,7 @@ public class QueryExpressionUtil {
   }
 
   public static Expression.Builder getAggregateFunctionExpression(
-      String columnName,
+      String attributeId,
       FunctionType function,
       String alias,
       List<Expression> additionalArguments,
@@ -60,7 +66,7 @@ public class QueryExpressionUtil {
         FunctionExpression.newBuilder()
             .setFunction(function)
             .setAlias(alias)
-            .addArguments(getColumnExpression(columnName));
+            .addArguments(buildAttributeExpression(attributeId));
     if (!additionalArguments.isEmpty()) {
       additionalArguments.forEach(functionBuilder::addArguments);
     }
@@ -72,9 +78,9 @@ public class QueryExpressionUtil {
     return Expression.newBuilder().setFunction(functionBuilder.build());
   }
 
-  public static Filter.Builder getBooleanFilter(String columnName, boolean value) {
+  public static Filter.Builder getBooleanFilter(String attributeId, boolean value) {
     return Filter.newBuilder()
-        .setLhs(getColumnExpression(columnName))
+        .setLhs(buildAttributeExpression(attributeId))
         .setOperator(Operator.EQ)
         .setRhs(
             Expression.newBuilder()
@@ -89,25 +95,12 @@ public class QueryExpressionUtil {
                 .build());
   }
 
-  public static Filter.Builder getSimpleFilter(String columnName, String value) {
+  public static Filter buildStringFilter(String attributeId, Operator operator, String value) {
     return Filter.newBuilder()
-        .setLhs(getColumnExpression(columnName))
-        .setOperator(Operator.EQ)
-        .setRhs(getLiteralExpression(value));
-  }
-
-  public static Filter.Builder getSimpleNeqFilter(String columnName, String value) {
-    return Filter.newBuilder()
-        .setLhs(getColumnExpression(columnName))
-        .setOperator(Operator.NEQ)
-        .setRhs(getLiteralExpression(value));
-  }
-
-  public static Filter.Builder getLikeFilter(String columnName, String value) {
-    return Filter.newBuilder()
-        .setLhs(getColumnExpression(columnName))
-        .setOperator(Operator.LIKE)
-        .setRhs(getLiteralExpression(value));
+        .setLhs(buildAttributeExpression(attributeId))
+        .setOperator(operator)
+        .setRhs(getLiteralExpression(value))
+        .build();
   }
 
   public static OrderByExpression.Builder getOrderBy(
@@ -120,25 +113,7 @@ public class QueryExpressionUtil {
   public static OrderByExpression.Builder getOrderBy(String columnName, SortOrder order) {
     return OrderByExpression.newBuilder()
         .setOrder(order)
-        .setExpression(getColumnExpression(columnName));
-  }
-
-  public static Filter createTimeFilter(String columnName, Operator op, long value) {
-
-    ColumnIdentifier startTimeColumn =
-        ColumnIdentifier.newBuilder().setColumnName(columnName).build();
-    Expression lhs = Expression.newBuilder().setColumnIdentifier(startTimeColumn).build();
-
-    LiteralConstant constant =
-        LiteralConstant.newBuilder()
-            .setValue(
-                Value.newBuilder()
-                    .setString(String.valueOf(value))
-                    .setValueType(ValueType.STRING)
-                    .build())
-            .build();
-    Expression rhs = Expression.newBuilder().setLiteral(constant).build();
-    return Filter.newBuilder().setLhs(lhs).setOperator(op).setRhs(rhs).build();
+        .setExpression(buildAttributeExpression(columnName));
   }
 
   public static long alignToPeriodBoundary(long timeMillis, long periodSecs, boolean alignToNext) {

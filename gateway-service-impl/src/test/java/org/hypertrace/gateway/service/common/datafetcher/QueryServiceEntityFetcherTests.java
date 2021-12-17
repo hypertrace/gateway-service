@@ -11,7 +11,7 @@ import static org.hypertrace.gateway.service.common.EntitiesRequestAndResponseUt
 import static org.hypertrace.gateway.service.common.QueryServiceRequestAndResponseUtils.createQsAggregationExpression;
 import static org.hypertrace.gateway.service.common.QueryServiceRequestAndResponseUtils.createQsRequestFilter;
 import static org.hypertrace.gateway.service.common.QueryServiceRequestAndResponseUtils.getResultSetChunk;
-import static org.hypertrace.gateway.service.common.converters.QueryRequestUtil.createColumnExpression;
+import static org.hypertrace.gateway.service.common.converters.QueryRequestUtil.createAttributeExpression;
 import static org.hypertrace.gateway.service.common.converters.QueryRequestUtil.createStringFilter;
 import static org.hypertrace.gateway.service.common.converters.QueryRequestUtil.createTimeColumnGroupByExpression;
 import static org.hypertrace.gateway.service.v1.common.Operator.AND;
@@ -160,7 +160,7 @@ public class QueryServiceEntityFetcherTests {
                     createStringFilter(API_DISCOVERY_STATE_ATTR, Operator.EQ, "DISCOVERED")))
             .addAllGroupBy(
                 List.of(API_ID_ATTR).stream()
-                    .map(QueryRequestUtil::createColumnExpression)
+                    .map(QueryRequestUtil::createAttributeExpression)
                     .collect(Collectors.toList()))
             .addGroupBy(createTimeColumnGroupByExpression(API_START_TIME_ATTR, 30))
             .setOffset(0)
@@ -316,7 +316,7 @@ public class QueryServiceEntityFetcherTests {
                     createStringFilter(API_DISCOVERY_STATE_ATTR, Operator.EQ, "DISCOVERED")))
             .addAllGroupBy(
                 List.of(API_ID_ATTR).stream()
-                    .map(QueryRequestUtil::createColumnExpression)
+                    .map(QueryRequestUtil::createAttributeExpression)
                     .collect(Collectors.toList()))
             .addGroupBy(createTimeColumnGroupByExpression(API_START_TIME_ATTR, 30))
             .setOffset(0)
@@ -422,9 +422,9 @@ public class QueryServiceEntityFetcherTests {
 
     QueryRequest expectedQueryRequest =
         QueryRequest.newBuilder()
-            .addSelection(createColumnExpression(API_ID_ATTR))
+            .addSelection(createAttributeExpression(API_ID_ATTR))
             .addSelection(createQsAggregationExpression("SUM", API_NUM_CALLS_ATTR, "Sum_numCalls"))
-            .addSelection(createColumnExpression(API_NAME_ATTR))
+            .addSelection(createAttributeExpression(API_NAME_ATTR))
             .setFilter(
                 createQsRequestFilter(
                     API_START_TIME_ATTR,
@@ -432,8 +432,8 @@ public class QueryServiceEntityFetcherTests {
                     startTime,
                     endTime,
                     createStringFilter(API_DISCOVERY_STATE_ATTR, Operator.EQ, "DISCOVERED")))
-            .addGroupBy(createColumnExpression(API_ID_ATTR))
-            .addGroupBy(createColumnExpression(API_NAME_ATTR))
+            .addGroupBy(createAttributeExpression(API_ID_ATTR))
+            .addGroupBy(createAttributeExpression(API_NAME_ATTR))
             .setOffset(offset)
             .setLimit(QueryServiceClient.DEFAULT_QUERY_SERVICE_GROUP_BY_LIMIT)
             .addAllOrderBy(
@@ -509,7 +509,7 @@ public class QueryServiceEntityFetcherTests {
 
     QueryRequest expectedQueryRequest =
         QueryRequest.newBuilder()
-            .addSelection(createColumnExpression(API_ID_ATTR))
+            .addSelection(createAttributeExpression(API_ID_ATTR))
             .addSelection(createQsAggregationExpression("COUNT", API_ID_ATTR))
             .setFilter(
                 createQsRequestFilter(
@@ -518,7 +518,7 @@ public class QueryServiceEntityFetcherTests {
                     startTime,
                     endTime,
                     createStringFilter(API_DISCOVERY_STATE_ATTR, Operator.EQ, "DISCOVERED")))
-            .addGroupBy(createColumnExpression(API_ID_ATTR))
+            .addGroupBy(createAttributeExpression(API_ID_ATTR))
             .setOffset(offset)
             .setLimit(limit)
             .addAllOrderBy(
@@ -570,7 +570,7 @@ public class QueryServiceEntityFetcherTests {
 
     QueryRequest expectedQueryRequest =
         QueryRequest.newBuilder()
-            .addSelection(createColumnExpression(API_ID_ATTR))
+            .addSelection(createAttributeExpression(API_ID_ATTR))
             .addSelection(createQsAggregationExpression("COUNT", API_ID_ATTR))
             .setFilter(
                 createQsRequestFilter(
@@ -579,7 +579,7 @@ public class QueryServiceEntityFetcherTests {
                     startTime,
                     endTime,
                     createStringFilter(API_DISCOVERY_STATE_ATTR, Operator.EQ, "DISCOVERED")))
-            .addGroupBy(createColumnExpression(API_ID_ATTR))
+            .addGroupBy(createAttributeExpression(API_ID_ATTR))
             .setLimit(QueryServiceClient.DEFAULT_QUERY_SERVICE_GROUP_BY_LIMIT)
             .addAllOrderBy(
                 QueryAndGatewayDtoConverter.convertToQueryOrderByExpressions(orderByExpressions))
@@ -621,8 +621,8 @@ public class QueryServiceEntityFetcherTests {
 
     QueryRequest expectedQueryRequest =
         QueryRequest.newBuilder()
-            .addSelection(createColumnExpression(API_ID_ATTR))
-            .addSelection(createColumnExpression(API_NAME_ATTR))
+            .addSelection(createAttributeExpression(API_ID_ATTR))
+            .addSelection(createAttributeExpression(API_NAME_ATTR))
             .addSelection(QueryRequestUtil.createCountByColumnSelection("API.id"))
             .setFilter(
                 createQsRequestFilter(
@@ -631,8 +631,8 @@ public class QueryServiceEntityFetcherTests {
                     startTime,
                     endTime,
                     createStringFilter(SPACE_IDS_ATTR, Operator.EQ, "test-space")))
-            .addGroupBy(createColumnExpression(API_ID_ATTR))
-            .addGroupBy(createColumnExpression(API_NAME_ATTR))
+            .addGroupBy(createAttributeExpression(API_ID_ATTR))
+            .addGroupBy(createAttributeExpression(API_NAME_ATTR))
             .setOffset(offset)
             .setLimit(QueryServiceClient.DEFAULT_QUERY_SERVICE_GROUP_BY_LIMIT)
             .build();

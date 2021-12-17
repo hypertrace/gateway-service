@@ -1,16 +1,11 @@
 package org.hypertrace.gateway.service.common.transformer;
 
-import java.util.ArrayList;
-import java.util.HashSet;
-import java.util.List;
-import java.util.Set;
+import java.util.stream.Collectors;
 import org.hypertrace.gateway.service.common.AttributeMetadataProvider;
 import org.hypertrace.gateway.service.common.RequestContext;
 import org.hypertrace.gateway.service.common.config.ScopeFilterConfigs;
 import org.hypertrace.gateway.service.entity.EntitiesRequestContext;
 import org.hypertrace.gateway.service.trace.TraceScope;
-import org.hypertrace.gateway.service.v1.common.Expression;
-import org.hypertrace.gateway.service.v1.common.Expression.ValueCase;
 import org.hypertrace.gateway.service.v1.common.Filter;
 import org.hypertrace.gateway.service.v1.entity.EntitiesRequest;
 import org.hypertrace.gateway.service.v1.trace.TracesRequest;
@@ -37,10 +32,10 @@ public class RequestPreProcessor {
    * This is called once before processing the request.
    *
    * @param originalRequest The original request received
-   * @return The modified request with any additional filters depending on the scope config
+   * @return The modified request with unique selections and any additional filters depending on the
+   *     scope config
    */
-  public EntitiesRequest transformFilter(
-      EntitiesRequest originalRequest, EntitiesRequestContext context) {
+  public EntitiesRequest process(EntitiesRequest originalRequest, EntitiesRequestContext context) {
     EntitiesRequest.Builder entitiesRequestBuilder = EntitiesRequest.newBuilder(originalRequest);
     // Add any additional filters that maybe defined in the scope filters config
     Filter filter =
@@ -51,10 +46,10 @@ public class RequestPreProcessor {
             context);
 
     return entitiesRequestBuilder
-        .clearSelection()
         .setFilter(filter)
-        // Clean out duplicate columns in selections
-        .addAllSelection(getUniqueSelections(originalRequest.getSelectionList()))
+        .clearSelection()
+        .addAllSelection(
+            originalRequest.getSelectionList().stream().distinct().collect(Collectors.toList()))
         .build();
   }
 
@@ -76,25 +71,5 @@ public class RequestPreProcessor {
     tracesRequestBuilder.setFilter(filter);
 
     return tracesRequestBuilder.build();
-  }
-
-  private List<Expression> getUniqueSelections(List<Expression> expressions) {
-    List<Expression> selections = new ArrayList<>();
-    Set<String> uniqueColumnNames = new HashSet<>();
-
-    for (Expression expression : expressions) {
-      // unique columns only
-      if (expression.getValueCase() == ValueCase.COLUMNIDENTIFIER) {
-        String columnName = expression.getColumnIdentifier().getColumnName();
-        if (!uniqueColumnNames.contains(columnName)) {
-          uniqueColumnNames.add(columnName);
-          selections.add(expression);
-        }
-      } else {
-        selections.add(expression);
-      }
-    }
-
-    return selections;
   }
 }

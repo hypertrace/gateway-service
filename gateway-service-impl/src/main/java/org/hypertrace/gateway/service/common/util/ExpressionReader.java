@@ -5,47 +5,122 @@ import java.util.HashMap;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
+import java.util.Optional;
 import java.util.Set;
 import java.util.stream.Collectors;
-import java.util.stream.Stream;
 import org.hypertrace.gateway.service.v1.common.Expression;
+import org.hypertrace.gateway.service.v1.common.FunctionExpression;
 
 public class ExpressionReader {
-  public static List<Expression> getFunctionExpressions(Stream<Expression> expressionStream) {
-    return expressionStream
+  public static List<Expression> getFunctionExpressions(List<Expression> expressions) {
+    return expressions.stream()
         .filter(expression -> expression.getValueCase() == Expression.ValueCase.FUNCTION)
-        .collect(Collectors.toList());
+        .collect(Collectors.toUnmodifiableList());
   }
 
-  public static List<Expression> getColumnExpressions(Stream<Expression> expressionStream) {
-    return expressionStream
-        .filter(expression -> expression.getValueCase() == Expression.ValueCase.COLUMNIDENTIFIER)
-        .collect(Collectors.toList());
+  public static List<Expression> getAttributeExpressions(List<Expression> expressions) {
+    return expressions.stream()
+        .filter(ExpressionReader::isAttributeSelection)
+        .collect(Collectors.toUnmodifiableList());
   }
 
-  public static Set<String> extractColumns(Expression expression) {
+  public static Set<String> extractAttributeIds(Expression expression) {
     Set<String> columns = new HashSet<>();
-    extractColumns(columns, expression);
+    extractAttributeIds(columns, expression);
     return Collections.unmodifiableSet(columns);
   }
 
-  private static void extractColumns(Set<String> columns, Expression expression) {
+  private static void extractAttributeIds(Set<String> columns, Expression expression) {
     switch (expression.getValueCase()) {
       case COLUMNIDENTIFIER:
         String columnName = expression.getColumnIdentifier().getColumnName();
         columns.add(columnName);
         break;
+      case ATTRIBUTE_EXPRESSION:
+        columns.add(expression.getAttributeExpression().getAttributeId());
+        break;
       case FUNCTION:
         for (Expression exp : expression.getFunction().getArgumentsList()) {
-          extractColumns(columns, exp);
+          extractAttributeIds(columns, exp);
         }
         break;
       case ORDERBY:
-        extractColumns(columns, expression.getOrderBy().getExpression());
+        extractAttributeIds(columns, expression.getOrderBy().getExpression());
         break;
       case LITERAL:
       case VALUE_NOT_SET:
         break;
+    }
+  }
+
+  public static Optional<String> getSelectionAttributeId(Expression expression) {
+    switch (expression.getValueCase()) {
+      case COLUMNIDENTIFIER:
+        return Optional.of(expression.getColumnIdentifier().getColumnName());
+      case ATTRIBUTE_EXPRESSION:
+        return Optional.of(expression.getAttributeExpression().getAttributeId());
+      case FUNCTION:
+        return getSelectionAttributeId(expression.getFunction());
+      default:
+        return Optional.empty();
+    }
+  }
+
+  public static Optional<String> getSelectionAttributeId(FunctionExpression functionExpression) {
+    return functionExpression.getArgumentsList().stream()
+        .map(ExpressionReader::getSelectionAttributeId)
+        .flatMap(Optional::stream)
+        .findFirst();
+  }
+
+  public static boolean isSimpleAttributeSelection(Expression expression) {
+    switch (expression.getValueCase()) {
+      case ATTRIBUTE_EXPRESSION:
+        return !expression.getAttributeExpression().hasSubpath();
+      case COLUMNIDENTIFIER:
+        return true;
+      default:
+        return false;
+    }
+  }
+
+  public static boolean isAttributeSelection(Expression expression) {
+    switch (expression.getValueCase()) {
+      case ATTRIBUTE_EXPRESSION:
+      case COLUMNIDENTIFIER:
+        return true;
+      default:
+        return false;
+    }
+  }
+
+  public static Optional<String> getSelectionResultName(Expression expression) {
+    switch (expression.getValueCase()) {
+      case COLUMNIDENTIFIER:
+        return Optional.of(
+            expression.getColumnIdentifier().getAlias().isEmpty()
+                ? expression.getColumnIdentifier().getColumnName()
+                : expression.getColumnIdentifier().getAlias());
+      case ATTRIBUTE_EXPRESSION:
+        return Optional.of(
+            expression.getAttributeExpression().getAlias().isEmpty()
+                ? expression.getAttributeExpression().getAttributeId()
+                : expression.getAttributeExpression().getAlias());
+      case FUNCTION:
+        FunctionExpression functionExpression = expression.getFunction();
+        if (!functionExpression.getAlias().isEmpty()) {
+          return Optional.of(functionExpression.getAlias());
+        }
+        String argumentString =
+            functionExpression.getArgumentsList().stream()
+                .map(ExpressionReader::getSelectionResultName)
+                .flatMap(Optional::stream)
+                .collect(Collectors.joining(","));
+
+        return Optional.of(
+            String.format("%s_%s", functionExpression.getFunction(), argumentString));
+      default:
+        return Optional.empty();
     }
   }
 

@@ -12,7 +12,7 @@ dependencies {
   api(project(":gateway-service-api"))
   api(project(":gateway-service-baseline-lib"))
 
-  implementation("org.hypertrace.core.query.service:query-service-client:0.6.2")
+  implementation("org.hypertrace.core.query.service:query-service-client:0.7.0-SNAPSHOT")
   implementation("org.hypertrace.core.attribute.service:attribute-service-client:0.12.5")
   implementation("org.hypertrace.entity.service:entity-service-client:0.8.11")
   implementation("org.hypertrace.entity.service:entity-service-api:0.8.11")

@@ -107,7 +107,7 @@ public class MetricAggregationFunctionUtilTest {
         QueryExpressionUtil.getAggregateFunctionExpression(metricName, functionType, alias, true)
             .build();
     Map<String, AttributeKind> aliasToKind =
-        MetricAggregationFunctionUtil.getValueTypeFromFunction(
+        MetricAggregationFunctionUtil.getValueTypeForFunctionType(
             Collections.singletonMap(alias, expr.getFunction()), attributeMetadataMap);
     Assertions.assertEquals(expectedKind, aliasToKind.get(alias));
   }

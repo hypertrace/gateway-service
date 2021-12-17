@@ -5,7 +5,7 @@ import static org.mockito.Mockito.mock;
 import java.util.List;
 import org.hypertrace.core.query.service.client.QueryServiceClient;
 import org.hypertrace.gateway.service.common.AttributeMetadataProvider;
-import org.hypertrace.gateway.service.v1.common.ColumnIdentifier;
+import org.hypertrace.gateway.service.common.util.QueryExpressionUtil;
 import org.hypertrace.gateway.service.v1.common.Expression;
 import org.hypertrace.gateway.service.v1.common.FunctionExpression;
 import org.hypertrace.gateway.service.v1.common.FunctionType;
@@ -34,11 +34,8 @@ public class TimeAggregationsRequestHandlerTest {
                                     .setFunction(FunctionType.AVG)
                                     .setAlias("AVG_Duration")
                                     .addArguments(
-                                        Expression.newBuilder()
-                                            .setColumnIdentifier(
-                                                ColumnIdentifier.newBuilder()
-                                                    .setColumnName(
-                                                        "Api.Trace.metrics.duration_millis"))))))
+                                        QueryExpressionUtil.buildAttributeExpression(
+                                            "Api.Trace.metrics.duration_millis")))))
             .addTimeAggregation(
                 TimeAggregation.newBuilder()
                     .setPeriod(Period.newBuilder().setUnit("SECONDS").setValue(60))
@@ -49,11 +46,8 @@ public class TimeAggregationsRequestHandlerTest {
                                     .setFunction(FunctionType.MAX)
                                     .setAlias("MAX_Duration")
                                     .addArguments(
-                                        Expression.newBuilder()
-                                            .setColumnIdentifier(
-                                                ColumnIdentifier.newBuilder()
-                                                    .setColumnName(
-                                                        "Api.Trace.metrics.duration_millis"))))))
+                                        QueryExpressionUtil.buildAttributeExpression(
+                                            "Api.Trace.metrics.duration_millis")))))
             .addOrderBy(
                 OrderByExpression.newBuilder()
                     .setOrder(SortOrder.DESC)
@@ -64,11 +58,8 @@ public class TimeAggregationsRequestHandlerTest {
                                     .setFunction(FunctionType.AVG)
                                     .setAlias("AVG_Duration_different_alias")
                                     .addArguments(
-                                        Expression.newBuilder()
-                                            .setColumnIdentifier(
-                                                ColumnIdentifier.newBuilder()
-                                                    .setColumnName(
-                                                        "Api.Trace.metrics.duration_millis"))))))
+                                        QueryExpressionUtil.buildAttributeExpression(
+                                            "Api.Trace.metrics.duration_millis")))))
             .build();
 
     TimeAggregationsRequestHandler requestHandler =
@@ -83,10 +74,7 @@ public class TimeAggregationsRequestHandlerTest {
         OrderByExpression.newBuilder()
             .setOrder(SortOrder.ASC)
             .setExpression(
-                Expression.newBuilder()
-                    .setColumnIdentifier(
-                        ColumnIdentifier.newBuilder()
-                            .setColumnName(ColumnName.INTERVAL_START_TIME.name())))
+                QueryExpressionUtil.buildAttributeExpression(ColumnName.INTERVAL_START_TIME.name()))
             .build(),
         orderByExpressions.get(0));
     // Should switch out the alias in the OrderBy expression
@@ -100,10 +88,8 @@ public class TimeAggregationsRequestHandlerTest {
                             .setFunction(FunctionType.AVG)
                             .setAlias("AVG_Duration")
                             .addArguments(
-                                Expression.newBuilder()
-                                    .setColumnIdentifier(
-                                        ColumnIdentifier.newBuilder()
-                                            .setColumnName("Api.Trace.metrics.duration_millis")))))
+                                QueryExpressionUtil.buildAttributeExpression(
+                                    "Api.Trace.metrics.duration_millis"))))
             .build(),
         orderByExpressions.get(1));
   }
@@ -122,18 +108,13 @@ public class TimeAggregationsRequestHandlerTest {
                                     .setFunction(FunctionType.MAX)
                                     .setAlias("MAX_Duration")
                                     .addArguments(
-                                        Expression.newBuilder()
-                                            .setColumnIdentifier(
-                                                ColumnIdentifier.newBuilder()
-                                                    .setColumnName("duration"))))))
+                                        QueryExpressionUtil.buildAttributeExpression("duration")))))
             .addOrderBy(
                 OrderByExpression.newBuilder()
                     .setOrder(SortOrder.DESC)
                     .setExpression(
-                        Expression.newBuilder()
-                            .setColumnIdentifier(
-                                ColumnIdentifier.newBuilder()
-                                    .setColumnName(ColumnName.INTERVAL_START_TIME.name()))))
+                        QueryExpressionUtil.buildAttributeExpression(
+                            ColumnName.INTERVAL_START_TIME.name())))
             .build();
 
     TimeAggregationsRequestHandler requestHandler =
@@ -148,10 +129,8 @@ public class TimeAggregationsRequestHandlerTest {
             OrderByExpression.newBuilder()
                 .setOrder(SortOrder.DESC)
                 .setExpression(
-                    Expression.newBuilder()
-                        .setColumnIdentifier(
-                            ColumnIdentifier.newBuilder()
-                                .setColumnName(ColumnName.INTERVAL_START_TIME.name())))
+                    QueryExpressionUtil.buildAttributeExpression(
+                        ColumnName.INTERVAL_START_TIME.name()))
                 .build()),
         orderByExpressions);
   }

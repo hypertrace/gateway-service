@@ -7,8 +7,8 @@
             "childFilter": [
               {
                 "lhs": {
-                  "columnIdentifier": {
-                    "columnName": "API_TRACE.startTime"
+                  "attributeExpression": {
+                    "attributeId": "API_TRACE.startTime"
                   }
                 },
                 "operator": "GE",
@@ -23,8 +23,8 @@
               },
               {
                 "lhs": {
-                  "columnIdentifier": {
-                    "columnName": "API_TRACE.startTime"
+                  "attributeExpression": {
+                    "attributeId": "API_TRACE.startTime"
                   }
                 },
                 "operator": "LT",
@@ -43,8 +43,8 @@
             "childFilter": [
               {
                 "lhs": {
-                  "columnIdentifier": {
-                    "columnName": "API_TRACE.apiBoundaryType"
+                  "attributeExpression": {
+                    "attributeId": "API_TRACE.apiBoundaryType"
                   }
                 },
                 "operator": "EQ",
@@ -66,8 +66,8 @@
             "functionName": "AVG",
             "arguments": [
               {
-                "columnIdentifier": {
-                  "columnName": "API_TRACE.duration"
+                "attributeExpression": {
+                  "attributeId": "API_TRACE.duration"
                 }
               }
             ],
@@ -79,8 +79,8 @@
             "functionName": "PERCENTILE95",
             "arguments": [
               {
-                "columnIdentifier": {
-                  "columnName": "API_TRACE.duration"
+                "attributeExpression": {
+                  "attributeId": "API_TRACE.duration"
                 }
               }
             ],
@@ -92,8 +92,8 @@
             "functionName": "COUNT",
             "arguments": [
               {
-                "columnIdentifier": {
-                  "columnName": "API_TRACE.duration"
+                "attributeExpression": {
+                  "attributeId": "API_TRACE.duration"
                 }
               }
             ],
@@ -104,8 +104,8 @@
           "function": {
             "functionName": "AVGRATE",
             "arguments": [{
-              "columnIdentifier": {
-                "columnName": "API_TRACE.duration"
+              "attributeExpression": {
+                "attributeId": "API_TRACE.duration"
               }
             }, {
               "literal": {
@@ -125,8 +125,8 @@
               "functionName": "AVG",
               "arguments": [
                 {
-                  "columnIdentifier": {
-                    "columnName": "API_TRACE.duration"
+                  "attributeExpression": {
+                    "attributeId": "API_TRACE.duration"
                   }
                 }
               ],

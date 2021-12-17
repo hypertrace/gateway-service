@@ -1,7 +1,10 @@
 package org.hypertrace.gateway.service.common.validators.function;
 
+import static java.util.function.Predicate.not;
 import static org.hypertrace.gateway.service.v1.common.Expression.ValueCase.HEALTH;
 
+import java.util.Optional;
+import org.hypertrace.gateway.service.common.util.ExpressionReader;
 import org.hypertrace.gateway.service.v1.common.FunctionExpression;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -12,14 +15,16 @@ public class OneArgAggregationValidator extends FunctionExpressionValidator {
   @Override
   protected void validateArguments(FunctionExpression functionExpression) {
     var argumentsList = functionExpression.getArgumentsList();
-    boolean columnIdentifierArgSet = false;
+    boolean attributeIdArgSet = false;
     for (var argument : argumentsList) {
       switch (argument.getValueCase()) {
         case COLUMNIDENTIFIER:
-          // Need a non empty column name
-          String columnName = argument.getColumnIdentifier().getColumnName();
-          checkArgument(columnName != null && !columnName.isEmpty(), "columnName is null or empty");
-          columnIdentifierArgSet = true;
+        case ATTRIBUTE_EXPRESSION:
+          // Need a non empty attribute ID
+          Optional<String> attributeId = ExpressionReader.getSelectionAttributeId(argument);
+          checkArgument(
+              attributeId.filter(not(String::isEmpty)).isPresent(), "attributeId is missing");
+          attributeIdArgSet = true;
           break;
         default:
           // Only other argument allowed is Health. All others are illegal.
@@ -27,7 +32,7 @@ public class OneArgAggregationValidator extends FunctionExpressionValidator {
       }
     }
 
-    checkArgument(columnIdentifierArgSet, "ColumnIdentifier arg not set");
+    checkArgument(attributeIdArgSet, "AttributeId arg not set");
   }
 
   @Override

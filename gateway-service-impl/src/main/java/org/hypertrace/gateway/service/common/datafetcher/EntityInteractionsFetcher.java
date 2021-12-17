@@ -36,6 +36,7 @@ import org.hypertrace.gateway.service.common.RequestContext;
 import org.hypertrace.gateway.service.common.converters.QueryAndGatewayDtoConverter;
 import org.hypertrace.gateway.service.common.converters.QueryRequestUtil;
 import org.hypertrace.gateway.service.common.util.AttributeMetadataUtil;
+import org.hypertrace.gateway.service.common.util.ExpressionReader;
 import org.hypertrace.gateway.service.common.util.MetricAggregationFunctionUtil;
 import org.hypertrace.gateway.service.entity.EntityKey;
 import org.hypertrace.gateway.service.entity.config.InteractionConfig;
@@ -171,12 +172,11 @@ public class EntityInteractionsFetcher {
       throw new IllegalArgumentException(errorMsg);
     }
 
-    Set<String> selectedColumns = new HashSet<>();
-    for (Expression expression : interactionsRequest.getSelectionList()) {
-      if (expression.getValueCase() == ValueCase.COLUMNIDENTIFIER) {
-        selectedColumns.add(expression.getColumnIdentifier().getColumnName());
-      }
-    }
+    Set<String> selectedColumns =
+        interactionsRequest.getSelectionList().stream()
+            .map(ExpressionReader::getSelectionAttributeId)
+            .flatMap(Optional::stream)
+            .collect(Collectors.toUnmodifiableSet());
 
     Map<String, FunctionExpression> metricToAggFunction =
         MetricAggregationFunctionUtil.getAggMetricToFunction(
@@ -205,14 +205,12 @@ public class EntityInteractionsFetcher {
           return result;
         }
       }
-    } else {
-      if (filter.getLhs().getValueCase() == ValueCase.COLUMNIDENTIFIER) {
-        String columnName = filter.getLhs().getColumnIdentifier().getColumnName();
+    } else if (ExpressionReader.isSimpleAttributeSelection(filter.getLhs())) {
+      String attributeId = ExpressionReader.getSelectionAttributeId(filter.getLhs()).orElseThrow();
 
-        if (StringUtils.equals(columnName, FROM_ENTITY_TYPE_ATTRIBUTE_ID)
-            || StringUtils.equals(columnName, TO_ENTITY_TYPE_ATTRIBUTE_ID)) {
-          return getValues(filter.getRhs());
-        }
+      if (StringUtils.equals(attributeId, FROM_ENTITY_TYPE_ATTRIBUTE_ID)
+          || StringUtils.equals(attributeId, TO_ENTITY_TYPE_ATTRIBUTE_ID)) {
+        return getValues(filter.getRhs());
       }
     }
 
@@ -228,10 +226,11 @@ public class EntityInteractionsFetcher {
         builder.addChildFilter(convertToQueryFilter(child, otherEntityType));
       }
     } else {
-      if (filter.getLhs().getValueCase() == ValueCase.COLUMNIDENTIFIER) {
-        String columnName = filter.getLhs().getColumnIdentifier().getColumnName();
+      if (ExpressionReader.isSimpleAttributeSelection(filter.getLhs())) {
+        String attributeId =
+            ExpressionReader.getSelectionAttributeId(filter.getLhs()).orElseThrow();
 
-        switch (columnName) {
+        switch (attributeId) {
           case FROM_ENTITY_TYPE_ATTRIBUTE_ID:
             return QueryRequestUtil.createCompositeFilter(
                 Operator.AND,
@@ -368,15 +367,16 @@ public class EntityInteractionsFetcher {
     // Group by the entity id column first, then the other end entity type for the interaction.
     List<org.hypertrace.core.query.service.api.Expression> idExpressions =
         idColumns.stream()
-            .map(QueryRequestUtil::createColumnExpression)
+            .map(QueryRequestUtil::createAttributeExpression)
             .collect(Collectors.toList());
     builder.addAllGroupBy(idExpressions);
 
     List<org.hypertrace.core.query.service.api.Expression> selections = new ArrayList<>();
     for (Expression expression : interactionsRequest.getSelectionList()) {
       // Ignore the predefined selections because they're handled specially.
-      if (expression.getValueCase() == ValueCase.COLUMNIDENTIFIER
-          && SELECTIONS_TO_IGNORE.contains(expression.getColumnIdentifier().getColumnName())) {
+      if (ExpressionReader.isSimpleAttributeSelection(expression)
+          && SELECTIONS_TO_IGNORE.contains(
+              ExpressionReader.getSelectionAttributeId(expression).orElseThrow())) {
         continue;
       }
 
@@ -414,7 +414,7 @@ public class EntityInteractionsFetcher {
           getEntityIdColumnsFromInteraction(otherEntityType, incoming);
       List<org.hypertrace.core.query.service.api.Expression> otherIdExpressions =
           otherEntityIdColumns.stream()
-              .map(QueryRequestUtil::createColumnExpression)
+              .map(QueryRequestUtil::createAttributeExpression)
               .collect(Collectors.toList());
       builderCopy.addAllGroupBy(otherIdExpressions);
 
@@ -451,7 +451,7 @@ public class EntityInteractionsFetcher {
         metadataProvider.getAttributesMetadata(requestContext, SCOPE);
 
     Map<String, AttributeKind> aliasToAttributeKind =
-        MetricAggregationFunctionUtil.getValueTypeFromFunction(
+        MetricAggregationFunctionUtil.getValueTypeForFunctionType(
             metricToAggFunction, attributeMetadataMap);
 
     while (resultset.hasNext()) {

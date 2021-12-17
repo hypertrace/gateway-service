@@ -2,8 +2,10 @@ package org.hypertrace.gateway.service.common.transformer;
 
 import java.util.Collection;
 import java.util.List;
+import java.util.Optional;
 import java.util.Set;
 import java.util.stream.Collectors;
+import org.hypertrace.gateway.service.common.util.ExpressionReader;
 import org.hypertrace.gateway.service.entity.query.ExecutionContext;
 import org.hypertrace.gateway.service.v1.common.AggregatedMetricValue;
 import org.hypertrace.gateway.service.v1.common.MetricSeries;
@@ -20,7 +22,8 @@ public class ResponsePostProcessor {
     Set<String> selections =
         executionContext.getSourceToSelectionExpressionMap().values().stream()
             .flatMap(Collection::stream)
-            .map(expression -> expression.getColumnIdentifier().getAlias())
+            .map(ExpressionReader::getSelectionResultName)
+            .flatMap(Optional::stream)
             .collect(Collectors.toSet());
     Set<String> aggregations =
         executionContext.getSourceToMetricExpressionMap().values().stream()

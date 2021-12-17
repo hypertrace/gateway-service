@@ -4,10 +4,11 @@ import java.util.Iterator;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.Map.Entry;
 import java.util.stream.Collectors;
 import java.util.stream.IntStream;
+import org.hypertrace.core.attribute.service.v1.AttributeMetadata;
 import org.hypertrace.entity.query.service.client.EntityQueryServiceClient;
-import org.hypertrace.entity.query.service.v1.ColumnMetadata;
 import org.hypertrace.entity.query.service.v1.EntityQueryRequest;
 import org.hypertrace.entity.query.service.v1.ResultSetChunk;
 import org.hypertrace.entity.query.service.v1.Row;
@@ -16,10 +17,10 @@ import org.hypertrace.entity.query.service.v1.TotalEntitiesResponse;
 import org.hypertrace.gateway.service.common.AttributeMetadataProvider;
 import org.hypertrace.gateway.service.common.converters.EntityServiceAndGatewayServiceConverter;
 import org.hypertrace.gateway.service.common.util.AttributeMetadataUtil;
+import org.hypertrace.gateway.service.common.util.ExpressionReader;
 import org.hypertrace.gateway.service.entity.EntitiesRequestContext;
 import org.hypertrace.gateway.service.entity.EntityKey;
 import org.hypertrace.gateway.service.entity.config.EntityIdColumnsConfigs;
-import org.hypertrace.gateway.service.v1.common.Expression.ValueCase;
 import org.hypertrace.gateway.service.v1.common.Value;
 import org.hypertrace.gateway.service.v1.common.ValueType;
 import org.hypertrace.gateway.service.v1.entity.EntitiesRequest;
@@ -84,12 +85,8 @@ public class EntityDataServiceEntityFetcher implements IEntityFetcher {
     }
 
     // Add all expressions in the select that are already not part of the EntityID attributes
-    entitiesRequest.getSelectionList().stream()
-        .filter(expression -> expression.getValueCase() == ValueCase.COLUMNIDENTIFIER)
-        .filter(
-            expression ->
-                !mappedEntityIdAttributeIds.contains(
-                    expression.getColumnIdentifier().getColumnName()))
+    entitiesRequest
+        .getSelectionList()
         .forEach(
             expression ->
                 builder.addSelection(
@@ -113,21 +110,18 @@ public class EntityDataServiceEntityFetcher implements IEntityFetcher {
     }
 
     EntityQueryRequest entityQueryRequest = builder.build();
-    if (LOG.isDebugEnabled()) {
-      LOG.debug("Sending Query to EDS  ======== \n {}", entityQueryRequest);
-    }
-
+    LOG.info("Sending Query to EDS  ======== \n {}", entityQueryRequest);
     Iterator<ResultSetChunk> resultSetChunkIterator =
         entityQueryServiceClient.execute(builder.build(), requestContext.getHeaders());
 
+    Map<String, AttributeMetadata> resultMetadataMap =
+        this.getAttributeMetadataByAlias(requestContext, entitiesRequest);
     // We want to retain the order as returned from the respective source. Hence using a
     // LinkedHashMap
     Map<EntityKey, Builder> entityBuilders = new LinkedHashMap<>();
     while (resultSetChunkIterator.hasNext()) {
       ResultSetChunk chunk = resultSetChunkIterator.next();
-      if (LOG.isDebugEnabled()) {
-        LOG.debug("Received chunk: " + chunk.toString());
-      }
+      LOG.info("Received chunk: {}", chunk);
 
       if (chunk.getRowCount() < 1) {
         break;
@@ -159,16 +153,12 @@ public class EntityDataServiceEntityFetcher implements IEntityFetcher {
         for (int i = mappedEntityIdAttributeIds.size();
             i < chunk.getResultSetMetadata().getColumnMetadataCount();
             i++) {
-          ColumnMetadata metadata = chunk.getResultSetMetadata().getColumnMetadata(i);
-
-          String attributeName = metadata.getColumnName();
+          String resultName = chunk.getResultSetMetadata().getColumnMetadata(i).getColumnName();
+          AttributeMetadata attributeMetadata = resultMetadataMap.get(resultName);
           entityBuilder.putAttribute(
-              attributeName,
-              EntityServiceAndGatewayServiceConverter.convertToGatewayValue(
-                  attributeName,
-                  row.getColumn(i),
-                  attributeMetadataProvider.getAttributesMetadata(
-                      requestContext, entitiesRequest.getEntityType())));
+              resultName,
+              EntityServiceAndGatewayServiceConverter.convertQueryValueToGatewayValue(
+                  row.getColumn(i), attributeMetadata));
         }
       }
     }
@@ -211,5 +201,24 @@ public class EntityDataServiceEntityFetcher implements IEntityFetcher {
     TotalEntitiesResponse response =
         entityQueryServiceClient.total(totalEntitiesRequest, requestContext.getHeaders());
     return response.getTotal();
+  }
+
+  private Map<String, AttributeMetadata> getAttributeMetadataByAlias(
+      EntitiesRequestContext requestContext, EntitiesRequest request) {
+    Map<String, AttributeMetadata> attributeMetadataByIdMap =
+        attributeMetadataProvider.getAttributesMetadata(requestContext, request.getEntityType());
+    return request.getSelectionList().stream()
+        .filter(
+            expression ->
+                ExpressionReader.getSelectionAttributeId(expression)
+                    .map(attributeMetadataByIdMap::containsKey)
+                    .orElse(false))
+        .map(
+            expression ->
+                Map.entry(
+                    ExpressionReader.getSelectionResultName(expression).orElseThrow(),
+                    attributeMetadataByIdMap.get(
+                        ExpressionReader.getSelectionAttributeId(expression).orElseThrow())))
+        .collect(Collectors.toUnmodifiableMap(Entry::getKey, Entry::getValue, (x, y) -> x));
   }
 }

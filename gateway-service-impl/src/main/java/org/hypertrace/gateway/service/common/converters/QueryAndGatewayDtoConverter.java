@@ -4,11 +4,13 @@ import com.google.common.base.Strings;
 import java.time.Duration;
 import java.util.List;
 import java.util.Map;
+import java.util.Optional;
+import java.util.function.Predicate;
 import java.util.stream.Collectors;
 import org.hypertrace.core.attribute.service.v1.AttributeKind;
 import org.hypertrace.core.attribute.service.v1.AttributeMetadata;
 import org.hypertrace.core.attribute.service.v1.AttributeType;
-import org.hypertrace.core.query.service.api.ColumnIdentifier;
+import org.hypertrace.core.query.service.api.AttributeExpression;
 import org.hypertrace.core.query.service.api.ColumnMetadata;
 import org.hypertrace.core.query.service.api.Expression;
 import org.hypertrace.core.query.service.api.Filter;
@@ -19,6 +21,7 @@ import org.hypertrace.core.query.service.api.OrderByExpression;
 import org.hypertrace.core.query.service.api.SortOrder;
 import org.hypertrace.core.query.service.api.Value;
 import org.hypertrace.core.query.service.api.ValueType;
+import org.hypertrace.gateway.service.common.util.ExpressionReader;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -284,37 +287,57 @@ public class QueryAndGatewayDtoConverter {
     throw new IllegalArgumentException("Unsupported operator " + operator.name());
   }
 
-  private static ColumnIdentifier.Builder convertToQueryColumnIdentifier(
+  private static AttributeExpression convertToQueryAttributeExpression(
+      org.hypertrace.gateway.service.v1.common.AttributeExpression attributeExpression) {
+    AttributeExpression.Builder builder =
+        AttributeExpression.newBuilder().setAttributeId(attributeExpression.getAttributeId());
+
+    if (attributeExpression.hasAlias()) {
+      builder.setAlias(attributeExpression.getAlias());
+    }
+    if (attributeExpression.hasSubpath()) {
+      builder.setSubpath(attributeExpression.getSubpath());
+    }
+    return builder.build();
+  }
+
+  private static AttributeExpression convertToQueryAttributeExpression(
       org.hypertrace.gateway.service.v1.common.ColumnIdentifier columnIdentifier) {
-    return ColumnIdentifier.newBuilder()
-        .setColumnName(columnIdentifier.getColumnName())
-        .setAlias(columnIdentifier.getAlias());
+    AttributeExpression.Builder builder =
+        AttributeExpression.newBuilder().setAttributeId(columnIdentifier.getColumnName());
+
+    Optional.of(columnIdentifier.getAlias())
+        .filter(Predicate.not(String::isEmpty))
+        .ifPresent(builder::setAlias);
+    return builder.build();
   }
 
   public static Expression.Builder convertToQueryExpression(
       org.hypertrace.gateway.service.v1.common.Expression expression) {
-    Expression.Builder builder = Expression.newBuilder();
     switch (expression.getValueCase()) {
       case VALUE_NOT_SET:
-        break;
+        return Expression.newBuilder();
       case COLUMNIDENTIFIER:
-        builder.setColumnIdentifier(
-            convertToQueryColumnIdentifier(expression.getColumnIdentifier()));
-        break;
+        return Expression.newBuilder()
+            .setAttributeExpression(
+                convertToQueryAttributeExpression(expression.getColumnIdentifier()));
+      case ATTRIBUTE_EXPRESSION:
+        return Expression.newBuilder()
+            .setAttributeExpression(
+                convertToQueryAttributeExpression(expression.getAttributeExpression()));
       case FUNCTION:
-        builder.setFunction(convertToQueryFunction(expression.getFunction()));
-        break;
+        return Expression.newBuilder()
+            .setFunction(convertToQueryFunction(expression.getFunction()));
       case LITERAL:
-        builder.setLiteral(convertToQueryLiteral(expression.getLiteral()));
-        break;
+        return Expression.newBuilder().setLiteral(convertToQueryLiteral(expression.getLiteral()));
       case ORDERBY:
-        builder.setOrderBy(convertToQueryOrderBy(expression.getOrderBy()));
-        break;
+        return Expression.newBuilder().setOrderBy(convertToQueryOrderBy(expression.getOrderBy()));
       case HEALTH:
-        throw new IllegalArgumentException("Cannot convert HEALTH expression to query expression.");
+      default:
+        throw new IllegalArgumentException(
+            String.format(
+                "Cannot convert %s expression to query expression.", expression.getValueCase()));
     }
-
-    return builder;
   }
 
   private static OrderByExpression convertToQueryOrderBy(
@@ -384,7 +407,7 @@ public class QueryAndGatewayDtoConverter {
           // percentile.
           List<org.hypertrace.gateway.service.v1.common.Expression> columns =
               function.getArgumentsList().stream()
-                  .filter(org.hypertrace.gateway.service.v1.common.Expression::hasColumnIdentifier)
+                  .filter(ExpressionReader::isAttributeSelection)
                   .collect(Collectors.toList());
           columns.forEach(e -> builder.addArguments(convertToQueryExpression(e)));
           break;
@@ -471,8 +494,20 @@ public class QueryAndGatewayDtoConverter {
       return filter.getChildFilterList().stream()
           .anyMatch(f -> hasTimeRangeFilter(f, timestampAttributeId));
     }
-    return filter.getLhs().getValueCase() == Expression.ValueCase.COLUMNIDENTIFIER
-        && filter.getLhs().getColumnIdentifier().getColumnName().equals(timestampAttributeId);
+    return getSelectionAttributeId(filter.getLhs())
+        .map(filterAttributeId -> filterAttributeId.equals(timestampAttributeId))
+        .orElse(false);
+  }
+
+  private static Optional<String> getSelectionAttributeId(Expression expression) {
+    switch (expression.getValueCase()) {
+      case COLUMNIDENTIFIER:
+        return Optional.of(expression.getColumnIdentifier().getColumnName());
+      case ATTRIBUTE_EXPRESSION:
+        return Optional.of(expression.getAttributeExpression().getAttributeId());
+      default:
+        return Optional.empty();
+    }
   }
 
   private static boolean isNonDefaultFilter(
@@ -500,26 +535,25 @@ public class QueryAndGatewayDtoConverter {
    */
   public static org.hypertrace.gateway.service.v1.common.Value convertToGatewayValueForMetricValue(
       Map<String, AttributeKind> aliasToOverrideKind,
-      Map<String, AttributeMetadata> attributeMetadataMap,
+      Map<String, AttributeMetadata> resultKeyToAttributeMetadataMap,
       ColumnMetadata metadata,
       Value queryValue) {
     AttributeKind overrideKind = aliasToOverrideKind.get(metadata.getColumnName());
     return convertToGatewayValueForMetricValue(
-        overrideKind, attributeMetadataMap, metadata, queryValue);
+        overrideKind, resultKeyToAttributeMetadataMap, metadata, queryValue);
   }
 
   public static org.hypertrace.gateway.service.v1.common.Value convertToGatewayValueForMetricValue(
       AttributeKind attributeKind,
-      Map<String, AttributeMetadata> attributeMetadataMap,
+      Map<String, AttributeMetadata> resultKeyToAttributeMetadataMap,
       ColumnMetadata metadata,
       Value queryValue) {
-    String columnName = metadata.getColumnName();
-    org.hypertrace.gateway.service.v1.common.Value gwValue;
+    String resultKey = metadata.getColumnName();
     // if there's no override from the function, then this is regular attribute, then
     // use the attribute map to convert the value
     AttributeMetadata attributeMetadata;
     if (attributeKind == null) {
-      attributeMetadata = attributeMetadataMap.get(columnName);
+      attributeMetadata = resultKeyToAttributeMetadataMap.get(resultKey);
     } else {
       attributeMetadata =
           AttributeMetadata.newBuilder()
@@ -530,12 +564,10 @@ public class QueryAndGatewayDtoConverter {
     }
     LOG.debug(
         "Converting {} from type: {} to type: {}",
-        columnName,
+        resultKey,
         metadata.getValueType().name(),
         attributeMetadata.getValueKind().name());
-    gwValue =
-        QueryAndGatewayDtoConverter.convertQueryValueToGatewayValue(queryValue, attributeMetadata);
-
-    return gwValue;
+    return QueryAndGatewayDtoConverter.convertQueryValueToGatewayValue(
+        queryValue, attributeMetadata);
   }
 }

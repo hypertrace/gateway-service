@@ -68,7 +68,7 @@ public class BaselineServiceQueryParser {
 
     builder.addAllGroupBy(
         entityIdAttributes.stream()
-            .map(QueryRequestUtil::createColumnExpression)
+            .map(QueryRequestUtil::createAttributeExpression)
             .collect(Collectors.toList()));
 
     builder.addGroupBy(createTimeColumnGroupByExpression(timeColumn, periodSecs));
@@ -167,7 +167,7 @@ public class BaselineServiceQueryParser {
 
             Value convertedValue =
                 QueryAndGatewayDtoConverter.convertToGatewayValueForMetricValue(
-                    MetricAggregationFunctionUtil.getValueTypeFromFunction(
+                    MetricAggregationFunctionUtil.getValueTypeForFunctionType(
                         timeAggregation.getAggregation(), attributeMetadataMap),
                     attributeMetadataMap,
                     metadata,

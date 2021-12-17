@@ -5,8 +5,8 @@ import java.util.HashMap;
 import java.util.Map;
 import org.hypertrace.core.query.service.api.Function;
 import org.hypertrace.gateway.service.common.converters.QueryAndGatewayDtoConverter;
+import org.hypertrace.gateway.service.common.converters.QueryRequestUtil;
 import org.hypertrace.gateway.service.common.util.QueryExpressionUtil;
-import org.hypertrace.gateway.service.v1.common.ColumnIdentifier;
 import org.hypertrace.gateway.service.v1.common.Expression;
 import org.hypertrace.gateway.service.v1.common.Filter;
 import org.hypertrace.gateway.service.v1.common.FunctionExpression;
@@ -89,12 +89,7 @@ public class GatewayValueToQueryValueConverterTest {
   private Map<Expression, org.hypertrace.core.query.service.api.Expression>
       getOrderByExpressionMap() {
     org.hypertrace.core.query.service.api.Expression queryExpression =
-        org.hypertrace.core.query.service.api.Expression.newBuilder()
-            .setColumnIdentifier(
-                org.hypertrace.core.query.service.api.ColumnIdentifier.newBuilder()
-                    .setColumnName("API.apiId")
-                    .build())
-            .build();
+        QueryRequestUtil.createAttributeExpression("API.apiId");
     Map<Expression, org.hypertrace.core.query.service.api.Expression> expressionMap =
         new HashMap<>();
     expressionMap.put(
@@ -122,31 +117,16 @@ public class GatewayValueToQueryValueConverterTest {
 
   private Map<Filter, org.hypertrace.core.query.service.api.Filter> getFilterMap() {
     Map<Filter, org.hypertrace.core.query.service.api.Filter> filterMap = new HashMap<>();
-    Filter.Builder gatewayFilterBuilder =
-        Filter.newBuilder()
-            .setLhs(
-                Expression.newBuilder()
-                    .setColumnIdentifier(ColumnIdentifier.newBuilder().setColumnName("API.apiId")))
-            .setRhs(Expression.newBuilder().setLiteral(getStringGatewayLiteralConstant("abc")));
-    org.hypertrace.core.query.service.api.Filter.Builder queryFilterBuilder =
-        org.hypertrace.core.query.service.api.Filter.newBuilder()
-            .setLhs(
-                org.hypertrace.core.query.service.api.Expression.newBuilder()
-                    .setColumnIdentifier(
-                        org.hypertrace.core.query.service.api.ColumnIdentifier.newBuilder()
-                            .setColumnName("API.apiId")))
-            .setRhs(
-                org.hypertrace.core.query.service.api.Expression.newBuilder()
-                    .setLiteral(getStringQueryLiteralConstant("abc")));
+    Filter gatewayFilter = QueryExpressionUtil.buildStringFilter("API.apiId", Operator.EQ, "abc");
+    org.hypertrace.core.query.service.api.Filter queryFilter =
+        QueryRequestUtil.createStringFilter(
+            "API.apiId", org.hypertrace.core.query.service.api.Operator.EQ, "abc");
     getLeafOperatorMap()
         .forEach(
             (go, qo) ->
                 filterMap.put(
-                    Filter.newBuilder(gatewayFilterBuilder.build()).setOperator(go).build(),
-                    org.hypertrace.core.query.service.api.Filter.newBuilder(
-                            queryFilterBuilder.build())
-                        .setOperator(qo)
-                        .build()));
+                    gatewayFilter.toBuilder().setOperator(go).build(),
+                    queryFilter.toBuilder().setOperator(qo).build()));
 
     // Construct boolean filters too
     filterMap.put(
@@ -179,16 +159,9 @@ public class GatewayValueToQueryValueConverterTest {
 
   private Map<FunctionExpression, Function> getFunctionMap() {
     Expression gatewayExprArgument =
-        Expression.newBuilder()
-            .setColumnIdentifier(ColumnIdentifier.newBuilder().setColumnName("API.apiId").build())
-            .build();
+        QueryExpressionUtil.buildAttributeExpression("API.apiId").build();
     org.hypertrace.core.query.service.api.Expression queryExprArgument =
-        org.hypertrace.core.query.service.api.Expression.newBuilder()
-            .setColumnIdentifier(
-                org.hypertrace.core.query.service.api.ColumnIdentifier.newBuilder()
-                    .setColumnName("API.apiId")
-                    .build())
-            .build();
+        QueryRequestUtil.createAttributeExpression("API.apiId");
     return Map.of(
         FunctionExpression.newBuilder()
             .setFunction(FunctionType.SUM)

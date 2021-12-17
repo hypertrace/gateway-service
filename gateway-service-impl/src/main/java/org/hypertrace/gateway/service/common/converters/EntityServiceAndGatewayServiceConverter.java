@@ -1,7 +1,6 @@
 package org.hypertrace.gateway.service.common.converters;
 
 import java.util.List;
-import java.util.Map;
 import java.util.stream.Collectors;
 import org.hypertrace.core.attribute.service.v1.AttributeMetadata;
 import org.hypertrace.entity.query.service.v1.BulkEntityArrayAttributeUpdateRequest.Operation;
@@ -18,6 +17,7 @@ import org.hypertrace.entity.query.service.v1.Value;
 import org.hypertrace.entity.query.service.v1.ValueType;
 import org.hypertrace.gateway.service.common.AttributeMetadataProvider;
 import org.hypertrace.gateway.service.common.util.AttributeMetadataUtil;
+import org.hypertrace.gateway.service.common.util.ExpressionReader;
 import org.hypertrace.gateway.service.entity.EntitiesRequestContext;
 import org.hypertrace.gateway.service.entity.config.TimestampConfigs;
 import org.hypertrace.gateway.service.v1.entity.EntitiesRequest;
@@ -186,7 +186,7 @@ public class EntityServiceAndGatewayServiceConverter {
           // percentile.
           List<org.hypertrace.gateway.service.v1.common.Expression> columns =
               function.getArgumentsList().stream()
-                  .filter(org.hypertrace.gateway.service.v1.common.Expression::hasColumnIdentifier)
+                  .filter(ExpressionReader::isAttributeSelection)
                   .collect(Collectors.toList());
           columns.forEach(e -> builder.addArguments(convertToEntityServiceExpression(e)));
           break;
@@ -282,16 +282,6 @@ public class EntityServiceAndGatewayServiceConverter {
   public static Expression.Builder createColumnExpression(String columnName) {
     return Expression.newBuilder()
         .setColumnIdentifier(ColumnIdentifier.newBuilder().setColumnName(columnName));
-  }
-
-  public static org.hypertrace.gateway.service.v1.common.Value convertToGatewayValue(
-      String attributeName, Value value, Map<String, AttributeMetadata> attributeMetadataMap) {
-    AttributeMetadata attributeMetadata = attributeMetadataMap.get(attributeName);
-    if (null == attributeMetadata) {
-      LOG.warn("No attribute metadata found for {}", attributeName);
-      return convertQueryValueToGatewayValue(value);
-    }
-    return convertQueryValueToGatewayValue(value, attributeMetadata);
   }
 
   public static org.hypertrace.gateway.service.v1.common.Value convertQueryValueToGatewayValue(

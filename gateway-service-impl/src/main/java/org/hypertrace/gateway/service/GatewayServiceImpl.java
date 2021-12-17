@@ -2,6 +2,7 @@ package org.hypertrace.gateway.service;
 
 import com.google.common.base.Preconditions;
 import com.google.protobuf.ServiceException;
+import com.google.protobuf.util.JsonFormat;
 import com.typesafe.config.Config;
 import io.grpc.ManagedChannel;
 import io.grpc.ManagedChannelBuilder;
@@ -189,9 +190,8 @@ public class GatewayServiceImpl extends GatewayServiceGrpc.GatewayServiceImplBas
   public void getEntities(
       org.hypertrace.gateway.service.v1.entity.EntitiesRequest request,
       StreamObserver<org.hypertrace.gateway.service.v1.entity.EntitiesResponse> responseObserver) {
-    if (LOG.isDebugEnabled()) {
-      LOG.debug("Received request: {}", request);
-    }
+
+    LOG.info("Received request: {}", request);
 
     Optional<String> tenantId =
         org.hypertrace.core.grpcutils.context.RequestContext.CURRENT.get().getTenantId();
@@ -222,7 +222,7 @@ public class GatewayServiceImpl extends GatewayServiceGrpc.GatewayServiceImplBas
                   .get()
                   .getRequestHeaders());
 
-      LOG.debug("Received response: {}", response);
+      LOG.info("Sending response: {}", JsonFormat.printer().print(response));
 
       responseObserver.onNext(response);
       responseObserver.onCompleted();

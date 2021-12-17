@@ -4,7 +4,7 @@ import com.google.common.collect.ImmutableSet;
 import java.util.Set;
 import org.hypertrace.core.query.service.client.QueryServiceClient;
 import org.hypertrace.gateway.service.common.AttributeMetadataProvider;
-import org.hypertrace.gateway.service.v1.common.ColumnIdentifier;
+import org.hypertrace.gateway.service.common.util.ExpressionReader;
 import org.hypertrace.gateway.service.v1.common.Expression;
 import org.hypertrace.gateway.service.v1.common.Filter;
 import org.hypertrace.gateway.service.v1.common.LiteralConstant;
@@ -115,9 +115,10 @@ public class TimeAggregationsWithGroupByRequestHandler implements IRequestHandle
         .getGroupByList()
         .forEach(
             groupBy -> {
-              String columnName = groupBy.getColumnIdentifier().getColumnName();
-              Set<String> inClauseValues = getInClauseValues(columnName, groupByResponse);
-              filterBuilder.addChildFilter(createInClauseChildFilter(columnName, inClauseValues));
+              String groupByResultName =
+                  ExpressionReader.getSelectionResultName(groupBy).orElseThrow();
+              Set<String> inClauseValues = getInClauseValues(groupByResultName, groupByResponse);
+              filterBuilder.addChildFilter(createInClauseChildFilter(groupBy, inClauseValues));
             });
 
     return filterBuilder;
@@ -131,11 +132,10 @@ public class TimeAggregationsWithGroupByRequestHandler implements IRequestHandle
         .collect(ImmutableSet.toImmutableSet());
   }
 
-  private Filter.Builder createInClauseChildFilter(String columnName, Set<String> inClauseValues) {
+  private Filter.Builder createInClauseChildFilter(
+      Expression groupBySelectionExpression, Set<String> inClauseValues) {
     return Filter.newBuilder()
-        .setLhs(
-            Expression.newBuilder()
-                .setColumnIdentifier(ColumnIdentifier.newBuilder().setColumnName(columnName)))
+        .setLhs(groupBySelectionExpression)
         .setOperator(Operator.IN)
         .setRhs(
             Expression.newBuilder()

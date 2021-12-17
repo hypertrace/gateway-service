@@ -1,15 +1,18 @@
 package org.hypertrace.gateway.service.entity.update;
 
 import java.util.Iterator;
+import java.util.Map;
+import java.util.Map.Entry;
 import java.util.stream.Collectors;
+import org.hypertrace.core.attribute.service.v1.AttributeMetadata;
 import org.hypertrace.entity.query.service.client.EntityQueryServiceClient;
-import org.hypertrace.entity.query.service.v1.ColumnMetadata;
 import org.hypertrace.entity.query.service.v1.EntityUpdateRequest;
 import org.hypertrace.entity.query.service.v1.ResultSetChunk;
 import org.hypertrace.entity.query.service.v1.Row;
 import org.hypertrace.entity.query.service.v1.SetAttribute;
 import org.hypertrace.entity.query.service.v1.UpdateOperation;
 import org.hypertrace.gateway.service.common.converters.EntityServiceAndGatewayServiceConverter;
+import org.hypertrace.gateway.service.common.util.ExpressionReader;
 import org.hypertrace.gateway.service.v1.entity.BulkUpdateEntitiesRequest;
 import org.hypertrace.gateway.service.v1.entity.BulkUpdateEntitiesResponse;
 import org.hypertrace.gateway.service.v1.entity.Entity;
@@ -59,17 +62,17 @@ public class EdsEntityUpdater {
           "Received more than 1 row back. Only the first out of {} rows will be returned in the response",
           chunk.getRowCount());
     }
-
+    Map<String, AttributeMetadata> resultAttributeMetadata =
+        this.getAttributeMetadataByResultName(updateRequest, updateExecutionContext);
     Row row = chunk.getRow(0);
     Entity.Builder entityBuilder = Entity.newBuilder().setEntityType(updateRequest.getEntityType());
 
     for (int i = 0; i < chunk.getResultSetMetadata().getColumnMetadataCount(); i++) {
-      ColumnMetadata metadata = chunk.getResultSetMetadata().getColumnMetadata(i);
-      String attributeName = metadata.getColumnName();
+      String resultName = chunk.getResultSetMetadata().getColumnMetadata(i).getColumnName();
       entityBuilder.putAttribute(
-          attributeName,
-          EntityServiceAndGatewayServiceConverter.convertToGatewayValue(
-              attributeName, row.getColumn(i), updateExecutionContext.getAttributeMetadata()));
+          resultName,
+          EntityServiceAndGatewayServiceConverter.convertQueryValueToGatewayValue(
+              row.getColumn(i), resultAttributeMetadata.get(resultName)));
     }
 
     responseBuilder.setEntity(entityBuilder);
@@ -133,5 +136,23 @@ public class EdsEntityUpdater {
                         expression)));
 
     return eqsUpdateRequestBuilder.build();
+  }
+
+  private Map<String, AttributeMetadata> getAttributeMetadataByResultName(
+      UpdateEntityRequest updateRequest, UpdateExecutionContext updateExecutionContext) {
+    return updateRequest.getSelectionList().stream()
+        .filter(
+            expression ->
+                ExpressionReader.getSelectionAttributeId(expression)
+                    .map(updateExecutionContext.getAttributeMetadata()::containsKey)
+                    .orElse(false))
+        .map(
+            expression ->
+                Map.entry(
+                    ExpressionReader.getSelectionResultName(expression).orElseThrow(),
+                    updateExecutionContext
+                        .getAttributeMetadata()
+                        .get(ExpressionReader.getSelectionAttributeId(expression).orElseThrow())))
+        .collect(Collectors.toUnmodifiableMap(Entry::getKey, Entry::getValue, (x, y) -> x));
   }
 }
