@@ -33,6 +33,6 @@ dependencies {
   testImplementation("org.junit.jupiter:junit-jupiter:5.7.0")
   testImplementation("org.mockito:mockito-core:3.9.0")
   testImplementation("org.mockito:mockito-inline:3.9.0")
-  testImplementation("org.apache.logging.log4j:log4j-slf4j-impl:2.16.0")
+  testImplementation("org.apache.logging.log4j:log4j-slf4j-impl:2.17.0")
   testImplementation("io.grpc:grpc-netty:1.42.0")
 }
