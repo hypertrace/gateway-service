@@ -119,7 +119,7 @@ public class QueryServiceEntityFetcher implements IEntityFetcher {
 
     QueryRequest queryRequest = builder.build();
 
-    LOG.info("Sending Query to Query Service ======== \n {}", queryRequest);
+    LOG.debug("Sending Query to Query Service ======== \n {}", queryRequest);
 
     Iterator<ResultSetChunk> resultSetChunkIterator =
         queryServiceClient.executeQuery(queryRequest, requestContext.getHeaders(), requestTimeout);
@@ -129,7 +129,7 @@ public class QueryServiceEntityFetcher implements IEntityFetcher {
     Map<EntityKey, Entity.Builder> entityBuilders = new LinkedHashMap<>();
     while (resultSetChunkIterator.hasNext()) {
       ResultSetChunk chunk = resultSetChunkIterator.next();
-      LOG.info("Received chunk: {}", chunk);
+      LOG.debug("Received chunk: {}", chunk);
 
       if (chunk.getRowCount() < 1) {
         break;
@@ -179,7 +179,6 @@ public class QueryServiceEntityFetcher implements IEntityFetcher {
         }
       }
     }
-    LOG.info("builders {}", entityBuilders);
     return new EntityFetcherResponse(entityBuilders);
   }
 

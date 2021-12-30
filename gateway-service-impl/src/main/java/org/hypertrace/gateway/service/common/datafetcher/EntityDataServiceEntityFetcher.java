@@ -110,7 +110,7 @@ public class EntityDataServiceEntityFetcher implements IEntityFetcher {
     }
 
     EntityQueryRequest entityQueryRequest = builder.build();
-    LOG.info("Sending Query to EDS  ======== \n {}", entityQueryRequest);
+    LOG.debug("Sending Query to EDS  ======== \n {}", entityQueryRequest);
     Iterator<ResultSetChunk> resultSetChunkIterator =
         entityQueryServiceClient.execute(builder.build(), requestContext.getHeaders());
 
@@ -121,7 +121,7 @@ public class EntityDataServiceEntityFetcher implements IEntityFetcher {
     Map<EntityKey, Builder> entityBuilders = new LinkedHashMap<>();
     while (resultSetChunkIterator.hasNext()) {
       ResultSetChunk chunk = resultSetChunkIterator.next();
-      LOG.info("Received chunk: {}", chunk);
+      LOG.debug("Received chunk: {}", chunk);
 
       if (chunk.getRowCount() < 1) {
         break;
