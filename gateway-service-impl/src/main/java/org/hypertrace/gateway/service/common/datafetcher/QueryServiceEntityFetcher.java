@@ -17,7 +17,6 @@ import java.util.Iterator;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
-import java.util.Map.Entry;
 import java.util.Optional;
 import java.util.concurrent.TimeUnit;
 import java.util.stream.Collectors;
@@ -90,7 +89,7 @@ public class QueryServiceEntityFetcher implements IEntityFetcher {
         attributeMetadataProvider.getAttributesMetadata(
             requestContext, entitiesRequest.getEntityType());
     Map<String, AttributeMetadata> resultKeyToAttributeMetadataMap =
-        this.remapAttributeMetadataByAlias(entitiesRequest, attributeMetadataMap);
+        this.remapAttributeMetadataByResultName(entitiesRequest, attributeMetadataMap);
     // Validate EntitiesRequest
     entitiesRequestValidator.validate(entitiesRequest, attributeMetadataMap);
 
@@ -365,7 +364,7 @@ public class QueryServiceEntityFetcher implements IEntityFetcher {
             requestContext, entitiesRequest.getEntityType());
 
     Map<String, AttributeMetadata> resultKeyToAttributeMetadataMap =
-        this.remapAttributeMetadataByAlias(entitiesRequest, attributeMetadataMap);
+        this.remapAttributeMetadataByResultName(entitiesRequest, attributeMetadataMap);
 
     entitiesRequestValidator.validate(entitiesRequest, attributeMetadataMap);
 
@@ -671,23 +670,14 @@ public class QueryServiceEntityFetcher implements IEntityFetcher {
     return series;
   }
 
-  private Map<String, AttributeMetadata> remapAttributeMetadataByAlias(
+  private Map<String, AttributeMetadata> remapAttributeMetadataByResultName(
       EntitiesRequest request, Map<String, AttributeMetadata> attributeMetadataByIdMap) {
-    return Streams.concat(
-            request.getSelectionList().stream(),
-            request.getTimeAggregationList().stream().map(TimeAggregation::getAggregation))
-        .filter(
-            expression ->
-                ExpressionReader.getSelectionAttributeId(expression)
-                    .map(attributeMetadataByIdMap::containsKey)
-                    .orElse(false))
-        .map(
-            expression ->
-                Map.entry(
-                    ExpressionReader.getSelectionResultName(expression).orElseThrow(),
-                    attributeMetadataByIdMap.get(
-                        ExpressionReader.getSelectionAttributeId(expression).orElseThrow())))
-        .collect(Collectors.toUnmodifiableMap(Entry::getKey, Entry::getValue, (x, y) -> x));
+    return AttributeMetadataUtil.remapAttributeMetadataByResultKey(
+        Streams.concat(
+                request.getSelectionList().stream(),
+                request.getTimeAggregationList().stream().map(TimeAggregation::getAggregation))
+            .collect(Collectors.toList()),
+        attributeMetadataByIdMap);
   }
 
   private Map<String, List<String>> getExpectedResultNamesForEachAttributeId(

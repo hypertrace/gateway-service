@@ -172,12 +172,6 @@ public class EntityInteractionsFetcher {
       throw new IllegalArgumentException(errorMsg);
     }
 
-    Set<String> selectedColumns =
-        interactionsRequest.getSelectionList().stream()
-            .map(ExpressionReader::getSelectionAttributeId)
-            .flatMap(Optional::stream)
-            .collect(Collectors.toUnmodifiableSet());
-
     Map<String, FunctionExpression> metricToAggFunction =
         MetricAggregationFunctionUtil.getAggMetricToFunction(
             interactionsRequest.getSelectionList());
@@ -188,7 +182,7 @@ public class EntityInteractionsFetcher {
       parseResultSet(
           request.getEntityType(),
           entry.getKey(),
-          selectedColumns,
+          interactionsRequest.getSelectionList(),
           metricToAggFunction,
           resultSet,
           incoming,
@@ -440,7 +434,7 @@ public class EntityInteractionsFetcher {
   private void parseResultSet(
       String entityType,
       String otherEntityType,
-      Set<String> selectedColumns,
+      Collection<Expression> selections,
       Map<String, FunctionExpression> metricToAggFunction,
       Iterator<ResultSetChunk> resultset,
       boolean incoming,
@@ -489,7 +483,7 @@ public class EntityInteractionsFetcher {
 
         addInteractionEdges(
             interaction,
-            selectedColumns,
+            selections,
             incoming ? otherEntityType : entityType,
             incoming ? otherEntityId : entityId,
             incoming ? entityType : otherEntityType,
@@ -539,37 +533,47 @@ public class EntityInteractionsFetcher {
 
   private void addInteractionEdges(
       EntityInteraction.Builder interaction,
-      Set<String> selectedColumns,
+      Collection<Expression> selections,
       String fromEntityType,
       EntityKey fromEntityId,
       String toEntityType,
       EntityKey toEntityId) {
 
-    if (selectedColumns.contains(FROM_ENTITY_ID_ATTRIBUTE_ID)) {
+    Map<String, String> selectionResultNames =
+        selections.stream()
+            .filter(ExpressionReader::isSimpleAttributeSelection)
+            .collect(
+                Collectors.toUnmodifiableMap(
+                    expression ->
+                        ExpressionReader.getSelectionAttributeId(expression).orElseThrow(),
+                    expression ->
+                        ExpressionReader.getSelectionResultName(expression).orElseThrow()));
+
+    if (selectionResultNames.containsKey(FROM_ENTITY_ID_ATTRIBUTE_ID)) {
       interaction.putAttribute(
-          FROM_ENTITY_ID_ATTRIBUTE_ID,
+          selectionResultNames.get(FROM_ENTITY_ID_ATTRIBUTE_ID),
           Value.newBuilder()
               .setString(fromEntityId.toString())
               .setValueType(ValueType.STRING)
               .build());
     }
-    if (selectedColumns.contains(FROM_ENTITY_TYPE_ATTRIBUTE_ID)) {
+    if (selectionResultNames.containsKey(FROM_ENTITY_TYPE_ATTRIBUTE_ID)) {
       interaction.putAttribute(
-          FROM_ENTITY_TYPE_ATTRIBUTE_ID,
+          selectionResultNames.get(FROM_ENTITY_TYPE_ATTRIBUTE_ID),
           Value.newBuilder().setString(fromEntityType).setValueType(ValueType.STRING).build());
     }
-    if (selectedColumns.contains(TO_ENTITY_ID_ATTRIBUTE_ID)) {
+    if (selectionResultNames.containsKey(TO_ENTITY_ID_ATTRIBUTE_ID)) {
       interaction.putAttribute(
-          TO_ENTITY_ID_ATTRIBUTE_ID,
+          selectionResultNames.get(TO_ENTITY_ID_ATTRIBUTE_ID),
           Value.newBuilder()
               .setString(toEntityId.toString())
               .setValueType(ValueType.STRING)
               .build());
     }
 
-    if (selectedColumns.contains(TO_ENTITY_TYPE_ATTRIBUTE_ID)) {
+    if (selectionResultNames.containsKey(TO_ENTITY_TYPE_ATTRIBUTE_ID)) {
       interaction.putAttribute(
-          TO_ENTITY_TYPE_ATTRIBUTE_ID,
+          selectionResultNames.get(TO_ENTITY_TYPE_ATTRIBUTE_ID),
           Value.newBuilder().setString(toEntityType).setValueType(ValueType.STRING).build());
     }
   }

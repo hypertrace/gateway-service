@@ -20,6 +20,7 @@ import org.hypertrace.gateway.service.common.util.AttributeMetadataUtil;
 import org.hypertrace.gateway.service.common.util.ExpressionReader;
 import org.hypertrace.gateway.service.entity.EntitiesRequestContext;
 import org.hypertrace.gateway.service.entity.config.TimestampConfigs;
+import org.hypertrace.gateway.service.v1.common.AttributeExpression;
 import org.hypertrace.gateway.service.v1.entity.EntitiesRequest;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -128,6 +129,10 @@ public class EntityServiceAndGatewayServiceConverter {
         builder.setColumnIdentifier(
             convertToQueryColumnIdentifier(expression.getColumnIdentifier()));
         break;
+      case ATTRIBUTE_EXPRESSION:
+        builder.setColumnIdentifier(
+            convertToQueryColumnIdentifier(expression.getAttributeExpression()));
+        break;
       case FUNCTION:
         builder.setFunction(convertToQueryFunction(expression.getFunction()));
         break;
@@ -149,6 +154,20 @@ public class EntityServiceAndGatewayServiceConverter {
     return ColumnIdentifier.newBuilder()
         .setColumnName(columnIdentifier.getColumnName())
         .setAlias(columnIdentifier.getAlias());
+  }
+
+  public static ColumnIdentifier convertToQueryColumnIdentifier(
+      AttributeExpression attributeExpression) {
+    if (attributeExpression.hasSubpath()) {
+      throw new IllegalArgumentException(
+          "Attribute expression with subpath not supported by entity service "
+              + attributeExpression.toString());
+    }
+
+    return ColumnIdentifier.newBuilder()
+        .setColumnName(attributeExpression.getAttributeId())
+        .setAlias(attributeExpression.getAlias())
+        .build();
   }
 
   public static LiteralConstant convertToQueryLiteral(
