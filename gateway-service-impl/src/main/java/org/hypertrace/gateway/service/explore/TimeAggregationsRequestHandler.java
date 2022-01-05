@@ -108,7 +108,7 @@ public class TimeAggregationsRequestHandler extends RequestHandler {
   private boolean containsIntervalOrdering(List<OrderByExpression> orderByExpressions) {
     return orderByExpressions.stream()
         .map(OrderByExpression::getExpression)
-        .map(ExpressionReader::getSelectionAttributeId)
+        .map(ExpressionReader::getAttributeIdFromAttributeSelection)
         .flatMap(Optional::stream)
         .anyMatch(name -> name.equals(ColumnName.INTERVAL_START_TIME.name()));
   }

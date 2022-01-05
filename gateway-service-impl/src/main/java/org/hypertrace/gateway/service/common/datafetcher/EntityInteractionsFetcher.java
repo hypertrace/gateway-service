@@ -200,7 +200,8 @@ public class EntityInteractionsFetcher {
         }
       }
     } else if (ExpressionReader.isSimpleAttributeSelection(filter.getLhs())) {
-      String attributeId = ExpressionReader.getSelectionAttributeId(filter.getLhs()).orElseThrow();
+      String attributeId =
+          ExpressionReader.getAttributeIdFromAttributeSelection(filter.getLhs()).orElseThrow();
 
       if (StringUtils.equals(attributeId, FROM_ENTITY_TYPE_ATTRIBUTE_ID)
           || StringUtils.equals(attributeId, TO_ENTITY_TYPE_ATTRIBUTE_ID)) {
@@ -222,7 +223,7 @@ public class EntityInteractionsFetcher {
     } else {
       if (ExpressionReader.isSimpleAttributeSelection(filter.getLhs())) {
         String attributeId =
-            ExpressionReader.getSelectionAttributeId(filter.getLhs()).orElseThrow();
+            ExpressionReader.getAttributeIdFromAttributeSelection(filter.getLhs()).orElseThrow();
 
         switch (attributeId) {
           case FROM_ENTITY_TYPE_ATTRIBUTE_ID:
@@ -370,7 +371,7 @@ public class EntityInteractionsFetcher {
       // Ignore the predefined selections because they're handled specially.
       if (ExpressionReader.isSimpleAttributeSelection(expression)
           && SELECTIONS_TO_IGNORE.contains(
-              ExpressionReader.getSelectionAttributeId(expression).orElseThrow())) {
+              ExpressionReader.getAttributeIdFromAttributeSelection(expression).orElseThrow())) {
         continue;
       }
 
@@ -545,7 +546,8 @@ public class EntityInteractionsFetcher {
             .collect(
                 Collectors.toUnmodifiableMap(
                     expression ->
-                        ExpressionReader.getSelectionAttributeId(expression).orElseThrow(),
+                        ExpressionReader.getAttributeIdFromAttributeSelection(expression)
+                            .orElseThrow(),
                     expression ->
                         ExpressionReader.getSelectionResultName(expression).orElseThrow()));
 

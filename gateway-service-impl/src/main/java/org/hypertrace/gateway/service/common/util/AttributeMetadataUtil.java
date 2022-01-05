@@ -121,7 +121,7 @@ public class AttributeMetadataUtil {
     return selections.stream()
         .filter(
             expression ->
-                ExpressionReader.getSelectionAttributeId(expression)
+                ExpressionReader.getAttributeIdFromAttributeSelection(expression)
                     .map(attributeMetadataByIdMap::containsKey)
                     .orElse(false))
         .map(
@@ -129,7 +129,8 @@ public class AttributeMetadataUtil {
                 Map.entry(
                     ExpressionReader.getSelectionResultName(expression).orElseThrow(),
                     attributeMetadataByIdMap.get(
-                        ExpressionReader.getSelectionAttributeId(expression).orElseThrow())))
+                        ExpressionReader.getAttributeIdFromAttributeSelection(expression)
+                            .orElseThrow())))
         .collect(Collectors.toUnmodifiableMap(Entry::getKey, Entry::getValue, (x, y) -> x));
   }
 }

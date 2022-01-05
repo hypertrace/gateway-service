@@ -54,22 +54,23 @@ public class ExpressionReader {
     }
   }
 
-  public static Optional<String> getSelectionAttributeId(Expression expression) {
+  public static Optional<String> getAttributeIdFromAttributeSelection(Expression expression) {
     switch (expression.getValueCase()) {
       case COLUMNIDENTIFIER:
         return Optional.of(expression.getColumnIdentifier().getColumnName());
       case ATTRIBUTE_EXPRESSION:
         return Optional.of(expression.getAttributeExpression().getAttributeId());
       case FUNCTION:
-        return getSelectionAttributeId(expression.getFunction());
+        return getAttributeIdFromAttributeSelection(expression.getFunction());
       default:
         return Optional.empty();
     }
   }
 
-  public static Optional<String> getSelectionAttributeId(FunctionExpression functionExpression) {
+  public static Optional<String> getAttributeIdFromAttributeSelection(
+      FunctionExpression functionExpression) {
     return functionExpression.getArgumentsList().stream()
-        .map(ExpressionReader::getSelectionAttributeId)
+        .map(ExpressionReader::getAttributeIdFromAttributeSelection)
         .flatMap(Optional::stream)
         .findFirst();
   }
@@ -155,10 +156,10 @@ public class ExpressionReader {
             .filter(
                 attributeSelection ->
                     attributeIds.contains(
-                        getSelectionAttributeId(attributeSelection).orElseThrow()))
+                        getAttributeIdFromAttributeSelection(attributeSelection).orElseThrow()))
             .collect(
                 Collectors.groupingBy(
-                    expression -> getSelectionAttributeId(expression).orElseThrow(),
+                    expression -> getAttributeIdFromAttributeSelection(expression).orElseThrow(),
                     Collectors.mapping(
                         expression -> getSelectionResultName(expression).orElseThrow(),
                         Collectors.toUnmodifiableList()))));

@@ -494,12 +494,12 @@ public class QueryAndGatewayDtoConverter {
       return filter.getChildFilterList().stream()
           .anyMatch(f -> hasTimeRangeFilter(f, timestampAttributeId));
     }
-    return getSelectionAttributeId(filter.getLhs())
+    return getAttributeIdFromAttributeSelection(filter.getLhs())
         .map(filterAttributeId -> filterAttributeId.equals(timestampAttributeId))
         .orElse(false);
   }
 
-  private static Optional<String> getSelectionAttributeId(Expression expression) {
+  private static Optional<String> getAttributeIdFromAttributeSelection(Expression expression) {
     switch (expression.getValueCase()) {
       case COLUMNIDENTIFIER:
         return Optional.of(expression.getColumnIdentifier().getColumnName());

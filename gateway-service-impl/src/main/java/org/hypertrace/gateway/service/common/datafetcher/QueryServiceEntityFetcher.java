@@ -243,7 +243,7 @@ public class QueryServiceEntityFetcher implements IEntityFetcher {
         .filter(ExpressionReader::isAttributeSelection)
         .filter(
             expression ->
-                ExpressionReader.getSelectionAttributeId(expression)
+                ExpressionReader.getAttributeIdFromAttributeSelection(expression)
                     .map(attributeId -> !entityIdAttributeIds.contains(attributeId))
                     .orElse(true))
         .forEach(

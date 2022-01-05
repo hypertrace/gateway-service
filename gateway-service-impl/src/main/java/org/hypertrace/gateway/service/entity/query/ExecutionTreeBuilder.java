@@ -283,7 +283,9 @@ public class ExecutionTreeBuilder {
     } else {
       List<AttributeSource> sources =
           attributeMetadataMap
-              .get(ExpressionReader.getSelectionAttributeId(filter.getLhs()).orElseThrow())
+              .get(
+                  ExpressionReader.getAttributeIdFromAttributeSelection(filter.getLhs())
+                      .orElseThrow())
               .getSourcesList();
 
       // if the filter by and order by are from QS, pagination can be pushed down to QS

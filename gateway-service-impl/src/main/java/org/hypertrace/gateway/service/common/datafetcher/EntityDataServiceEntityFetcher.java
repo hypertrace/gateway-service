@@ -94,7 +94,7 @@ public class EntityDataServiceEntityFetcher implements IEntityFetcher {
         .filter(ExpressionReader::isAttributeSelection)
         .filter(
             expression ->
-                ExpressionReader.getSelectionAttributeId(expression)
+                ExpressionReader.getAttributeIdFromAttributeSelection(expression)
                     .map(attributeId -> !entityIdAttributeIds.contains(attributeId))
                     .orElse(true))
         .forEach(
@@ -227,7 +227,7 @@ public class EntityDataServiceEntityFetcher implements IEntityFetcher {
     return request.getSelectionList().stream()
         .filter(
             expression ->
-                ExpressionReader.getSelectionAttributeId(expression)
+                ExpressionReader.getAttributeIdFromAttributeSelection(expression)
                     .map(attributeMetadataByIdMap::containsKey)
                     .orElse(false))
         .map(
@@ -235,7 +235,8 @@ public class EntityDataServiceEntityFetcher implements IEntityFetcher {
                 Map.entry(
                     ExpressionReader.getSelectionResultName(expression).orElseThrow(),
                     attributeMetadataByIdMap.get(
-                        ExpressionReader.getSelectionAttributeId(expression).orElseThrow())))
+                        ExpressionReader.getAttributeIdFromAttributeSelection(expression)
+                            .orElseThrow())))
         .collect(Collectors.toUnmodifiableMap(Entry::getKey, Entry::getValue, (x, y) -> x));
   }
 }

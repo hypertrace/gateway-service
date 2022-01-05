@@ -32,7 +32,8 @@ public class AvgRateValidator extends FunctionExpressionValidator {
         case COLUMNIDENTIFIER:
         case ATTRIBUTE_EXPRESSION:
           // Need a non empty attribute ID
-          Optional<String> attributeId = ExpressionReader.getSelectionAttributeId(argument);
+          Optional<String> attributeId =
+              ExpressionReader.getAttributeIdFromAttributeSelection(argument);
           checkArgument(
               attributeId.filter(not(String::isEmpty)).isPresent(), "attributeId is missing");
           attributeIdArgSet = true;

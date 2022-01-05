@@ -50,7 +50,7 @@ public class MetricAggregationFunctionUtil {
     // assumes 1 level of aggregation for now, like the rest of the code
     // Also, for the type, it should follow the outer most aggregation type
     String attributeId =
-        ExpressionReader.getSelectionAttributeId(functionExpression)
+        ExpressionReader.getAttributeIdFromAttributeSelection(functionExpression)
             .orElseThrow(); // Should have validated the FunctionExpression using
     // AggregationValidator
 
