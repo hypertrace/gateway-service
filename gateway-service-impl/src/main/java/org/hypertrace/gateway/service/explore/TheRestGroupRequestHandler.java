@@ -171,20 +171,21 @@ class TheRestGroupRequestHandler {
       ExploreRequest originalRequest, ExploreResponse.Builder originalResponse) {
     Filter.Builder filterBuilder = Filter.newBuilder();
     filterBuilder.setOperator(Operator.AND);
-    Map<String, Expression> groupBySelectionExpressionsByKey =
-        groupByExpressionByKey(originalRequest);
+    Map<String, Expression> groupBySelectionExpressionsByResultName =
+        groupByExpressionByResultName(originalRequest);
 
     originalResponse
         .getRowBuilderList()
         .forEach(
             rowBuilder ->
                 filterBuilder.addChildFilter(
-                    createGroupValuesOrFilter(groupBySelectionExpressionsByKey, rowBuilder)));
+                    createGroupValuesOrFilter(
+                        groupBySelectionExpressionsByResultName, rowBuilder)));
 
     return filterBuilder;
   }
 
-  private Map<String, Expression> groupByExpressionByKey(ExploreRequest originalRequest) {
+  private Map<String, Expression> groupByExpressionByResultName(ExploreRequest originalRequest) {
     return originalRequest.getGroupByList().stream()
         .collect(
             Collectors.toUnmodifiableMap(
@@ -193,17 +194,17 @@ class TheRestGroupRequestHandler {
   }
 
   private Filter.Builder createGroupValuesOrFilter(
-      Map<String, Expression> groupBySelectionExpressionsByKey, Row.Builder rowBuilder) {
+      Map<String, Expression> groupBySelectionExpressionsByResultName, Row.Builder rowBuilder) {
     Filter.Builder filterBuilder = Filter.newBuilder();
     filterBuilder.setOperator(Operator.OR);
     rowBuilder
         .getColumnsMap()
         .forEach(
             (columnName, columnValue) -> {
-              if (groupBySelectionExpressionsByKey.containsKey(columnName)) {
+              if (groupBySelectionExpressionsByResultName.containsKey(columnName)) {
                 filterBuilder.addChildFilter(
                     Filter.newBuilder()
-                        .setLhs(groupBySelectionExpressionsByKey.get(columnName))
+                        .setLhs(groupBySelectionExpressionsByResultName.get(columnName))
                         .setOperator(Operator.NEQ)
                         .setRhs(
                             Expression.newBuilder()

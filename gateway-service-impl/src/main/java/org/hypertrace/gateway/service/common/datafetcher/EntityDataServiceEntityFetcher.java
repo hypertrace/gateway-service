@@ -1,5 +1,7 @@
 package org.hypertrace.gateway.service.common.datafetcher;
 
+import static org.hypertrace.gateway.service.common.util.ExpressionReader.getExpectedResultNamesForEachAttributeId;
+
 import java.util.Iterator;
 import java.util.LinkedHashMap;
 import java.util.List;
@@ -51,12 +53,15 @@ public class EntityDataServiceEntityFetcher implements IEntityFetcher {
   @Override
   public EntityFetcherResponse getEntities(
       EntitiesRequestContext requestContext, EntitiesRequest entitiesRequest) {
-    List<String> mappedEntityIdAttributeIds =
+    List<String> entityIdAttributeIds =
         AttributeMetadataUtil.getIdAttributeIds(
             attributeMetadataProvider,
             entityIdColumnsConfigs,
             requestContext,
             entitiesRequest.getEntityType());
+    Map<String, List<String>> requestedAliasesByEntityIdAttributeIds =
+        getExpectedResultNamesForEachAttributeId(
+            entitiesRequest.getSelectionList(), entityIdAttributeIds);
     EntityQueryRequest.Builder builder =
         EntityQueryRequest.newBuilder()
             .setEntityType(entitiesRequest.getEntityType())
@@ -65,7 +70,7 @@ public class EntityDataServiceEntityFetcher implements IEntityFetcher {
                     entitiesRequest.getFilter()))
             // Add EntityID attributes as the first selection
             .addAllSelection(
-                mappedEntityIdAttributeIds.stream()
+                entityIdAttributeIds.stream()
                     .map(
                         entityIdAttr ->
                             EntityServiceAndGatewayServiceConverter.createColumnExpression(
@@ -85,8 +90,13 @@ public class EntityDataServiceEntityFetcher implements IEntityFetcher {
     }
 
     // Add all expressions in the select that are already not part of the EntityID attributes
-    entitiesRequest
-        .getSelectionList()
+    entitiesRequest.getSelectionList().stream()
+        .filter(ExpressionReader::isAttributeSelection)
+        .filter(
+            expression ->
+                ExpressionReader.getSelectionAttributeId(expression)
+                    .map(attributeId -> !entityIdAttributeIds.contains(attributeId))
+                    .orElse(true))
         .forEach(
             expression ->
                 builder.addSelection(
@@ -131,7 +141,7 @@ public class EntityDataServiceEntityFetcher implements IEntityFetcher {
         // Construct the entity id from the entityIdAttributes columns
         EntityKey entityKey =
             EntityKey.of(
-                IntStream.range(0, mappedEntityIdAttributeIds.size())
+                IntStream.range(0, entityIdAttributeIds.size())
                     .mapToObj(value -> row.getColumn(value).getString())
                     .toArray(String[]::new));
         Builder entityBuilder = entityBuilders.computeIfAbsent(entityKey, k -> Entity.newBuilder());
@@ -141,16 +151,23 @@ public class EntityDataServiceEntityFetcher implements IEntityFetcher {
         // Always include the id in entity since that's needed to make follow up queries in
         // optimal fashion. If this wasn't really requested by the client, it should be removed
         // as post processing.
-        for (int i = 0; i < mappedEntityIdAttributeIds.size(); i++) {
+        for (int i = 0; i < entityIdAttributeIds.size(); i++) {
           entityBuilder.putAttribute(
-              mappedEntityIdAttributeIds.get(i),
+              entityIdAttributeIds.get(i),
               Value.newBuilder()
                   .setString(entityKey.getAttributes().get(i))
                   .setValueType(ValueType.STRING)
                   .build());
         }
 
-        for (int i = mappedEntityIdAttributeIds.size();
+        requestedAliasesByEntityIdAttributeIds.forEach(
+            (attributeId, requestedAliasList) ->
+                requestedAliasList.forEach(
+                    requestedAlias ->
+                        entityBuilder.putAttribute(
+                            requestedAlias, entityBuilder.getAttributeOrThrow(attributeId))));
+
+        for (int i = entityIdAttributeIds.size();
             i < chunk.getResultSetMetadata().getColumnMetadataCount();
             i++) {
           String resultName = chunk.getResultSetMetadata().getColumnMetadata(i).getColumnName();

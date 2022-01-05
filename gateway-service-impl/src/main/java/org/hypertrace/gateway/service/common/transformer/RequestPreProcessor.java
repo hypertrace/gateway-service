@@ -59,8 +59,7 @@ public class RequestPreProcessor {
    * @param originalRequest The original request received
    * @return The modified request with any additional filters in scope filters config
    */
-  public TracesRequest transformFilter(
-      TracesRequest originalRequest, RequestContext requestContext) {
+  public TracesRequest process(TracesRequest originalRequest, RequestContext requestContext) {
     TracesRequest.Builder tracesRequestBuilder = TracesRequest.newBuilder(originalRequest);
 
     // Add any additional filters that maybe defined in the scope filters config

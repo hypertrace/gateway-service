@@ -1,5 +1,6 @@
 package org.hypertrace.gateway.service.common.util;
 
+import java.util.Collection;
 import java.util.Collections;
 import java.util.HashMap;
 import java.util.HashSet;
@@ -144,5 +145,22 @@ public class ExpressionReader {
       }
     }
     return Collections.unmodifiableMap(attributeToSourcesMap);
+  }
+
+  public static Map<String, List<String>> getExpectedResultNamesForEachAttributeId(
+      Collection<Expression> expressionList, Collection<String> attributeIds) {
+    return Map.copyOf(
+        expressionList.stream()
+            .filter(ExpressionReader::isSimpleAttributeSelection)
+            .filter(
+                attributeSelection ->
+                    attributeIds.contains(
+                        getSelectionAttributeId(attributeSelection).orElseThrow()))
+            .collect(
+                Collectors.groupingBy(
+                    expression -> getSelectionAttributeId(expression).orElseThrow(),
+                    Collectors.mapping(
+                        expression -> getSelectionResultName(expression).orElseThrow(),
+                        Collectors.toUnmodifiableList()))));
   }
 }

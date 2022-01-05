@@ -134,8 +134,7 @@ public class RequestPreProcessorTest {
             .addSelection(QueryExpressionUtil.buildAttributeExpression("API_TRACE.serviceName"))
             .build();
 
-    TracesRequest transformedRequest =
-        requestPreProcessor.transformFilter(tracesRequest, requestContext);
+    TracesRequest transformedRequest = requestPreProcessor.process(tracesRequest, requestContext);
 
     // RequestPreProcessor should add scope filters config.
     Assertions.assertEquals(

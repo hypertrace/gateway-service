@@ -86,7 +86,7 @@ public class TracesService {
     try {
       requestValidator.validateScope(request);
 
-      TracesRequest preProcessedRequest = requestPreProcessor.transformFilter(request, context);
+      TracesRequest preProcessedRequest = requestPreProcessor.process(request, context);
 
       TraceScope scope = TraceScope.valueOf(preProcessedRequest.getScope());
       Map<String, AttributeMetadata> attributeMap =

@@ -2,7 +2,6 @@ package org.hypertrace.gateway.service.entity.update;
 
 import java.util.Iterator;
 import java.util.Map;
-import java.util.Map.Entry;
 import java.util.stream.Collectors;
 import org.hypertrace.core.attribute.service.v1.AttributeMetadata;
 import org.hypertrace.entity.query.service.client.EntityQueryServiceClient;
@@ -12,7 +11,7 @@ import org.hypertrace.entity.query.service.v1.Row;
 import org.hypertrace.entity.query.service.v1.SetAttribute;
 import org.hypertrace.entity.query.service.v1.UpdateOperation;
 import org.hypertrace.gateway.service.common.converters.EntityServiceAndGatewayServiceConverter;
-import org.hypertrace.gateway.service.common.util.ExpressionReader;
+import org.hypertrace.gateway.service.common.util.AttributeMetadataUtil;
 import org.hypertrace.gateway.service.v1.entity.BulkUpdateEntitiesRequest;
 import org.hypertrace.gateway.service.v1.entity.BulkUpdateEntitiesResponse;
 import org.hypertrace.gateway.service.v1.entity.Entity;
@@ -63,7 +62,8 @@ public class EdsEntityUpdater {
           chunk.getRowCount());
     }
     Map<String, AttributeMetadata> resultAttributeMetadata =
-        this.getAttributeMetadataByResultName(updateRequest, updateExecutionContext);
+        AttributeMetadataUtil.remapAttributeMetadataByResultKey(
+            updateRequest.getSelectionList(), updateExecutionContext.getAttributeMetadata());
     Row row = chunk.getRow(0);
     Entity.Builder entityBuilder = Entity.newBuilder().setEntityType(updateRequest.getEntityType());
 
@@ -136,23 +136,5 @@ public class EdsEntityUpdater {
                         expression)));
 
     return eqsUpdateRequestBuilder.build();
-  }
-
-  private Map<String, AttributeMetadata> getAttributeMetadataByResultName(
-      UpdateEntityRequest updateRequest, UpdateExecutionContext updateExecutionContext) {
-    return updateRequest.getSelectionList().stream()
-        .filter(
-            expression ->
-                ExpressionReader.getSelectionAttributeId(expression)
-                    .map(updateExecutionContext.getAttributeMetadata()::containsKey)
-                    .orElse(false))
-        .map(
-            expression ->
-                Map.entry(
-                    ExpressionReader.getSelectionResultName(expression).orElseThrow(),
-                    updateExecutionContext
-                        .getAttributeMetadata()
-                        .get(ExpressionReader.getSelectionAttributeId(expression).orElseThrow())))
-        .collect(Collectors.toUnmodifiableMap(Entry::getKey, Entry::getValue, (x, y) -> x));
   }
 }
