@@ -103,6 +103,7 @@ message Expression {
     FunctionExpression function = 3;
     OrderByExpression orderBy = 4;
     HealthExpression health = 5;
+    AttributeExpression attribute_expression = 6;
   }
 }
 
@@ -180,4 +181,10 @@ message TimeAggregation {
 message Row {
   // key is column_name from metadata
   map<string, Value> columns = 1;
+}
+
+message AttributeExpression {
+  string attributeId = 1;
+  optional string subpath = 2;
+  optional string alias = 3;
 }

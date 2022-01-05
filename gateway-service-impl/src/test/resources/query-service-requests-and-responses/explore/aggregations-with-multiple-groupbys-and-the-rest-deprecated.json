@@ -7,8 +7,8 @@
             "childFilter": [
               {
                 "lhs": {
-                  "columnIdentifier": {
-                    "columnName": "API_TRACE.startTime"
+                  "attributeExpression": {
+                    "attributeId": "API_TRACE.startTime"
                   }
                 },
                 "operator": "GE",
@@ -23,8 +23,8 @@
               },
               {
                 "lhs": {
-                  "columnIdentifier": {
-                    "columnName": "API_TRACE.startTime"
+                  "attributeExpression": {
+                    "attributeId": "API_TRACE.startTime"
                   }
                 },
                 "operator": "LT",
@@ -43,8 +43,8 @@
             "childFilter": [
               {
                 "lhs": {
-                  "columnIdentifier": {
-                    "columnName": "API_TRACE.apiBoundaryType"
+                  "attributeExpression": {
+                    "attributeId": "API_TRACE.apiBoundaryType"
                   }
                 },
                 "operator": "EQ",
@@ -66,8 +66,8 @@
             "functionName": "AVG",
             "arguments": [
               {
-                "columnIdentifier": {
-                  "columnName": "API_TRACE.duration"
+                "attributeExpression": {
+                  "attributeId": "API_TRACE.duration"
                 }
               }
             ],
@@ -79,8 +79,8 @@
             "functionName": "COUNT",
             "arguments": [
               {
-                "columnIdentifier": {
-                  "columnName": "API_TRACE.apiTraceId"
+                "attributeExpression": {
+                  "attributeId": "API_TRACE.apiTraceId"
                 }
               }
             ],
@@ -88,25 +88,25 @@
           }
         },
         {
-          "columnIdentifier": {
-            "columnName": "API_TRACE.serviceName"
+          "attributeExpression": {
+            "attributeId": "API_TRACE.serviceName"
           }
         },
         {
-          "columnIdentifier": {
-            "columnName": "API_TRACE.apiName"
+          "attributeExpression": {
+            "attributeId": "API_TRACE.apiName"
           }
         }
       ],
       "groupBy": [
         {
-          "columnIdentifier": {
-            "columnName": "API_TRACE.serviceName"
+          "attributeExpression": {
+            "attributeId": "API_TRACE.serviceName"
           }
         },
         {
-          "columnIdentifier": {
-            "columnName": "API_TRACE.apiName"
+          "attributeExpression": {
+            "attributeId": "API_TRACE.apiName"
           }
         }
       ],
@@ -478,8 +478,8 @@
             "childFilter": [
               {
                 "lhs": {
-                  "columnIdentifier": {
-                    "columnName": "API_TRACE.startTime"
+                  "attributeExpression": {
+                    "attributeId": "API_TRACE.startTime"
                   }
                 },
                 "operator": "GE",
@@ -494,8 +494,8 @@
               },
               {
                 "lhs": {
-                  "columnIdentifier": {
-                    "columnName": "API_TRACE.startTime"
+                  "attributeExpression": {
+                    "attributeId": "API_TRACE.startTime"
                   }
                 },
                 "operator": "LT",
@@ -514,8 +514,8 @@
             "childFilter": [
               {
                 "lhs": {
-                  "columnIdentifier": {
-                    "columnName": "API_TRACE.apiBoundaryType"
+                  "attributeExpression": {
+                    "attributeId": "API_TRACE.apiBoundaryType"
                   }
                 },
                 "operator": "EQ",
@@ -535,8 +535,8 @@
                     "childFilter": [
                       {
                         "lhs": {
-                          "columnIdentifier": {
-                            "columnName": "API_TRACE.serviceName"
+                          "attributeExpression": {
+                            "attributeId": "API_TRACE.serviceName"
                           }
                         },
                         "operator": "NEQ",
@@ -551,8 +551,8 @@
                       },
                       {
                         "lhs": {
-                          "columnIdentifier": {
-                            "columnName": "API_TRACE.apiName"
+                          "attributeExpression": {
+                            "attributeId": "API_TRACE.apiName"
                           }
                         },
                         "operator": "NEQ",
@@ -572,8 +572,8 @@
                     "childFilter": [
                       {
                         "lhs": {
-                          "columnIdentifier": {
-                            "columnName": "API_TRACE.serviceName"
+                          "attributeExpression": {
+                            "attributeId": "API_TRACE.serviceName"
                           }
                         },
                         "operator": "NEQ",
@@ -588,8 +588,8 @@
                       },
                       {
                         "lhs": {
-                          "columnIdentifier": {
-                            "columnName": "API_TRACE.apiName"
+                          "attributeExpression": {
+                            "attributeId": "API_TRACE.apiName"
                           }
                         },
                         "operator": "NEQ",
@@ -609,8 +609,8 @@
                     "childFilter": [
                       {
                         "lhs": {
-                          "columnIdentifier": {
-                            "columnName": "API_TRACE.serviceName"
+                          "attributeExpression": {
+                            "attributeId": "API_TRACE.serviceName"
                           }
                         },
                         "operator": "NEQ",
@@ -625,8 +625,8 @@
                       },
                       {
                         "lhs": {
-                          "columnIdentifier": {
-                            "columnName": "API_TRACE.apiName"
+                          "attributeExpression": {
+                            "attributeId": "API_TRACE.apiName"
                           }
                         },
                         "operator": "NEQ",
@@ -646,8 +646,8 @@
                     "childFilter": [
                       {
                         "lhs": {
-                          "columnIdentifier": {
-                            "columnName": "API_TRACE.serviceName"
+                          "attributeExpression": {
+                            "attributeId": "API_TRACE.serviceName"
                           }
                         },
                         "operator": "NEQ",
@@ -662,8 +662,8 @@
                       },
                       {
                         "lhs": {
-                          "columnIdentifier": {
-                            "columnName": "API_TRACE.apiName"
+                          "attributeExpression": {
+                            "attributeId": "API_TRACE.apiName"
                           }
                         },
                         "operator": "NEQ",
@@ -683,8 +683,8 @@
                     "childFilter": [
                       {
                         "lhs": {
-                          "columnIdentifier": {
-                            "columnName": "API_TRACE.serviceName"
+                          "attributeExpression": {
+                            "attributeId": "API_TRACE.serviceName"
                           }
                         },
                         "operator": "NEQ",
@@ -699,8 +699,8 @@
                       },
                       {
                         "lhs": {
-                          "columnIdentifier": {
-                            "columnName": "API_TRACE.apiName"
+                          "attributeExpression": {
+                            "attributeId": "API_TRACE.apiName"
                           }
                         },
                         "operator": "NEQ",
@@ -720,8 +720,8 @@
                     "childFilter": [
                       {
                         "lhs": {
-                          "columnIdentifier": {
-                            "columnName": "API_TRACE.serviceName"
+                          "attributeExpression": {
+                            "attributeId": "API_TRACE.serviceName"
                           }
                         },
                         "operator": "NEQ",
@@ -736,8 +736,8 @@
                       },
                       {
                         "lhs": {
-                          "columnIdentifier": {
-                            "columnName": "API_TRACE.apiName"
+                          "attributeExpression": {
+                            "attributeId": "API_TRACE.apiName"
                           }
                         },
                         "operator": "NEQ",
@@ -757,8 +757,8 @@
                     "childFilter": [
                       {
                         "lhs": {
-                          "columnIdentifier": {
-                            "columnName": "API_TRACE.serviceName"
+                          "attributeExpression": {
+                            "attributeId": "API_TRACE.serviceName"
                           }
                         },
                         "operator": "NEQ",
@@ -773,8 +773,8 @@
                       },
                       {
                         "lhs": {
-                          "columnIdentifier": {
-                            "columnName": "API_TRACE.apiName"
+                          "attributeExpression": {
+                            "attributeId": "API_TRACE.apiName"
                           }
                         },
                         "operator": "NEQ",
@@ -794,8 +794,8 @@
                     "childFilter": [
                       {
                         "lhs": {
-                          "columnIdentifier": {
-                            "columnName": "API_TRACE.serviceName"
+                          "attributeExpression": {
+                            "attributeId": "API_TRACE.serviceName"
                           }
                         },
                         "operator": "NEQ",
@@ -810,8 +810,8 @@
                       },
                       {
                         "lhs": {
-                          "columnIdentifier": {
-                            "columnName": "API_TRACE.apiName"
+                          "attributeExpression": {
+                            "attributeId": "API_TRACE.apiName"
                           }
                         },
                         "operator": "NEQ",
@@ -831,8 +831,8 @@
                     "childFilter": [
                       {
                         "lhs": {
-                          "columnIdentifier": {
-                            "columnName": "API_TRACE.serviceName"
+                          "attributeExpression": {
+                            "attributeId": "API_TRACE.serviceName"
                           }
                         },
                         "operator": "NEQ",
@@ -847,8 +847,8 @@
                       },
                       {
                         "lhs": {
-                          "columnIdentifier": {
-                            "columnName": "API_TRACE.apiName"
+                          "attributeExpression": {
+                            "attributeId": "API_TRACE.apiName"
                           }
                         },
                         "operator": "NEQ",
@@ -868,8 +868,8 @@
                     "childFilter": [
                       {
                         "lhs": {
-                          "columnIdentifier": {
-                            "columnName": "API_TRACE.serviceName"
+                          "attributeExpression": {
+                            "attributeId": "API_TRACE.serviceName"
                           }
                         },
                         "operator": "NEQ",
@@ -884,8 +884,8 @@
                       },
                       {
                         "lhs": {
-                          "columnIdentifier": {
-                            "columnName": "API_TRACE.apiName"
+                          "attributeExpression": {
+                            "attributeId": "API_TRACE.apiName"
                           }
                         },
                         "operator": "NEQ",
@@ -912,8 +912,8 @@
             "functionName": "AVG",
             "arguments": [
               {
-                "columnIdentifier": {
-                  "columnName": "API_TRACE.duration"
+                "attributeExpression": {
+                  "attributeId": "API_TRACE.duration"
                 }
               }
             ],
@@ -925,8 +925,8 @@
             "functionName": "COUNT",
             "arguments": [
               {
-                "columnIdentifier": {
-                  "columnName": "API_TRACE.apiTraceId"
+                "attributeExpression": {
+                  "attributeId": "API_TRACE.apiTraceId"
                 }
               }
             ],

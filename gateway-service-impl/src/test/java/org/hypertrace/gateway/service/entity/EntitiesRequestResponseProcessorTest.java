@@ -19,6 +19,7 @@ import org.hypertrace.gateway.service.common.transformer.RequestPreProcessor;
 import org.hypertrace.gateway.service.common.util.QueryExpressionUtil;
 import org.hypertrace.gateway.service.v1.common.Expression;
 import org.hypertrace.gateway.service.v1.common.FunctionType;
+import org.hypertrace.gateway.service.v1.common.Operator;
 import org.hypertrace.gateway.service.v1.common.SortOrder;
 import org.hypertrace.gateway.service.v1.entity.EntitiesRequest;
 import org.junit.jupiter.api.Assertions;
@@ -32,11 +33,11 @@ public class EntitiesRequestResponseProcessorTest {
   private final EntitiesRequest originalRequest =
       EntitiesRequest.newBuilder()
           .setEntityType("API")
-          .addSelection(QueryExpressionUtil.getColumnExpression("API.duplicate"))
-          .addSelection(QueryExpressionUtil.getColumnExpression("API.duplicate"))
-          .addSelection(QueryExpressionUtil.getColumnExpression("API.apiId"))
-          .addSelection(QueryExpressionUtil.getColumnExpression("API.apiName"))
-          .setFilter(QueryExpressionUtil.getSimpleFilter("API.apiId", "name1"))
+          .addSelection(QueryExpressionUtil.buildAttributeExpression("API.duplicate"))
+          .addSelection(QueryExpressionUtil.buildAttributeExpression("API.duplicate"))
+          .addSelection(QueryExpressionUtil.buildAttributeExpression("API.apiId"))
+          .addSelection(QueryExpressionUtil.buildAttributeExpression("API.apiName"))
+          .setFilter(QueryExpressionUtil.buildStringFilter("API.apiId", Operator.EQ, "name1"))
           .addOrderBy(QueryExpressionUtil.getOrderBy("API.apiId", SortOrder.ASC))
           .build();
   @Mock private AttributeMetadataProvider attributeMetadataProvider;
@@ -55,10 +56,10 @@ public class EntitiesRequestResponseProcessorTest {
     EntitiesRequest originalRequest =
         EntitiesRequest.newBuilder()
             .setEntityType("API")
-            .addSelection(QueryExpressionUtil.getColumnExpression("API.duplicate"))
-            .addSelection(QueryExpressionUtil.getColumnExpression("API.duplicate"))
-            .addSelection(QueryExpressionUtil.getColumnExpression("API.duplicate"))
-            .addSelection(QueryExpressionUtil.getColumnExpression("API.apiName"))
+            .addSelection(QueryExpressionUtil.buildAttributeExpression("API.duplicate"))
+            .addSelection(QueryExpressionUtil.buildAttributeExpression("API.duplicate"))
+            .addSelection(QueryExpressionUtil.buildAttributeExpression("API.duplicate"))
+            .addSelection(QueryExpressionUtil.buildAttributeExpression("API.apiName"))
             .addSelection(
                 QueryExpressionUtil.getAggregateFunctionExpression(
                     "API.metrics.bytes_received", FunctionType.SUM, "SUM_bytes_received", true))
@@ -66,8 +67,7 @@ public class EntitiesRequestResponseProcessorTest {
 
     EntitiesRequestContext context = mock(EntitiesRequestContext.class);
     when(context.getTimestampAttributeId()).thenReturn("API.startTime");
-    EntitiesRequest transformedRequest =
-        requestPreProcessor.transformFilter(originalRequest, context);
+    EntitiesRequest transformedRequest = requestPreProcessor.process(originalRequest, context);
     List<Expression> expressionList = transformedRequest.getSelectionList();
     Assertions.assertEquals(3, expressionList.size());
   }

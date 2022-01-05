@@ -6,7 +6,6 @@ import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
 import org.hypertrace.core.attribute.service.v1.AttributeMetadata;
-import org.hypertrace.core.query.service.api.ColumnIdentifier;
 import org.hypertrace.core.query.service.api.ColumnMetadata;
 import org.hypertrace.core.query.service.api.Filter;
 import org.hypertrace.core.query.service.api.QueryRequest;
@@ -74,7 +73,7 @@ public class RequestHandler implements RequestHandlerWithSorting {
     // 1. Add selections. All selections should either be only column or only function, never both.
     // The validator should catch this.
     List<Expression> aggregatedSelections =
-        ExpressionReader.getFunctionExpressions(request.getSelectionList().stream());
+        ExpressionReader.getFunctionExpressions(request.getSelectionList());
     aggregatedSelections.forEach(
         aggregatedSelection -> {
           requestContext.mapAliasToFunctionExpression(
@@ -84,7 +83,7 @@ public class RequestHandler implements RequestHandlerWithSorting {
         });
 
     List<Expression> columnSelections =
-        ExpressionReader.getColumnExpressions(request.getSelectionList().stream());
+        ExpressionReader.getAttributeExpressions(request.getSelectionList());
     columnSelections.forEach(
         columnSelection ->
             builder.addSelection(
@@ -171,18 +170,12 @@ public class RequestHandler implements RequestHandlerWithSorting {
   }
 
   private void addGroupByExpressionToBuilder(QueryRequest.Builder builder, Expression expression) {
-    org.hypertrace.core.query.service.api.Expression.Builder expressionBuilder =
-        org.hypertrace.core.query.service.api.Expression.newBuilder()
-            .setColumnIdentifier(
-                ColumnIdentifier.newBuilder()
-                    .setColumnName(expression.getColumnIdentifier().getColumnName())
-                    .setAlias(expression.getColumnIdentifier().getAlias()));
     // Add groupBy expression to GroupBy list
-    builder.addGroupBy(expressionBuilder);
+    builder.addGroupBy(QueryAndGatewayDtoConverter.convertToQueryExpression(expression));
     // Add groupBy to Selection list. The expectation from the Gateway service client is that they
     // do not add the
     // group by expressions to the selection expressions in the request
-    builder.addSelection(expressionBuilder);
+    builder.addSelection(QueryAndGatewayDtoConverter.convertToQueryExpression(expression));
   }
 
   private ExploreResponse.Builder handleQueryServiceResponse(
@@ -282,7 +275,7 @@ public class RequestHandler implements RequestHandlerWithSorting {
     if (function != null) { // Function expression value
       gwValue =
           QueryAndGatewayDtoConverter.convertToGatewayValueForMetricValue(
-              MetricAggregationFunctionUtil.getValueTypeFromFunction(
+              MetricAggregationFunctionUtil.getValueTypeForFunctionType(
                   function, attributeMetadataMap),
               attributeMetadataMap,
               metadata,

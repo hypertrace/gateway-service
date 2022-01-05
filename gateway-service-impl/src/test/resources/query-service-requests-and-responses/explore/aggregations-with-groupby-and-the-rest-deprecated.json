@@ -7,8 +7,8 @@
             "childFilter": [
               {
                 "lhs": {
-                  "columnIdentifier": {
-                    "columnName": "API_TRACE.startTime"
+                  "attributeExpression": {
+                    "attributeId": "API_TRACE.startTime"
                   }
                 },
                 "operator": "GE",
@@ -23,8 +23,8 @@
               },
               {
                 "lhs": {
-                  "columnIdentifier": {
-                    "columnName": "API_TRACE.startTime"
+                  "attributeExpression": {
+                    "attributeId": "API_TRACE.startTime"
                   }
                 },
                 "operator": "LT",
@@ -43,8 +43,8 @@
             "childFilter": [
               {
                 "lhs": {
-                  "columnIdentifier": {
-                    "columnName": "API_TRACE.apiBoundaryType"
+                  "attributeExpression": {
+                    "attributeId": "API_TRACE.apiBoundaryType"
                   }
                 },
                 "operator": "EQ",
@@ -66,8 +66,8 @@
             "functionName": "AVG",
             "arguments": [
               {
-                "columnIdentifier": {
-                  "columnName": "API_TRACE.duration"
+                "attributeExpression": {
+                  "attributeId": "API_TRACE.duration"
                 }
               }
             ],
@@ -79,8 +79,8 @@
             "functionName": "COUNT",
             "arguments": [
               {
-                "columnIdentifier": {
-                  "columnName": "API_TRACE.apiTraceId"
+                "attributeExpression": {
+                  "attributeId": "API_TRACE.apiTraceId"
                 }
               }
             ],
@@ -88,15 +88,15 @@
           }
         },
         {
-          "columnIdentifier": {
-            "columnName": "API_TRACE.serviceName"
+          "attributeExpression": {
+            "attributeId": "API_TRACE.serviceName"
           }
         }
       ],
       "groupBy": [
         {
-          "columnIdentifier": {
-            "columnName": "API_TRACE.serviceName"
+          "attributeExpression": {
+            "attributeId": "API_TRACE.serviceName"
           }
         }
       ],
@@ -402,8 +402,8 @@
             "childFilter": [
               {
                 "lhs": {
-                  "columnIdentifier": {
-                    "columnName": "API_TRACE.startTime"
+                  "attributeExpression": {
+                    "attributeId": "API_TRACE.startTime"
                   }
                 },
                 "operator": "GE",
@@ -418,8 +418,8 @@
               },
               {
                 "lhs": {
-                  "columnIdentifier": {
-                    "columnName": "API_TRACE.startTime"
+                  "attributeExpression": {
+                    "attributeId": "API_TRACE.startTime"
                   }
                 },
                 "operator": "LT",
@@ -438,8 +438,8 @@
             "childFilter": [
               {
                 "lhs": {
-                  "columnIdentifier": {
-                    "columnName": "API_TRACE.apiBoundaryType"
+                  "attributeExpression": {
+                    "attributeId": "API_TRACE.apiBoundaryType"
                   }
                 },
                 "operator": "EQ",
@@ -455,8 +455,8 @@
                 "childFilter": [
                   {
                     "lhs": {
-                      "columnIdentifier": {
-                        "columnName": "API_TRACE.serviceName"
+                      "attributeExpression": {
+                        "attributeId": "API_TRACE.serviceName"
                       }
                     },
                     "operator": "NOT_IN",
@@ -481,8 +481,8 @@
             "functionName": "AVG",
             "arguments": [
               {
-                "columnIdentifier": {
-                  "columnName": "API_TRACE.duration"
+                "attributeExpression": {
+                  "attributeId": "API_TRACE.duration"
                 }
               }
             ],
@@ -494,8 +494,8 @@
             "functionName": "COUNT",
             "arguments": [
               {
-                "columnIdentifier": {
-                  "columnName": "API_TRACE.apiTraceId"
+                "attributeExpression": {
+                  "attributeId": "API_TRACE.apiTraceId"
                 }
               }
             ],

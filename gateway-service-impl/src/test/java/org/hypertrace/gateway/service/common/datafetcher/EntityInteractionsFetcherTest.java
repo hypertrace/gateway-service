@@ -2,7 +2,11 @@ package org.hypertrace.gateway.service.common.datafetcher;
 
 import static org.hypertrace.gateway.service.common.converters.QueryRequestUtil.createBetweenTimesFilter;
 import static org.hypertrace.gateway.service.common.converters.QueryRequestUtil.createFilter;
+import static org.hypertrace.gateway.service.common.converters.QueryRequestUtil.createStringArrayLiteralExpression;
 import static org.hypertrace.gateway.service.common.converters.QueryRequestUtil.createStringNullLiteralExpression;
+import static org.hypertrace.gateway.service.common.util.QueryExpressionUtil.buildAttributeExpression;
+import static org.hypertrace.gateway.service.common.util.QueryExpressionUtil.buildStringFilter;
+import static org.hypertrace.gateway.service.common.util.QueryExpressionUtil.getAggregateFunctionExpression;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.junit.jupiter.api.Assertions.fail;
@@ -33,9 +37,7 @@ import org.hypertrace.gateway.service.entity.EntityKey;
 import org.hypertrace.gateway.service.v1.common.ColumnIdentifier;
 import org.hypertrace.gateway.service.v1.common.DomainEntityType;
 import org.hypertrace.gateway.service.v1.common.Expression;
-import org.hypertrace.gateway.service.v1.common.Expression.Builder;
 import org.hypertrace.gateway.service.v1.common.Filter;
-import org.hypertrace.gateway.service.v1.common.FunctionExpression;
 import org.hypertrace.gateway.service.v1.common.FunctionType;
 import org.hypertrace.gateway.service.v1.common.LiteralConstant;
 import org.hypertrace.gateway.service.v1.common.Operator;
@@ -51,7 +53,7 @@ import org.mockito.Mockito;
 public class EntityInteractionsFetcherTest extends AbstractGatewayServiceTest {
   private final InteractionsRequest fromServiceInteractions =
       InteractionsRequest.newBuilder()
-          .setFilter(getSimpleFilter("INTERACTION.fromEntityType", "SERVICE"))
+          .setFilter(buildStringFilter("INTERACTION.fromEntityType", Operator.EQ, "SERVICE"))
           .addSelection(
               getAggregateFunctionExpression(
                   "INTERACTION.bytesReceived", FunctionType.SUM, "SUM_bytes_received"))
@@ -59,12 +61,12 @@ public class EntityInteractionsFetcherTest extends AbstractGatewayServiceTest {
 
   private final InteractionsRequest toServiceInteractions =
       InteractionsRequest.newBuilder()
-          .setFilter(getSimpleFilter("INTERACTION.toEntityType", "SERVICE"))
+          .setFilter(buildStringFilter("INTERACTION.toEntityType", Operator.EQ, "SERVICE"))
           .addSelection(
               getAggregateFunctionExpression(
                   "INTERACTION.bytesSent", FunctionType.SUM, "SUM_bytes_sent"))
           .addSelection(
-              QueryExpressionUtil.getAggregateFunctionExpression(
+              getAggregateFunctionExpression(
                   "INTERACTION.bytesSent",
                   FunctionType.AVGRATE,
                   "AVGRATE_bytes_sent_60",
@@ -73,7 +75,7 @@ public class EntityInteractionsFetcherTest extends AbstractGatewayServiceTest {
                           .build()),
                   false))
           .addSelection(
-              QueryExpressionUtil.getAggregateFunctionExpression(
+              getAggregateFunctionExpression(
                   "INTERACTION.bytesSent",
                   FunctionType.PERCENTILE,
                   "p99_bytes_sent",
@@ -84,42 +86,13 @@ public class EntityInteractionsFetcherTest extends AbstractGatewayServiceTest {
 
   private final InteractionsRequest toApiInteractions =
       InteractionsRequest.newBuilder()
-          .setFilter(getSimpleFilter("Interaction.attributes.to_entity_type", "API"))
+          .setFilter(buildStringFilter("Interaction.attributes.to_entity_type", Operator.EQ, "API"))
           .addSelection(
               getAggregateFunctionExpression(
                   "Interaction.metrics.bytes_sent", FunctionType.SUM, "SUM_bytes_sent"))
           .build();
 
   @Mock private AttributeMetadataProvider attributeMetadataProvider;
-
-  private Builder getColumnExpression(String columnName) {
-    return Expression.newBuilder()
-        .setColumnIdentifier(ColumnIdentifier.newBuilder().setColumnName(columnName));
-  }
-
-  private Expression.Builder getLiteralExpression(String value) {
-    return Expression.newBuilder()
-        .setLiteral(
-            LiteralConstant.newBuilder()
-                .setValue(Value.newBuilder().setString(value).setValueType(ValueType.STRING)));
-  }
-
-  private Expression.Builder getAggregateFunctionExpression(
-      String columnName, FunctionType function, String alias) {
-    return Expression.newBuilder()
-        .setFunction(
-            FunctionExpression.newBuilder()
-                .setFunction(function)
-                .setAlias(alias)
-                .addArguments(getColumnExpression(columnName)));
-  }
-
-  private Filter.Builder getSimpleFilter(String columnName, String value) {
-    return Filter.newBuilder()
-        .setLhs(getColumnExpression(columnName))
-        .setOperator(Operator.EQ)
-        .setRhs(getLiteralExpression(value));
-  }
 
   @Test
   public void testServiceToServiceEdgeQueryRequests() {
@@ -128,7 +101,7 @@ public class EntityInteractionsFetcherTest extends AbstractGatewayServiceTest {
             .setEntityType(DomainEntityType.SERVICE.name())
             .setStartTimeMillis(System.currentTimeMillis() - TimeUnit.DAYS.toMillis(30))
             .setEndTimeMillis(System.currentTimeMillis())
-            .addSelection(getColumnExpression("SERVICE.name"))
+            .addSelection(buildAttributeExpression("SERVICE.name"))
             .setIncomingInteractions(fromServiceInteractions)
             .setOutgoingInteractions(toServiceInteractions)
             .build();
@@ -183,10 +156,7 @@ public class EntityInteractionsFetcherTest extends AbstractGatewayServiceTest {
 
     Filter.Builder entityTypeFilter =
         Filter.newBuilder()
-            .setLhs(
-                Expression.newBuilder()
-                    .setColumnIdentifier(
-                        ColumnIdentifier.newBuilder().setColumnName("INTERACTION.fromEntityType")))
+            .setLhs(buildAttributeExpression("INTERACTION.fromEntityType"))
             .setOperator(Operator.IN)
             .setRhs(
                 Expression.newBuilder()
@@ -198,10 +168,7 @@ public class EntityInteractionsFetcherTest extends AbstractGatewayServiceTest {
                                     .addAllStringArray(entityTypes))));
     Filter.Builder entityIdFilter =
         Filter.newBuilder()
-            .setLhs(
-                Expression.newBuilder()
-                    .setColumnIdentifier(
-                        ColumnIdentifier.newBuilder().setColumnName("INTERACTION.fromEntityId")))
+            .setLhs(buildAttributeExpression("INTERACTION.fromEntityId"))
             .setOperator(Operator.IN)
             .setRhs(
                 Expression.newBuilder()
@@ -219,10 +186,10 @@ public class EntityInteractionsFetcherTest extends AbstractGatewayServiceTest {
                     .addChildFilter(entityTypeFilter)
                     .addChildFilter(entityIdFilter))
             .addSelection(
-                QueryExpressionUtil.getAggregateFunctionExpression(
+                getAggregateFunctionExpression(
                     "INTERACTION.bytesReceived", FunctionType.SUM, "SUM_bytes_received"))
             .addSelection(
-                QueryExpressionUtil.getAggregateFunctionExpression(
+                getAggregateFunctionExpression(
                     "INTERACTION.bytesReceived",
                     FunctionType.AVGRATE,
                     "AVGRATE_bytes_received_60",
@@ -231,7 +198,7 @@ public class EntityInteractionsFetcherTest extends AbstractGatewayServiceTest {
                             .build()),
                     false))
             .addSelection(
-                QueryExpressionUtil.getAggregateFunctionExpression(
+                getAggregateFunctionExpression(
                     "INTERACTION.bytesReceived",
                     FunctionType.PERCENTILE,
                     "p99_bytes_received",
@@ -244,7 +211,7 @@ public class EntityInteractionsFetcherTest extends AbstractGatewayServiceTest {
             .setEntityType(DomainEntityType.SERVICE.name())
             .setStartTimeMillis(System.currentTimeMillis() - TimeUnit.DAYS.toMillis(30))
             .setEndTimeMillis(System.currentTimeMillis())
-            .addSelection(getColumnExpression("SERVICE.name"))
+            .addSelection(buildAttributeExpression("SERVICE.name"))
             .setIncomingInteractions(fromInteraction)
             .build();
 
@@ -283,10 +250,7 @@ public class EntityInteractionsFetcherTest extends AbstractGatewayServiceTest {
 
     Filter.Builder entityTypeFilter =
         Filter.newBuilder()
-            .setLhs(
-                Expression.newBuilder()
-                    .setColumnIdentifier(
-                        ColumnIdentifier.newBuilder().setColumnName("INTERACTION.toEntityType")))
+            .setLhs(buildAttributeExpression("INTERACTION.toEntityType"))
             .setOperator(Operator.IN)
             .setRhs(
                 Expression.newBuilder()
@@ -308,9 +272,9 @@ public class EntityInteractionsFetcherTest extends AbstractGatewayServiceTest {
             .setEntityType(DomainEntityType.SERVICE.name())
             .setStartTimeMillis(System.currentTimeMillis() - TimeUnit.DAYS.toMillis(30))
             .setEndTimeMillis(System.currentTimeMillis())
-            .addSelection(getColumnExpression("SERVICE.name"))
-            .addSelection(getColumnExpression("INTERACTION.fromEntityType"))
-            .addSelection(getColumnExpression("INTERACTION.toEntityType"))
+            .addSelection(buildAttributeExpression("SERVICE.name"))
+            .addSelection(buildAttributeExpression("INTERACTION.fromEntityType"))
+            .addSelection(buildAttributeExpression("INTERACTION.toEntityType"))
             .setOutgoingInteractions(toInteraction)
             .build();
 
@@ -501,25 +465,11 @@ public class EntityInteractionsFetcherTest extends AbstractGatewayServiceTest {
 
   private org.hypertrace.core.query.service.api.Filter createStringArrayFilter(
       org.hypertrace.core.query.service.api.Operator operator,
-      String columnName,
+      String attributeId,
       List<String> valueList) {
-    return org.hypertrace.core.query.service.api.Filter.newBuilder()
-        .setOperator(operator)
-        .setLhs(
-            org.hypertrace.core.query.service.api.Expression.newBuilder()
-                .setColumnIdentifier(
-                    org.hypertrace.core.query.service.api.ColumnIdentifier.newBuilder()
-                        .setColumnName(columnName)))
-        .setRhs(
-            org.hypertrace.core.query.service.api.Expression.newBuilder()
-                .setLiteral(
-                    org.hypertrace.core.query.service.api.LiteralConstant.newBuilder()
-                        .setValue(
-                            org.hypertrace.core.query.service.api.Value.newBuilder()
-                                .addAllStringArray(valueList)
-                                .setValueType(
-                                    org.hypertrace.core.query.service.api.ValueType.STRING_ARRAY))))
-        .build();
+
+    return org.hypertrace.gateway.service.common.converters.QueryRequestUtil.createFilter(
+        attributeId, operator, createStringArrayLiteralExpression(valueList));
   }
 
   private EntitiesRequest.Builder getValidServiceEntitiesRequest() {
@@ -527,7 +477,7 @@ public class EntityInteractionsFetcherTest extends AbstractGatewayServiceTest {
         .setEntityType(DomainEntityType.SERVICE.name())
         .setStartTimeMillis(System.currentTimeMillis() - TimeUnit.DAYS.toMillis(30))
         .setEndTimeMillis(System.currentTimeMillis())
-        .addSelection(getColumnExpression("Service.name"));
+        .addSelection(buildAttributeExpression("Service.name"));
   }
 
   private EntitiesRequest.Builder getValidBackendEntitiesRequest() {
@@ -535,7 +485,7 @@ public class EntityInteractionsFetcherTest extends AbstractGatewayServiceTest {
         .setEntityType(DomainEntityType.BACKEND.name())
         .setStartTimeMillis(System.currentTimeMillis() - TimeUnit.DAYS.toMillis(30))
         .setEndTimeMillis(System.currentTimeMillis())
-        .addSelection(getColumnExpression("Backend.name"));
+        .addSelection(buildAttributeExpression("Backend.name"));
   }
 
   @Test
@@ -543,7 +493,7 @@ public class EntityInteractionsFetcherTest extends AbstractGatewayServiceTest {
     // No selections
     InteractionsRequest interactionsRequest =
         InteractionsRequest.newBuilder()
-            .setFilter(getSimpleFilter("INTERACTION.fromEntityType", "SERVICE"))
+            .setFilter(buildStringFilter("INTERACTION.fromEntityType", Operator.EQ, "SERVICE"))
             .build();
 
     EntitiesRequest request =
@@ -588,13 +538,13 @@ public class EntityInteractionsFetcherTest extends AbstractGatewayServiceTest {
         getValidServiceEntitiesRequest()
             .setIncomingInteractions(
                 // No filter but selections available.
-                InteractionsRequest.newBuilder().addSelection(getColumnExpression("test")))
+                InteractionsRequest.newBuilder().addSelection(buildAttributeExpression("test")))
             .build(),
         getValidServiceEntitiesRequest()
             .setOutgoingInteractions(
                 // No filter but filter available
                 InteractionsRequest.newBuilder()
-                    .setFilter(getSimpleFilter("test", "value"))
+                    .setFilter(QueryExpressionUtil.buildStringFilter("test", Operator.EQ, "value"))
                     .build())
             .build(),
         // Backend to service interactions

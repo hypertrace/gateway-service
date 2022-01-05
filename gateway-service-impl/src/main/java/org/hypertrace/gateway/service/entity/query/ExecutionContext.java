@@ -20,11 +20,11 @@ import org.hypertrace.gateway.service.common.AttributeMetadataProvider;
 import org.hypertrace.gateway.service.common.util.AttributeMetadataUtil;
 import org.hypertrace.gateway.service.common.util.ExpressionReader;
 import org.hypertrace.gateway.service.common.util.OrderByUtil;
+import org.hypertrace.gateway.service.common.util.QueryExpressionUtil;
 import org.hypertrace.gateway.service.entity.EntitiesRequestContext;
 import org.hypertrace.gateway.service.entity.config.EntityIdColumnsConfigs;
-import org.hypertrace.gateway.service.v1.common.ColumnIdentifier;
 import org.hypertrace.gateway.service.v1.common.Expression;
-import org.hypertrace.gateway.service.v1.common.Expression.ValueCase;
+import org.hypertrace.gateway.service.v1.common.Expression.Builder;
 import org.hypertrace.gateway.service.v1.common.Filter;
 import org.hypertrace.gateway.service.v1.common.OrderByExpression;
 import org.hypertrace.gateway.service.v1.common.TimeAggregation;
@@ -195,13 +195,9 @@ public class ExecutionContext {
     return IntStream.range(0, entityIdAttributeNames.size())
         .mapToObj(
             value ->
-                Expression.newBuilder()
-                    .setColumnIdentifier(
-                        ColumnIdentifier.newBuilder()
-                            .setColumnName(entityIdAttributeNames.get(value))
-                            .setAlias("entityId" + value)
-                            .build())
-                    .build())
+                QueryExpressionUtil.buildAttributeExpression(
+                    entityIdAttributeNames.get(value), "entityId" + value))
+        .map(Builder::build)
         .collect(Collectors.toList());
   }
 
@@ -224,7 +220,8 @@ public class ExecutionContext {
 
     Predicate<Expression> retainExpressionPredicate =
         expression ->
-            Sets.intersection(ExpressionReader.extractColumns(expression), attributes).isEmpty();
+            Sets.intersection(ExpressionReader.extractAttributeIds(expression), attributes)
+                .isEmpty();
     List<Expression> expressions =
         sourceToSelectionExpressionMap.get(source).stream()
             .filter(retainExpressionPredicate)
@@ -262,15 +259,17 @@ public class ExecutionContext {
   }
 
   private void buildSourceToExpressionMaps() {
-    Map<ValueCase, List<Expression>> selectionExprTypeToExprMap =
+    List<Expression> attributeSelections =
         entitiesRequest.getSelectionList().stream()
-            .collect(Collectors.groupingBy(Expression::getValueCase, Collectors.toList()));
-    sourceToSelectionExpressionMap =
-        getDataSourceToExpressionMap(selectionExprTypeToExprMap.get(ValueCase.COLUMNIDENTIFIER));
+            .filter(ExpressionReader::isAttributeSelection)
+            .collect(Collectors.toUnmodifiableList());
+    sourceToSelectionExpressionMap = getDataSourceToExpressionMap(attributeSelections);
     sourceToSelectionAttributeMap = buildSourceToAttributesMap(sourceToSelectionExpressionMap);
-
-    sourceToMetricExpressionMap =
-        getDataSourceToExpressionMap(selectionExprTypeToExprMap.get(ValueCase.FUNCTION));
+    List<Expression> functionSelections =
+        entitiesRequest.getSelectionList().stream()
+            .filter(Expression::hasFunction)
+            .collect(Collectors.toUnmodifiableList());
+    sourceToMetricExpressionMap = getDataSourceToExpressionMap(functionSelections);
     sourceToTimeAggregationMap =
         getDataSourceToTimeAggregation(entitiesRequest.getTimeAggregationList());
     pendingSelectionSources.addAll(sourceToSelectionExpressionMap.keySet());
@@ -296,24 +295,27 @@ public class ExecutionContext {
             entitiesRequest.getOrderByList(),
             entitiesRequest.getSelectionList(),
             entitiesRequest.getTimeAggregationList());
-    Map<ValueCase, List<OrderByExpression>> orderByExpressionTypeToExpressionMap =
+
+    List<OrderByExpression> attributeOrderByExpressions =
         orderByExpressions.stream()
-            .collect(
-                Collectors.groupingBy(
-                    orderByExpression -> orderByExpression.getExpression().getValueCase(),
-                    Collectors.toList()));
+            .filter(
+                orderByExpression ->
+                    ExpressionReader.isAttributeSelection(orderByExpression.getExpression()))
+            .collect(Collectors.toUnmodifiableList());
+
     sourceToSelectionOrderByExpressionMap =
-        getDataSourceToOrderByExpressionMap(
-            orderByExpressionTypeToExpressionMap.getOrDefault(
-                ValueCase.COLUMNIDENTIFIER, Collections.emptyList()));
+        getDataSourceToOrderByExpressionMap(attributeOrderByExpressions);
     sourceToSelectionOrderByAttributeMap =
         buildSourceToAttributesMap(
             convertOrderByExpressionToExpression(sourceToSelectionOrderByExpressionMap));
 
+    List<OrderByExpression> functionOrderByExpressions =
+        orderByExpressions.stream()
+            .filter(orderByExpression -> orderByExpression.getExpression().hasFunction())
+            .collect(Collectors.toUnmodifiableList());
+
     sourceToMetricOrderByExpressionMap =
-        getDataSourceToOrderByExpressionMap(
-            orderByExpressionTypeToExpressionMap.getOrDefault(
-                ValueCase.FUNCTION, Collections.emptyList()));
+        getDataSourceToOrderByExpressionMap(functionOrderByExpressions);
     sourceToMetricOrderByAttributeMap =
         buildSourceToAttributesMap(
             convertOrderByExpressionToExpression(sourceToMetricOrderByExpressionMap));
@@ -397,14 +399,14 @@ public class ExecutionContext {
         attributeMetadataProvider.getAttributesMetadata(
             this.entitiesRequestContext, entitiesRequest.getEntityType());
     for (Expression expression : expressions) {
-      Set<String> columnNames = ExpressionReader.extractColumns(expression);
+      Set<String> attributeIds = ExpressionReader.extractAttributeIds(expression);
       Set<AttributeSource> sources =
           Arrays.stream(AttributeSource.values()).collect(Collectors.toSet());
-      for (String columnName : columnNames) {
-        List<AttributeSource> sourcesList = attrNameToMetadataMap.get(columnName).getSourcesList();
+      for (String attributeId : attributeIds) {
+        List<AttributeSource> sourcesList = attrNameToMetadataMap.get(attributeId).getSourcesList();
         sources.retainAll(sourcesList);
         allAttributesToSourcesMap
-            .computeIfAbsent(columnName, v -> new HashSet<>())
+            .computeIfAbsent(attributeId, v -> new HashSet<>())
             .addAll(sourcesList.stream().map(Enum::name).collect(Collectors.toList()));
       }
       if (sources.isEmpty()) {
@@ -434,7 +436,7 @@ public class ExecutionContext {
                         Map.Entry::getKey,
                         entry ->
                             entry.getValue().stream()
-                                .map(ExpressionReader::extractColumns)
+                                .map(ExpressionReader::extractAttributeIds)
                                 .flatMap(Collection::stream)
                                 .collect(Collectors.toSet()))))
         .build();

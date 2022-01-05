@@ -13,6 +13,7 @@ import java.util.stream.Collectors;
 import java.util.stream.Stream;
 import org.hypertrace.core.attribute.service.v1.AttributeMetadata;
 import org.hypertrace.core.attribute.service.v1.AttributeSource;
+import org.hypertrace.gateway.service.common.util.ExpressionReader;
 import org.hypertrace.gateway.service.common.util.TimeRangeFilterUtil;
 import org.hypertrace.gateway.service.entity.query.visitor.ExecutionContextBuilderVisitor;
 import org.hypertrace.gateway.service.entity.query.visitor.FilterOptimizingVisitor;
@@ -282,7 +283,9 @@ public class ExecutionTreeBuilder {
     } else {
       List<AttributeSource> sources =
           attributeMetadataMap
-              .get(filter.getLhs().getColumnIdentifier().getColumnName())
+              .get(
+                  ExpressionReader.getAttributeIdFromAttributeSelection(filter.getLhs())
+                      .orElseThrow())
               .getSourcesList();
 
       // if the filter by and order by are from QS, pagination can be pushed down to QS

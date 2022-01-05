@@ -3,6 +3,7 @@ package org.hypertrace.gateway.service.explore;
 import java.util.List;
 import java.util.Map;
 import org.hypertrace.core.attribute.service.v1.AttributeMetadata;
+import org.hypertrace.gateway.service.common.util.ExpressionReader;
 import org.hypertrace.gateway.service.common.validators.request.RequestValidator;
 import org.hypertrace.gateway.service.v1.common.Expression;
 import org.hypertrace.gateway.service.v1.common.Period;
@@ -48,7 +49,7 @@ public class ExploreRequestValidator extends RequestValidator<ExploreRequest> {
       List<Expression> selections,
       Map<String, AttributeMetadata> attributeMetadataMap) {
     checkArgument(
-        groupByExpressions.stream().allMatch(Expression::hasColumnIdentifier),
+        groupByExpressions.stream().allMatch(ExpressionReader::isAttributeSelection),
         "Group By expressions should all be on columns(for now).");
     validateSimpleSelections(groupByExpressions, attributeMetadataMap);
 
@@ -82,7 +83,7 @@ public class ExploreRequestValidator extends RequestValidator<ExploreRequest> {
 
   private void validateAllSelectionsAreEitherColumnOrAggregations(List<Expression> selections) {
     checkArgument(
-        selections.stream().allMatch(Expression::hasColumnIdentifier)
+        selections.stream().allMatch(ExpressionReader::isAttributeSelection)
             || selections.stream().allMatch(Expression::hasFunction),
         "The selections should either be all columns or all aggregations");
   }

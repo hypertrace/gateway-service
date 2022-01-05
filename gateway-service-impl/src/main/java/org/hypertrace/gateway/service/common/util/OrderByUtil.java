@@ -93,7 +93,7 @@ public class OrderByUtil {
       FunctionExpression orderByExpression, FunctionExpression selectionExpression) {
     Optional<Expression> orderByColumnIdExpression =
         orderByExpression.getArgumentsList().stream()
-            .filter(Expression::hasColumnIdentifier)
+            .filter(ExpressionReader::isAttributeSelection)
             .findFirst();
     if (orderByColumnIdExpression.isEmpty()) {
       return false;
@@ -102,7 +102,7 @@ public class OrderByUtil {
     // Match the ColumnId Expression
     return selectionExpression.getFunction() == orderByExpression.getFunction()
         && selectionExpression.getArgumentsList().stream()
-            .filter(Expression::hasColumnIdentifier)
+            .filter(ExpressionReader::isAttributeSelection)
             .findFirst()
             .equals(orderByColumnIdExpression);
   }

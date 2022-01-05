@@ -4,9 +4,9 @@ import java.util.List;
 
 public class ScopeFilterConfig {
   private final String scope;
-  private final List<ScopeFilter> scopeFilters;
+  private final List<ScopeFilter<String>> scopeFilters;
 
-  public ScopeFilterConfig(String scope, List<ScopeFilter> scopeFilters) {
+  public ScopeFilterConfig(String scope, List<ScopeFilter<String>> scopeFilters) {
     this.scope = scope;
     this.scopeFilters = scopeFilters;
   }
@@ -15,7 +15,7 @@ public class ScopeFilterConfig {
     return scope;
   }
 
-  public List<ScopeFilter> getScopeFilters() {
+  public List<ScopeFilter<String>> getScopeFilters() {
     return scopeFilters;
   }
 }

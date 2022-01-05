@@ -22,6 +22,7 @@ import org.hypertrace.core.serviceframework.metrics.PlatformMetricsRegistry;
 import org.hypertrace.gateway.service.common.AttributeMetadataProvider;
 import org.hypertrace.gateway.service.common.RequestContext;
 import org.hypertrace.gateway.service.common.converters.QueryAndGatewayDtoConverter;
+import org.hypertrace.gateway.service.common.util.AttributeMetadataUtil;
 import org.hypertrace.gateway.service.v1.common.OrderByExpression;
 import org.hypertrace.gateway.service.v1.log.events.LogEvent;
 import org.hypertrace.gateway.service.v1.log.events.LogEventsRequest;
@@ -81,6 +82,10 @@ public class LogEventsService {
       LogEventsRequest request,
       Map<String, AttributeMetadata> attributeMetadataMap) {
 
+    Map<String, AttributeMetadata> resultKeyToAttributeMetadataMap =
+        AttributeMetadataUtil.remapAttributeMetadataByResultKey(
+            request.getSelectionList(), attributeMetadataMap);
+
     AttributeMetadata timestampAttributeMetadata =
         getTimestampAttributeMetadata(attributeMetadataProvider, context, LOG_EVENT_SCOPE);
     QueryRequest.Builder queryBuilder =
@@ -131,7 +136,7 @@ public class LogEventsService {
           logEventBuilder.putAttributes(
               metadata.getColumnName(),
               QueryAndGatewayDtoConverter.convertToGatewayValue(
-                  attrName, row.getColumn(i), attributeMetadataMap));
+                  attrName, row.getColumn(i), resultKeyToAttributeMetadataMap));
         }
 
         logEventResult.add(logEventBuilder.build());

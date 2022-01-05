@@ -27,6 +27,7 @@ import org.hypertrace.core.serviceframework.metrics.PlatformMetricsRegistry;
 import org.hypertrace.gateway.service.common.AttributeMetadataProvider;
 import org.hypertrace.gateway.service.common.RequestContext;
 import org.hypertrace.gateway.service.common.converters.QueryAndGatewayDtoConverter;
+import org.hypertrace.gateway.service.common.util.AttributeMetadataUtil;
 import org.hypertrace.gateway.service.v1.common.OrderByExpression;
 import org.hypertrace.gateway.service.v1.span.SpanEvent;
 import org.hypertrace.gateway.service.v1.span.SpansRequest;
@@ -98,6 +99,10 @@ public class SpanService {
       SpansRequest request,
       Map<String, AttributeMetadata> attributeMetadataMap) {
 
+    Map<String, AttributeMetadata> resultKeyToAttributeMetadataMap =
+        AttributeMetadataUtil.remapAttributeMetadataByResultKey(
+            request.getSelectionList(), attributeMetadataMap);
+
     QueryRequest.Builder queryBuilder = createQueryWithFilter(request, context);
 
     if (!request.getSelectionList().isEmpty()) {
@@ -133,7 +138,7 @@ public class SpanService {
           spanEventBuilder.putAttributes(
               metadata.getColumnName(),
               QueryAndGatewayDtoConverter.convertToGatewayValue(
-                  attrName, row.getColumn(i), attributeMetadataMap));
+                  attrName, row.getColumn(i), resultKeyToAttributeMetadataMap));
         }
 
         spanEventsResult.add(spanEventBuilder.build());

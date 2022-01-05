@@ -1,7 +1,7 @@
 package org.hypertrace.gateway.service.common;
 
+import static org.hypertrace.gateway.service.common.converters.QueryRequestUtil.createAttributeExpression;
 import static org.hypertrace.gateway.service.common.converters.QueryRequestUtil.createBetweenTimesFilter;
-import static org.hypertrace.gateway.service.common.converters.QueryRequestUtil.createColumnExpression;
 import static org.hypertrace.gateway.service.common.converters.QueryRequestUtil.createFilter;
 import static org.hypertrace.gateway.service.common.converters.QueryRequestUtil.createStringNullLiteralExpression;
 
@@ -67,7 +67,7 @@ public class QueryServiceRequestAndResponseUtils {
             Function.newBuilder()
                 .setFunctionName(functionName)
                 .setAlias(functionAlias)
-                .addArguments(createColumnExpression(columnName, columnAlias)))
+                .addArguments(createAttributeExpression(columnName, columnAlias)))
         .build();
   }
 
@@ -78,7 +78,7 @@ public class QueryServiceRequestAndResponseUtils {
             Function.newBuilder()
                 .setFunctionName(functionName)
                 .setAlias(alias)
-                .addArguments(createColumnExpression(columnName)))
+                .addArguments(createAttributeExpression(columnName)))
         .build();
   }
 
@@ -87,7 +87,7 @@ public class QueryServiceRequestAndResponseUtils {
         .setFunction(
             Function.newBuilder()
                 .setFunctionName(functionName)
-                .addArguments(createColumnExpression(columnName)))
+                .addArguments(createAttributeExpression(columnName)))
         .build();
   }
 
@@ -105,7 +105,7 @@ public class QueryServiceRequestAndResponseUtils {
         .setOperator(Operator.AND)
         .addChildFilter(
             createFilter(
-                createColumnExpression(entityIdColumnName),
+                createAttributeExpression(entityIdColumnName),
                 Operator.NEQ,
                 createStringNullLiteralExpression()))
         .addChildFilter(createBetweenTimesFilter(timestampColumnName, startTime, endTime))
@@ -119,7 +119,7 @@ public class QueryServiceRequestAndResponseUtils {
         .setOperator(Operator.AND)
         .addChildFilter(
             createFilter(
-                createColumnExpression(entityIdColumnName),
+                createAttributeExpression(entityIdColumnName),
                 Operator.NEQ,
                 createStringNullLiteralExpression()))
         .addAllChildFilter(

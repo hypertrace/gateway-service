@@ -1,5 +1,6 @@
 package org.hypertrace.gateway.service.common.config;
 
+import static org.hypertrace.gateway.service.common.util.QueryExpressionUtil.buildAttributeExpression;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.when;
 
@@ -11,7 +12,6 @@ import org.hypertrace.core.attribute.service.v1.AttributeMetadata;
 import org.hypertrace.core.attribute.service.v1.AttributeScope;
 import org.hypertrace.gateway.service.common.AttributeMetadataProvider;
 import org.hypertrace.gateway.service.common.RequestContext;
-import org.hypertrace.gateway.service.v1.common.ColumnIdentifier;
 import org.hypertrace.gateway.service.v1.common.Expression;
 import org.hypertrace.gateway.service.v1.common.Filter;
 import org.hypertrace.gateway.service.v1.common.LiteralConstant;
@@ -52,12 +52,12 @@ public class ScopeFilterConfigsTest {
             .setOperator(Operator.AND)
             .addChildFilter(
                 Filter.newBuilder()
-                    .setLhs(createColumnExpression("API_TRACE.id"))
+                    .setLhs(buildAttributeExpression("API_TRACE.id"))
                     .setOperator(Operator.EQ)
                     .setRhs(createLiteralStringExpression("some-api-trace-id")))
             .addChildFilter(
                 Filter.newBuilder()
-                    .setLhs(createColumnExpression("API_TRACE.some_col"))
+                    .setLhs(buildAttributeExpression("API_TRACE.some_col"))
                     .setOperator(Operator.EQ)
                     .setRhs(createLiteralStringExpression("some-col-value")))
             .build();
@@ -67,12 +67,12 @@ public class ScopeFilterConfigsTest {
             .setOperator(Operator.OR)
             .addChildFilter(
                 Filter.newBuilder()
-                    .setLhs(createColumnExpression("API_TRACE.id"))
+                    .setLhs(buildAttributeExpression("API_TRACE.id"))
                     .setOperator(Operator.EQ)
                     .setRhs(createLiteralStringExpression("some-api-trace-id")))
             .addChildFilter(
                 Filter.newBuilder()
-                    .setLhs(createColumnExpression("API_TRACE.some_col"))
+                    .setLhs(buildAttributeExpression("API_TRACE.some_col"))
                     .setOperator(Operator.EQ)
                     .setRhs(createLiteralStringExpression("some-col-value")))
             .build();
@@ -103,12 +103,12 @@ public class ScopeFilterConfigsTest {
             .setOperator(Operator.AND)
             .addChildFilter(
                 Filter.newBuilder()
-                    .setLhs(createColumnExpression("API_TRACE.apiBoundaryType"))
+                    .setLhs(buildAttributeExpression("API_TRACE.apiBoundaryType"))
                     .setOperator(Operator.EQ)
                     .setRhs(createLiteralStringExpression("ENTRY")))
             .addChildFilter(
                 Filter.newBuilder()
-                    .setLhs(createColumnExpression("API_TRACE.apiId"))
+                    .setLhs(buildAttributeExpression("API_TRACE.apiId"))
                     .setOperator(Operator.NEQ)
                     .setRhs(createLiteralStringExpression("null")));
 
@@ -169,12 +169,12 @@ public class ScopeFilterConfigsTest {
             .setOperator(Operator.AND)
             .addChildFilter(
                 Filter.newBuilder()
-                    .setLhs(createColumnExpression("API_TRACE.id"))
+                    .setLhs(buildAttributeExpression("API_TRACE.id"))
                     .setOperator(Operator.EQ)
                     .setRhs(createLiteralStringExpression("some-api-trace-id")))
             .addChildFilter(
                 Filter.newBuilder()
-                    .setLhs(createColumnExpression("API_TRACE.some_col"))
+                    .setLhs(buildAttributeExpression("API_TRACE.some_col"))
                     .setOperator(Operator.EQ)
                     .setRhs(createLiteralStringExpression("some-col-value")))
             .build();
@@ -201,12 +201,12 @@ public class ScopeFilterConfigsTest {
             .setOperator(Operator.AND)
             .addChildFilter(
                 Filter.newBuilder()
-                    .setLhs(createColumnExpression("API_TRACE.id"))
+                    .setLhs(buildAttributeExpression("API_TRACE.id"))
                     .setOperator(Operator.EQ)
                     .setRhs(createLiteralStringExpression("some-api-trace-id")))
             .addChildFilter(
                 Filter.newBuilder()
-                    .setLhs(createColumnExpression("API_TRACE.some_col"))
+                    .setLhs(buildAttributeExpression("API_TRACE.some_col"))
                     .setOperator(Operator.EQ)
                     .setRhs(createLiteralStringExpression("some-col-value")))
             .build();
@@ -230,10 +230,5 @@ public class ScopeFilterConfigsTest {
         .setLiteral(
             LiteralConstant.newBuilder()
                 .setValue(Value.newBuilder().setValueType(ValueType.STRING).setString(str)));
-  }
-
-  private Expression.Builder createColumnExpression(String columnName) {
-    return Expression.newBuilder()
-        .setColumnIdentifier(ColumnIdentifier.newBuilder().setColumnName(columnName));
   }
 }

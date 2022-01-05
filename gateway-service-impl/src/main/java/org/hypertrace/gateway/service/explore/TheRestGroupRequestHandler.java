@@ -2,9 +2,11 @@ package org.hypertrace.gateway.service.explore;
 
 import com.google.common.collect.ImmutableSet;
 import java.util.List;
+import java.util.Map;
 import java.util.Set;
+import java.util.function.Function;
 import java.util.stream.Collectors;
-import org.hypertrace.gateway.service.v1.common.ColumnIdentifier;
+import org.hypertrace.gateway.service.common.util.ExpressionReader;
 import org.hypertrace.gateway.service.v1.common.Expression;
 import org.hypertrace.gateway.service.v1.common.Filter;
 import org.hypertrace.gateway.service.v1.common.LiteralConstant;
@@ -131,9 +133,10 @@ class TheRestGroupRequestHandler {
         .getGroupByList()
         .forEach(
             groupBy -> {
-              String columnName = groupBy.getColumnIdentifier().getColumnName();
-              Set<String> excludedValues = getExcludedValues(columnName, originalResponse);
-              filterBuilder.addChildFilter(createExcludedChildFilter(columnName, excludedValues));
+              String groupByResultName =
+                  ExpressionReader.getSelectionResultName(groupBy).orElseThrow();
+              Set<String> excludedValues = getExcludedValues(groupByResultName, originalResponse);
+              filterBuilder.addChildFilter(createExcludedChildFilter(groupBy, excludedValues));
             });
 
     return filterBuilder;
@@ -168,39 +171,40 @@ class TheRestGroupRequestHandler {
       ExploreRequest originalRequest, ExploreResponse.Builder originalResponse) {
     Filter.Builder filterBuilder = Filter.newBuilder();
     filterBuilder.setOperator(Operator.AND);
-    List<String> groupByColumns = groupByColumnList(originalRequest);
+    Map<String, Expression> groupBySelectionExpressionsByResultName =
+        groupByExpressionByResultName(originalRequest);
 
     originalResponse
         .getRowBuilderList()
         .forEach(
             rowBuilder ->
                 filterBuilder.addChildFilter(
-                    createGroupValuesOrFilter(groupByColumns, rowBuilder)));
+                    createGroupValuesOrFilter(
+                        groupBySelectionExpressionsByResultName, rowBuilder)));
 
     return filterBuilder;
   }
 
-  private List<String> groupByColumnList(ExploreRequest originalRequest) {
+  private Map<String, Expression> groupByExpressionByResultName(ExploreRequest originalRequest) {
     return originalRequest.getGroupByList().stream()
-        .map(groupBy -> groupBy.getColumnIdentifier().getColumnName())
-        .collect(Collectors.toUnmodifiableList());
+        .collect(
+            Collectors.toUnmodifiableMap(
+                expression -> ExpressionReader.getSelectionResultName(expression).orElseThrow(),
+                Function.identity()));
   }
 
   private Filter.Builder createGroupValuesOrFilter(
-      List<String> groupByColumns, Row.Builder rowBuilder) {
+      Map<String, Expression> groupBySelectionExpressionsByResultName, Row.Builder rowBuilder) {
     Filter.Builder filterBuilder = Filter.newBuilder();
     filterBuilder.setOperator(Operator.OR);
     rowBuilder
         .getColumnsMap()
         .forEach(
             (columnName, columnValue) -> {
-              if (groupByColumns.contains(columnName)) {
+              if (groupBySelectionExpressionsByResultName.containsKey(columnName)) {
                 filterBuilder.addChildFilter(
                     Filter.newBuilder()
-                        .setLhs(
-                            Expression.newBuilder()
-                                .setColumnIdentifier(
-                                    ColumnIdentifier.newBuilder().setColumnName(columnName)))
+                        .setLhs(groupBySelectionExpressionsByResultName.get(columnName))
                         .setOperator(Operator.NEQ)
                         .setRhs(
                             Expression.newBuilder()
@@ -217,19 +221,17 @@ class TheRestGroupRequestHandler {
   }
 
   private Set<String> getExcludedValues(
-      String columnName, ExploreResponse.Builder originalResponse) {
-    // GroupBy only supports columns expressions for now.
+      String resultName, ExploreResponse.Builder originalResponse) {
     return originalResponse.getRowBuilderList().stream()
-        .map(rowBuilder -> rowBuilder.getColumnsMap().get(columnName))
+        .map(rowBuilder -> rowBuilder.getColumnsMap().get(resultName))
         .map(Value::getString)
         .collect(ImmutableSet.toImmutableSet());
   }
 
-  private Filter.Builder createExcludedChildFilter(String columnName, Set<String> excludedValues) {
+  private Filter.Builder createExcludedChildFilter(
+      Expression groupBySelectionExpression, Set<String> excludedValues) {
     return Filter.newBuilder()
-        .setLhs(
-            Expression.newBuilder()
-                .setColumnIdentifier(ColumnIdentifier.newBuilder().setColumnName(columnName)))
+        .setLhs(groupBySelectionExpression)
         .setOperator(Operator.NOT_IN)
         .setRhs(
             Expression.newBuilder()
@@ -257,14 +259,12 @@ class TheRestGroupRequestHandler {
   private void appendTheRestColumnValueToRowBuilder(
       Row.Builder rowBuilder, List<Expression> groupBys) {
     groupBys.forEach(
-        groupBy -> {
-          String columnName = groupBy.getColumnIdentifier().getColumnName();
-          rowBuilder.putColumns(
-              columnName,
-              Value.newBuilder()
-                  .setValueType(ValueType.STRING)
-                  .setString(OTHER_COLUMN_VALUE)
-                  .build());
-        });
+        groupBy ->
+            rowBuilder.putColumns(
+                ExpressionReader.getSelectionResultName(groupBy).orElseThrow(),
+                Value.newBuilder()
+                    .setValueType(ValueType.STRING)
+                    .setString(OTHER_COLUMN_VALUE)
+                    .build()));
   }
 }

@@ -4,6 +4,7 @@ import com.google.common.base.Preconditions;
 import java.util.Comparator;
 import java.util.List;
 import org.apache.commons.lang3.StringUtils;
+import org.hypertrace.gateway.service.common.util.ExpressionReader;
 import org.hypertrace.gateway.service.v1.common.OrderByExpression;
 import org.hypertrace.gateway.service.v1.common.SortOrder;
 import org.hypertrace.gateway.service.v1.common.Value;
@@ -29,10 +30,13 @@ public class TraceComparator implements Comparator<Trace.Builder> {
               "Invalid orderBy: " + orderBy.getExpression().getValueCase());
 
         case COLUMNIDENTIFIER:
-          // Otherwise, this is either a simple attribute/metric or entity name itself.
-          String attr = orderBy.getExpression().getColumnIdentifier().getColumnName();
-          int value;
-          value = compare(left.getAttributesMap().get(attr), right.getAttributesMap().get(attr));
+        case ATTRIBUTE_EXPRESSION:
+          String resultName =
+              ExpressionReader.getSelectionResultName(orderBy.getExpression()).orElseThrow();
+          int value =
+              compare(
+                  left.getAttributesMap().get(resultName),
+                  right.getAttributesMap().get(resultName));
           if (value == 0) {
             continue;
           }

@@ -2,7 +2,7 @@ package org.hypertrace.gateway.service.common.comparators;
 
 import java.util.Comparator;
 import java.util.List;
-import org.hypertrace.gateway.service.common.util.MetricAggregationFunctionUtil;
+import org.hypertrace.gateway.service.common.util.ExpressionReader;
 import org.hypertrace.gateway.service.v1.common.OrderByExpression;
 import org.hypertrace.gateway.service.v1.common.SortOrder;
 
@@ -37,28 +37,33 @@ public abstract class OrderByComparator<T> implements Comparator<T> {
   @Override
   public int compare(T o1, T o2) {
     for (OrderByExpression orderBy : orderByList) {
-
-      // Check if we need to order by an aggregated metric.
       switch (orderBy.getExpression().getValueCase()) {
         case FUNCTION:
-          org.hypertrace.gateway.service.v1.common.FunctionExpression function =
-              orderBy.getExpression().getFunction();
-          String alias = MetricAggregationFunctionUtil.getAggregationFunctionAlias(function);
-          int value = compareFunctionExpressionValues(o1, o2, alias);
-          if (value == 0) {
+          int functionComparisonResult =
+              compareFunctionExpressionValues(
+                  o1,
+                  o2,
+                  ExpressionReader.getSelectionResultName(orderBy.getExpression()).orElseThrow());
+          if (functionComparisonResult == 0) {
             continue;
           }
-          return orderBy.getOrder() == SortOrder.ASC ? value : Math.negateExact(value);
+          return orderBy.getOrder() == SortOrder.ASC
+              ? functionComparisonResult
+              : Math.negateExact(functionComparisonResult);
 
         case COLUMNIDENTIFIER:
-          // Otherwise, this is either a simple attribute/metric or entity name itself.
-          String attr = orderBy.getExpression().getColumnIdentifier().getColumnName();
-          value = compareColumnExpressionValues(o1, o2, attr);
-          if (value == 0) {
+        case ATTRIBUTE_EXPRESSION:
+          int selectionComparisonResult =
+              compareColumnExpressionValues(
+                  o1,
+                  o2,
+                  ExpressionReader.getSelectionResultName(orderBy.getExpression()).orElseThrow());
+          if (selectionComparisonResult == 0) {
             continue;
           }
-          return orderBy.getOrder() == SortOrder.ASC ? value : Math.negateExact(value);
-
+          return orderBy.getOrder() == SortOrder.ASC
+              ? selectionComparisonResult
+              : Math.negateExact(selectionComparisonResult);
         default:
           throw new IllegalArgumentException(
               "Invalid orderBy: " + orderBy.getExpression().getValueCase());

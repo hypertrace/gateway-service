@@ -11,7 +11,7 @@ public class QueryRequestContext extends RequestContext {
   private final Map<String, FunctionExpression> aliasToFunctionExpressionMap = new HashMap<>();
   private final long startTimeMillis;
   private final long endTimeMillis;
-  private final Map<String, TimeAggregation> aliasToTimeAggregation = new HashMap();
+  private final Map<String, TimeAggregation> aliasToTimeAggregation = new HashMap<>();
 
   public QueryRequestContext(
       String tenantId, long startTimeMillis, long endTimeMillis, Map<String, String> headers) {

@@ -9,12 +9,8 @@ import static org.junit.jupiter.api.Assertions.assertEquals;
 
 import java.util.List;
 import org.hypertrace.core.query.service.api.Filter;
-import org.hypertrace.gateway.service.v1.common.ColumnIdentifier;
-import org.hypertrace.gateway.service.v1.common.Expression;
-import org.hypertrace.gateway.service.v1.common.LiteralConstant;
+import org.hypertrace.gateway.service.common.util.QueryExpressionUtil;
 import org.hypertrace.gateway.service.v1.common.Operator;
-import org.hypertrace.gateway.service.v1.common.Value;
-import org.hypertrace.gateway.service.v1.common.ValueType;
 import org.junit.jupiter.api.Test;
 
 class QueryAndGatewayDtoConverterTest {
@@ -79,17 +75,11 @@ class QueryAndGatewayDtoConverterTest {
   }
 
   org.hypertrace.gateway.service.v1.common.Filter buildLongFilter(
-      String col, Operator operator, long value) {
+      String attributeId, Operator operator, long value) {
     return org.hypertrace.gateway.service.v1.common.Filter.newBuilder()
-        .setLhs(
-            Expression.newBuilder()
-                .setColumnIdentifier(ColumnIdentifier.newBuilder().setColumnName(col).build()))
+        .setLhs(QueryExpressionUtil.buildAttributeExpression(attributeId))
         .setOperator(operator)
-        .setRhs(
-            Expression.newBuilder()
-                .setLiteral(
-                    LiteralConstant.newBuilder()
-                        .setValue(Value.newBuilder().setValueType(ValueType.LONG).setLong(value))))
+        .setRhs(QueryExpressionUtil.getLiteralExpression(value))
         .build();
   }
 }

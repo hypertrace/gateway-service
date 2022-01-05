@@ -15,7 +15,6 @@ import org.hypertrace.gateway.service.common.RequestContext;
 import org.hypertrace.gateway.service.common.config.ScopeFilterConfigs;
 import org.hypertrace.gateway.service.common.util.QueryExpressionUtil;
 import org.hypertrace.gateway.service.entity.EntitiesRequestContext;
-import org.hypertrace.gateway.service.testutils.GatewayExpressionCreator;
 import org.hypertrace.gateway.service.v1.common.Filter;
 import org.hypertrace.gateway.service.v1.common.FunctionType;
 import org.hypertrace.gateway.service.v1.common.Operator;
@@ -59,16 +58,12 @@ public class RequestPreProcessorTest {
             .setEntityType("SERVICE")
             .setStartTimeMillis(startTime)
             .setEndTimeMillis(endTime)
-            .setFilter(
-                GatewayExpressionCreator.createFilter(
-                    QueryExpressionUtil.getColumnExpression("SERVICE.name"),
-                    Operator.LIKE,
-                    QueryExpressionUtil.getLiteralExpression("log")))
-            .addSelection(QueryExpressionUtil.getColumnExpression("SERVICE.id"))
+            .setFilter(QueryExpressionUtil.buildStringFilter("SERVICE.name", Operator.LIKE, "log"))
+            .addSelection(QueryExpressionUtil.buildAttributeExpression("SERVICE.id"))
             .addSelection(
-                QueryExpressionUtil.getColumnExpression(
+                QueryExpressionUtil.buildAttributeExpression(
                     "SERVICE.id")) // Duplicate should be removed by the processor
-            .addSelection(QueryExpressionUtil.getColumnExpression("SERVICE.name"))
+            .addSelection(QueryExpressionUtil.buildAttributeExpression("SERVICE.name"))
             .addSelection(
                 QueryExpressionUtil.getAggregateFunctionExpression(
                     "SERVICE.duration", FunctionType.AVG, "AVG#SERVICE|duration"))
@@ -81,7 +76,7 @@ public class RequestPreProcessorTest {
             .build();
 
     EntitiesRequest transformedRequest =
-        requestPreProcessor.transformFilter(entitiesRequest, entitiesRequestContext);
+        requestPreProcessor.process(entitiesRequest, entitiesRequestContext);
 
     // RequestPreProcessor should remove duplicate Service.Id selection and add scope filters
     // config.
@@ -94,25 +89,18 @@ public class RequestPreProcessorTest {
                 Filter.newBuilder()
                     .setOperator(Operator.AND)
                     .addChildFilter(
-                        GatewayExpressionCreator.createFilter(
-                            QueryExpressionUtil.getColumnExpression("SERVICE.name"),
-                            Operator.LIKE,
-                            QueryExpressionUtil.getLiteralExpression("log")))
+                        QueryExpressionUtil.buildStringFilter("SERVICE.name", Operator.LIKE, "log"))
                     .addChildFilter(
                         Filter.newBuilder()
                             .setOperator(Operator.AND)
                             .addChildFilter(
-                                GatewayExpressionCreator.createFilter(
-                                    QueryExpressionUtil.getColumnExpression("SERVICE.id"),
-                                    Operator.NEQ,
-                                    QueryExpressionUtil.getLiteralExpression("null")))
+                                QueryExpressionUtil.buildStringFilter(
+                                    "SERVICE.id", Operator.NEQ, "null"))
                             .addChildFilter(
-                                GatewayExpressionCreator.createFilter(
-                                    QueryExpressionUtil.getColumnExpression("SERVICE.name"),
-                                    Operator.NEQ,
-                                    QueryExpressionUtil.getLiteralExpression("foo")))))
-            .addSelection(QueryExpressionUtil.getColumnExpression("SERVICE.id"))
-            .addSelection(QueryExpressionUtil.getColumnExpression("SERVICE.name"))
+                                QueryExpressionUtil.buildStringFilter(
+                                    "SERVICE.name", Operator.NEQ, "foo"))))
+            .addSelection(QueryExpressionUtil.buildAttributeExpression("SERVICE.id"))
+            .addSelection(QueryExpressionUtil.buildAttributeExpression("SERVICE.name"))
             .addSelection(
                 QueryExpressionUtil.getAggregateFunctionExpression(
                     "SERVICE.duration", FunctionType.AVG, "AVG#SERVICE|duration"))
@@ -140,16 +128,13 @@ public class RequestPreProcessorTest {
             .setEndTimeMillis(endTime)
             .setScope("API_TRACE")
             .setFilter(
-                GatewayExpressionCreator.createFilter(
-                    QueryExpressionUtil.getColumnExpression("API_TRACE.serviceName"),
-                    Operator.LIKE,
-                    QueryExpressionUtil.getLiteralExpression("log")))
-            .addSelection(QueryExpressionUtil.getColumnExpression("API_TRACE.id"))
-            .addSelection(QueryExpressionUtil.getColumnExpression("API_TRACE.serviceName"))
+                QueryExpressionUtil.buildStringFilter(
+                    "API_TRACE.serviceName", Operator.LIKE, "log"))
+            .addSelection(QueryExpressionUtil.buildAttributeExpression("API_TRACE.id"))
+            .addSelection(QueryExpressionUtil.buildAttributeExpression("API_TRACE.serviceName"))
             .build();
 
-    TracesRequest transformedRequest =
-        requestPreProcessor.transformFilter(tracesRequest, requestContext);
+    TracesRequest transformedRequest = requestPreProcessor.process(tracesRequest, requestContext);
 
     // RequestPreProcessor should add scope filters config.
     Assertions.assertEquals(
@@ -161,26 +146,19 @@ public class RequestPreProcessorTest {
                 Filter.newBuilder()
                     .setOperator(Operator.AND)
                     .addChildFilter(
-                        GatewayExpressionCreator.createFilter(
-                            QueryExpressionUtil.getColumnExpression("API_TRACE.serviceName"),
-                            Operator.LIKE,
-                            QueryExpressionUtil.getLiteralExpression("log")))
+                        QueryExpressionUtil.buildStringFilter(
+                            "API_TRACE.serviceName", Operator.LIKE, "log"))
                     .addChildFilter(
                         Filter.newBuilder()
                             .setOperator(Operator.AND)
                             .addChildFilter(
-                                GatewayExpressionCreator.createFilter(
-                                    QueryExpressionUtil.getColumnExpression(
-                                        "API_TRACE.apiBoundaryType"),
-                                    Operator.EQ,
-                                    QueryExpressionUtil.getLiteralExpression("ENTRY")))
+                                QueryExpressionUtil.buildStringFilter(
+                                    "API_TRACE.apiBoundaryType", Operator.EQ, "ENTRY"))
                             .addChildFilter(
-                                GatewayExpressionCreator.createFilter(
-                                    QueryExpressionUtil.getColumnExpression("API_TRACE.apiId"),
-                                    Operator.NEQ,
-                                    QueryExpressionUtil.getLiteralExpression("null")))))
-            .addSelection(QueryExpressionUtil.getColumnExpression("API_TRACE.id"))
-            .addSelection(QueryExpressionUtil.getColumnExpression("API_TRACE.serviceName"))
+                                QueryExpressionUtil.buildStringFilter(
+                                    "API_TRACE.apiId", Operator.NEQ, "null"))))
+            .addSelection(QueryExpressionUtil.buildAttributeExpression("API_TRACE.id"))
+            .addSelection(QueryExpressionUtil.buildAttributeExpression("API_TRACE.serviceName"))
             .build(),
         transformedRequest);
   }

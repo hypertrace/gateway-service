@@ -29,6 +29,8 @@ import org.hypertrace.gateway.service.common.RequestContext;
 import org.hypertrace.gateway.service.common.config.ScopeFilterConfigs;
 import org.hypertrace.gateway.service.common.converters.QueryAndGatewayDtoConverter;
 import org.hypertrace.gateway.service.common.transformer.RequestPreProcessor;
+import org.hypertrace.gateway.service.common.util.AttributeMetadataUtil;
+import org.hypertrace.gateway.service.common.util.ExpressionReader;
 import org.hypertrace.gateway.service.v1.common.OrderByExpression;
 import org.hypertrace.gateway.service.v1.trace.Trace;
 import org.hypertrace.gateway.service.v1.trace.TracesRequest;
@@ -84,7 +86,7 @@ public class TracesService {
     try {
       requestValidator.validateScope(request);
 
-      TracesRequest preProcessedRequest = requestPreProcessor.transformFilter(request, context);
+      TracesRequest preProcessedRequest = requestPreProcessor.process(request, context);
 
       TraceScope scope = TraceScope.valueOf(preProcessedRequest.getScope());
       Map<String, AttributeMetadata> attributeMap =
@@ -119,6 +121,10 @@ public class TracesService {
       TracesRequest request,
       Map<String, AttributeMetadata> attributeMetadataMap,
       TraceScope scope) {
+
+    Map<String, AttributeMetadata> resultKeyToAttributeMetadataMap =
+        AttributeMetadataUtil.remapAttributeMetadataByResultKey(
+            request.getSelectionList(), attributeMetadataMap);
 
     QueryRequest.Builder builder = createQueryWithFilter(request, scope, context);
 
@@ -157,7 +163,7 @@ public class TracesService {
           traceBuilder.putAttributes(
               metadata.getColumnName(),
               QueryAndGatewayDtoConverter.convertToGatewayValue(
-                  attrName, row.getColumn(i), attributeMetadataMap));
+                  attrName, row.getColumn(i), resultKeyToAttributeMetadataMap));
         }
 
         tracesResult.add(traceBuilder.build());
@@ -174,8 +180,10 @@ public class TracesService {
       throw new IllegalArgumentException("Query request does not have any selection");
     }
 
-    String columnName = request.getSelection(0).getColumnIdentifier().getColumnName();
-    queryBuilder.addSelection(createCountByColumnSelection(columnName));
+    String firstSelectionAttributeId =
+        ExpressionReader.getAttributeIdFromAttributeSelection(request.getSelection(0))
+            .orElseThrow();
+    queryBuilder.addSelection(createCountByColumnSelection(firstSelectionAttributeId));
     QueryRequest queryRequest = queryBuilder.build();
     Iterator<ResultSetChunk> resultSetChunkIterator =
         queryServiceClient.executeQuery(queryRequest, context.getHeaders(), queryServiceReqTimeout);

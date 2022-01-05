@@ -7,8 +7,8 @@
             "childFilter": [
               {
                 "lhs": {
-                  "columnIdentifier": {
-                    "columnName": "API_TRACE.startTime"
+                  "attributeExpression": {
+                    "attributeId": "API_TRACE.startTime"
                   }
                 },
                 "operator": "GE",
@@ -23,8 +23,8 @@
               },
               {
                 "lhs": {
-                  "columnIdentifier": {
-                    "columnName": "API_TRACE.startTime"
+                  "attributeExpression": {
+                    "attributeId": "API_TRACE.startTime"
                   }
                 },
                 "operator": "LT",
@@ -43,8 +43,8 @@
             "childFilter": [
               {
                 "lhs": {
-                  "columnIdentifier": {
-                    "columnName": "API_TRACE.apiBoundaryType"
+                  "attributeExpression": {
+                    "attributeId": "API_TRACE.apiBoundaryType"
                   }
                 },
                 "operator": "EQ",
@@ -62,26 +62,26 @@
       },
       "selection": [
         {
-          "columnIdentifier": {
-            "columnName": "API_TRACE.duration"
+          "attributeExpression": {
+            "attributeId": "API_TRACE.duration"
           }
         },
         {
-          "columnIdentifier": {
-            "columnName": "API_TRACE.serviceName"
+          "attributeExpression": {
+            "attributeId": "API_TRACE.serviceName"
           }
         },
         {
-          "columnIdentifier": {
-            "columnName": "API_TRACE.apiName"
+          "attributeExpression": {
+            "attributeId": "API_TRACE.apiName"
           }
         }
       ],
       "orderBy": [
         {
           "expression": {
-            "columnIdentifier": {
-              "columnName": "API_TRACE.serviceName"
+            "attributeExpression": {
+              "attributeId": "API_TRACE.serviceName"
             }
           },
           "order": "DESC"

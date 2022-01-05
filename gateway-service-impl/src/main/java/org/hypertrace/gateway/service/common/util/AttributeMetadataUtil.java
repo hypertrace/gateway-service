@@ -1,6 +1,9 @@
 package org.hypertrace.gateway.service.common.util;
 
+import java.util.Collection;
 import java.util.List;
+import java.util.Map;
+import java.util.Map.Entry;
 import java.util.Optional;
 import java.util.Set;
 import java.util.stream.Collectors;
@@ -11,6 +14,7 @@ import org.hypertrace.gateway.service.common.RequestContext;
 import org.hypertrace.gateway.service.common.exp.UnknownScopeAndKeyForAttributeException;
 import org.hypertrace.gateway.service.entity.config.EntityIdColumnsConfigs;
 import org.hypertrace.gateway.service.entity.config.TimestampConfigs;
+import org.hypertrace.gateway.service.v1.common.Expression;
 
 /** Utility class for fetching AttributeMetadata */
 public class AttributeMetadataUtil {
@@ -110,5 +114,23 @@ public class AttributeMetadataUtil {
     return attributeMetadataProvider
         .getAttributeMetadata(requestContext, scope, key)
         .orElseThrow(() -> new UnknownScopeAndKeyForAttributeException(scope, key));
+  }
+
+  public static Map<String, AttributeMetadata> remapAttributeMetadataByResultKey(
+      Collection<Expression> selections, Map<String, AttributeMetadata> attributeMetadataByIdMap) {
+    return selections.stream()
+        .filter(
+            expression ->
+                ExpressionReader.getAttributeIdFromAttributeSelection(expression)
+                    .map(attributeMetadataByIdMap::containsKey)
+                    .orElse(false))
+        .map(
+            expression ->
+                Map.entry(
+                    ExpressionReader.getSelectionResultName(expression).orElseThrow(),
+                    attributeMetadataByIdMap.get(
+                        ExpressionReader.getAttributeIdFromAttributeSelection(expression)
+                            .orElseThrow())))
+        .collect(Collectors.toUnmodifiableMap(Entry::getKey, Entry::getValue, (x, y) -> x));
   }
 }

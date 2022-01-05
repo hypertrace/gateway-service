@@ -8,13 +8,9 @@ import java.util.stream.Collectors;
 import org.hypertrace.core.attribute.service.v1.AttributeMetadata;
 import org.hypertrace.gateway.service.common.AttributeMetadataProvider;
 import org.hypertrace.gateway.service.common.RequestContext;
-import org.hypertrace.gateway.service.v1.common.ColumnIdentifier;
-import org.hypertrace.gateway.service.v1.common.Expression;
+import org.hypertrace.gateway.service.common.util.QueryExpressionUtil;
 import org.hypertrace.gateway.service.v1.common.Filter;
-import org.hypertrace.gateway.service.v1.common.LiteralConstant;
 import org.hypertrace.gateway.service.v1.common.Operator;
-import org.hypertrace.gateway.service.v1.common.Value;
-import org.hypertrace.gateway.service.v1.common.ValueType;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -69,10 +65,10 @@ public class ScopeFilterConfigs {
     String attributeScope = config.getString(SCOPE_CONFIG);
     List<? extends Config> filterConfigsList = config.getConfigList(FILTERS_CONFIG);
     try {
-      List<ScopeFilter> scopeFilters =
+      List<ScopeFilter<String>> scopeFilters =
           filterConfigsList.stream()
               .map(
-                  (filterConfig) ->
+                  filterConfig ->
                       new ScopeFilter<>(
                           filterConfig.getString(SCOPE_CONFIG),
                           filterConfig.getString(FILTER_KEY_CONFIG),
@@ -119,35 +115,23 @@ public class ScopeFilterConfigs {
     scopeFilterConfig
         .getScopeFilters()
         .forEach(
-            (scopeFilter ->
+            scopeFilter ->
                 filterBuilder.addChildFilter(
                     createScopeChildFilter(
-                        scopeFilter, attributeMetadataProvider, requestContext))));
+                        scopeFilter, attributeMetadataProvider, requestContext)));
 
     return filterBuilder;
   }
 
-  private Filter.Builder createScopeChildFilter(
-      ScopeFilter scopeFilter,
+  private Filter createScopeChildFilter(
+      ScopeFilter<String> scopeFilter,
       AttributeMetadataProvider attributeMetadataProvider,
       RequestContext requestContext) {
     AttributeMetadata attributeMetadata =
         attributeMetadataProvider
             .getAttributeMetadata(requestContext, scopeFilter.getScope(), scopeFilter.getKey())
             .orElseThrow();
-    return Filter.newBuilder()
-        .setLhs(
-            Expression.newBuilder()
-                .setColumnIdentifier(
-                    ColumnIdentifier.newBuilder().setColumnName(attributeMetadata.getId())))
-        .setOperator(scopeFilter.getOperator())
-        .setRhs(
-            Expression.newBuilder()
-                .setLiteral(
-                    LiteralConstant.newBuilder()
-                        .setValue(
-                            Value.newBuilder()
-                                .setValueType(ValueType.STRING)
-                                .setString((String) scopeFilter.getFilterValue()))));
+    return QueryExpressionUtil.buildStringFilter(
+        attributeMetadata.getId(), scopeFilter.getOperator(), scopeFilter.getFilterValue());
   }
 }

@@ -31,7 +31,7 @@ public class QueryExpressionUtilTest {
   public void testBooleanFilter() {
     Filter booleanFilter = QueryExpressionUtil.getBooleanFilter("API.is_external", true).build();
     Assertions.assertEquals(
-        "API.is_external", booleanFilter.getLhs().getColumnIdentifier().getColumnName());
+        "API.is_external", booleanFilter.getLhs().getAttributeExpression().getAttributeId());
     Assertions.assertEquals(Operator.EQ, booleanFilter.getOperator());
     Assertions.assertTrue(booleanFilter.getRhs().getLiteral().getValue().getBoolean());
   }

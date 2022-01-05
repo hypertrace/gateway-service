@@ -1,10 +1,13 @@
 package org.hypertrace.gateway.service.common.validators.function;
 
+import static java.util.function.Predicate.not;
 import static org.hypertrace.gateway.service.v1.common.Expression.ValueCase.HEALTH;
 
 import java.time.Duration;
 import java.time.format.DateTimeParseException;
 import java.time.temporal.ChronoUnit;
+import java.util.Optional;
+import org.hypertrace.gateway.service.common.util.ExpressionReader;
 import org.hypertrace.gateway.service.v1.common.FunctionExpression;
 import org.hypertrace.gateway.service.v1.common.FunctionType;
 import org.hypertrace.gateway.service.v1.common.ValueType;
@@ -22,15 +25,18 @@ public class AvgRateValidator extends FunctionExpressionValidator {
         functionExpression.getFunction());
 
     var argumentsList = functionExpression.getArgumentsList();
-    boolean columnIdentifierArgSet = false;
+    boolean attributeIdArgSet = false;
     boolean periodArgSet = false;
     for (var argument : argumentsList) {
       switch (argument.getValueCase()) {
         case COLUMNIDENTIFIER:
-          // Need a non empty column name
-          String columnName = argument.getColumnIdentifier().getColumnName();
-          checkArgument(columnName != null && !columnName.isEmpty(), "columnName is null or empty");
-          columnIdentifierArgSet = true;
+        case ATTRIBUTE_EXPRESSION:
+          // Need a non empty attribute ID
+          Optional<String> attributeId =
+              ExpressionReader.getAttributeIdFromAttributeSelection(argument);
+          checkArgument(
+              attributeId.filter(not(String::isEmpty)).isPresent(), "attributeId is missing");
+          attributeIdArgSet = true;
           break;
         case LITERAL:
           // Need the Period to be set in ISO format
@@ -59,7 +65,7 @@ public class AvgRateValidator extends FunctionExpressionValidator {
       }
     }
 
-    checkArgument(columnIdentifierArgSet, "ColumnIdentifier arg not set");
+    checkArgument(attributeIdArgSet, "Attribute ID arg not set");
     checkArgument(periodArgSet, "Period arg not set");
   }
 

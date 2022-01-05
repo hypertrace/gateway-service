@@ -5,8 +5,8 @@
         "childFilter": [
           {
             "lhs": {
-              "columnIdentifier": {
-                "columnName": "SERVICE.startTime"
+              "attributeExpression": {
+                "attributeId": "SERVICE.startTime"
               }
             },
             "operator": "GE",
@@ -21,8 +21,8 @@
           },
           {
             "lhs": {
-              "columnIdentifier": {
-                "columnName": "SERVICE.startTime"
+              "attributeExpression": {
+                "attributeId": "SERVICE.startTime"
               }
             },
             "operator": "LT",
@@ -43,8 +43,8 @@
             "functionName": "SUM",
             "arguments": [
               {
-                "columnIdentifier": {
-                  "columnName": "SERVICE.numCalls"
+                "attributeExpression": {
+                  "attributeId": "SERVICE.numCalls"
                 }
               }
             ],
@@ -52,16 +52,16 @@
           }
         },
         {
-          "columnIdentifier": {
-            "columnName": "SERVICE.name",
+          "attributeExpression": {
+            "attributeId": "SERVICE.name",
             "alias": "SERVICE.name"
           }
         }
       ],
       "groupBy": [
         {
-          "columnIdentifier": {
-            "columnName": "SERVICE.name",
+          "attributeExpression": {
+            "attributeId": "SERVICE.name",
             "alias": "SERVICE.name"
           }
         }
@@ -352,8 +352,8 @@
             "childFilter": [
               {
                 "lhs": {
-                  "columnIdentifier": {
-                    "columnName": "SERVICE.startTime"
+                  "attributeExpression": {
+                    "attributeId": "SERVICE.startTime"
                   }
                 },
                 "operator": "GE",
@@ -368,8 +368,8 @@
               },
               {
                 "lhs": {
-                  "columnIdentifier": {
-                    "columnName": "SERVICE.startTime"
+                  "attributeExpression": {
+                    "attributeId": "SERVICE.startTime"
                   }
                 },
                 "operator": "LT",
@@ -388,8 +388,9 @@
             "childFilter": [
               {
                 "lhs": {
-                  "columnIdentifier": {
-                    "columnName": "SERVICE.name"
+                  "attributeExpression": {
+                    "attributeId": "SERVICE.name",
+                    "alias": "SERVICE.name"
                   }
                 },
                 "operator": "IN",
@@ -415,8 +416,8 @@
             "functionName": "SUM",
             "arguments": [
               {
-                "columnIdentifier": {
-                  "columnName": "SERVICE.numCalls"
+                "attributeExpression": {
+                  "attributeId": "SERVICE.numCalls"
                 }
               }
             ],
@@ -424,8 +425,8 @@
           }
         },
         {
-          "columnIdentifier": {
-            "columnName": "SERVICE.name",
+          "attributeExpression": {
+            "attributeId": "SERVICE.name",
             "alias": "SERVICE.name"
           }
         }
@@ -436,8 +437,8 @@
             "functionName": "dateTimeConvert",
             "arguments": [
               {
-                "columnIdentifier": {
-                  "columnName": "SERVICE.startTime"
+                "attributeExpression": {
+                  "attributeId": "SERVICE.startTime"
                 }
               },
               {
@@ -465,8 +466,8 @@
           }
         },
         {
-          "columnIdentifier": {
-            "columnName": "SERVICE.name",
+          "attributeExpression": {
+            "attributeId": "SERVICE.name",
             "alias": "SERVICE.name"
           }
         }

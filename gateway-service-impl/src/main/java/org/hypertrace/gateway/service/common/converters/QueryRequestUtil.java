@@ -1,7 +1,7 @@
 package org.hypertrace.gateway.service.common.converters;
 
 import java.util.List;
-import org.hypertrace.core.query.service.api.ColumnIdentifier;
+import org.hypertrace.core.query.service.api.AttributeExpression;
 import org.hypertrace.core.query.service.api.Expression;
 import org.hypertrace.core.query.service.api.Filter;
 import org.hypertrace.core.query.service.api.Function;
@@ -29,16 +29,16 @@ public class QueryRequestUtil {
         .build();
   }
 
-  public static Expression createColumnExpression(String columnName) {
+  public static Expression createAttributeExpression(String attributeId) {
     return Expression.newBuilder()
-        .setColumnIdentifier(ColumnIdentifier.newBuilder().setColumnName(columnName))
+        .setAttributeExpression(AttributeExpression.newBuilder().setAttributeId(attributeId))
         .build();
   }
 
-  public static Expression createColumnExpression(String columnName, String alias) {
+  public static Expression createAttributeExpression(String attributeId, String alias) {
     return Expression.newBuilder()
-        .setColumnIdentifier(
-            ColumnIdentifier.newBuilder().setColumnName(columnName).setAlias(alias))
+        .setAttributeExpression(
+            AttributeExpression.newBuilder().setAttributeId(attributeId).setAlias(alias))
         .build();
   }
 
@@ -51,7 +51,7 @@ public class QueryRequestUtil {
   }
 
   public static Filter createFilter(String columnName, Operator op, Expression value) {
-    return createFilter(createColumnExpression(columnName), op, value);
+    return createFilter(createAttributeExpression(columnName), op, value);
   }
 
   public static Filter createFilter(Expression columnExpression, Operator op, Expression value) {
@@ -97,30 +97,31 @@ public class QueryRequestUtil {
         .build();
   }
 
-  public static Expression createCountByColumnSelection(String columnName) {
+  public static Expression createCountByColumnSelection(String attributeId) {
     return Expression.newBuilder()
         .setFunction(
             Function.newBuilder()
                 .setFunctionName(COUNT_FUNCTION_NAME)
-                .addArguments(createColumnExpression(columnName)))
+                .addArguments(createAttributeExpression(attributeId)))
         .build();
   }
 
-  public static Expression createDistinctCountByColumnSelection(String columnName) {
+  public static Expression createDistinctCountByColumnSelection(String attributeId) {
     return Expression.newBuilder()
         .setFunction(
             Function.newBuilder()
                 .setFunctionName(DISTINCTCOUNT_FUNCTION_NAME)
-                .addArguments(createColumnExpression(columnName)))
+                .addArguments(createAttributeExpression(attributeId)))
         .build();
   }
 
-  public static Expression createTimeColumnGroupByExpression(String timeColumn, long periodSecs) {
+  public static Expression createTimeColumnGroupByExpression(
+      String timeAttributeId, long periodSecs) {
     return Expression.newBuilder()
         .setFunction(
             Function.newBuilder()
                 .setFunctionName(DATE_TIME_CONVERTER)
-                .addArguments(createColumnExpression(timeColumn))
+                .addArguments(createAttributeExpression(timeAttributeId))
                 .addArguments(createStringLiteralExpression("1:MILLISECONDS:EPOCH"))
                 .addArguments(createStringLiteralExpression("1:MILLISECONDS:EPOCH"))
                 .addArguments(createStringLiteralExpression(periodSecs + ":SECONDS")))

@@ -6,6 +6,7 @@ import java.time.Duration;
 import java.time.temporal.ChronoUnit;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Optional;
 import org.hypertrace.core.query.service.api.ColumnMetadata;
 import org.hypertrace.core.query.service.api.QueryRequest;
 import org.hypertrace.core.query.service.api.ResultSetMetadata;
@@ -15,9 +16,8 @@ import org.hypertrace.core.query.service.client.QueryServiceClient;
 import org.hypertrace.gateway.service.common.AttributeMetadataProvider;
 import org.hypertrace.gateway.service.common.converters.QueryAndGatewayDtoConverter;
 import org.hypertrace.gateway.service.common.util.AttributeMetadataUtil;
+import org.hypertrace.gateway.service.common.util.ExpressionReader;
 import org.hypertrace.gateway.service.common.util.QueryExpressionUtil;
-import org.hypertrace.gateway.service.v1.common.ColumnIdentifier;
-import org.hypertrace.gateway.service.v1.common.Expression;
 import org.hypertrace.gateway.service.v1.common.OrderByExpression;
 import org.hypertrace.gateway.service.v1.common.Period;
 import org.hypertrace.gateway.service.v1.common.SortOrder;
@@ -93,10 +93,8 @@ public class TimeAggregationsRequestHandler extends RequestHandler {
           OrderByExpression.newBuilder()
               .setOrder(SortOrder.ASC)
               .setExpression(
-                  Expression.newBuilder()
-                      .setColumnIdentifier(
-                          ColumnIdentifier.newBuilder()
-                              .setColumnName(ColumnName.INTERVAL_START_TIME.name())))
+                  QueryExpressionUtil.buildAttributeExpression(
+                      ColumnName.INTERVAL_START_TIME.name()))
               .build();
 
       resolvedOrderBys.add(defaultIntervalOrdering);
@@ -110,8 +108,8 @@ public class TimeAggregationsRequestHandler extends RequestHandler {
   private boolean containsIntervalOrdering(List<OrderByExpression> orderByExpressions) {
     return orderByExpressions.stream()
         .map(OrderByExpression::getExpression)
-        .map(Expression::getColumnIdentifier)
-        .map(ColumnIdentifier::getColumnName)
+        .map(ExpressionReader::getAttributeIdFromAttributeSelection)
+        .flatMap(Optional::stream)
         .anyMatch(name -> name.equals(ColumnName.INTERVAL_START_TIME.name()));
   }
 

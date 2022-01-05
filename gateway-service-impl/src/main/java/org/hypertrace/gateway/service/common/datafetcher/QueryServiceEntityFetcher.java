@@ -1,13 +1,16 @@
 package org.hypertrace.gateway.service.common.datafetcher;
 
+import static java.util.Objects.isNull;
 import static org.hypertrace.gateway.service.common.converters.QueryAndGatewayDtoConverter.convertToQueryExpression;
 import static org.hypertrace.gateway.service.common.converters.QueryRequestUtil.createCountByColumnSelection;
 import static org.hypertrace.gateway.service.common.converters.QueryRequestUtil.createDistinctCountByColumnSelection;
 import static org.hypertrace.gateway.service.common.converters.QueryRequestUtil.createFilter;
 import static org.hypertrace.gateway.service.common.converters.QueryRequestUtil.createStringNullLiteralExpression;
 import static org.hypertrace.gateway.service.common.converters.QueryRequestUtil.createTimeColumnGroupByExpression;
+import static org.hypertrace.gateway.service.common.util.ExpressionReader.getExpectedResultNamesForEachAttributeId;
 
 import com.google.common.base.Preconditions;
+import com.google.common.collect.Streams;
 import java.time.Duration;
 import java.time.temporal.ChronoUnit;
 import java.util.Collection;
@@ -42,8 +45,8 @@ import org.hypertrace.gateway.service.entity.EntitiesRequestValidator;
 import org.hypertrace.gateway.service.entity.EntityKey;
 import org.hypertrace.gateway.service.entity.config.EntityIdColumnsConfigs;
 import org.hypertrace.gateway.service.v1.common.AggregatedMetricValue;
-import org.hypertrace.gateway.service.v1.common.Expression.ValueCase;
 import org.hypertrace.gateway.service.v1.common.FunctionExpression;
+import org.hypertrace.gateway.service.v1.common.FunctionType;
 import org.hypertrace.gateway.service.v1.common.Health;
 import org.hypertrace.gateway.service.v1.common.Interval;
 import org.hypertrace.gateway.service.v1.common.MetricSeries;
@@ -86,20 +89,26 @@ public class QueryServiceEntityFetcher implements IEntityFetcher {
     Map<String, AttributeMetadata> attributeMetadataMap =
         attributeMetadataProvider.getAttributesMetadata(
             requestContext, entitiesRequest.getEntityType());
+    Map<String, AttributeMetadata> resultKeyToAttributeMetadataMap =
+        this.remapAttributeMetadataByResultName(entitiesRequest, attributeMetadataMap);
     // Validate EntitiesRequest
     entitiesRequestValidator.validate(entitiesRequest, attributeMetadataMap);
 
-    List<String> entityIdAttributes =
+    List<String> entityIdAttributeIds =
         AttributeMetadataUtil.getIdAttributeIds(
             attributeMetadataProvider,
             entityIdColumnsConfigs,
             requestContext,
             entitiesRequest.getEntityType());
     List<org.hypertrace.gateway.service.v1.common.Expression> aggregates =
-        ExpressionReader.getFunctionExpressions(entitiesRequest.getSelectionList().stream());
+        ExpressionReader.getFunctionExpressions(entitiesRequest.getSelectionList());
+
+    Map<String, List<String>> requestedAliasesByEntityIdAttributeIds =
+        getExpectedResultNamesForEachAttributeId(
+            entitiesRequest.getSelectionList(), entityIdAttributeIds);
 
     QueryRequest.Builder builder =
-        constructSelectionQuery(requestContext, entitiesRequest, entityIdAttributes, aggregates);
+        constructSelectionQuery(requestContext, entitiesRequest, entityIdAttributeIds, aggregates);
 
     adjustLimitAndOffset(builder, entitiesRequest.getLimit(), entitiesRequest.getOffset());
 
@@ -112,9 +121,7 @@ public class QueryServiceEntityFetcher implements IEntityFetcher {
 
     QueryRequest queryRequest = builder.build();
 
-    if (LOG.isDebugEnabled()) {
-      LOG.debug("Sending Query to Query Service ======== \n {}", queryRequest);
-    }
+    LOG.debug("Sending Query to Query Service ======== \n {}", queryRequest);
 
     Iterator<ResultSetChunk> resultSetChunkIterator =
         queryServiceClient.executeQuery(queryRequest, requestContext.getHeaders(), requestTimeout);
@@ -124,19 +131,17 @@ public class QueryServiceEntityFetcher implements IEntityFetcher {
     Map<EntityKey, Entity.Builder> entityBuilders = new LinkedHashMap<>();
     while (resultSetChunkIterator.hasNext()) {
       ResultSetChunk chunk = resultSetChunkIterator.next();
-      if (LOG.isDebugEnabled()) {
-        LOG.debug("Received chunk: " + chunk.toString());
-      }
+      LOG.debug("Received chunk: {}", chunk);
 
       if (chunk.getRowCount() < 1) {
         break;
       }
 
       for (Row row : chunk.getRowList()) {
-        // Construct the entity id from the entityIdAttributes columns
+        // Construct the entity id from the entityIdAttributeIds columns
         EntityKey entityKey =
             EntityKey.of(
-                IntStream.range(0, entityIdAttributes.size())
+                IntStream.range(0, entityIdAttributeIds.size())
                     .mapToObj(value -> row.getColumn(value).getString())
                     .toArray(String[]::new));
         Builder entityBuilder = entityBuilders.computeIfAbsent(entityKey, k -> Entity.newBuilder());
@@ -145,16 +150,23 @@ public class QueryServiceEntityFetcher implements IEntityFetcher {
         // Always include the id in entity since that's needed to make follow up queries in
         // optimal fashion. If this wasn't really requested by the client, it should be removed
         // as post processing.
-        for (int i = 0; i < entityIdAttributes.size(); i++) {
+        for (int i = 0; i < entityIdAttributeIds.size(); i++) {
           entityBuilder.putAttribute(
-              entityIdAttributes.get(i),
+              entityIdAttributeIds.get(i),
               Value.newBuilder()
                   .setString(entityKey.getAttributes().get(i))
                   .setValueType(ValueType.STRING)
                   .build());
         }
 
-        for (int i = entityIdAttributes.size();
+        requestedAliasesByEntityIdAttributeIds.forEach(
+            (attributeId, requestedAliasList) ->
+                requestedAliasList.forEach(
+                    requestedAlias ->
+                        entityBuilder.putAttribute(
+                            requestedAlias, entityBuilder.getAttributeOrThrow(attributeId))));
+
+        for (int i = entityIdAttributeIds.size();
             i < chunk.getResultSetMetadata().getColumnMetadataCount();
             i++) {
           ColumnMetadata metadata = chunk.getResultSetMetadata().getColumnMetadata(i);
@@ -162,15 +174,13 @@ public class QueryServiceEntityFetcher implements IEntityFetcher {
           buildEntity(
               entityBuilder,
               requestContext,
-              entitiesRequest,
               metadata,
               columnValue,
-              attributeMetadataMap,
+              resultKeyToAttributeMetadataMap,
               aggregates.isEmpty());
         }
       }
     }
-
     return new EntityFetcherResponse(entityBuilders);
   }
 
@@ -201,14 +211,14 @@ public class QueryServiceEntityFetcher implements IEntityFetcher {
   private QueryRequest.Builder constructSelectionQuery(
       EntitiesRequestContext requestContext,
       EntitiesRequest entitiesRequest,
-      List<String> entityIdAttributes,
+      List<String> entityIdAttributeIds,
       List<org.hypertrace.gateway.service.v1.common.Expression> aggregates) {
     List<Expression> idExpressions =
-        entityIdAttributes.stream()
-            .map(QueryRequestUtil::createColumnExpression)
+        entityIdAttributeIds.stream()
+            .map(QueryRequestUtil::createAttributeExpression)
             .collect(Collectors.toList());
     Filter.Builder filterBuilder =
-        constructQueryServiceFilter(entitiesRequest, requestContext, entityIdAttributes);
+        constructQueryServiceFilter(entitiesRequest, requestContext, entityIdAttributeIds);
 
     QueryRequest.Builder builder =
         QueryRequest.newBuilder()
@@ -230,10 +240,12 @@ public class QueryServiceEntityFetcher implements IEntityFetcher {
     // TODO: Query non identifying attributes from entity service in parallel to this query
     //  and remove this logic.
     entitiesRequest.getSelectionList().stream()
-        .filter(expression -> expression.getValueCase() == ValueCase.COLUMNIDENTIFIER)
+        .filter(ExpressionReader::isAttributeSelection)
         .filter(
             expression ->
-                !entityIdAttributes.contains(expression.getColumnIdentifier().getColumnName()))
+                ExpressionReader.getAttributeIdFromAttributeSelection(expression)
+                    .map(attributeId -> !entityIdAttributeIds.contains(attributeId))
+                    .orElse(true))
         .forEach(
             expression -> {
               Expression.Builder expBuilder = convertToQueryExpression(expression);
@@ -246,7 +258,7 @@ public class QueryServiceEntityFetcher implements IEntityFetcher {
     if (aggregates.isEmpty()) {
       builder.addSelection(
           createCountByColumnSelection(
-              Optional.ofNullable(entityIdAttributes.get(0)).orElseThrow()));
+              Optional.ofNullable(entityIdAttributeIds.get(0)).orElseThrow()));
     }
     return builder;
   }
@@ -254,10 +266,9 @@ public class QueryServiceEntityFetcher implements IEntityFetcher {
   private void buildEntity(
       Entity.Builder entityBuilder,
       QueryRequestContext requestContext,
-      EntitiesRequest entitiesRequest,
       ColumnMetadata metadata,
       org.hypertrace.core.query.service.api.Value columnValue,
-      Map<String, AttributeMetadata> attributeMetadataMap,
+      Map<String, AttributeMetadata> resultKeyToAttributeMetadataMap,
       boolean isSkipCountColumn) {
 
     // Ignore the count column since we introduced that ourselves into the query
@@ -269,15 +280,10 @@ public class QueryServiceEntityFetcher implements IEntityFetcher {
     // aggregate
     if (requestContext.containsFunctionExpression(metadata.getColumnName())) {
       addAggregateMetric(
-          entityBuilder,
-          requestContext,
-          entitiesRequest,
-          metadata,
-          columnValue,
-          attributeMetadataMap);
+          entityBuilder, requestContext, metadata, columnValue, resultKeyToAttributeMetadataMap);
     } else {
       // attribute
-      addEntityAttribute(entityBuilder, metadata, columnValue, attributeMetadataMap);
+      addEntityAttribute(entityBuilder, metadata, columnValue, resultKeyToAttributeMetadataMap);
     }
   }
 
@@ -285,27 +291,36 @@ public class QueryServiceEntityFetcher implements IEntityFetcher {
       Entity.Builder entityBuilder,
       ColumnMetadata metadata,
       org.hypertrace.core.query.service.api.Value columnValue,
-      Map<String, AttributeMetadata> attributeMetadataMap) {
+      Map<String, AttributeMetadata> resultKeyToAttributeMetadataMap) {
 
-    String attributeName = metadata.getColumnName();
+    String resultKey = metadata.getColumnName();
+    if (!resultKeyToAttributeMetadataMap.containsKey(resultKey)) {
+      LOG.warn("Missing attribute metadata for key {}", resultKey);
+    }
+
     entityBuilder.putAttribute(
-        attributeName,
-        QueryAndGatewayDtoConverter.convertToGatewayValue(
-            attributeName, columnValue, attributeMetadataMap));
+        resultKey,
+        QueryAndGatewayDtoConverter.convertQueryValueToGatewayValue(
+            columnValue, resultKeyToAttributeMetadataMap.get(resultKey)));
   }
 
   private void addAggregateMetric(
       Entity.Builder entityBuilder,
       QueryRequestContext requestContext,
-      EntitiesRequest entitiesRequest,
       ColumnMetadata metadata,
       org.hypertrace.core.query.service.api.Value columnValue,
-      Map<String, AttributeMetadata> attributeMetadataMap) {
+      Map<String, AttributeMetadata> resultKeyToAttributeMetadataMap) {
 
-    FunctionExpression function =
+    FunctionExpression functionExpression =
         requestContext.getFunctionExpressionByAlias(metadata.getColumnName());
+    AttributeMetadata functionAttributeMetadata =
+        resultKeyToAttributeMetadataMap.get(metadata.getColumnName());
+
+    if (isNull(functionAttributeMetadata)) {
+      LOG.warn("Missing attribute metadata for {}", metadata.getColumnName());
+    }
     List<org.hypertrace.gateway.service.v1.common.Expression> healthExpressions =
-        function.getArgumentsList().stream()
+        functionExpression.getArgumentsList().stream()
             .filter(org.hypertrace.gateway.service.v1.common.Expression::hasHealth)
             .collect(Collectors.toList());
     Preconditions.checkArgument(healthExpressions.size() <= 1);
@@ -313,8 +328,9 @@ public class QueryServiceEntityFetcher implements IEntityFetcher {
 
     Value convertedValue =
         QueryAndGatewayDtoConverter.convertToGatewayValueForMetricValue(
-            MetricAggregationFunctionUtil.getValueTypeFromFunction(function, attributeMetadataMap),
-            attributeMetadataMap,
+            MetricAggregationFunctionUtil.getValueTypeForFunctionType(
+                functionExpression.getFunction(), functionAttributeMetadata),
+            resultKeyToAttributeMetadataMap,
             metadata,
             columnValue);
 
@@ -322,7 +338,7 @@ public class QueryServiceEntityFetcher implements IEntityFetcher {
         metadata.getColumnName(),
         AggregatedMetricValue.newBuilder()
             .setValue(convertedValue)
-            .setFunction(function.getFunction())
+            .setFunction(functionExpression.getFunction())
             .setHealth(health)
             .build());
   }
@@ -347,6 +363,9 @@ public class QueryServiceEntityFetcher implements IEntityFetcher {
     Map<String, AttributeMetadata> attributeMetadataMap =
         attributeMetadataProvider.getAttributesMetadata(
             requestContext, entitiesRequest.getEntityType());
+
+    Map<String, AttributeMetadata> resultKeyToAttributeMetadataMap =
+        this.remapAttributeMetadataByResultName(entitiesRequest, attributeMetadataMap);
 
     entitiesRequestValidator.validate(entitiesRequest, attributeMetadataMap);
 
@@ -402,7 +421,7 @@ public class QueryServiceEntityFetcher implements IEntityFetcher {
         }
 
         for (Row row : chunk.getRowList()) {
-          // Construct the entity id from the entityIdAttributes columns
+          // Construct the entity id from the entityIdAttributeIds columns
           EntityKey entityKey =
               EntityKey.of(
                   IntStream.range(0, idColumns.size())
@@ -430,17 +449,21 @@ public class QueryServiceEntityFetcher implements IEntityFetcher {
               ColumnMetadata metadata = chunk.getResultSetMetadata().getColumnMetadata(i);
               TimeAggregation timeAggregation =
                   requestContext.getTimeAggregationByAlias(metadata.getColumnName());
-
               if (timeAggregation == null) {
                 LOG.warn("Couldn't find an aggregate for column: {}", metadata.getColumnName());
                 continue;
               }
 
+              FunctionType functionType =
+                  timeAggregation.getAggregation().getFunction().getFunction();
+              AttributeMetadata functionAttributeMetadata =
+                  resultKeyToAttributeMetadataMap.get(metadata.getColumnName());
+
               Value convertedValue =
                   QueryAndGatewayDtoConverter.convertToGatewayValueForMetricValue(
-                      MetricAggregationFunctionUtil.getValueTypeFromFunction(
-                          timeAggregation.getAggregation().getFunction(), attributeMetadataMap),
-                      attributeMetadataMap,
+                      MetricAggregationFunctionUtil.getValueTypeForFunctionType(
+                          functionType, functionAttributeMetadata),
+                      resultKeyToAttributeMetadataMap,
                       metadata,
                       row.getColumn(i));
 
@@ -501,7 +524,7 @@ public class QueryServiceEntityFetcher implements IEntityFetcher {
     // Validate EntitiesRequest
     entitiesRequestValidator.validate(entitiesRequest, attributeMetadataMap);
 
-    List<String> entityIdAttributes =
+    List<String> entityIdAttributeIds =
         AttributeMetadataUtil.getIdAttributeIds(
             attributeMetadataProvider,
             entityIdColumnsConfigs,
@@ -509,13 +532,13 @@ public class QueryServiceEntityFetcher implements IEntityFetcher {
             entitiesRequest.getEntityType());
 
     Filter.Builder filterBuilder =
-        constructQueryServiceFilter(entitiesRequest, requestContext, entityIdAttributes);
+        constructQueryServiceFilter(entitiesRequest, requestContext, entityIdAttributeIds);
 
     QueryRequest queryRequest =
         QueryRequest.newBuilder()
             .addSelection(
                 createDistinctCountByColumnSelection(
-                    Optional.ofNullable(entityIdAttributes.get(0)).orElseThrow()))
+                    Optional.ofNullable(entityIdAttributeIds.get(0)).orElseThrow()))
             .setFilter(filterBuilder)
             .build();
 
@@ -584,7 +607,7 @@ public class QueryServiceEntityFetcher implements IEntityFetcher {
     // First group by the id columns.
     builder.addAllGroupBy(
         idColumns.stream()
-            .map(QueryRequestUtil::createColumnExpression)
+            .map(QueryRequestUtil::createAttributeExpression)
             .collect(Collectors.toList()));
 
     // Secondary grouping is on time.
@@ -607,13 +630,13 @@ public class QueryServiceEntityFetcher implements IEntityFetcher {
   private Filter.Builder constructQueryServiceFilter(
       EntitiesRequest entitiesRequest,
       EntitiesRequestContext context,
-      List<String> entityIdAttributes) {
+      List<String> entityIdAttributeIds) {
     // adds the Id != "null" filter to remove null entities.
     Filter.Builder filterBuilder =
         Filter.newBuilder()
             .setOperator(Operator.AND)
             .addAllChildFilter(
-                entityIdAttributes.stream()
+                entityIdAttributeIds.stream()
                     .map(
                         entityIdAttribute ->
                             createFilter(
@@ -646,5 +669,15 @@ public class QueryServiceEntityFetcher implements IEntityFetcher {
     series.setAggregation(timeAggregation.getAggregation().getFunction().getFunction().name());
     series.setPeriod(timeAggregation.getPeriod());
     return series;
+  }
+
+  private Map<String, AttributeMetadata> remapAttributeMetadataByResultName(
+      EntitiesRequest request, Map<String, AttributeMetadata> attributeMetadataByIdMap) {
+    return AttributeMetadataUtil.remapAttributeMetadataByResultKey(
+        Streams.concat(
+                request.getSelectionList().stream(),
+                request.getTimeAggregationList().stream().map(TimeAggregation::getAggregation))
+            .collect(Collectors.toList()),
+        attributeMetadataByIdMap);
   }
 }

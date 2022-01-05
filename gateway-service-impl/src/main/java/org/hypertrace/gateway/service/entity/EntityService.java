@@ -149,7 +149,7 @@ public class EntityService {
             timestampAttributeId,
             requestHeaders);
     EntitiesRequest preProcessedRequest =
-        requestPreProcessor.transformFilter(originalRequest, entitiesRequestContext);
+        requestPreProcessor.process(originalRequest, entitiesRequestContext);
 
     ExecutionContext executionContext =
         ExecutionContext.from(

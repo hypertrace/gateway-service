@@ -2,7 +2,6 @@ package org.hypertrace.gateway.service.common.util;
 
 import static org.hypertrace.gateway.service.v1.common.Operator.AND;
 
-import org.hypertrace.gateway.service.v1.common.ColumnIdentifier;
 import org.hypertrace.gateway.service.v1.common.Expression;
 import org.hypertrace.gateway.service.v1.common.Filter;
 import org.hypertrace.gateway.service.v1.common.LiteralConstant;
@@ -23,12 +22,10 @@ public class TimeRangeFilterUtil {
     return filterBuilder.build();
   }
 
-  private static Filter getTimestampFilter(String colName, Operator operator, long timestamp) {
+  private static Filter getTimestampFilter(String attributeId, Operator operator, long timestamp) {
     return Filter.newBuilder()
         .setOperator(operator)
-        .setLhs(
-            Expression.newBuilder()
-                .setColumnIdentifier(ColumnIdentifier.newBuilder().setColumnName(colName)))
+        .setLhs(QueryExpressionUtil.buildAttributeExpression(attributeId))
         .setRhs(
             Expression.newBuilder()
                 .setLiteral(

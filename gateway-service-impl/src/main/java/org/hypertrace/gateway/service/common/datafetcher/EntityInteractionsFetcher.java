@@ -36,6 +36,7 @@ import org.hypertrace.gateway.service.common.RequestContext;
 import org.hypertrace.gateway.service.common.converters.QueryAndGatewayDtoConverter;
 import org.hypertrace.gateway.service.common.converters.QueryRequestUtil;
 import org.hypertrace.gateway.service.common.util.AttributeMetadataUtil;
+import org.hypertrace.gateway.service.common.util.ExpressionReader;
 import org.hypertrace.gateway.service.common.util.MetricAggregationFunctionUtil;
 import org.hypertrace.gateway.service.entity.EntityKey;
 import org.hypertrace.gateway.service.entity.config.InteractionConfig;
@@ -171,13 +172,6 @@ public class EntityInteractionsFetcher {
       throw new IllegalArgumentException(errorMsg);
     }
 
-    Set<String> selectedColumns = new HashSet<>();
-    for (Expression expression : interactionsRequest.getSelectionList()) {
-      if (expression.getValueCase() == ValueCase.COLUMNIDENTIFIER) {
-        selectedColumns.add(expression.getColumnIdentifier().getColumnName());
-      }
-    }
-
     Map<String, FunctionExpression> metricToAggFunction =
         MetricAggregationFunctionUtil.getAggMetricToFunction(
             interactionsRequest.getSelectionList());
@@ -188,7 +182,7 @@ public class EntityInteractionsFetcher {
       parseResultSet(
           request.getEntityType(),
           entry.getKey(),
-          selectedColumns,
+          interactionsRequest.getSelectionList(),
           metricToAggFunction,
           resultSet,
           incoming,
@@ -205,14 +199,13 @@ public class EntityInteractionsFetcher {
           return result;
         }
       }
-    } else {
-      if (filter.getLhs().getValueCase() == ValueCase.COLUMNIDENTIFIER) {
-        String columnName = filter.getLhs().getColumnIdentifier().getColumnName();
+    } else if (ExpressionReader.isSimpleAttributeSelection(filter.getLhs())) {
+      String attributeId =
+          ExpressionReader.getAttributeIdFromAttributeSelection(filter.getLhs()).orElseThrow();
 
-        if (StringUtils.equals(columnName, FROM_ENTITY_TYPE_ATTRIBUTE_ID)
-            || StringUtils.equals(columnName, TO_ENTITY_TYPE_ATTRIBUTE_ID)) {
-          return getValues(filter.getRhs());
-        }
+      if (StringUtils.equals(attributeId, FROM_ENTITY_TYPE_ATTRIBUTE_ID)
+          || StringUtils.equals(attributeId, TO_ENTITY_TYPE_ATTRIBUTE_ID)) {
+        return getValues(filter.getRhs());
       }
     }
 
@@ -228,10 +221,11 @@ public class EntityInteractionsFetcher {
         builder.addChildFilter(convertToQueryFilter(child, otherEntityType));
       }
     } else {
-      if (filter.getLhs().getValueCase() == ValueCase.COLUMNIDENTIFIER) {
-        String columnName = filter.getLhs().getColumnIdentifier().getColumnName();
+      if (ExpressionReader.isSimpleAttributeSelection(filter.getLhs())) {
+        String attributeId =
+            ExpressionReader.getAttributeIdFromAttributeSelection(filter.getLhs()).orElseThrow();
 
-        switch (columnName) {
+        switch (attributeId) {
           case FROM_ENTITY_TYPE_ATTRIBUTE_ID:
             return QueryRequestUtil.createCompositeFilter(
                 Operator.AND,
@@ -368,15 +362,16 @@ public class EntityInteractionsFetcher {
     // Group by the entity id column first, then the other end entity type for the interaction.
     List<org.hypertrace.core.query.service.api.Expression> idExpressions =
         idColumns.stream()
-            .map(QueryRequestUtil::createColumnExpression)
+            .map(QueryRequestUtil::createAttributeExpression)
             .collect(Collectors.toList());
     builder.addAllGroupBy(idExpressions);
 
     List<org.hypertrace.core.query.service.api.Expression> selections = new ArrayList<>();
     for (Expression expression : interactionsRequest.getSelectionList()) {
       // Ignore the predefined selections because they're handled specially.
-      if (expression.getValueCase() == ValueCase.COLUMNIDENTIFIER
-          && SELECTIONS_TO_IGNORE.contains(expression.getColumnIdentifier().getColumnName())) {
+      if (ExpressionReader.isSimpleAttributeSelection(expression)
+          && SELECTIONS_TO_IGNORE.contains(
+              ExpressionReader.getAttributeIdFromAttributeSelection(expression).orElseThrow())) {
         continue;
       }
 
@@ -414,7 +409,7 @@ public class EntityInteractionsFetcher {
           getEntityIdColumnsFromInteraction(otherEntityType, incoming);
       List<org.hypertrace.core.query.service.api.Expression> otherIdExpressions =
           otherEntityIdColumns.stream()
-              .map(QueryRequestUtil::createColumnExpression)
+              .map(QueryRequestUtil::createAttributeExpression)
               .collect(Collectors.toList());
       builderCopy.addAllGroupBy(otherIdExpressions);
 
@@ -440,7 +435,7 @@ public class EntityInteractionsFetcher {
   private void parseResultSet(
       String entityType,
       String otherEntityType,
-      Set<String> selectedColumns,
+      Collection<Expression> selections,
       Map<String, FunctionExpression> metricToAggFunction,
       Iterator<ResultSetChunk> resultset,
       boolean incoming,
@@ -451,7 +446,7 @@ public class EntityInteractionsFetcher {
         metadataProvider.getAttributesMetadata(requestContext, SCOPE);
 
     Map<String, AttributeKind> aliasToAttributeKind =
-        MetricAggregationFunctionUtil.getValueTypeFromFunction(
+        MetricAggregationFunctionUtil.getValueTypeForFunctionType(
             metricToAggFunction, attributeMetadataMap);
 
     while (resultset.hasNext()) {
@@ -489,7 +484,7 @@ public class EntityInteractionsFetcher {
 
         addInteractionEdges(
             interaction,
-            selectedColumns,
+            selections,
             incoming ? otherEntityType : entityType,
             incoming ? otherEntityId : entityId,
             incoming ? entityType : otherEntityType,
@@ -539,37 +534,48 @@ public class EntityInteractionsFetcher {
 
   private void addInteractionEdges(
       EntityInteraction.Builder interaction,
-      Set<String> selectedColumns,
+      Collection<Expression> selections,
       String fromEntityType,
       EntityKey fromEntityId,
       String toEntityType,
       EntityKey toEntityId) {
 
-    if (selectedColumns.contains(FROM_ENTITY_ID_ATTRIBUTE_ID)) {
+    Map<String, String> selectionResultNames =
+        selections.stream()
+            .filter(ExpressionReader::isSimpleAttributeSelection)
+            .collect(
+                Collectors.toUnmodifiableMap(
+                    expression ->
+                        ExpressionReader.getAttributeIdFromAttributeSelection(expression)
+                            .orElseThrow(),
+                    expression ->
+                        ExpressionReader.getSelectionResultName(expression).orElseThrow()));
+
+    if (selectionResultNames.containsKey(FROM_ENTITY_ID_ATTRIBUTE_ID)) {
       interaction.putAttribute(
-          FROM_ENTITY_ID_ATTRIBUTE_ID,
+          selectionResultNames.get(FROM_ENTITY_ID_ATTRIBUTE_ID),
           Value.newBuilder()
               .setString(fromEntityId.toString())
               .setValueType(ValueType.STRING)
               .build());
     }
-    if (selectedColumns.contains(FROM_ENTITY_TYPE_ATTRIBUTE_ID)) {
+    if (selectionResultNames.containsKey(FROM_ENTITY_TYPE_ATTRIBUTE_ID)) {
       interaction.putAttribute(
-          FROM_ENTITY_TYPE_ATTRIBUTE_ID,
+          selectionResultNames.get(FROM_ENTITY_TYPE_ATTRIBUTE_ID),
           Value.newBuilder().setString(fromEntityType).setValueType(ValueType.STRING).build());
     }
-    if (selectedColumns.contains(TO_ENTITY_ID_ATTRIBUTE_ID)) {
+    if (selectionResultNames.containsKey(TO_ENTITY_ID_ATTRIBUTE_ID)) {
       interaction.putAttribute(
-          TO_ENTITY_ID_ATTRIBUTE_ID,
+          selectionResultNames.get(TO_ENTITY_ID_ATTRIBUTE_ID),
           Value.newBuilder()
               .setString(toEntityId.toString())
               .setValueType(ValueType.STRING)
               .build());
     }
 
-    if (selectedColumns.contains(TO_ENTITY_TYPE_ATTRIBUTE_ID)) {
+    if (selectionResultNames.containsKey(TO_ENTITY_TYPE_ATTRIBUTE_ID)) {
       interaction.putAttribute(
-          TO_ENTITY_TYPE_ATTRIBUTE_ID,
+          selectionResultNames.get(TO_ENTITY_TYPE_ATTRIBUTE_ID),
           Value.newBuilder().setString(toEntityType).setValueType(ValueType.STRING).build());
     }
   }
