@@ -15,8 +15,11 @@ dependencies {
   // Common utilities
   implementation("org.apache.commons:commons-lang3:3.10")
   implementation("org.apache.commons:commons-math:2.2")
-  implementation("com.google.protobuf:protobuf-java-util:3.17.3")
+  implementation("com.google.protobuf:protobuf-java-util:3.19.2")
   constraints {
+    implementation("com.google.protobuf:protobuf-java:3.19.2") {
+      because("https://snyk.io/vuln/SNYK-JAVA-COMGOOGLEPROTOBUF-2331703")
+    }
     implementation("com.google.code.gson:gson:2.8.9") {
       because("https://snyk.io/vuln/SNYK-JAVA-COMGOOGLECODEGSON-1730327")
     }

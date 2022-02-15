@@ -25,14 +25,20 @@ dependencies {
   // Common utilities
   implementation("org.apache.commons:commons-lang3:3.10")
   implementation("org.apache.commons:commons-math:2.2")
-  implementation("com.google.protobuf:protobuf-java-util:3.17.3")
+  implementation("com.google.protobuf:protobuf-java-util:3.19.2")
 
   implementation("com.fasterxml.jackson.core:jackson-annotations:2.12.4")
   implementation("com.fasterxml.jackson.core:jackson-databind:2.12.4")
 
+  constraints {
+    implementation("com.google.protobuf:protobuf-java:3.19.2") {
+      because("https://snyk.io/vuln/SNYK-JAVA-COMGOOGLEPROTOBUF-2331703")
+    }
+  }
+  
   testImplementation("org.junit.jupiter:junit-jupiter:5.7.0")
   testImplementation("org.mockito:mockito-core:3.9.0")
   testImplementation("org.mockito:mockito-inline:3.9.0")
   testImplementation("org.apache.logging.log4j:log4j-slf4j-impl:2.17.1")
-  testImplementation("io.grpc:grpc-netty:1.43.1")
+  testImplementation("io.grpc:grpc-netty:1.43.2")
 }
