@@ -1,5 +1,6 @@
 package org.hypertrace.gateway.service.entity.query;
 
+import static java.util.function.Predicate.not;
 import static org.hypertrace.gateway.service.common.util.ExpressionReader.buildAttributeToSourcesMap;
 
 import com.google.common.collect.Sets;
@@ -75,9 +76,9 @@ public class ExecutionTreeUtils {
     // Compute the intersection of all sources in attributesToSourcesMap and check if it's size is 1
     Set<String> attributeSourcesIntersection =
         executionContext.getAllAttributesToSourcesMap().values().stream()
-            .filter((sourcesSet) -> !sourcesSet.isEmpty())
+            .filter(not(Set::isEmpty))
             .findFirst()
-            .orElse(Set.of());
+            .orElse(Collections.emptySet());
 
     if (attributeSourcesIntersection.isEmpty()) {
       return Optional.empty();

@@ -15,6 +15,7 @@ import org.hypertrace.core.attribute.service.v1.AttributeMetadata;
 import org.hypertrace.core.attribute.service.v1.AttributeSource;
 import org.hypertrace.gateway.service.common.util.ExpressionReader;
 import org.hypertrace.gateway.service.common.util.TimeRangeFilterUtil;
+import org.hypertrace.gateway.service.entity.config.TimestampConfigs;
 import org.hypertrace.gateway.service.entity.query.visitor.ExecutionContextBuilderVisitor;
 import org.hypertrace.gateway.service.entity.query.visitor.FilterOptimizingVisitor;
 import org.hypertrace.gateway.service.entity.query.visitor.PrintVisitor;
@@ -56,9 +57,6 @@ public class ExecutionTreeBuilder {
    * @return the root node of the execution tree
    */
   public QueryNode build() {
-    // All expressions' attributes from the same source. Will only need one downstream query.
-    Optional<String> singleSourceForAllAttributes =
-        ExecutionTreeUtils.getSingleSourceForAllAttributes(executionContext);
     EntitiesRequest entitiesRequest = executionContext.getEntitiesRequest();
 
     // EDS source has all the entities (live + non live). In order to fetch all the non live
@@ -106,6 +104,7 @@ public class ExecutionTreeBuilder {
     // can be source specification
     // optimization where all projections, filters, order by, sort and limit can be pushed down to
     // the data store
+    Optional<String> singleSourceForAllAttributes = getSingleSourceForAllAttributes();
     if (singleSourceForAllAttributes.isPresent()) {
       String source = singleSourceForAllAttributes.get();
       QueryNode rootNode = buildExecutionTreeForSameSourceFilterAndSelection(source);
@@ -356,5 +355,55 @@ public class ExecutionTreeBuilder {
 
   private QueryNode createPaginateOnlyNode(QueryNode queryNode, EntitiesRequest entitiesRequest) {
     return new PaginateOnlyNode(queryNode, entitiesRequest.getLimit(), entitiesRequest.getOffset());
+  }
+
+  private Optional<String> getSingleSourceForAllAttributes() {
+    // All expressions' attributes from the same source. Will only need one downstream query.
+    Optional<String> singleSourceForAllAttributes =
+        ExecutionTreeUtils.getSingleSourceForAllAttributes(executionContext);
+    EntitiesRequest entitiesRequest = executionContext.getEntitiesRequest();
+
+    if (singleSourceForAllAttributes.isEmpty()) {
+      return Optional.empty();
+    }
+
+    /**
+     * Entities queries usually have an inherent time filter, via {@link
+     * EntitiesRequest#getStartTimeMillis()} and {@link EntitiesRequest#getEndTimeMillis()}.
+     *
+     * <p>The time filter is usually applied on QS, apart from few entity types, which have a
+     * timestamp column specified through timestamp config {@link TimestampConfigs}
+     *
+     * <p>Single source for all attributes doesn't take care of the inherent time filter for the
+     * single source
+     *
+     * <p>If the single source is {@link EDS} and the timestamp column doesn't exist for the
+     * corresponding entity type, the query will be executed on {@link EDS} source, without the
+     * inherent filter, leading to erroneous outputs
+     *
+     * <p>Hence, default to non single source, if
+     *
+     * <ul>
+     *   <li>single source is {@link EDS}
+     *   <li>inherent time filter is valid
+     *   <li>only live entities are requested (since non live entities request ignores the inherent
+     *       time filter anyways)
+     *   <li>timestamp column doesn't exist for the corresponding entity type
+     * </ul>
+     */
+    String singleSource = singleSourceForAllAttributes.get();
+    if (EDS.name().equals(singleSource)
+        && isValidTimeRange(
+            entitiesRequest.getStartTimeMillis(), entitiesRequest.getEndTimeMillis())
+        && !entitiesRequest.getIncludeNonLiveEntities()
+        && TimestampConfigs.getTimestampColumn(entitiesRequest.getEntityType()) == null) {
+      return Optional.empty();
+    }
+
+    return singleSourceForAllAttributes;
+  }
+
+  private boolean isValidTimeRange(long startTimeMillis, long endTimeMillis) {
+    return startTimeMillis != 0 && endTimeMillis != 0 && startTimeMillis < endTimeMillis;
   }
 }
