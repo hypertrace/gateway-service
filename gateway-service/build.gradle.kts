@@ -10,7 +10,6 @@ dependencies {
 
   implementation("org.hypertrace.core.grpcutils:grpc-server-utils:0.7.1")
   implementation("org.hypertrace.core.serviceframework:platform-service-framework:0.1.33")
-
   implementation("org.slf4j:slf4j-api:1.7.30")
   implementation("com.typesafe:config:1.4.1")
 
