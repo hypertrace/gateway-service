@@ -8,39 +8,30 @@ plugins {
 dependencies {
   implementation(project(":gateway-service-impl"))
 
-  implementation("org.hypertrace.core.grpcutils:grpc-server-utils:0.7.0")
-  implementation("org.hypertrace.core.serviceframework:platform-service-framework:0.1.29")
+  implementation("org.hypertrace.core.grpcutils:grpc-server-utils:0.7.1")
+  implementation("org.hypertrace.core.serviceframework:platform-service-framework:0.1.33")
 
-  implementation("io.grpc:grpc-netty:1.43.2")
-
-  // Logging
   implementation("org.slf4j:slf4j-api:1.7.30")
-  implementation("org.apache.logging.log4j:log4j-api:2.16.0")
-  implementation("org.apache.logging.log4j:log4j-core:2.16.0")
-  implementation("org.apache.logging.log4j:log4j-slf4j-impl:2.17.1")
-
-  // Config
   implementation("com.typesafe:config:1.4.1")
 
-  constraints {
-    runtimeOnly("io.netty:netty-codec-http2:4.1.71.Final")
-    runtimeOnly("io.netty:netty-handler-proxy:4.1.71.Final")
-  }
+  runtimeOnly("io.grpc:grpc-netty:1.44.0")
+  runtimeOnly("org.apache.logging.log4j:log4j-slf4j-impl:2.17.1")
 }
 
 application {
-  mainClassName = "org.hypertrace.core.serviceframework.PlatformServiceLauncher"
+  mainClass.set("org.hypertrace.core.serviceframework.PlatformServiceLauncher")
 }
 
 // Config for gw run to be able to run this locally. Just execute gw run here on Intellij or on the console.
 tasks.run<JavaExec> {
-  jvmArgs = listOf("-Dbootstrap.config.uri=file:$projectDir/src/main/resources/configs", "-Dservice.name=${project.name}")
+  jvmArgs = listOf("-Dservice.name=${project.name}")
 }
 
 hypertraceDocker {
   defaultImage {
     javaApplication {
-      port.set(50072)
+      ports.add(50071)
+      adminPort.set(50072)
     }
   }
 }
