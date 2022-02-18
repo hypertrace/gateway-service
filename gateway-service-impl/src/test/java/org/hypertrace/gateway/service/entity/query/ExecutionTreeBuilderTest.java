@@ -60,7 +60,7 @@ public class ExecutionTreeBuilderTest {
   private static final String API_DISCOVERY_STATE = "API.apiDiscoveryState";
   private static final String API_ID_ATTR = "API.id";
 
-  private static final Map<String, AttributeMetadata> attributeSources =
+  private static final Map<String, AttributeMetadata> ATTRIBUTE_SOURCES =
       new HashMap<>() {
         {
           put(
@@ -149,9 +149,9 @@ public class ExecutionTreeBuilderTest {
     entityIdColumnsConfigs = mock(EntityIdColumnsConfigs.class);
     when(attributeMetadataProvider.getAttributesMetadata(
             any(RequestContext.class), eq(AttributeScope.API.name())))
-        .thenReturn(attributeSources);
+        .thenReturn(ATTRIBUTE_SOURCES);
 
-    attributeSources.forEach(
+    ATTRIBUTE_SOURCES.forEach(
         (attributeId, attribute) ->
             when(attributeMetadataProvider.getAttributeMetadata(
                     any(RequestContext.class),
@@ -229,6 +229,30 @@ public class ExecutionTreeBuilderTest {
       assertTrue(optimizedNode instanceof DataFetcherNode);
       assertEquals(filter, ((DataFetcherNode) optimizedNode).getFilter());
     }
+  }
+
+  @Test
+  public void singleDataSource_shouldNotUseEds_inherentTimeFilter() {
+    Filter filter =
+        generateAndOrNotFilter(
+            Operator.AND,
+            generateEQFilter(API_API_ID_ATTR, UUID.randomUUID().toString()),
+            generateEQFilter(API_NAME_ATTR, "/login"),
+            generateEQFilter(API_TYPE_ATTR, "http"));
+    ExecutionContext executionContext = getExecutionContextForOptimizedFilterTests(filter);
+    ExecutionTreeBuilder executionTreeBuilder = new ExecutionTreeBuilder(executionContext);
+    QueryNode queryNode = executionTreeBuilder.build();
+    assertNotNull(queryNode);
+    assertTrue(queryNode instanceof AndNode);
+    List<QueryNode> queryNodeList = ((AndNode) queryNode).getChildNodes();
+    assertEquals(2, queryNodeList.size());
+    DataFetcherNode qsNode = ((DataFetcherNode) queryNodeList.get(0));
+    assertEquals("QS", qsNode.getSource());
+
+    DataFetcherNode edsNode = ((DataFetcherNode) queryNodeList.get(1));
+    assertEquals("EDS", edsNode.getSource());
+    assertNotNull(edsNode.getFilter());
+    assertEquals(3, edsNode.getFilter().getChildFilterCount());
   }
 
   @Test

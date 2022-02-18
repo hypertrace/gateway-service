@@ -56,9 +56,6 @@ public class ExecutionTreeBuilder {
    * @return the root node of the execution tree
    */
   public QueryNode build() {
-    // All expressions' attributes from the same source. Will only need one downstream query.
-    Optional<String> singleSourceForAllAttributes =
-        ExecutionTreeUtils.getSingleSourceForAllAttributes(executionContext);
     EntitiesRequest entitiesRequest = executionContext.getEntitiesRequest();
 
     // EDS source has all the entities (live + non live). In order to fetch all the non live
@@ -106,6 +103,8 @@ public class ExecutionTreeBuilder {
     // can be source specification
     // optimization where all projections, filters, order by, sort and limit can be pushed down to
     // the data store
+    Optional<String> singleSourceForAllAttributes =
+        ExecutionTreeUtils.getSingleSourceForAllAttributes(executionContext);
     if (singleSourceForAllAttributes.isPresent()) {
       String source = singleSourceForAllAttributes.get();
       QueryNode rootNode = buildExecutionTreeForSameSourceFilterAndSelection(source);
