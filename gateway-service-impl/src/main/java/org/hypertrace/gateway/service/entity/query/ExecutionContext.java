@@ -71,7 +71,7 @@ public class ExecutionContext {
 
   // group bys
   private final List<Expression> groupBys;
-  private ImmutableMap<String, List<Expression>> sourceToSelectionGroupByExpressionMap;
+  private ImmutableMap<String, List<Expression>> sourceToGroupByExpressionMap;
 
   /** Following fields are mutable and updated during the ExecutionTree building phase * */
   private final Set<String> pendingSelectionSources = new HashSet<>();
@@ -154,6 +154,10 @@ public class ExecutionContext {
 
   public Map<String, List<TimeAggregation>> getSourceToTimeAggregationMap() {
     return sourceToTimeAggregationMap;
+  }
+
+  public Map<String, List<Expression>> getSourceToGroupByExpressionMap() {
+    return sourceToGroupByExpressionMap;
   }
 
   public Map<String, List<OrderByExpression>> getSourceToSelectionOrderByExpressionMap() {
@@ -344,7 +348,7 @@ public class ExecutionContext {
   }
 
   private void buildSourceToGroupByExpressionMaps() {
-    sourceToSelectionGroupByExpressionMap = getDataSourceToExpressionMap(groupBys);
+    sourceToGroupByExpressionMap = getDataSourceToExpressionMap(groupBys);
   }
 
   private ImmutableMap<String, List<OrderByExpression>> getDataSourceToOrderByExpressionMap(

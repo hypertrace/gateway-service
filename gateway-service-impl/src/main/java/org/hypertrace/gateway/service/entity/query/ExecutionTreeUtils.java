@@ -43,6 +43,7 @@ public class ExecutionTreeUtils {
     Set<String> timeAggregationsSourceSet =
         executionContext.getSourceToTimeAggregationMap().keySet();
     Set<String> filtersSourceSet = executionContext.getSourceToFilterExpressionMap().keySet();
+    Set<String> groupBysSourceSet = executionContext.getSourceToGroupByExpressionMap().keySet();
     Set<String> selectionOrderBysSourceSet =
         executionContext.getSourceToSelectionOrderByExpressionMap().keySet();
     Set<String> metricAggregationOrderBysSourceSet =
@@ -53,6 +54,7 @@ public class ExecutionTreeUtils {
     sources.addAll(metricAggregationsSourceSet);
     sources.addAll(timeAggregationsSourceSet);
     sources.addAll(filtersSourceSet);
+    sources.addAll(groupBysSourceSet);
     sources.addAll(selectionOrderBysSourceSet);
     sources.addAll(metricAggregationOrderBysSourceSet);
     if (sources.size() == 1) {
