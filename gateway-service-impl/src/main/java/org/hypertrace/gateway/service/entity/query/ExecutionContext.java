@@ -105,6 +105,7 @@ public class ExecutionContext {
     buildSourceToExpressionMaps();
     buildSourceToFilterExpressionMaps();
     buildSourceToOrderByExpressionMaps();
+    buildSourceToGroupByExpressionMaps();
   }
 
   public ExecutionContext(
