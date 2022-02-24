@@ -80,11 +80,11 @@ class ExecutionContextTest {
     EntitiesRequest entitiesRequest =
         EntitiesRequest.newBuilder().setEntityType("API").setFilter(filter).build();
     ExecutionContext executionContext =
-        ExecutionContext.from(
+        new ExecutionContext(
             attributeMetadataProvider,
             entityIdColumnsConfigs,
-            entitiesRequest,
-            entitiesRequestContext);
+            entitiesRequestContext,
+            entitiesRequest);
 
     Map<String, List<Expression>> sourceToFilterExpressionMap =
         executionContext.getSourceToFilterExpressionMap();
@@ -117,11 +117,11 @@ class ExecutionContextTest {
     EntitiesRequest entitiesRequest =
         EntitiesRequest.newBuilder().setEntityType("API").addAllSelection(selections).build();
     ExecutionContext executionContext =
-        ExecutionContext.from(
+        new ExecutionContext(
             attributeMetadataProvider,
             entityIdColumnsConfigs,
-            entitiesRequest,
-            entitiesRequestContext);
+            entitiesRequestContext,
+            entitiesRequest);
 
     int size = executionContext.getSourceToSelectionExpressionMap().get("EDS").size();
     executionContext.removeSelectionAttributes("INVALID", Set.of("apiId"));
@@ -143,11 +143,11 @@ class ExecutionContextTest {
     EntitiesRequest entitiesRequest =
         EntitiesRequest.newBuilder().setEntityType("API").addAllSelection(selections).build();
     ExecutionContext executionContext =
-        ExecutionContext.from(
+        new ExecutionContext(
             attributeMetadataProvider,
             entityIdColumnsConfigs,
-            entitiesRequest,
-            entitiesRequestContext);
+            entitiesRequestContext,
+            entitiesRequest);
 
     Set<String> removeAttributes = Set.of(API_ID_ATTR, API_NAME_ATTR, API_END_TIME_ATTR);
 
@@ -170,11 +170,11 @@ class ExecutionContextTest {
     EntitiesRequest entitiesRequest =
         EntitiesRequest.newBuilder().setEntityType("API").addAllSelection(selections).build();
     ExecutionContext executionContext =
-        ExecutionContext.from(
+        new ExecutionContext(
             attributeMetadataProvider,
             entityIdColumnsConfigs,
-            entitiesRequest,
-            entitiesRequestContext);
+            entitiesRequestContext,
+            entitiesRequest);
 
     executionContext.removeSelectionAttributes("EDS", attributes);
     assertEquals(1, executionContext.getSourceToSelectionExpressionMap().size());

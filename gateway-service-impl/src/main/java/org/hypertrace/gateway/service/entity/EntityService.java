@@ -152,9 +152,10 @@ public class EntityService {
         requestPreProcessor.process(originalRequest, entitiesRequestContext);
 
     ExecutionContext executionContext =
-        ExecutionContext.from(
-            metadataProvider, entityIdColumnsConfigs, preProcessedRequest, entitiesRequestContext);
-    ExecutionTreeBuilder executionTreeBuilder = new ExecutionTreeBuilder(executionContext);
+        new ExecutionContext(
+            metadataProvider, entityIdColumnsConfigs, entitiesRequestContext, preProcessedRequest);
+    ExecutionTreeBuilder executionTreeBuilder =
+        new ExecutionTreeBuilder(preProcessedRequest, executionContext);
     QueryNode executionTree = executionTreeBuilder.build();
     queryBuildTimer.record(
         Duration.between(start, Instant.now()).toMillis(), TimeUnit.MILLISECONDS);
@@ -165,7 +166,8 @@ public class EntityService {
      */
     EntityResponse response =
         executionTree.acceptVisitor(
-            new ExecutionVisitor(executionContext, EntityQueryHandlerRegistry.get()));
+            new ExecutionVisitor(
+                preProcessedRequest, executionContext, EntityQueryHandlerRegistry.get()));
 
     EntityFetcherResponse entityFetcherResponse = response.getEntityFetcherResponse();
 

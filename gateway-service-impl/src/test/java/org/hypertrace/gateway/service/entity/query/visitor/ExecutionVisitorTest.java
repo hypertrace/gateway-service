@@ -129,7 +129,8 @@ public class ExecutionVisitorTest {
         .thenReturn(queryServiceEntityFetcher);
     when(entityQueryHandlerRegistry.getEntityFetcher(EDS_SOURCE))
         .thenReturn(entityDataServiceEntityFetcher);
-    executionVisitor = new ExecutionVisitor(executionContext, entityQueryHandlerRegistry);
+    executionVisitor =
+        new ExecutionVisitor(ENTITIES_REQUEST, executionContext, entityQueryHandlerRegistry);
   }
 
   @Test
@@ -411,7 +412,6 @@ public class ExecutionVisitorTest {
 
     when(executionContext.getSourceToSelectionExpressionMap())
         .thenReturn(Map.of("QS", List.of(selectionExpression)));
-    when(executionContext.getEntitiesRequest()).thenReturn(entitiesRequest);
     when(executionContext.getTenantId()).thenReturn(tenantId);
     when(executionContext.getRequestHeaders()).thenReturn(requestHeaders);
     when(executionContext.getTimestampAttributeId()).thenReturn("API.startTime");
@@ -426,6 +426,9 @@ public class ExecutionVisitorTest {
     DataFetcherNode dataFetcherNode =
         new DataFetcherNode(
             "QS", entitiesRequest.getFilter(), limit, offset, orderByExpressions, true);
+
+    executionVisitor =
+        new ExecutionVisitor(entitiesRequest, executionContext, entityQueryHandlerRegistry);
 
     compareEntityResponses(
         new EntityResponse(entityFetcherResponse, 100L), executionVisitor.visit(dataFetcherNode));
@@ -469,7 +472,6 @@ public class ExecutionVisitorTest {
         new EntityFetcherResponse(entityKeyBuilderResponseMap);
     when(executionContext.getSourceToSelectionExpressionMap())
         .thenReturn(Map.of("QS", List.of(selectionExpression)));
-    when(executionContext.getEntitiesRequest()).thenReturn(entitiesRequest);
     when(executionContext.getTenantId()).thenReturn(tenantId);
     when(executionContext.getRequestHeaders()).thenReturn(requestHeaders);
     when(executionContext.getTimestampAttributeId()).thenReturn("API.startTime");
@@ -482,6 +484,9 @@ public class ExecutionVisitorTest {
     DataFetcherNode dataFetcherNode =
         new DataFetcherNode(
             "QS", entitiesRequest.getFilter(), limit, offset, orderByExpressions, false);
+
+    executionVisitor =
+        new ExecutionVisitor(entitiesRequest, executionContext, entityQueryHandlerRegistry);
 
     compareEntityResponses(
         new EntityResponse(
@@ -527,7 +532,6 @@ public class ExecutionVisitorTest {
 
     when(executionContext.getSourceToSelectionExpressionMap())
         .thenReturn(Map.of("EDS", List.of(selectionExpression)));
-    when(executionContext.getEntitiesRequest()).thenReturn(entitiesRequest);
     when(executionContext.getTenantId()).thenReturn(tenantId);
     when(executionContext.getRequestHeaders()).thenReturn(requestHeaders);
     when(executionContext.getTimestampAttributeId()).thenReturn("API.startTime");
@@ -539,6 +543,9 @@ public class ExecutionVisitorTest {
     DataFetcherNode dataFetcherNode =
         new DataFetcherNode(
             "EDS", entitiesRequest.getFilter(), limit, offset, orderByExpressions, true);
+
+    executionVisitor =
+        new ExecutionVisitor(entitiesRequest, executionContext, entityQueryHandlerRegistry);
 
     compareEntityResponses(
         new EntityResponse(entityFetcherResponse, 100), executionVisitor.visit(dataFetcherNode));
@@ -576,7 +583,6 @@ public class ExecutionVisitorTest {
         new EntityFetcherResponse(entityKeyBuilderResponseMap);
     when(executionContext.getSourceToSelectionExpressionMap())
         .thenReturn(Map.of("QS", List.of(selectionExpression)));
-    when(executionContext.getEntitiesRequest()).thenReturn(entitiesRequest);
     when(executionContext.getTenantId()).thenReturn(tenantId);
     when(executionContext.getRequestHeaders()).thenReturn(requestHeaders);
     when(executionContext.getTimestampAttributeId()).thenReturn("API.startTime");
@@ -588,6 +594,9 @@ public class ExecutionVisitorTest {
 
     // no pagination in data fetcher node
     DataFetcherNode dataFetcherNode = new DataFetcherNode("QS", entitiesRequest.getFilter());
+
+    executionVisitor =
+        new ExecutionVisitor(entitiesRequest, executionContext, entityQueryHandlerRegistry);
 
     compareEntityResponses(
         new EntityResponse(
@@ -685,7 +694,6 @@ public class ExecutionVisitorTest {
         .thenReturn(Map.of("QS", List.of(metricExpression)));
     when(executionContext.getSourceToTimeAggregationMap())
         .thenReturn(Map.of("QS", List.of(timeAggregation)));
-    when(executionContext.getEntitiesRequest()).thenReturn(entitiesRequest);
     when(executionContext.getTenantId()).thenReturn(tenantId);
     when(executionContext.getRequestHeaders()).thenReturn(requestHeaders);
     when(executionContext.getTimestampAttributeId()).thenReturn("API.startTime");
@@ -744,6 +752,9 @@ public class ExecutionVisitorTest {
             .setTimeSeriesSelectionSources(Set.of("QS"))
             .build();
 
+    executionVisitor =
+        new ExecutionVisitor(entitiesRequest, executionContext, entityQueryHandlerRegistry);
+
     compareEntityResponses(
         new EntityResponse(new EntityFetcherResponse(expectedEntityKeyBuilderResponseMap), 100),
         executionVisitor.visit(selectionNode));
@@ -752,7 +763,7 @@ public class ExecutionVisitorTest {
   @Test
   public void test_visitSelectionNode_differentSource_callSeparatedCalls() {
     ExecutionVisitor executionVisitor =
-        spy(new ExecutionVisitor(executionContext, entityQueryHandlerRegistry));
+        spy(new ExecutionVisitor(ENTITIES_REQUEST, executionContext, entityQueryHandlerRegistry));
     when(executionContext.getTimestampAttributeId()).thenReturn("API.startTime");
     SelectionNode selectionNode =
         new SelectionNode.Builder(new NoOpNode())
@@ -851,7 +862,6 @@ public class ExecutionVisitorTest {
         .thenReturn(Map.of("QS", List.of(metricExpression)));
     when(executionContext.getSourceToTimeAggregationMap())
         .thenReturn(Map.of("QS", List.of(timeAggregation)));
-    when(executionContext.getEntitiesRequest()).thenReturn(entitiesRequest);
     when(executionContext.getTenantId()).thenReturn(tenantId);
     when(executionContext.getRequestHeaders()).thenReturn(requestHeaders);
     when(executionContext.getTimestampAttributeId()).thenReturn("API.startTime");
@@ -900,6 +910,9 @@ public class ExecutionVisitorTest {
             EntityKey.of("entity-id-2"),
             EntityKey.of("entity-id-3"));
 
+    executionVisitor =
+        new ExecutionVisitor(entitiesRequest, executionContext, entityQueryHandlerRegistry);
+
     // child selection node has no child data fetcher node. it should set total entity keys
     {
       compareEntityResponses(
@@ -928,8 +941,7 @@ public class ExecutionVisitorTest {
             .setFilter(generateEQFilter(API_DISCOVERY_STATE, "DISCOVERED"))
             .build();
     ExecutionVisitor executionVisitor =
-        spy(new ExecutionVisitor(executionContext, entityQueryHandlerRegistry));
-    when(executionContext.getEntitiesRequest()).thenReturn(entitiesRequest);
+        spy(new ExecutionVisitor(entitiesRequest, executionContext, entityQueryHandlerRegistry));
 
     // Selection node with NoOp child, to short-circuit the call to first service.
     SelectionNode selectionNode =
@@ -980,7 +992,6 @@ public class ExecutionVisitorTest {
 
     when(executionContext.getTenantId()).thenReturn("tenantId");
     when(executionContext.getRequestHeaders()).thenReturn(Collections.emptyMap());
-    when(executionContext.getEntitiesRequest()).thenReturn(ENTITIES_REQUEST);
     when(executionContext.getPendingSelectionSources()).thenReturn(selectionSource);
     when(executionContext.getPendingMetricAggregationSources()).thenReturn(aggregateSource);
     when(executionContext.getSourceToSelectionExpressionMap()).thenReturn(sourceToSelectionMap);

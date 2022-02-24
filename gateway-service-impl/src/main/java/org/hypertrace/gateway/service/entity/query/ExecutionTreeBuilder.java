@@ -15,6 +15,7 @@ import org.hypertrace.core.attribute.service.v1.AttributeMetadata;
 import org.hypertrace.core.attribute.service.v1.AttributeSource;
 import org.hypertrace.gateway.service.common.util.ExpressionReader;
 import org.hypertrace.gateway.service.common.util.TimeRangeFilterUtil;
+import org.hypertrace.gateway.service.entity.config.TimestampConfigs;
 import org.hypertrace.gateway.service.entity.query.visitor.ExecutionContextBuilderVisitor;
 import org.hypertrace.gateway.service.entity.query.visitor.FilterOptimizingVisitor;
 import org.hypertrace.gateway.service.entity.query.visitor.PrintVisitor;
@@ -32,16 +33,17 @@ public class ExecutionTreeBuilder {
 
   private final Map<String, AttributeMetadata> attributeMetadataMap;
   private final ExecutionContext executionContext;
+  private final EntitiesRequest entitiesRequest;
   private final Set<String> sourceSetsIfFilterAndOrderByAreFromSameSourceSets;
 
-  public ExecutionTreeBuilder(ExecutionContext executionContext) {
+  public ExecutionTreeBuilder(EntitiesRequest entitiesRequest, ExecutionContext executionContext) {
     this.executionContext = executionContext;
+    this.entitiesRequest = entitiesRequest;
     this.attributeMetadataMap =
         executionContext
             .getAttributeMetadataProvider()
             .getAttributesMetadata(
-                executionContext.getEntitiesRequestContext(),
-                executionContext.getEntitiesRequest().getEntityType());
+                executionContext.getEntitiesRequestContext(), entitiesRequest.getEntityType());
 
     this.sourceSetsIfFilterAndOrderByAreFromSameSourceSets =
         ExecutionTreeUtils.getSourceSetsIfFilterAndOrderByAreFromSameSourceSets(executionContext);
@@ -56,8 +58,6 @@ public class ExecutionTreeBuilder {
    * @return the root node of the execution tree
    */
   public QueryNode build() {
-    EntitiesRequest entitiesRequest = executionContext.getEntitiesRequest();
-
     // EDS source has all the entities (live + non live). In order to fetch all the non live
     // entities, along with live entities,
     // the query needs to be anchored around EDS.
@@ -103,8 +103,7 @@ public class ExecutionTreeBuilder {
     // can be source specification
     // optimization where all projections, filters, order by, sort and limit can be pushed down to
     // the data store
-    Optional<String> singleSourceForAllAttributes =
-        ExecutionTreeUtils.getSingleSourceForAllAttributes(executionContext);
+    Optional<String> singleSourceForAllAttributes = getValidSingleSource();
     if (singleSourceForAllAttributes.isPresent()) {
       String source = singleSourceForAllAttributes.get();
       QueryNode rootNode = buildExecutionTreeForSameSourceFilterAndSelection(source);
@@ -170,7 +169,6 @@ public class ExecutionTreeBuilder {
   }
 
   private QueryNode buildExecutionTreeForQsFilterAndSelection() {
-    EntitiesRequest entitiesRequest = executionContext.getEntitiesRequest();
     QueryNode rootNode = createQsDataFetcherNodeWithLimitAndOffset(entitiesRequest);
     rootNode = createPaginateOnlyNode(rootNode, entitiesRequest);
     executionContext.setSortAndPaginationNodeAdded(true);
@@ -179,7 +177,6 @@ public class ExecutionTreeBuilder {
   }
 
   private QueryNode buildExecutionTreeForEdsFilterAndSelection() {
-    EntitiesRequest entitiesRequest = executionContext.getEntitiesRequest();
     Filter filter = entitiesRequest.getFilter();
     int selectionLimit = entitiesRequest.getLimit();
     int selectionOffset = entitiesRequest.getOffset();
@@ -257,10 +254,10 @@ public class ExecutionTreeBuilder {
         TimeRangeFilterUtil.addTimeRangeFilter(
             context.getTimestampAttributeId(),
             filter,
-            context.getEntitiesRequest().getStartTimeMillis(),
-            context.getEntitiesRequest().getEndTimeMillis());
+            entitiesRequest.getStartTimeMillis(),
+            entitiesRequest.getEndTimeMillis());
 
-    return buildFilterTree(context.getEntitiesRequest(), timeRangeFilter);
+    return buildFilterTree(entitiesRequest, timeRangeFilter);
   }
 
   @VisibleForTesting
@@ -320,16 +317,13 @@ public class ExecutionTreeBuilder {
         Stream.of(selectionOrderByExpressions, metricOrderByExpressions)
             .flatMap(Collection::stream)
             .collect(Collectors.toList());
-    if (orderByExpressions.isEmpty() && executionContext.getEntitiesRequest().getLimit() == 0) {
+    if (orderByExpressions.isEmpty() && entitiesRequest.getLimit() == 0) {
       return childNode;
     }
 
     executionContext.setSortAndPaginationNodeAdded(true);
     return new SortAndPaginateNode(
-        childNode,
-        executionContext.getEntitiesRequest().getLimit(),
-        executionContext.getEntitiesRequest().getOffset(),
-        orderByExpressions);
+        childNode, entitiesRequest.getLimit(), entitiesRequest.getOffset(), orderByExpressions);
   }
 
   private QueryNode createQsDataFetcherNodeWithLimitAndOffset(EntitiesRequest entitiesRequest) {
@@ -355,5 +349,53 @@ public class ExecutionTreeBuilder {
 
   private QueryNode createPaginateOnlyNode(QueryNode queryNode, EntitiesRequest entitiesRequest) {
     return new PaginateOnlyNode(queryNode, entitiesRequest.getLimit(), entitiesRequest.getOffset());
+  }
+
+  private Optional<String> getValidSingleSource() {
+    Optional<String> singleSourceForAllAttributes =
+        ExecutionTreeUtils.getSingleSourceForAllAttributes(executionContext);
+
+    if (singleSourceForAllAttributes.isEmpty()) {
+      return Optional.empty();
+    }
+
+    /**
+     * Entities queries usually have an inherent time filter, via {@link
+     * EntitiesRequest#getStartTimeMillis()} and {@link EntitiesRequest#getEndTimeMillis()}.
+     *
+     * <p>The time filter is usually applied on QS, apart from few entity types, which have a
+     * timestamp column specified through timestamp config {@link TimestampConfigs}
+     *
+     * <p>Single source for all attributes doesn't take care of the inherent time filter for the
+     * single source
+     *
+     * <p>If the single source is {@link EDS} and the timestamp column doesn't exist for the
+     * corresponding entity type, the query will be executed on {@link EDS} source, without the
+     * inherent filter, leading to erroneous outputs
+     *
+     * <p>Hence, default to non single source, if
+     *
+     * <ul>
+     *   <li>single source is {@link EDS}
+     *   <li>inherent time filter is valid
+     *   <li>only live entities are requested (since non live entities request ignores the inherent
+     *       time filter anyways)
+     *   <li>timestamp column doesn't exist for the corresponding entity type
+     * </ul>
+     */
+    String singleSource = singleSourceForAllAttributes.get();
+    if (EDS.name().equals(singleSource)
+        && isValidTimeRange(
+            entitiesRequest.getStartTimeMillis(), entitiesRequest.getEndTimeMillis())
+        && !entitiesRequest.getIncludeNonLiveEntities()
+        && TimestampConfigs.getTimestampColumn(entitiesRequest.getEntityType()) == null) {
+      return Optional.empty();
+    }
+
+    return singleSourceForAllAttributes;
+  }
+
+  private static boolean isValidTimeRange(long startTimeMillis, long endTimeMillis) {
+    return startTimeMillis != 0 && endTimeMillis != 0 && startTimeMillis < endTimeMillis;
   }
 }

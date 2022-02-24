@@ -29,6 +29,7 @@ import org.hypertrace.gateway.service.v1.common.Filter;
 import org.hypertrace.gateway.service.v1.common.OrderByExpression;
 import org.hypertrace.gateway.service.v1.common.TimeAggregation;
 import org.hypertrace.gateway.service.v1.entity.EntitiesRequest;
+import org.hypertrace.gateway.service.v1.explore.ExploreRequest;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -43,11 +44,11 @@ public class ExecutionContext {
   private final AttributeMetadataProvider attributeMetadataProvider;
 
   private final EntityIdColumnsConfigs entityIdColumnsConfigs;
-
-  private final EntitiesRequest entitiesRequest;
   private final EntitiesRequestContext entitiesRequestContext;
 
   // selections
+  private final List<Expression> selections;
+  private final List<TimeAggregation> timeAggregations;
   private ImmutableMap<String, List<Expression>> sourceToSelectionExpressionMap;
   private ImmutableMap<String, Set<String>> sourceToSelectionAttributeMap;
 
@@ -55,6 +56,7 @@ public class ExecutionContext {
   private ImmutableMap<String, List<TimeAggregation>> sourceToTimeAggregationMap;
 
   // order bys
+  private final List<OrderByExpression> orderBys;
   private ImmutableMap<String, List<OrderByExpression>> sourceToSelectionOrderByExpressionMap;
   private ImmutableMap<String, Set<String>> sourceToSelectionOrderByAttributeMap;
 
@@ -62,9 +64,14 @@ public class ExecutionContext {
   private ImmutableMap<String, Set<String>> sourceToMetricOrderByAttributeMap;
 
   // filters
+  private final Filter filter;
   private ImmutableMap<String, List<Expression>> sourceToFilterExpressionMap;
   private ImmutableMap<String, Set<String>> sourceToFilterAttributeMap;
   private ImmutableMap<String, Set<String>> filterAttributeToSourceMap;
+
+  // group bys
+  private final List<Expression> groupBys;
+  private ImmutableMap<String, List<Expression>> sourceToSelectionGroupByExpressionMap;
 
   /** Following fields are mutable and updated during the ExecutionTree building phase * */
   private final Set<String> pendingSelectionSources = new HashSet<>();
@@ -75,30 +82,50 @@ public class ExecutionContext {
   private final Set<String> pendingMetricAggregationSourcesForOrderBy = new HashSet<>();
   private boolean sortAndPaginationNodeAdded = false;
 
-  // map of filter, selections (attribute, metrics, aggregations), order by attributes to source map
+  // map of filter, selections (attribute, metrics, aggregations), group bys, order by attributes to
+  // source map
   private final Map<String, Set<String>> allAttributesToSourcesMap = new HashMap<>();
 
-  private ExecutionContext(
+  public ExecutionContext(
       AttributeMetadataProvider attributeMetadataProvider,
       EntityIdColumnsConfigs entityIdColumnsConfigs,
-      EntitiesRequest entitiesRequest,
-      EntitiesRequestContext entitiesRequestContext) {
+      EntitiesRequestContext entitiesRequestContext,
+      EntitiesRequest entitiesRequest) {
     this.attributeMetadataProvider = attributeMetadataProvider;
     this.entityIdColumnsConfigs = entityIdColumnsConfigs;
-    this.entitiesRequest = entitiesRequest;
     this.entitiesRequestContext = entitiesRequestContext;
+
+    this.selections = entitiesRequest.getSelectionList();
+    this.timeAggregations = entitiesRequest.getTimeAggregationList();
+    this.filter = entitiesRequest.getFilter();
+    this.orderBys = entitiesRequest.getOrderByList();
+    // entities request does not have group by
+    this.groupBys = new ArrayList<>();
+
     buildSourceToExpressionMaps();
     buildSourceToFilterExpressionMaps();
     buildSourceToOrderByExpressionMaps();
   }
 
-  public static ExecutionContext from(
-      AttributeMetadataProvider metadataProvider,
+  public ExecutionContext(
+      AttributeMetadataProvider attributeMetadataProvider,
       EntityIdColumnsConfigs entityIdColumnsConfigs,
-      EntitiesRequest entitiesRequest,
-      EntitiesRequestContext entitiesRequestContext) {
-    return new ExecutionContext(
-        metadataProvider, entityIdColumnsConfigs, entitiesRequest, entitiesRequestContext);
+      EntitiesRequestContext entitiesRequestContext,
+      ExploreRequest exploreRequest) {
+    this.attributeMetadataProvider = attributeMetadataProvider;
+    this.entityIdColumnsConfigs = entityIdColumnsConfigs;
+    this.entitiesRequestContext = entitiesRequestContext;
+
+    this.selections = exploreRequest.getSelectionList();
+    this.timeAggregations = exploreRequest.getTimeAggregationList();
+    this.filter = exploreRequest.getFilter();
+    this.orderBys = exploreRequest.getOrderByList();
+    this.groupBys = exploreRequest.getGroupByList();
+
+    buildSourceToExpressionMaps();
+    buildSourceToFilterExpressionMaps();
+    buildSourceToOrderByExpressionMaps();
+    buildSourceToGroupByExpressionMaps();
   }
 
   public String getTenantId() {
@@ -107,10 +134,6 @@ public class ExecutionContext {
 
   public String getTimestampAttributeId() {
     return entitiesRequestContext.getTimestampAttributeId();
-  }
-
-  public EntitiesRequest getEntitiesRequest() {
-    return entitiesRequest;
   }
 
   public AttributeMetadataProvider getAttributeMetadataProvider() {
@@ -191,7 +214,7 @@ public class ExecutionContext {
             attributeMetadataProvider,
             entityIdColumnsConfigs,
             this.entitiesRequestContext,
-            entitiesRequest.getEntityType());
+            entitiesRequestContext.getEntityType());
     return IntStream.range(0, entityIdAttributeNames.size())
         .mapToObj(
             value ->
@@ -260,25 +283,24 @@ public class ExecutionContext {
 
   private void buildSourceToExpressionMaps() {
     List<Expression> attributeSelections =
-        entitiesRequest.getSelectionList().stream()
+        selections.stream()
             .filter(ExpressionReader::isAttributeSelection)
             .collect(Collectors.toUnmodifiableList());
     sourceToSelectionExpressionMap = getDataSourceToExpressionMap(attributeSelections);
     sourceToSelectionAttributeMap = buildSourceToAttributesMap(sourceToSelectionExpressionMap);
     List<Expression> functionSelections =
-        entitiesRequest.getSelectionList().stream()
+        selections.stream()
             .filter(Expression::hasFunction)
             .collect(Collectors.toUnmodifiableList());
     sourceToMetricExpressionMap = getDataSourceToExpressionMap(functionSelections);
-    sourceToTimeAggregationMap =
-        getDataSourceToTimeAggregation(entitiesRequest.getTimeAggregationList());
+    sourceToTimeAggregationMap = getDataSourceToTimeAggregation(timeAggregations);
     pendingSelectionSources.addAll(sourceToSelectionExpressionMap.keySet());
     pendingMetricAggregationSources.addAll(sourceToMetricExpressionMap.keySet());
     pendingTimeAggregationSources.addAll(sourceToTimeAggregationMap.keySet());
   }
 
   private void buildSourceToFilterExpressionMaps() {
-    sourceToFilterExpressionMap = getSourceToFilterExpressionMap(entitiesRequest.getFilter());
+    sourceToFilterExpressionMap = getSourceToFilterExpressionMap(filter);
     sourceToFilterAttributeMap = buildSourceToAttributesMap(sourceToFilterExpressionMap);
     filterAttributeToSourceMap =
         ImmutableMap.<String, Set<String>>builder()
@@ -292,9 +314,7 @@ public class ExecutionContext {
     // QueryService results
     List<OrderByExpression> orderByExpressions =
         OrderByUtil.matchOrderByExpressionsAliasToSelectionAlias(
-            entitiesRequest.getOrderByList(),
-            entitiesRequest.getSelectionList(),
-            entitiesRequest.getTimeAggregationList());
+            orderBys, selections, timeAggregations);
 
     List<OrderByExpression> attributeOrderByExpressions =
         orderByExpressions.stream()
@@ -321,6 +341,10 @@ public class ExecutionContext {
             convertOrderByExpressionToExpression(sourceToMetricOrderByExpressionMap));
     pendingSelectionSourcesForOrderBy.addAll(sourceToSelectionOrderByExpressionMap.keySet());
     pendingMetricAggregationSourcesForOrderBy.addAll(sourceToMetricOrderByExpressionMap.keySet());
+  }
+
+  private void buildSourceToGroupByExpressionMaps() {
+    sourceToSelectionGroupByExpressionMap = getDataSourceToExpressionMap(groupBys);
   }
 
   private ImmutableMap<String, List<OrderByExpression>> getDataSourceToOrderByExpressionMap(
@@ -397,7 +421,7 @@ public class ExecutionContext {
     Map<String, List<Expression>> sourceToExpressionMap = new HashMap<>();
     Map<String, AttributeMetadata> attrNameToMetadataMap =
         attributeMetadataProvider.getAttributesMetadata(
-            this.entitiesRequestContext, entitiesRequest.getEntityType());
+            this.entitiesRequestContext, entitiesRequestContext.getEntityType());
     for (Expression expression : expressions) {
       Set<String> attributeIds = ExpressionReader.extractAttributeIds(expression);
       Set<AttributeSource> sources =
@@ -461,8 +485,6 @@ public class ExecutionContext {
         + attributeMetadataProvider
         + ", entityIdColumnsConfigs="
         + entityIdColumnsConfigs
-        + ", entitiesRequest="
-        + entitiesRequest
         + ", entitiesRequestContext="
         + entitiesRequestContext
         + ", sourceToSelectionExpressionMap="

@@ -11,8 +11,6 @@ import java.util.LinkedList;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
-import java.util.concurrent.ExecutorService;
-import java.util.concurrent.Executors;
 import java.util.stream.Collectors;
 import java.util.stream.IntStream;
 import org.hypertrace.gateway.service.common.datafetcher.EntityFetcherResponse;
@@ -46,16 +44,17 @@ import org.slf4j.LoggerFactory;
 
 /** Visitor that executes each QueryNode in the execution tree. */
 public class ExecutionVisitor implements Visitor<EntityResponse> {
-
-  private static final int THREAD_COUNT = 20;
-  private static final ExecutorService executorService = Executors.newFixedThreadPool(THREAD_COUNT);
-
-  private final EntityQueryHandlerRegistry queryHandlerRegistry;
-  private final ExecutionContext executionContext;
   private static final Logger LOG = LoggerFactory.getLogger(ExecutionVisitor.class);
 
+  private final EntityQueryHandlerRegistry queryHandlerRegistry;
+  private final EntitiesRequest entitiesRequest;
+  private final ExecutionContext executionContext;
+
   public ExecutionVisitor(
-      ExecutionContext executionContext, EntityQueryHandlerRegistry queryHandlerRegistry) {
+      EntitiesRequest entitiesRequest,
+      ExecutionContext executionContext,
+      EntityQueryHandlerRegistry queryHandlerRegistry) {
+    this.entitiesRequest = entitiesRequest;
     this.executionContext = executionContext;
     this.queryHandlerRegistry = queryHandlerRegistry;
   }
@@ -118,7 +117,6 @@ public class ExecutionVisitor implements Visitor<EntityResponse> {
   @Override
   public EntityResponse visit(DataFetcherNode dataFetcherNode) {
     String source = dataFetcherNode.getSource();
-    EntitiesRequest entitiesRequest = executionContext.getEntitiesRequest();
     EntitiesRequestContext context =
         new EntitiesRequestContext(
             executionContext.getTenantId(),
@@ -198,7 +196,7 @@ public class ExecutionVisitor implements Visitor<EntityResponse> {
     // If the result was empty when the filter is non-empty, it means no entities matched the filter
     // and hence no need to do any more follow up calls.
     if (childEntityFetcherResponse.isEmpty()
-        && !Filter.getDefaultInstance().equals(executionContext.getEntitiesRequest().getFilter())) {
+        && !Filter.getDefaultInstance().equals(entitiesRequest.getFilter())) {
       LOG.debug("No results matched the filter so not fetching aggregate/timeseries metrics.");
       return childNodeResponse;
     }
@@ -215,7 +213,7 @@ public class ExecutionVisitor implements Visitor<EntityResponse> {
             .map(
                 source -> {
                   EntitiesRequest request =
-                      EntitiesRequest.newBuilder(executionContext.getEntitiesRequest())
+                      EntitiesRequest.newBuilder(entitiesRequest)
                           .clearSelection()
                           .clearTimeAggregation()
                           .clearFilter()
@@ -247,7 +245,7 @@ public class ExecutionVisitor implements Visitor<EntityResponse> {
             .map(
                 source -> {
                   EntitiesRequest request =
-                      EntitiesRequest.newBuilder(executionContext.getEntitiesRequest())
+                      EntitiesRequest.newBuilder(entitiesRequest)
                           .clearSelection()
                           .clearTimeAggregation()
                           .clearFilter()
@@ -275,7 +273,7 @@ public class ExecutionVisitor implements Visitor<EntityResponse> {
             .map(
                 source -> {
                   EntitiesRequest request =
-                      EntitiesRequest.newBuilder(executionContext.getEntitiesRequest())
+                      EntitiesRequest.newBuilder(entitiesRequest)
                           .clearSelection()
                           .clearTimeAggregation()
                           .clearFilter()

@@ -27,7 +27,7 @@ import org.hypertrace.gateway.service.v1.explore.ExploreResponse;
  * <p>It is called from the implementations of IRequestHandler when ExploreRequest.includeRestGroup
  * of the original request is set to true.
  */
-class TheRestGroupRequestHandler {
+public class TheRestGroupRequestHandler {
   private static final String OTHER_COLUMN_VALUE = "__Other";
   private final RequestHandlerWithSorting requestHandler;
 
@@ -35,7 +35,7 @@ class TheRestGroupRequestHandler {
     this.requestHandler = requestHandler;
   }
 
-  void getRowsForTheRestGroup(
+  public void getRowsForTheRestGroup(
       ExploreRequestContext context,
       ExploreRequest originalRequest,
       ExploreResponse.Builder originalResponse) {
