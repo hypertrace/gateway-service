@@ -491,6 +491,10 @@ public class ExecutionContext {
         + entityIdColumnsConfigs
         + ", entitiesRequestContext="
         + entitiesRequestContext
+        + ", selections="
+        + selections
+        + ", timeAggregations="
+        + timeAggregations
         + ", sourceToSelectionExpressionMap="
         + sourceToSelectionExpressionMap
         + ", sourceToSelectionAttributeMap="
@@ -499,6 +503,8 @@ public class ExecutionContext {
         + sourceToMetricExpressionMap
         + ", sourceToTimeAggregationMap="
         + sourceToTimeAggregationMap
+        + ", orderBys="
+        + orderBys
         + ", sourceToSelectionOrderByExpressionMap="
         + sourceToSelectionOrderByExpressionMap
         + ", sourceToSelectionOrderByAttributeMap="
@@ -507,12 +513,18 @@ public class ExecutionContext {
         + sourceToMetricOrderByExpressionMap
         + ", sourceToMetricOrderByAttributeMap="
         + sourceToMetricOrderByAttributeMap
+        + ", filter="
+        + filter
         + ", sourceToFilterExpressionMap="
         + sourceToFilterExpressionMap
         + ", sourceToFilterAttributeMap="
         + sourceToFilterAttributeMap
         + ", filterAttributeToSourceMap="
         + filterAttributeToSourceMap
+        + ", groupBys="
+        + groupBys
+        + ", sourceToGroupByExpressionMap="
+        + sourceToGroupByExpressionMap
         + ", pendingSelectionSources="
         + pendingSelectionSources
         + ", pendingMetricAggregationSources="
