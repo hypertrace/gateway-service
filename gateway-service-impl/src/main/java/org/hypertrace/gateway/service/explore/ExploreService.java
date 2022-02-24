@@ -114,7 +114,7 @@ public class ExploreService {
 
   private boolean isContextAnEntityType(ExploreRequest request) {
     return Arrays.stream(EntityType.values())
-        .anyMatch(entityType -> entityType.toString().equals(request.getContext()));
+        .anyMatch(entityType -> entityType.name().equalsIgnoreCase(request.getContext()));
   }
 
   private IRequestHandler getRequestHandler(
