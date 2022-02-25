@@ -30,7 +30,7 @@ import org.hypertrace.gateway.service.common.transformer.ResponsePostProcessor;
 import org.hypertrace.gateway.service.common.util.AttributeMetadataUtil;
 import org.hypertrace.gateway.service.entity.config.EntityIdColumnsConfigs;
 import org.hypertrace.gateway.service.entity.config.LogConfig;
-import org.hypertrace.gateway.service.entity.query.ExecutionContext;
+import org.hypertrace.gateway.service.entity.query.EntityExecutionContext;
 import org.hypertrace.gateway.service.entity.query.ExecutionTreeBuilder;
 import org.hypertrace.gateway.service.entity.query.QueryNode;
 import org.hypertrace.gateway.service.entity.query.visitor.ExecutionVisitor;
@@ -151,11 +151,10 @@ public class EntityService {
     EntitiesRequest preProcessedRequest =
         requestPreProcessor.process(originalRequest, entitiesRequestContext);
 
-    ExecutionContext executionContext =
-        new ExecutionContext(
+    EntityExecutionContext executionContext =
+        new EntityExecutionContext(
             metadataProvider, entityIdColumnsConfigs, entitiesRequestContext, preProcessedRequest);
-    ExecutionTreeBuilder executionTreeBuilder =
-        new ExecutionTreeBuilder(preProcessedRequest, executionContext);
+    ExecutionTreeBuilder executionTreeBuilder = new ExecutionTreeBuilder(executionContext);
     QueryNode executionTree = executionTreeBuilder.build();
     queryBuildTimer.record(
         Duration.between(start, Instant.now()).toMillis(), TimeUnit.MILLISECONDS);
@@ -166,8 +165,7 @@ public class EntityService {
      */
     EntityResponse response =
         executionTree.acceptVisitor(
-            new ExecutionVisitor(
-                preProcessedRequest, executionContext, EntityQueryHandlerRegistry.get()));
+            new ExecutionVisitor(executionContext, EntityQueryHandlerRegistry.get()));
 
     EntityFetcherResponse entityFetcherResponse = response.getEntityFetcherResponse();
 

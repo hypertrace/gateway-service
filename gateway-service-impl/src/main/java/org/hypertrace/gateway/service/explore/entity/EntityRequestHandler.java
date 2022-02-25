@@ -15,9 +15,9 @@ import org.hypertrace.entity.query.service.v1.Row;
 import org.hypertrace.entity.query.service.v1.Value;
 import org.hypertrace.gateway.service.common.AttributeMetadataProvider;
 import org.hypertrace.gateway.service.common.converters.EntityServiceAndGatewayServiceConverter;
-import org.hypertrace.gateway.service.common.converters.ExploreToEntityConverter;
 import org.hypertrace.gateway.service.common.datafetcher.EntityFetcherResponse;
 import org.hypertrace.gateway.service.common.datafetcher.QueryServiceEntityFetcher;
+import org.hypertrace.gateway.service.common.util.AttributeMetadataUtil;
 import org.hypertrace.gateway.service.common.util.MetricAggregationFunctionUtil;
 import org.hypertrace.gateway.service.entity.EntitiesRequestContext;
 import org.hypertrace.gateway.service.entity.config.EntityIdColumnsConfigs;
@@ -145,7 +145,7 @@ public class EntityRequestHandler extends RequestHandler {
   private Set<String> getEntityIds(
       ExploreRequestContext requestContext, ExploreRequest exploreRequest) {
     EntitiesRequestContext entitiesRequestContext =
-        ExploreToEntityConverter.convert(attributeMetadataProvider, requestContext);
+        convert(attributeMetadataProvider, requestContext);
     EntitiesRequest entitiesRequest =
         EntitiesRequest.newBuilder()
             .setEntityType(exploreRequest.getContext())
@@ -157,6 +157,22 @@ public class EntityRequestHandler extends RequestHandler {
     return response.getEntityKeyBuilderMap().values().stream()
         .map(Builder::getId)
         .collect(Collectors.toUnmodifiableSet());
+  }
+
+  private EntitiesRequestContext convert(
+      AttributeMetadataProvider attributeMetadataProvider, ExploreRequestContext requestContext) {
+    String entityType = requestContext.getContext();
+
+    String timestampAttributeId =
+        AttributeMetadataUtil.getTimestampAttributeId(
+            attributeMetadataProvider, requestContext, entityType);
+    return new EntitiesRequestContext(
+        requestContext.getTenantId(),
+        requestContext.getStartTimeMillis(),
+        requestContext.getEndTimeMillis(),
+        entityType,
+        timestampAttributeId,
+        requestContext.getHeaders());
   }
 
   private void handleRow(

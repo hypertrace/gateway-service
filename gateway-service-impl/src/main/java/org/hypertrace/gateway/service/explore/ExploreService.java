@@ -16,11 +16,9 @@ import org.hypertrace.core.serviceframework.metrics.PlatformMetricsRegistry;
 import org.hypertrace.entity.query.service.client.EntityQueryServiceClient;
 import org.hypertrace.entity.v1.entitytype.EntityType;
 import org.hypertrace.gateway.service.common.AttributeMetadataProvider;
+import org.hypertrace.gateway.service.common.ExpressionContext;
 import org.hypertrace.gateway.service.common.config.ScopeFilterConfigs;
-import org.hypertrace.gateway.service.common.converters.ExploreToEntityConverter;
-import org.hypertrace.gateway.service.entity.EntitiesRequestContext;
 import org.hypertrace.gateway.service.entity.config.EntityIdColumnsConfigs;
-import org.hypertrace.gateway.service.entity.query.ExecutionContext;
 import org.hypertrace.gateway.service.entity.query.ExecutionTreeUtils;
 import org.hypertrace.gateway.service.explore.entity.EntityRequestHandler;
 import org.hypertrace.gateway.service.v1.explore.ExploreRequest;
@@ -100,7 +98,7 @@ public class ExploreService {
               newExploreRequestContext, request.getContext());
       exploreRequestValidator.validate(request, attributeMetadataMap);
 
-      IRequestHandler requestHandler = getRequestHandler(newExploreRequestContext, request);
+      IRequestHandler requestHandler = getRequestHandler(request, attributeMetadataMap);
 
       ExploreResponse.Builder responseBuilder =
           requestHandler.handleRequest(newExploreRequestContext, request);
@@ -118,17 +116,20 @@ public class ExploreService {
   }
 
   private IRequestHandler getRequestHandler(
-      ExploreRequestContext requestContext, ExploreRequest request) {
+      ExploreRequest request, Map<String, AttributeMetadata> attributeMetadataMap) {
     if (isContextAnEntityType(request)
         && !hasTimeAggregations(request)
         && !request.getGroupByList().isEmpty()) {
-      EntitiesRequestContext entitiesRequestContext =
-          ExploreToEntityConverter.convert(attributeMetadataProvider, requestContext);
-      ExecutionContext executionContext =
-          new ExecutionContext(
-              attributeMetadataProvider, entityIdColumnsConfigs, entitiesRequestContext, request);
+      ExpressionContext expressionContext =
+          new ExpressionContext(
+              attributeMetadataMap,
+              request.getFilter(),
+              request.getSelectionList(),
+              request.getTimeAggregationList(),
+              request.getOrderByList(),
+              request.getGroupByList());
       Optional<String> source =
-          ExecutionTreeUtils.getSingleSourceForAllAttributes(executionContext);
+          ExecutionTreeUtils.getSingleSourceForAllAttributes(expressionContext);
       if (source.isPresent() && EDS.toString().equals(source.get())) {
         return entityRequestHandler;
       }

@@ -79,17 +79,17 @@ class ExecutionContextTest {
 
     EntitiesRequest entitiesRequest =
         EntitiesRequest.newBuilder().setEntityType("API").setFilter(filter).build();
-    ExecutionContext executionContext =
-        new ExecutionContext(
+    EntityExecutionContext executionContext =
+        new EntityExecutionContext(
             attributeMetadataProvider,
             entityIdColumnsConfigs,
             entitiesRequestContext,
             entitiesRequest);
 
     Map<String, List<Expression>> sourceToFilterExpressionMap =
-        executionContext.getSourceToFilterExpressionMap();
+        executionContext.getExpressionContext().getSourceToFilterExpressionMap();
     Map<String, Set<String>> sourceToFilterAttributeMap =
-        executionContext.getSourceToFilterAttributeMap();
+        executionContext.getExpressionContext().getSourceToFilterAttributeMap();
 
     assertEquals(2, sourceToFilterExpressionMap.size());
     assertEquals(2, sourceToFilterAttributeMap.size());
@@ -104,7 +104,7 @@ class ExecutionContextTest {
     assertEquals(Set.of(API_NAME_ATTR, API_DISCOVERY_STATE), sourceToFilterAttributeMap.get("EDS"));
 
     Map<String, Set<String>> filterAttributeToSourcesMap =
-        executionContext.getFilterAttributeToSourceMap();
+        executionContext.getExpressionContext().getFilterAttributeToSourceMap();
     assertEquals(3, filterAttributeToSourcesMap.size());
     assertEquals(Set.of("EDS"), filterAttributeToSourcesMap.get(API_NAME_ATTR));
     assertEquals(Set.of("QS"), filterAttributeToSourcesMap.get(API_NUM_CALLS_ATTR));
@@ -116,19 +116,40 @@ class ExecutionContextTest {
     List<Expression> selections = List.of(buildExpression(API_API_ID_ATTR));
     EntitiesRequest entitiesRequest =
         EntitiesRequest.newBuilder().setEntityType("API").addAllSelection(selections).build();
-    ExecutionContext executionContext =
-        new ExecutionContext(
+    EntityExecutionContext executionContext =
+        new EntityExecutionContext(
             attributeMetadataProvider,
             entityIdColumnsConfigs,
             entitiesRequestContext,
             entitiesRequest);
 
-    int size = executionContext.getSourceToSelectionExpressionMap().get("EDS").size();
+    int size =
+        executionContext
+            .getExpressionContext()
+            .getSourceToSelectionExpressionMap()
+            .get("EDS")
+            .size();
     executionContext.removeSelectionAttributes("INVALID", Set.of("apiId"));
 
-    assertTrue(executionContext.getSourceToSelectionExpressionMap().containsKey("EDS"));
-    assertEquals(size, executionContext.getSourceToSelectionExpressionMap().get("EDS").size());
-    assertEquals(size, executionContext.getSourceToSelectionAttributeMap().get("EDS").size());
+    assertTrue(
+        executionContext
+            .getExpressionContext()
+            .getSourceToSelectionExpressionMap()
+            .containsKey("EDS"));
+    assertEquals(
+        size,
+        executionContext
+            .getExpressionContext()
+            .getSourceToSelectionExpressionMap()
+            .get("EDS")
+            .size());
+    assertEquals(
+        size,
+        executionContext
+            .getExpressionContext()
+            .getSourceToSelectionAttributeMap()
+            .get("EDS")
+            .size());
   }
 
   @Test
@@ -142,8 +163,8 @@ class ExecutionContextTest {
             buildExpression(API_TYPE_ATTR)); // EDS
     EntitiesRequest entitiesRequest =
         EntitiesRequest.newBuilder().setEntityType("API").addAllSelection(selections).build();
-    ExecutionContext executionContext =
-        new ExecutionContext(
+    EntityExecutionContext executionContext =
+        new EntityExecutionContext(
             attributeMetadataProvider,
             entityIdColumnsConfigs,
             entitiesRequestContext,
@@ -152,11 +173,35 @@ class ExecutionContextTest {
     Set<String> removeAttributes = Set.of(API_ID_ATTR, API_NAME_ATTR, API_END_TIME_ATTR);
 
     executionContext.removeSelectionAttributes("QS", removeAttributes);
-    assertEquals(1, executionContext.getSourceToSelectionExpressionMap().get("QS").size());
-    assertEquals(1, executionContext.getSourceToSelectionAttributeMap().get("QS").size());
+    assertEquals(
+        1,
+        executionContext
+            .getExpressionContext()
+            .getSourceToSelectionExpressionMap()
+            .get("QS")
+            .size());
+    assertEquals(
+        1,
+        executionContext
+            .getExpressionContext()
+            .getSourceToSelectionAttributeMap()
+            .get("QS")
+            .size());
 
-    assertEquals(4, executionContext.getSourceToSelectionExpressionMap().get("EDS").size());
-    assertEquals(4, executionContext.getSourceToSelectionAttributeMap().get("EDS").size());
+    assertEquals(
+        4,
+        executionContext
+            .getExpressionContext()
+            .getSourceToSelectionExpressionMap()
+            .get("EDS")
+            .size());
+    assertEquals(
+        4,
+        executionContext
+            .getExpressionContext()
+            .getSourceToSelectionAttributeMap()
+            .get("EDS")
+            .size());
   }
 
   @Test
@@ -169,19 +214,33 @@ class ExecutionContextTest {
             .collect(Collectors.toUnmodifiableList());
     EntitiesRequest entitiesRequest =
         EntitiesRequest.newBuilder().setEntityType("API").addAllSelection(selections).build();
-    ExecutionContext executionContext =
-        new ExecutionContext(
+    EntityExecutionContext executionContext =
+        new EntityExecutionContext(
             attributeMetadataProvider,
             entityIdColumnsConfigs,
             entitiesRequestContext,
             entitiesRequest);
 
     executionContext.removeSelectionAttributes("EDS", attributes);
-    assertEquals(1, executionContext.getSourceToSelectionExpressionMap().size());
-    assertEquals(1, executionContext.getSourceToSelectionAttributeMap().size());
+    assertEquals(
+        1, executionContext.getExpressionContext().getSourceToSelectionExpressionMap().size());
+    assertEquals(
+        1, executionContext.getExpressionContext().getSourceToSelectionAttributeMap().size());
 
-    assertEquals(3, executionContext.getSourceToSelectionExpressionMap().get("QS").size());
-    assertEquals(3, executionContext.getSourceToSelectionAttributeMap().get("QS").size());
+    assertEquals(
+        3,
+        executionContext
+            .getExpressionContext()
+            .getSourceToSelectionExpressionMap()
+            .get("QS")
+            .size());
+    assertEquals(
+        3,
+        executionContext
+            .getExpressionContext()
+            .getSourceToSelectionAttributeMap()
+            .get("QS")
+            .size());
   }
 
   private static final Map<String, AttributeMetadata> attributeSources =

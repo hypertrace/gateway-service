@@ -171,7 +171,7 @@ public class ExecutionTreeBuilderTest {
         .build();
   }
 
-  private ExecutionContext getExecutionContext(EntitiesRequest entitiesRequest) {
+  private EntityExecutionContext getExecutionContext(EntitiesRequest entitiesRequest) {
     EntitiesRequestContext entitiesRequestContext =
         new EntitiesRequestContext(
             TENANT_ID,
@@ -180,7 +180,7 @@ public class ExecutionTreeBuilderTest {
             "API",
             "API.startTime",
             new HashMap<>());
-    return new ExecutionContext(
+    return new EntityExecutionContext(
         attributeMetadataProvider, entityIdColumnsConfigs, entitiesRequestContext, entitiesRequest);
   }
 
@@ -188,9 +188,8 @@ public class ExecutionTreeBuilderTest {
   public void testOptimizedFilterTreeBuilderSimpleFilter() {
     Filter filter = generateEQFilter(API_API_ID_ATTR, UUID.randomUUID().toString());
     EntitiesRequest entitiesRequest = buildEntitiesRequest(filter);
-    ExecutionContext executionContext = getExecutionContext(entitiesRequest);
-    ExecutionTreeBuilder executionTreeBuilder =
-        new ExecutionTreeBuilder(entitiesRequest, executionContext);
+    EntityExecutionContext executionContext = getExecutionContext(entitiesRequest);
+    ExecutionTreeBuilder executionTreeBuilder = new ExecutionTreeBuilder(executionContext);
     QueryNode queryNode = executionTreeBuilder.buildFilterTree(entitiesRequest, filter);
     QueryNode optimizedQueryNode = queryNode.acceptVisitor(new FilterOptimizingVisitor());
     assertNotNull(optimizedQueryNode);
@@ -208,9 +207,8 @@ public class ExecutionTreeBuilderTest {
               generateEQFilter(API_NAME_ATTR, "/login"),
               generateEQFilter(API_TYPE_ATTR, "http"));
       EntitiesRequest entitiesRequest = buildEntitiesRequest(filter);
-      ExecutionContext executionContext = getExecutionContext(entitiesRequest);
-      ExecutionTreeBuilder executionTreeBuilder =
-          new ExecutionTreeBuilder(entitiesRequest, executionContext);
+      EntityExecutionContext executionContext = getExecutionContext(entitiesRequest);
+      ExecutionTreeBuilder executionTreeBuilder = new ExecutionTreeBuilder(executionContext);
       QueryNode queryNode = executionTreeBuilder.buildFilterTree(entitiesRequest, filter);
       assertNotNull(queryNode);
       assertTrue(queryNode instanceof AndNode);
@@ -228,9 +226,8 @@ public class ExecutionTreeBuilderTest {
               generateEQFilter(API_NAME_ATTR, "/login"),
               generateEQFilter(API_TYPE_ATTR, "http"));
       EntitiesRequest entitiesRequest = buildEntitiesRequest(filter);
-      ExecutionContext executionContext = getExecutionContext(entitiesRequest);
-      ExecutionTreeBuilder executionTreeBuilder =
-          new ExecutionTreeBuilder(entitiesRequest, executionContext);
+      EntityExecutionContext executionContext = getExecutionContext(entitiesRequest);
+      ExecutionTreeBuilder executionTreeBuilder = new ExecutionTreeBuilder(executionContext);
       QueryNode queryNode = executionTreeBuilder.buildFilterTree(entitiesRequest, filter);
       assertNotNull(queryNode);
       assertTrue(queryNode instanceof OrNode);
@@ -250,9 +247,8 @@ public class ExecutionTreeBuilderTest {
             generateEQFilter(API_NAME_ATTR, "/login"),
             generateEQFilter(API_TYPE_ATTR, "http"));
     EntitiesRequest entitiesRequest = buildEntitiesRequest(filter);
-    ExecutionContext executionContext = getExecutionContext(entitiesRequest);
-    ExecutionTreeBuilder executionTreeBuilder =
-        new ExecutionTreeBuilder(entitiesRequest, executionContext);
+    EntityExecutionContext executionContext = getExecutionContext(entitiesRequest);
+    ExecutionTreeBuilder executionTreeBuilder = new ExecutionTreeBuilder(executionContext);
     QueryNode queryNode = executionTreeBuilder.build();
     assertNotNull(queryNode);
     assertTrue(queryNode instanceof AndNode);
@@ -283,9 +279,8 @@ public class ExecutionTreeBuilderTest {
       Filter filter =
           generateAndOrNotFilter(Operator.AND, apiIdFilter, apiNameFilter, startTimeFilter);
       EntitiesRequest entitiesRequest = buildEntitiesRequest(filter);
-      ExecutionContext executionContext = getExecutionContext(entitiesRequest);
-      ExecutionTreeBuilder executionTreeBuilder =
-          new ExecutionTreeBuilder(entitiesRequest, executionContext);
+      EntityExecutionContext executionContext = getExecutionContext(entitiesRequest);
+      ExecutionTreeBuilder executionTreeBuilder = new ExecutionTreeBuilder(executionContext);
       QueryNode queryNode = executionTreeBuilder.buildFilterTree(entitiesRequest, filter);
       assertNotNull(queryNode);
       assertTrue(queryNode instanceof AndNode);
@@ -310,9 +305,8 @@ public class ExecutionTreeBuilderTest {
       Filter filter =
           generateAndOrNotFilter(Operator.OR, apiIdFilter, apiNameFilter, startTimeFilter);
       EntitiesRequest entitiesRequest = buildEntitiesRequest(filter);
-      ExecutionContext executionContext = getExecutionContext(entitiesRequest);
-      ExecutionTreeBuilder executionTreeBuilder =
-          new ExecutionTreeBuilder(entitiesRequest, executionContext);
+      EntityExecutionContext executionContext = getExecutionContext(entitiesRequest);
+      ExecutionTreeBuilder executionTreeBuilder = new ExecutionTreeBuilder(executionContext);
       QueryNode queryNode = executionTreeBuilder.buildFilterTree(entitiesRequest, filter);
       assertNotNull(queryNode);
       assertTrue(queryNode instanceof OrNode);
@@ -360,9 +354,8 @@ public class ExecutionTreeBuilderTest {
       Filter level2Filter = generateAndOrNotFilter(Operator.AND, apiIdFilter, startTimeFilter);
       Filter filter = generateAndOrNotFilter(Operator.AND, level2Filter, apiNameFilter);
       EntitiesRequest entitiesRequest = buildEntitiesRequest(filter);
-      ExecutionContext executionContext = getExecutionContext(entitiesRequest);
-      ExecutionTreeBuilder executionTreeBuilder =
-          new ExecutionTreeBuilder(entitiesRequest, executionContext);
+      EntityExecutionContext executionContext = getExecutionContext(entitiesRequest);
+      ExecutionTreeBuilder executionTreeBuilder = new ExecutionTreeBuilder(executionContext);
       QueryNode queryNode = executionTreeBuilder.buildFilterTree(entitiesRequest, filter);
       assertNotNull(queryNode);
       QueryNode optimizedNode = queryNode.acceptVisitor(new FilterOptimizingVisitor());
@@ -386,9 +379,8 @@ public class ExecutionTreeBuilderTest {
       Filter level2Filter = generateAndOrNotFilter(Operator.AND, apiIdFilter, apiNameFilter);
       Filter filter = generateAndOrNotFilter(Operator.AND, level2Filter, startTimeFilter);
       EntitiesRequest entitiesRequest = buildEntitiesRequest(filter);
-      ExecutionContext executionContext = getExecutionContext(entitiesRequest);
-      ExecutionTreeBuilder executionTreeBuilder =
-          new ExecutionTreeBuilder(entitiesRequest, executionContext);
+      EntityExecutionContext executionContext = getExecutionContext(entitiesRequest);
+      ExecutionTreeBuilder executionTreeBuilder = new ExecutionTreeBuilder(executionContext);
       QueryNode queryNode = executionTreeBuilder.buildFilterTree(entitiesRequest, filter);
       assertNotNull(queryNode);
       QueryNode optimizedNode = queryNode.acceptVisitor(new FilterOptimizingVisitor());
@@ -414,9 +406,8 @@ public class ExecutionTreeBuilderTest {
           generateAndOrNotFilter(Operator.AND, apiIdFilter, startTimeFilter, level3Filter);
       Filter filter = generateAndOrNotFilter(Operator.AND, level2Filter, apiNameFilter);
       EntitiesRequest entitiesRequest = buildEntitiesRequest(filter);
-      ExecutionContext executionContext = getExecutionContext(entitiesRequest);
-      ExecutionTreeBuilder executionTreeBuilder =
-          new ExecutionTreeBuilder(entitiesRequest, executionContext);
+      EntityExecutionContext executionContext = getExecutionContext(entitiesRequest);
+      ExecutionTreeBuilder executionTreeBuilder = new ExecutionTreeBuilder(executionContext);
       QueryNode queryNode = executionTreeBuilder.buildFilterTree(entitiesRequest, filter);
       assertNotNull(queryNode);
       QueryNode optimizedNode = queryNode.acceptVisitor(new FilterOptimizingVisitor());
@@ -445,9 +436,8 @@ public class ExecutionTreeBuilderTest {
       Filter level2Filter = generateAndOrNotFilter(Operator.AND, apiIdFilter, apiNameFilter);
       Filter filter = generateAndOrNotFilter(Operator.OR, level2Filter, startTimeFilter);
       EntitiesRequest entitiesRequest = buildEntitiesRequest(filter);
-      ExecutionContext executionContext = getExecutionContext(entitiesRequest);
-      ExecutionTreeBuilder executionTreeBuilder =
-          new ExecutionTreeBuilder(entitiesRequest, executionContext);
+      EntityExecutionContext executionContext = getExecutionContext(entitiesRequest);
+      ExecutionTreeBuilder executionTreeBuilder = new ExecutionTreeBuilder(executionContext);
       QueryNode queryNode = executionTreeBuilder.buildFilterTree(entitiesRequest, filter);
       assertNotNull(queryNode);
       QueryNode optimizedNode = queryNode.acceptVisitor(new FilterOptimizingVisitor());
@@ -471,9 +461,8 @@ public class ExecutionTreeBuilderTest {
       Filter level2Filter = generateAndOrNotFilter(Operator.AND, apiIdFilter, startTimeFilter);
       Filter filter = generateAndOrNotFilter(Operator.OR, level2Filter, apiNameFilter);
       EntitiesRequest entitiesRequest = buildEntitiesRequest(filter);
-      ExecutionContext executionContext = getExecutionContext(entitiesRequest);
-      ExecutionTreeBuilder executionTreeBuilder =
-          new ExecutionTreeBuilder(entitiesRequest, executionContext);
+      EntityExecutionContext executionContext = getExecutionContext(entitiesRequest);
+      ExecutionTreeBuilder executionTreeBuilder = new ExecutionTreeBuilder(executionContext);
       QueryNode queryNode = executionTreeBuilder.buildFilterTree(entitiesRequest, filter);
       assertNotNull(queryNode);
       QueryNode optimizedNode = queryNode.acceptVisitor(new FilterOptimizingVisitor());
@@ -511,14 +500,13 @@ public class ExecutionTreeBuilderTest {
               .build();
       EntitiesRequestContext entitiesRequestContext =
           new EntitiesRequestContext(TENANT_ID, 0L, 10L, "API", "API.startTime", new HashMap<>());
-      ExecutionContext executionContext =
-          new ExecutionContext(
+      EntityExecutionContext executionContext =
+          new EntityExecutionContext(
               attributeMetadataProvider,
               entityIdColumnsConfigs,
               entitiesRequestContext,
               entitiesRequest);
-      ExecutionTreeBuilder executionTreeBuilder =
-          new ExecutionTreeBuilder(entitiesRequest, executionContext);
+      ExecutionTreeBuilder executionTreeBuilder = new ExecutionTreeBuilder(executionContext);
       QueryNode executionTree = executionTreeBuilder.build();
       assertNotNull(executionTree);
 
@@ -551,14 +539,13 @@ public class ExecutionTreeBuilderTest {
       EntitiesRequestContext entitiesRequestContext =
           new EntitiesRequestContext(
               TENANT_ID, startTime, endTime, "API", "API.startTime", new HashMap<>());
-      ExecutionContext executionContext =
-          new ExecutionContext(
+      EntityExecutionContext executionContext =
+          new EntityExecutionContext(
               attributeMetadataProvider,
               entityIdColumnsConfigs,
               entitiesRequestContext,
               entitiesRequest);
-      ExecutionTreeBuilder executionTreeBuilder =
-          new ExecutionTreeBuilder(entitiesRequest, executionContext);
+      ExecutionTreeBuilder executionTreeBuilder = new ExecutionTreeBuilder(executionContext);
       QueryNode executionTree = executionTreeBuilder.build();
       assertNotNull(executionTree);
       assertTrue(executionTree instanceof SortAndPaginateNode);
@@ -589,14 +576,13 @@ public class ExecutionTreeBuilderTest {
             .build();
     EntitiesRequestContext entitiesRequestContext =
         new EntitiesRequestContext(TENANT_ID, 0L, 10L, "API", "API.startTime", new HashMap<>());
-    ExecutionContext executionContext =
-        new ExecutionContext(
+    EntityExecutionContext executionContext =
+        new EntityExecutionContext(
             attributeMetadataProvider,
             entityIdColumnsConfigs,
             entitiesRequestContext,
             entitiesRequest);
-    ExecutionTreeBuilder executionTreeBuilder =
-        new ExecutionTreeBuilder(entitiesRequest, executionContext);
+    ExecutionTreeBuilder executionTreeBuilder = new ExecutionTreeBuilder(executionContext);
     QueryNode executionTree = executionTreeBuilder.build();
     assertNotNull(executionTree);
     assertTrue(executionTree instanceof DataFetcherNode);
@@ -620,14 +606,13 @@ public class ExecutionTreeBuilderTest {
             .build();
     EntitiesRequestContext entitiesRequestContext =
         new EntitiesRequestContext(TENANT_ID, 0L, 10L, "API", "API.startTime", new HashMap<>());
-    ExecutionContext executionContext =
-        new ExecutionContext(
+    EntityExecutionContext executionContext =
+        new EntityExecutionContext(
             attributeMetadataProvider,
             entityIdColumnsConfigs,
             entitiesRequestContext,
             entitiesRequest);
-    ExecutionTreeBuilder executionTreeBuilder =
-        new ExecutionTreeBuilder(entitiesRequest, executionContext);
+    ExecutionTreeBuilder executionTreeBuilder = new ExecutionTreeBuilder(executionContext);
     QueryNode executionTree = executionTreeBuilder.build();
     assertNotNull(executionTree);
     assertTrue(executionTree instanceof SelectionNode);
@@ -673,14 +658,13 @@ public class ExecutionTreeBuilderTest {
             .build();
     EntitiesRequestContext entitiesRequestContext =
         new EntitiesRequestContext(TENANT_ID, 0L, 10L, "API", "API.startTime", new HashMap<>());
-    ExecutionContext executionContext =
-        new ExecutionContext(
+    EntityExecutionContext executionContext =
+        new EntityExecutionContext(
             attributeMetadataProvider,
             entityIdColumnsConfigs,
             entitiesRequestContext,
             entitiesRequest);
-    ExecutionTreeBuilder executionTreeBuilder =
-        new ExecutionTreeBuilder(entitiesRequest, executionContext);
+    ExecutionTreeBuilder executionTreeBuilder = new ExecutionTreeBuilder(executionContext);
     QueryNode executionTree = executionTreeBuilder.build();
     assertNotNull(executionTree);
     assertTrue(executionTree instanceof SelectionNode);
@@ -727,14 +711,13 @@ public class ExecutionTreeBuilderTest {
             .build();
     EntitiesRequestContext entitiesRequestContext =
         new EntitiesRequestContext(TENANT_ID, 0L, 10L, "API", "API.startTime", new HashMap<>());
-    ExecutionContext executionContext =
-        new ExecutionContext(
+    EntityExecutionContext executionContext =
+        new EntityExecutionContext(
             attributeMetadataProvider,
             entityIdColumnsConfigs,
             entitiesRequestContext,
             entitiesRequest);
-    ExecutionTreeBuilder executionTreeBuilder =
-        new ExecutionTreeBuilder(entitiesRequest, executionContext);
+    ExecutionTreeBuilder executionTreeBuilder = new ExecutionTreeBuilder(executionContext);
     QueryNode executionTree = executionTreeBuilder.build();
     assertNotNull(executionTree);
     assertTrue(executionTree instanceof SelectionNode);
@@ -780,14 +763,13 @@ public class ExecutionTreeBuilderTest {
             .build();
     EntitiesRequestContext entitiesRequestContext =
         new EntitiesRequestContext(TENANT_ID, 0L, 10L, "API", "API.startTime", new HashMap<>());
-    ExecutionContext executionContext =
-        new ExecutionContext(
+    EntityExecutionContext executionContext =
+        new EntityExecutionContext(
             attributeMetadataProvider,
             entityIdColumnsConfigs,
             entitiesRequestContext,
             entitiesRequest);
-    ExecutionTreeBuilder executionTreeBuilder =
-        new ExecutionTreeBuilder(entitiesRequest, executionContext);
+    ExecutionTreeBuilder executionTreeBuilder = new ExecutionTreeBuilder(executionContext);
     QueryNode executionTree = executionTreeBuilder.build();
     assertNotNull(executionTree);
     assertTrue(executionTree instanceof SelectionNode);
@@ -834,14 +816,13 @@ public class ExecutionTreeBuilderTest {
             "API",
             "API.startTime",
             new HashMap<>());
-    ExecutionContext executionContext =
-        new ExecutionContext(
+    EntityExecutionContext executionContext =
+        new EntityExecutionContext(
             attributeMetadataProvider,
             entityIdColumnsConfigs,
             entitiesRequestContext,
             entitiesRequest);
-    ExecutionTreeBuilder executionTreeBuilder =
-        new ExecutionTreeBuilder(entitiesRequest, executionContext);
+    ExecutionTreeBuilder executionTreeBuilder = new ExecutionTreeBuilder(executionContext);
     QueryNode executionTree = executionTreeBuilder.build();
     assertNotNull(executionTree);
     assertTrue(executionTree instanceof SelectionNode);
@@ -878,14 +859,13 @@ public class ExecutionTreeBuilderTest {
             .build();
     EntitiesRequestContext entitiesRequestContext =
         new EntitiesRequestContext(TENANT_ID, 0L, 10L, "API", "API.startTime", new HashMap<>());
-    ExecutionContext executionContext =
-        new ExecutionContext(
+    EntityExecutionContext executionContext =
+        new EntityExecutionContext(
             attributeMetadataProvider,
             entityIdColumnsConfigs,
             entitiesRequestContext,
             entitiesRequest);
-    ExecutionTreeBuilder executionTreeBuilder =
-        new ExecutionTreeBuilder(entitiesRequest, executionContext);
+    ExecutionTreeBuilder executionTreeBuilder = new ExecutionTreeBuilder(executionContext);
     QueryNode executionTree = executionTreeBuilder.build();
     assertNotNull(executionTree);
     assertTrue(executionTree instanceof SelectionNode);
@@ -920,14 +900,13 @@ public class ExecutionTreeBuilderTest {
             .build();
     EntitiesRequestContext entitiesRequestContext =
         new EntitiesRequestContext(TENANT_ID, 0L, 10L, "API", "API.startTime", new HashMap<>());
-    ExecutionContext executionContext =
-        new ExecutionContext(
+    EntityExecutionContext executionContext =
+        new EntityExecutionContext(
             attributeMetadataProvider,
             entityIdColumnsConfigs,
             entitiesRequestContext,
             entitiesRequest);
-    ExecutionTreeBuilder executionTreeBuilder =
-        new ExecutionTreeBuilder(entitiesRequest, executionContext);
+    ExecutionTreeBuilder executionTreeBuilder = new ExecutionTreeBuilder(executionContext);
     QueryNode executionTree = executionTreeBuilder.build();
     assertNotNull(executionTree);
     assertTrue(executionTree instanceof SelectionNode);
@@ -968,14 +947,13 @@ public class ExecutionTreeBuilderTest {
             "API",
             "API.startTime",
             new HashMap<>());
-    ExecutionContext executionContext =
-        new ExecutionContext(
+    EntityExecutionContext executionContext =
+        new EntityExecutionContext(
             attributeMetadataProvider,
             entityIdColumnsConfigs,
             entitiesRequestContext,
             entitiesRequest);
-    ExecutionTreeBuilder executionTreeBuilder =
-        new ExecutionTreeBuilder(entitiesRequest, executionContext);
+    ExecutionTreeBuilder executionTreeBuilder = new ExecutionTreeBuilder(executionContext);
     QueryNode executionTree = executionTreeBuilder.build();
     assertNotNull(executionTree);
     assertTrue(executionTree instanceof SelectionNode);
@@ -1030,14 +1008,13 @@ public class ExecutionTreeBuilderTest {
             "API",
             "API.startTime",
             new HashMap<>());
-    ExecutionContext executionContext =
-        new ExecutionContext(
+    EntityExecutionContext executionContext =
+        new EntityExecutionContext(
             attributeMetadataProvider,
             entityIdColumnsConfigs,
             entitiesRequestContext,
             entitiesRequest);
-    ExecutionTreeBuilder executionTreeBuilder =
-        new ExecutionTreeBuilder(entitiesRequest, executionContext);
+    ExecutionTreeBuilder executionTreeBuilder = new ExecutionTreeBuilder(executionContext);
     QueryNode executionTree = executionTreeBuilder.build();
     assertNotNull(executionTree);
     assertTrue(executionTree instanceof SelectionNode);
@@ -1071,14 +1048,13 @@ public class ExecutionTreeBuilderTest {
             "API",
             "API.startTime",
             new HashMap<>());
-    ExecutionContext executionContext =
-        new ExecutionContext(
+    EntityExecutionContext executionContext =
+        new EntityExecutionContext(
             attributeMetadataProvider,
             entityIdColumnsConfigs,
             entitiesRequestContext,
             entitiesRequest);
-    ExecutionTreeBuilder executionTreeBuilder =
-        new ExecutionTreeBuilder(entitiesRequest, executionContext);
+    ExecutionTreeBuilder executionTreeBuilder = new ExecutionTreeBuilder(executionContext);
     QueryNode executionTree = executionTreeBuilder.build();
     assertNotNull(executionTree);
     assertTrue(executionTree instanceof SelectionNode);
@@ -1112,14 +1088,13 @@ public class ExecutionTreeBuilderTest {
             "API",
             "API.startTime",
             new HashMap<>());
-    ExecutionContext executionContext =
-        new ExecutionContext(
+    EntityExecutionContext executionContext =
+        new EntityExecutionContext(
             attributeMetadataProvider,
             entityIdColumnsConfigs,
             entitiesRequestContext,
             entitiesRequest);
-    ExecutionTreeBuilder executionTreeBuilder =
-        new ExecutionTreeBuilder(entitiesRequest, executionContext);
+    ExecutionTreeBuilder executionTreeBuilder = new ExecutionTreeBuilder(executionContext);
     QueryNode executionTree = executionTreeBuilder.build();
     assertNotNull(executionTree);
     assertTrue(executionTree instanceof DataFetcherNode);
@@ -1145,14 +1120,13 @@ public class ExecutionTreeBuilderTest {
             "API",
             "API.startTime",
             new HashMap<>());
-    ExecutionContext executionContext =
-        new ExecutionContext(
+    EntityExecutionContext executionContext =
+        new EntityExecutionContext(
             attributeMetadataProvider,
             entityIdColumnsConfigs,
             entitiesRequestContext,
             entitiesRequest);
-    ExecutionTreeBuilder executionTreeBuilder =
-        new ExecutionTreeBuilder(entitiesRequest, executionContext);
+    ExecutionTreeBuilder executionTreeBuilder = new ExecutionTreeBuilder(executionContext);
     QueryNode executionTree = executionTreeBuilder.build();
     assertNotNull(executionTree);
     assertTrue(executionTree instanceof DataFetcherNode);

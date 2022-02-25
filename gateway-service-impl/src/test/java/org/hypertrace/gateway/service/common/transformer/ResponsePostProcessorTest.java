@@ -7,7 +7,8 @@ import static org.mockito.Mockito.when;
 import java.util.Collections;
 import java.util.List;
 import java.util.Map;
-import org.hypertrace.gateway.service.entity.query.ExecutionContext;
+import org.hypertrace.gateway.service.common.ExpressionContext;
+import org.hypertrace.gateway.service.entity.query.EntityExecutionContext;
 import org.hypertrace.gateway.service.v1.common.AggregatedMetricValue;
 import org.hypertrace.gateway.service.v1.common.ColumnIdentifier;
 import org.hypertrace.gateway.service.v1.common.Expression;
@@ -30,16 +31,19 @@ public class ResponsePostProcessorTest {
 
   @Test
   public void shouldAddMissingSelections() {
-    ExecutionContext executionContext = mock(ExecutionContext.class);
-    when(executionContext.getSourceToSelectionExpressionMap())
+    ExpressionContext expressionContext = mock(ExpressionContext.class);
+    when(expressionContext.getSourceToSelectionExpressionMap())
         .thenReturn(
             Map.of(
                 "EDS",
                 List.of(createAttributeExpression("API.id"), createAttributeExpression("API.name")),
                 "QS",
                 List.of(createAttributeExpression("API.serviceId"))));
-    when(executionContext.getSourceToMetricExpressionMap()).thenReturn(Collections.emptyMap());
-    when(executionContext.getSourceToTimeAggregationMap()).thenReturn(Collections.emptyMap());
+    when(expressionContext.getSourceToMetricExpressionMap()).thenReturn(Collections.emptyMap());
+    when(expressionContext.getSourceToTimeAggregationMap()).thenReturn(Collections.emptyMap());
+
+    EntityExecutionContext executionContext = mock(EntityExecutionContext.class);
+    when(executionContext.getExpressionContext()).thenReturn(expressionContext);
 
     List<Entity.Builder> entityBuilders =
         List.of(
@@ -75,11 +79,14 @@ public class ResponsePostProcessorTest {
 
   @Test
   public void shouldAddMissingAggregations() {
-    ExecutionContext executionContext = mock(ExecutionContext.class);
-    when(executionContext.getSourceToSelectionExpressionMap()).thenReturn(Collections.emptyMap());
-    when(executionContext.getSourceToMetricExpressionMap())
+    ExpressionContext expressionContext = mock(ExpressionContext.class);
+    when(expressionContext.getSourceToSelectionExpressionMap()).thenReturn(Collections.emptyMap());
+    when(expressionContext.getSourceToMetricExpressionMap())
         .thenReturn(Map.of("QS", List.of(createAggregateExpression("API.duration"))));
-    when(executionContext.getSourceToTimeAggregationMap()).thenReturn(Collections.emptyMap());
+    when(expressionContext.getSourceToTimeAggregationMap()).thenReturn(Collections.emptyMap());
+
+    EntityExecutionContext executionContext = mock(EntityExecutionContext.class);
+    when(executionContext.getExpressionContext()).thenReturn(expressionContext);
 
     List<Entity.Builder> entityBuilders =
         List.of(
@@ -110,11 +117,14 @@ public class ResponsePostProcessorTest {
 
   @Test
   public void shouldAddMissingTimeAggregations() {
-    ExecutionContext executionContext = mock(ExecutionContext.class);
-    when(executionContext.getSourceToSelectionExpressionMap()).thenReturn(Collections.emptyMap());
-    when(executionContext.getSourceToMetricExpressionMap()).thenReturn(Collections.emptyMap());
-    when(executionContext.getSourceToTimeAggregationMap())
+    ExpressionContext expressionContext = mock(ExpressionContext.class);
+    when(expressionContext.getSourceToSelectionExpressionMap()).thenReturn(Collections.emptyMap());
+    when(expressionContext.getSourceToMetricExpressionMap()).thenReturn(Collections.emptyMap());
+    when(expressionContext.getSourceToTimeAggregationMap())
         .thenReturn(Map.of("QS", List.of(createTimeAggregation("API.duration"))));
+
+    EntityExecutionContext executionContext = mock(EntityExecutionContext.class);
+    when(executionContext.getExpressionContext()).thenReturn(expressionContext);
 
     List<Entity.Builder> entityBuilders =
         List.of(

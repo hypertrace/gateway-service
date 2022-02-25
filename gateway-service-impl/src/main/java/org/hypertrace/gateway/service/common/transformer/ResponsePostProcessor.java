@@ -6,7 +6,7 @@ import java.util.Optional;
 import java.util.Set;
 import java.util.stream.Collectors;
 import org.hypertrace.gateway.service.common.util.ExpressionReader;
-import org.hypertrace.gateway.service.entity.query.ExecutionContext;
+import org.hypertrace.gateway.service.entity.query.EntityExecutionContext;
 import org.hypertrace.gateway.service.v1.common.AggregatedMetricValue;
 import org.hypertrace.gateway.service.v1.common.MetricSeries;
 import org.hypertrace.gateway.service.v1.common.Value;
@@ -18,20 +18,24 @@ public class ResponsePostProcessor {
   private static final Logger LOGGER = LoggerFactory.getLogger(ResponsePostProcessor.class);
 
   public List<Entity.Builder> transform(
-      ExecutionContext executionContext, List<Entity.Builder> entityBuilders) {
+      EntityExecutionContext executionContext, List<Entity.Builder> entityBuilders) {
     Set<String> selections =
-        executionContext.getSourceToSelectionExpressionMap().values().stream()
+        executionContext
+            .getExpressionContext()
+            .getSourceToSelectionExpressionMap()
+            .values()
+            .stream()
             .flatMap(Collection::stream)
             .map(ExpressionReader::getSelectionResultName)
             .flatMap(Optional::stream)
             .collect(Collectors.toSet());
     Set<String> aggregations =
-        executionContext.getSourceToMetricExpressionMap().values().stream()
+        executionContext.getExpressionContext().getSourceToMetricExpressionMap().values().stream()
             .flatMap(Collection::stream)
             .map(expression -> expression.getFunction().getAlias())
             .collect(Collectors.toSet());
     Set<String> timeAggregations =
-        executionContext.getSourceToTimeAggregationMap().values().stream()
+        executionContext.getExpressionContext().getSourceToTimeAggregationMap().values().stream()
             .flatMap(Collection::stream)
             .map(timeAggregation -> timeAggregation.getAggregation().getFunction().getAlias())
             .collect(Collectors.toSet());
