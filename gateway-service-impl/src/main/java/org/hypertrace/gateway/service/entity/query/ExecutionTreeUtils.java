@@ -7,7 +7,6 @@ import java.util.Map;
 import java.util.Optional;
 import java.util.Set;
 import org.hypertrace.gateway.service.common.ExpressionContext;
-import org.hypertrace.gateway.service.common.util.ExpressionReader;
 import org.hypertrace.gateway.service.entity.config.TimestampConfigs;
 import org.hypertrace.gateway.service.v1.entity.EntitiesRequest;
 
@@ -17,7 +16,7 @@ public class ExecutionTreeUtils {
     EntitiesRequest entitiesRequest = executionContext.getEntitiesRequest();
 
     Optional<String> singleSourceForAllAttributes =
-        ExpressionReader.getSingleSourceForAllAttributes(executionContext.getExpressionContext());
+        ExpressionContext.getSingleSourceForAllAttributes(executionContext.getExpressionContext());
 
     if (singleSourceForAllAttributes.isEmpty()) {
       return Optional.empty();

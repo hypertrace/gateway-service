@@ -13,6 +13,7 @@ import java.util.stream.Collectors;
 import java.util.stream.Stream;
 import org.hypertrace.core.attribute.service.v1.AttributeMetadata;
 import org.hypertrace.core.attribute.service.v1.AttributeSource;
+import org.hypertrace.gateway.service.common.ExpressionContext;
 import org.hypertrace.gateway.service.common.util.ExpressionReader;
 import org.hypertrace.gateway.service.common.util.TimeRangeFilterUtil;
 import org.hypertrace.gateway.service.entity.query.visitor.ExecutionContextBuilderVisitor;
@@ -44,7 +45,7 @@ public class ExecutionTreeBuilder {
                 executionContext.getEntitiesRequest().getEntityType());
 
     this.sourceSetsIfFilterAndOrderByAreFromSameSourceSets =
-        ExpressionReader.getSourceSetsIfFilterAndOrderByAreFromSameSourceSets(
+        ExpressionContext.getSourceSetsIfFilterAndOrderByAreFromSameSourceSets(
             executionContext.getExpressionContext());
   }
 
@@ -70,7 +71,7 @@ public class ExecutionTreeBuilder {
     // (live + non live) does not make sense, since filters on any other data source will anyways
     // filter out the "non live" entities
     boolean areFiltersOnlyOnEds =
-        ExpressionReader.areFiltersOnlyOnCurrentDataSource(
+        ExpressionContext.areFiltersOnlyOnCurrentDataSource(
             executionContext.getExpressionContext(), EDS.name());
     if (entitiesRequest.getIncludeNonLiveEntities() && areFiltersOnlyOnEds) {
       ExecutionTreeUtils.removeDuplicateSelectionAttributes(executionContext, EDS.name());

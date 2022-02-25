@@ -1,4 +1,4 @@
-package org.hypertrace.gateway.service.common.util;
+package org.hypertrace.gateway.service.common;
 
 import static org.hypertrace.core.attribute.service.v1.AttributeSource.EDS;
 import static org.hypertrace.core.attribute.service.v1.AttributeSource.QS;
@@ -14,14 +14,13 @@ import java.util.Map;
 import java.util.Optional;
 import java.util.Set;
 import java.util.stream.Collectors;
-import org.hypertrace.gateway.service.common.ExpressionContext;
 import org.hypertrace.gateway.service.v1.common.Expression;
 import org.hypertrace.gateway.service.v1.common.OrderByExpression;
 import org.hypertrace.gateway.service.v1.common.TimeAggregation;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 
-class ExpressionReaderTest {
+class ExpressionContextTest {
   @Test
   void testGetSingleSourceForAllAttributes_allSourceExpressionMapKeySetsHaveOneSource() {
     // All source expression map keysets have one source.
@@ -40,7 +39,7 @@ class ExpressionReaderTest {
                 "API.startTime", Set.of(QS.name())));
 
     assertEquals(
-        Optional.of("QS"), ExpressionReader.getSingleSourceForAllAttributes(expressionContext));
+        Optional.of("QS"), ExpressionContext.getSingleSourceForAllAttributes(expressionContext));
   }
 
   @Test
@@ -60,7 +59,7 @@ class ExpressionReaderTest {
                 "API.startTime", Set.of(QS.name())));
 
     assertEquals(
-        Optional.of("QS"), ExpressionReader.getSingleSourceForAllAttributes(expressionContext));
+        Optional.of("QS"), ExpressionContext.getSingleSourceForAllAttributes(expressionContext));
   }
 
   @Test
@@ -80,7 +79,7 @@ class ExpressionReaderTest {
                 "API.startTime", Set.of(QS.name())));
 
     assertEquals(
-        Optional.empty(), ExpressionReader.getSingleSourceForAllAttributes(expressionContext));
+        Optional.empty(), ExpressionContext.getSingleSourceForAllAttributes(expressionContext));
   }
 
   @Test
@@ -101,7 +100,7 @@ class ExpressionReaderTest {
                 "API.startTime", Set.of(QS.name())));
 
     assertEquals(
-        Optional.of("QS"), ExpressionReader.getSingleSourceForAllAttributes(expressionContext));
+        Optional.of("QS"), ExpressionContext.getSingleSourceForAllAttributes(expressionContext));
   }
 
   // This scenario is not possible but for academic purposes let's test it.
@@ -122,7 +121,7 @@ class ExpressionReaderTest {
                 "API.startTime", Set.of()));
 
     assertEquals(
-        Optional.empty(), ExpressionReader.getSingleSourceForAllAttributes(expressionContext));
+        Optional.empty(), ExpressionContext.getSingleSourceForAllAttributes(expressionContext));
   }
 
   @Test
@@ -142,7 +141,7 @@ class ExpressionReaderTest {
         .thenReturn(Collections.emptyMap());
 
     Set<String> sourceSets =
-        ExpressionReader.getSourceSetsIfFilterAndOrderByAreFromSameSourceSets(expressionContext);
+        ExpressionContext.getSourceSetsIfFilterAndOrderByAreFromSameSourceSets(expressionContext);
     assertEquals(1, sourceSets.size());
     assertTrue(sourceSets.contains("QS"));
   }
@@ -166,7 +165,7 @@ class ExpressionReaderTest {
         .thenReturn(Map.of("EDS", Set.of("API.status", "API.latency")));
 
     Set<String> sourceSets =
-        ExpressionReader.getSourceSetsIfFilterAndOrderByAreFromSameSourceSets(expressionContext);
+        ExpressionContext.getSourceSetsIfFilterAndOrderByAreFromSameSourceSets(expressionContext);
     assertEquals(2, sourceSets.size());
     assertTrue(sourceSets.contains("QS"));
     assertTrue(sourceSets.contains("EDS"));
@@ -191,7 +190,7 @@ class ExpressionReaderTest {
         .thenReturn(Collections.emptyMap());
 
     Set<String> sourceSets =
-        ExpressionReader.getSourceSetsIfFilterAndOrderByAreFromSameSourceSets(expressionContext);
+        ExpressionContext.getSourceSetsIfFilterAndOrderByAreFromSameSourceSets(expressionContext);
     assertEquals(2, sourceSets.size());
     assertTrue(sourceSets.contains("QS"));
     assertTrue(sourceSets.contains("EDS"));
@@ -212,7 +211,7 @@ class ExpressionReaderTest {
         .thenReturn(Map.of("EDS", Set.of("API.status")));
 
     Set<String> sourceSets =
-        ExpressionReader.getSourceSetsIfFilterAndOrderByAreFromSameSourceSets(expressionContext);
+        ExpressionContext.getSourceSetsIfFilterAndOrderByAreFromSameSourceSets(expressionContext);
     assertEquals(1, sourceSets.size());
     assertTrue(sourceSets.contains("QS"));
   }
@@ -237,7 +236,7 @@ class ExpressionReaderTest {
         .thenReturn(Map.of("EDS", Set.of("API.status", "API.latency")));
 
     Set<String> sourceSets =
-        ExpressionReader.getSourceSetsIfFilterAndOrderByAreFromSameSourceSets(expressionContext);
+        ExpressionContext.getSourceSetsIfFilterAndOrderByAreFromSameSourceSets(expressionContext);
     assertTrue(sourceSets.isEmpty());
   }
 
@@ -254,8 +253,8 @@ class ExpressionReaderTest {
     when(expressionContext.getFilterAttributeToSourceMap())
         .thenReturn(Map.of("API.id", Set.of("QS", "EDS"), "API.name", Set.of("QS")));
 
-    assertTrue(ExpressionReader.areFiltersOnlyOnCurrentDataSource(expressionContext, "QS"));
-    assertFalse(ExpressionReader.areFiltersOnlyOnCurrentDataSource(expressionContext, "EDS"));
+    assertTrue(ExpressionContext.areFiltersOnlyOnCurrentDataSource(expressionContext, "QS"));
+    assertFalse(ExpressionContext.areFiltersOnlyOnCurrentDataSource(expressionContext, "EDS"));
   }
 
   @Test
@@ -272,8 +271,8 @@ class ExpressionReaderTest {
     when(expressionContext.getFilterAttributeToSourceMap())
         .thenReturn(Map.of("API.id", Set.of("QS", "EDS"), "API.name", Set.of("QS", "EDS")));
 
-    assertTrue(ExpressionReader.areFiltersOnlyOnCurrentDataSource(expressionContext, "QS"));
-    assertTrue(ExpressionReader.areFiltersOnlyOnCurrentDataSource(expressionContext, "EDS"));
+    assertTrue(ExpressionContext.areFiltersOnlyOnCurrentDataSource(expressionContext, "QS"));
+    assertTrue(ExpressionContext.areFiltersOnlyOnCurrentDataSource(expressionContext, "EDS"));
   }
 
   @Test
@@ -289,8 +288,8 @@ class ExpressionReaderTest {
     when(expressionContext.getFilterAttributeToSourceMap())
         .thenReturn(Map.of("API.id", Set.of("QS"), "API.name", Set.of("EDS")));
 
-    assertFalse(ExpressionReader.areFiltersOnlyOnCurrentDataSource(expressionContext, "QS"));
-    assertFalse(ExpressionReader.areFiltersOnlyOnCurrentDataSource(expressionContext, "EDS"));
+    assertFalse(ExpressionContext.areFiltersOnlyOnCurrentDataSource(expressionContext, "QS"));
+    assertFalse(ExpressionContext.areFiltersOnlyOnCurrentDataSource(expressionContext, "EDS"));
   }
 
   @Test
@@ -300,8 +299,8 @@ class ExpressionReaderTest {
     // filters
     when(expressionContext.getSourceToFilterAttributeMap()).thenReturn(Collections.emptyMap());
 
-    assertTrue(ExpressionReader.areFiltersOnlyOnCurrentDataSource(expressionContext, "QS"));
-    assertTrue(ExpressionReader.areFiltersOnlyOnCurrentDataSource(expressionContext, "EDS"));
+    assertTrue(ExpressionContext.areFiltersOnlyOnCurrentDataSource(expressionContext, "QS"));
+    assertTrue(ExpressionContext.areFiltersOnlyOnCurrentDataSource(expressionContext, "EDS"));
   }
 
   private ExpressionContext getMockExpressionContext(
