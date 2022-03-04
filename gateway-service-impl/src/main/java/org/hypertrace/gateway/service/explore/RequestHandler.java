@@ -36,7 +36,7 @@ public class RequestHandler implements RequestHandlerWithSorting {
   private final AttributeMetadataProvider attributeMetadataProvider;
   private final TheRestGroupRequestHandler theRestGroupRequestHandler;
 
-  RequestHandler(
+  public RequestHandler(
       QueryServiceClient queryServiceClient,
       int qsRequestTimeout,
       AttributeMetadataProvider attributeMetadataProvider) {
@@ -326,7 +326,7 @@ public class RequestHandler implements RequestHandlerWithSorting {
     return LOG;
   }
 
-  TheRestGroupRequestHandler getTheRestGroupRequestHandler() {
+  protected TheRestGroupRequestHandler getTheRestGroupRequestHandler() {
     return this.theRestGroupRequestHandler;
   }
 }

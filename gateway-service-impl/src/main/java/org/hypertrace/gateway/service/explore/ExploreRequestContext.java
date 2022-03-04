@@ -14,7 +14,7 @@ public class ExploreRequestContext extends QueryRequestContext {
   private boolean hasGroupBy = false;
   private List<OrderByExpression> orderByExpressions;
 
-  ExploreRequestContext(
+  public ExploreRequestContext(
       String tenantId, ExploreRequest exploreRequest, Map<String, String> requestHeaders) {
     super(
         tenantId,
@@ -30,7 +30,7 @@ public class ExploreRequestContext extends QueryRequestContext {
     return this.exploreRequest;
   }
 
-  String getContext() {
+  public String getContext() {
     return this.exploreRequest.getContext();
   }
 
@@ -41,11 +41,11 @@ public class ExploreRequestContext extends QueryRequestContext {
    * after getting the results back from Query Service which we need to do when Group By is
    * specified.
    */
-  void setHasGroupBy(boolean hasGroupBy) {
+  public void setHasGroupBy(boolean hasGroupBy) {
     this.hasGroupBy = hasGroupBy;
   }
 
-  boolean hasGroupBy() {
+  public boolean hasGroupBy() {
     return this.hasGroupBy;
   }
 
@@ -84,7 +84,7 @@ public class ExploreRequestContext extends QueryRequestContext {
     return this.exploreRequest.getOffset();
   }
 
-  boolean getIncludeRestGroup() {
+  public boolean getIncludeRestGroup() {
     return this.exploreRequest.getIncludeRestGroup();
   }
 

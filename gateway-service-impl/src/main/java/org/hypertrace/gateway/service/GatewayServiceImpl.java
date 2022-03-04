@@ -105,7 +105,12 @@ public class GatewayServiceImpl extends GatewayServiceGrpc.GatewayServiceImplBas
             logConfig);
     this.exploreService =
         new ExploreService(
-            queryServiceClient, qsRequestTimeout, attributeMetadataProvider, scopeFilterConfigs);
+            queryServiceClient,
+            qsRequestTimeout,
+            eqsClient,
+            attributeMetadataProvider,
+            scopeFilterConfigs,
+            entityIdColumnsConfigs);
     BaselineServiceQueryParser baselineServiceQueryParser =
         new BaselineServiceQueryParser(attributeMetadataProvider);
     BaselineServiceQueryExecutor baselineServiceQueryExecutor =

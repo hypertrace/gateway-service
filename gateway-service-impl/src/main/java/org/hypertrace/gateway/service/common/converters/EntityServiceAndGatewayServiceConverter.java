@@ -1,10 +1,14 @@
 package org.hypertrace.gateway.service.common.converters;
 
 import java.util.List;
+import java.util.Map;
 import java.util.stream.Collectors;
+import org.hypertrace.core.attribute.service.v1.AttributeKind;
 import org.hypertrace.core.attribute.service.v1.AttributeMetadata;
+import org.hypertrace.core.attribute.service.v1.AttributeType;
 import org.hypertrace.entity.query.service.v1.BulkEntityArrayAttributeUpdateRequest.Operation;
 import org.hypertrace.entity.query.service.v1.ColumnIdentifier;
+import org.hypertrace.entity.query.service.v1.ColumnMetadata;
 import org.hypertrace.entity.query.service.v1.EntityQueryRequest;
 import org.hypertrace.entity.query.service.v1.Expression;
 import org.hypertrace.entity.query.service.v1.Filter;
@@ -111,6 +115,16 @@ public class EntityServiceAndGatewayServiceConverter {
     }
 
     return builder.build();
+  }
+
+  public static org.hypertrace.gateway.service.v1.common.Value convertToGatewayValue(
+      String attributeName, Value value, Map<String, AttributeMetadata> attributeMetadataMap) {
+    AttributeMetadata attributeMetadata = attributeMetadataMap.get(attributeName);
+    if (null == attributeMetadata) {
+      LOG.warn("No attribute metadata found for {}", attributeName);
+      return convertQueryValueToGatewayValue(value);
+    }
+    return convertQueryValueToGatewayValue(value, attributeMetadata);
   }
 
   public static Operator convertOperator(
@@ -455,6 +469,34 @@ public class EntityServiceAndGatewayServiceConverter {
       return convertQueryValueToGatewayValue(value);
     }
     return retValue;
+  }
+
+  public static org.hypertrace.gateway.service.v1.common.Value convertToGatewayValueForMetricValue(
+      AttributeKind attributeKind,
+      Map<String, AttributeMetadata> resultKeyToAttributeMetadataMap,
+      ColumnMetadata metadata,
+      Value value) {
+    String resultKey = metadata.getColumnName();
+    // if there's no override from the function, then this is regular attribute, then
+    // use the attribute map to convert the value
+    AttributeMetadata attributeMetadata;
+    if (attributeKind == null) {
+      attributeMetadata = resultKeyToAttributeMetadataMap.get(resultKey);
+    } else {
+      attributeMetadata =
+          AttributeMetadata.newBuilder()
+              .setId(metadata.getColumnName())
+              .setType(AttributeType.METRIC)
+              .setValueKind(attributeKind)
+              .build();
+    }
+    LOG.debug(
+        "Converting {} from type: {} to type: {}",
+        resultKey,
+        metadata.getValueType().name(),
+        attributeMetadata.getValueKind().name());
+    return EntityServiceAndGatewayServiceConverter.convertQueryValueToGatewayValue(
+        value, attributeMetadata);
   }
 
   public static Operation convertToBulkEntityArrayAttributeUpdateOperation(

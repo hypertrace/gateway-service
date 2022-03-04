@@ -9,8 +9,9 @@ import java.util.Collections;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
+import org.hypertrace.gateway.service.common.ExpressionContext;
 import org.hypertrace.gateway.service.entity.query.DataFetcherNode;
-import org.hypertrace.gateway.service.entity.query.ExecutionContext;
+import org.hypertrace.gateway.service.entity.query.EntityExecutionContext;
 import org.hypertrace.gateway.service.v1.common.ColumnIdentifier;
 import org.hypertrace.gateway.service.v1.common.Expression;
 import org.hypertrace.gateway.service.v1.common.OrderByExpression;
@@ -18,11 +19,14 @@ import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 
 public class ExecutionContextBuilderVisitorTest {
-  private ExecutionContext executionContext;
+  private ExpressionContext expressionContext;
+  private EntityExecutionContext executionContext;
 
   @BeforeEach
   public void setup() {
-    this.executionContext = mock(ExecutionContext.class);
+    this.expressionContext = mock(ExpressionContext.class);
+    this.executionContext = mock(EntityExecutionContext.class);
+    when(executionContext.getExpressionContext()).thenReturn(expressionContext);
   }
 
   @Test
@@ -30,7 +34,7 @@ public class ExecutionContextBuilderVisitorTest {
     DataFetcherNode dataFetcherNode = new DataFetcherNode("QS", null);
     // API.id -> ["QS", "EDS"]
     // API.name -> ["QS", "EDS"]
-    when(executionContext.getSourceToSelectionExpressionMap())
+    when(expressionContext.getSourceToSelectionExpressionMap())
         .thenReturn(
             Map.of(
                 "QS",
@@ -42,7 +46,7 @@ public class ExecutionContextBuilderVisitorTest {
                     createExpressionFromColumnName("API.id"),
                     createExpressionFromColumnName("API.name"))));
 
-    when(executionContext.getSourceToSelectionAttributeMap())
+    when(expressionContext.getSourceToSelectionAttributeMap())
         .thenReturn(
             Map.of("QS", Set.of("API.id", "API.name"), "EDS", Set.of("API.id", "API.name")));
 
@@ -63,7 +67,7 @@ public class ExecutionContextBuilderVisitorTest {
 
     // API.id -> ["QS", "EDS"]
     // API.name -> ["EDS"]
-    when(executionContext.getSourceToSelectionExpressionMap())
+    when(expressionContext.getSourceToSelectionExpressionMap())
         .thenReturn(
             Map.of(
                 "QS",
@@ -73,10 +77,10 @@ public class ExecutionContextBuilderVisitorTest {
                     createExpressionFromColumnName("API.id"),
                     createExpressionFromColumnName("API.name"))));
 
-    when(executionContext.getSourceToSelectionAttributeMap())
+    when(expressionContext.getSourceToSelectionAttributeMap())
         .thenReturn(Map.of("QS", Set.of("API.id"), "EDS", Set.of("API.id", "API.name")));
 
-    when(executionContext.getSourceToSelectionOrderByAttributeMap())
+    when(expressionContext.getSourceToSelectionOrderByAttributeMap())
         .thenReturn(Map.of("QS", Set.of("API.id"), "EDS", Set.of("API.name")));
 
     when(executionContext.getPendingSelectionSources()).thenReturn(Set.of("EDS"));
@@ -96,11 +100,11 @@ public class ExecutionContextBuilderVisitorTest {
 
     // API.id -> ["QS", "EDS"]
     // API.name -> ["QS", "EDS"]
-    when(executionContext.getSourceToSelectionAttributeMap())
+    when(expressionContext.getSourceToSelectionAttributeMap())
         .thenReturn(
             Map.of("QS", Set.of("API.id", "API.name"), "EDS", Set.of("API.id", "API.name")));
 
-    when(executionContext.getSourceToSelectionOrderByAttributeMap())
+    when(expressionContext.getSourceToSelectionOrderByAttributeMap())
         .thenReturn(Map.of("QS", Set.of("API.id"), "EDS", Set.of("API.status")));
 
     when(executionContext.getPendingSelectionSources()).thenReturn(Set.of("EDS"));
@@ -121,7 +125,7 @@ public class ExecutionContextBuilderVisitorTest {
     // API.id -> ["QS", "EDS"]
     // API.name -> ["QS", "EDS"]
     // API.status -> ["AS"]
-    when(executionContext.getSourceToSelectionAttributeMap())
+    when(expressionContext.getSourceToSelectionAttributeMap())
         .thenReturn(
             Map.of(
                 "QS",
@@ -131,7 +135,7 @@ public class ExecutionContextBuilderVisitorTest {
                 "AS",
                 Set.of("API.status")));
 
-    when(executionContext.getSourceToSelectionOrderByAttributeMap())
+    when(expressionContext.getSourceToSelectionOrderByAttributeMap())
         .thenReturn(Map.of("EDS", Set.of("API.name"), "AS", Set.of("API.status")));
 
     when(executionContext.getPendingSelectionSources()).thenReturn(Set.of("EDS", "AS"));

@@ -39,7 +39,8 @@ public class ExploreServiceTest extends AbstractServiceTest<ExploreRequest, Expl
       AttributeMetadataProvider attributeMetadataProvider,
       ScopeFilterConfigs scopeFilterConfigs) {
     ExploreService exploreService =
-        new ExploreService(queryServiceClient, 500, attributeMetadataProvider, scopeFilterConfigs);
+        new ExploreService(
+            queryServiceClient, 500, null, attributeMetadataProvider, scopeFilterConfigs, null);
     return exploreService.explore(TENANT_ID, request, new HashMap<>());
   }
 }

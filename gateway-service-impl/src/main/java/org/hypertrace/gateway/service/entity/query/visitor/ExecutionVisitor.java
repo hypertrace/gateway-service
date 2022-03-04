@@ -11,8 +11,6 @@ import java.util.LinkedList;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
-import java.util.concurrent.ExecutorService;
-import java.util.concurrent.Executors;
 import java.util.stream.Collectors;
 import java.util.stream.IntStream;
 import org.hypertrace.gateway.service.common.datafetcher.EntityFetcherResponse;
@@ -26,7 +24,7 @@ import org.hypertrace.gateway.service.entity.EntityKeyEntityBuilderEntryComparat
 import org.hypertrace.gateway.service.entity.EntityQueryHandlerRegistry;
 import org.hypertrace.gateway.service.entity.query.AndNode;
 import org.hypertrace.gateway.service.entity.query.DataFetcherNode;
-import org.hypertrace.gateway.service.entity.query.ExecutionContext;
+import org.hypertrace.gateway.service.entity.query.EntityExecutionContext;
 import org.hypertrace.gateway.service.entity.query.NoOpNode;
 import org.hypertrace.gateway.service.entity.query.OrNode;
 import org.hypertrace.gateway.service.entity.query.PaginateOnlyNode;
@@ -46,16 +44,13 @@ import org.slf4j.LoggerFactory;
 
 /** Visitor that executes each QueryNode in the execution tree. */
 public class ExecutionVisitor implements Visitor<EntityResponse> {
-
-  private static final int THREAD_COUNT = 20;
-  private static final ExecutorService executorService = Executors.newFixedThreadPool(THREAD_COUNT);
-
-  private final EntityQueryHandlerRegistry queryHandlerRegistry;
-  private final ExecutionContext executionContext;
   private static final Logger LOG = LoggerFactory.getLogger(ExecutionVisitor.class);
 
+  private final EntityQueryHandlerRegistry queryHandlerRegistry;
+  private final EntityExecutionContext executionContext;
+
   public ExecutionVisitor(
-      ExecutionContext executionContext, EntityQueryHandlerRegistry queryHandlerRegistry) {
+      EntityExecutionContext executionContext, EntityQueryHandlerRegistry queryHandlerRegistry) {
     this.executionContext = executionContext;
     this.queryHandlerRegistry = queryHandlerRegistry;
   }
@@ -138,6 +133,7 @@ public class ExecutionVisitor implements Visitor<EntityResponse> {
             .clearOffset()
             .addAllSelection(
                 executionContext
+                    .getExpressionContext()
                     .getSourceToSelectionExpressionMap()
                     .getOrDefault(source, executionContext.getEntityIdExpressions()))
             .setFilter(dataFetcherNode.getFilter());
@@ -227,7 +223,10 @@ public class ExecutionVisitor implements Visitor<EntityResponse> {
                           .clearLimit()
                           .clearOffset()
                           .addAllSelection(
-                              executionContext.getSourceToSelectionExpressionMap().get(source))
+                              executionContext
+                                  .getExpressionContext()
+                                  .getSourceToSelectionExpressionMap()
+                                  .get(source))
                           .setFilter(filter)
                           .build();
                   IEntityFetcher entityFetcher = queryHandlerRegistry.getEntityFetcher(source);
@@ -255,7 +254,10 @@ public class ExecutionVisitor implements Visitor<EntityResponse> {
                           .clearOffset()
                           .clearLimit()
                           .addAllSelection(
-                              executionContext.getSourceToMetricExpressionMap().get(source))
+                              executionContext
+                                  .getExpressionContext()
+                                  .getSourceToMetricExpressionMap()
+                                  .get(source))
                           .setFilter(filter)
                           .build();
                   IEntityFetcher entityFetcher = queryHandlerRegistry.getEntityFetcher(source);
@@ -283,7 +285,10 @@ public class ExecutionVisitor implements Visitor<EntityResponse> {
                           .clearOffset()
                           .clearLimit()
                           .addAllTimeAggregation(
-                              executionContext.getSourceToTimeAggregationMap().get(source))
+                              executionContext
+                                  .getExpressionContext()
+                                  .getSourceToTimeAggregationMap()
+                                  .get(source))
                           .setFilter(filter)
                           .build();
                   IEntityFetcher entityFetcher = queryHandlerRegistry.getEntityFetcher(source);

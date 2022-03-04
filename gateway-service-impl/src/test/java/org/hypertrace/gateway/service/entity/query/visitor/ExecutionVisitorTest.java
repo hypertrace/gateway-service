@@ -31,6 +31,7 @@ import java.util.stream.Collectors;
 import java.util.stream.Stream;
 import org.hypertrace.core.attribute.service.v1.AttributeScope;
 import org.hypertrace.entity.v1.entitytype.EntityType;
+import org.hypertrace.gateway.service.common.ExpressionContext;
 import org.hypertrace.gateway.service.common.datafetcher.EntityDataServiceEntityFetcher;
 import org.hypertrace.gateway.service.common.datafetcher.EntityFetcherResponse;
 import org.hypertrace.gateway.service.common.datafetcher.EntityResponse;
@@ -39,7 +40,7 @@ import org.hypertrace.gateway.service.entity.EntitiesRequestContext;
 import org.hypertrace.gateway.service.entity.EntityKey;
 import org.hypertrace.gateway.service.entity.EntityQueryHandlerRegistry;
 import org.hypertrace.gateway.service.entity.query.DataFetcherNode;
-import org.hypertrace.gateway.service.entity.query.ExecutionContext;
+import org.hypertrace.gateway.service.entity.query.EntityExecutionContext;
 import org.hypertrace.gateway.service.entity.query.NoOpNode;
 import org.hypertrace.gateway.service.entity.query.PaginateOnlyNode;
 import org.hypertrace.gateway.service.entity.query.SelectionNode;
@@ -114,14 +115,17 @@ public class ExecutionVisitorTest {
           .build();
 
   private EntityQueryHandlerRegistry entityQueryHandlerRegistry;
-  private ExecutionContext executionContext;
+  private ExpressionContext expressionContext;
+  private EntityExecutionContext executionContext;
   private ExecutionVisitor executionVisitor;
   private QueryServiceEntityFetcher queryServiceEntityFetcher;
   private EntityDataServiceEntityFetcher entityDataServiceEntityFetcher;
 
   @BeforeEach
   public void setup() {
-    executionContext = mock(ExecutionContext.class);
+    expressionContext = mock(ExpressionContext.class);
+    executionContext = mock(EntityExecutionContext.class);
+    when(executionContext.getExpressionContext()).thenReturn(expressionContext);
     entityQueryHandlerRegistry = mock(EntityQueryHandlerRegistry.class);
     queryServiceEntityFetcher = mock(QueryServiceEntityFetcher.class);
     entityDataServiceEntityFetcher = mock(EntityDataServiceEntityFetcher.class);
@@ -409,7 +413,7 @@ public class ExecutionVisitorTest {
     EntityFetcherResponse entityFetcherResponse =
         new EntityFetcherResponse(entityKeyBuilderResponseMap);
 
-    when(executionContext.getSourceToSelectionExpressionMap())
+    when(expressionContext.getSourceToSelectionExpressionMap())
         .thenReturn(Map.of("QS", List.of(selectionExpression)));
     when(executionContext.getEntitiesRequest()).thenReturn(entitiesRequest);
     when(executionContext.getTenantId()).thenReturn(tenantId);
@@ -467,7 +471,7 @@ public class ExecutionVisitorTest {
 
     EntityFetcherResponse entityFetcherResponse =
         new EntityFetcherResponse(entityKeyBuilderResponseMap);
-    when(executionContext.getSourceToSelectionExpressionMap())
+    when(expressionContext.getSourceToSelectionExpressionMap())
         .thenReturn(Map.of("QS", List.of(selectionExpression)));
     when(executionContext.getEntitiesRequest()).thenReturn(entitiesRequest);
     when(executionContext.getTenantId()).thenReturn(tenantId);
@@ -525,7 +529,7 @@ public class ExecutionVisitorTest {
     EntityFetcherResponse entityFetcherResponse =
         new EntityFetcherResponse(entityKeyBuilderResponseMap);
 
-    when(executionContext.getSourceToSelectionExpressionMap())
+    when(expressionContext.getSourceToSelectionExpressionMap())
         .thenReturn(Map.of("EDS", List.of(selectionExpression)));
     when(executionContext.getEntitiesRequest()).thenReturn(entitiesRequest);
     when(executionContext.getTenantId()).thenReturn(tenantId);
@@ -574,7 +578,7 @@ public class ExecutionVisitorTest {
 
     EntityFetcherResponse entityFetcherResponse =
         new EntityFetcherResponse(entityKeyBuilderResponseMap);
-    when(executionContext.getSourceToSelectionExpressionMap())
+    when(expressionContext.getSourceToSelectionExpressionMap())
         .thenReturn(Map.of("QS", List.of(selectionExpression)));
     when(executionContext.getEntitiesRequest()).thenReturn(entitiesRequest);
     when(executionContext.getTenantId()).thenReturn(tenantId);
@@ -679,11 +683,11 @@ public class ExecutionVisitorTest {
 
     when(executionContext.getEntityIdExpressions())
         .thenReturn(List.of(buildExpression(API_ID_ATTR)));
-    when(executionContext.getSourceToSelectionExpressionMap())
+    when(expressionContext.getSourceToSelectionExpressionMap())
         .thenReturn(Map.of("QS", List.of(selectionExpression)));
-    when(executionContext.getSourceToMetricExpressionMap())
+    when(expressionContext.getSourceToMetricExpressionMap())
         .thenReturn(Map.of("QS", List.of(metricExpression)));
-    when(executionContext.getSourceToTimeAggregationMap())
+    when(expressionContext.getSourceToTimeAggregationMap())
         .thenReturn(Map.of("QS", List.of(timeAggregation)));
     when(executionContext.getEntitiesRequest()).thenReturn(entitiesRequest);
     when(executionContext.getTenantId()).thenReturn(tenantId);
@@ -845,11 +849,11 @@ public class ExecutionVisitorTest {
 
     when(executionContext.getEntityIdExpressions())
         .thenReturn(List.of(buildExpression(API_ID_ATTR)));
-    when(executionContext.getSourceToSelectionExpressionMap())
+    when(expressionContext.getSourceToSelectionExpressionMap())
         .thenReturn(Map.of("QS", List.of(selectionExpression)));
-    when(executionContext.getSourceToMetricExpressionMap())
+    when(expressionContext.getSourceToMetricExpressionMap())
         .thenReturn(Map.of("QS", List.of(metricExpression)));
-    when(executionContext.getSourceToTimeAggregationMap())
+    when(expressionContext.getSourceToTimeAggregationMap())
         .thenReturn(Map.of("QS", List.of(timeAggregation)));
     when(executionContext.getEntitiesRequest()).thenReturn(entitiesRequest);
     when(executionContext.getTenantId()).thenReturn(tenantId);
@@ -892,13 +896,6 @@ public class ExecutionVisitorTest {
         new SelectionNode.Builder(sortAndPaginateNode)
             .setAggMetricSelectionSources(Set.of("QS"))
             .build();
-
-    Set<EntityKey> totalEntityKeys =
-        Set.of(
-            EntityKey.of("entity-id-0"),
-            EntityKey.of("entity-id-1"),
-            EntityKey.of("entity-id-2"),
-            EntityKey.of("entity-id-3"));
 
     // child selection node has no child data fetcher node. it should set total entity keys
     {
@@ -966,7 +963,7 @@ public class ExecutionVisitorTest {
         .build();
   }
 
-  private ExecutionContext mockExecutionContext(
+  private EntityExecutionContext mockExecutionContext(
       Set<String> selectionSource,
       Set<String> aggregateSource,
       Map<String, List<Expression>> sourceToSelectionMap,
@@ -983,8 +980,8 @@ public class ExecutionVisitorTest {
     when(executionContext.getEntitiesRequest()).thenReturn(ENTITIES_REQUEST);
     when(executionContext.getPendingSelectionSources()).thenReturn(selectionSource);
     when(executionContext.getPendingMetricAggregationSources()).thenReturn(aggregateSource);
-    when(executionContext.getSourceToSelectionExpressionMap()).thenReturn(sourceToSelectionMap);
-    when(executionContext.getSourceToMetricExpressionMap()).thenReturn(sourceToAggregateMap);
+    when(expressionContext.getSourceToSelectionExpressionMap()).thenReturn(sourceToSelectionMap);
+    when(expressionContext.getSourceToMetricExpressionMap()).thenReturn(sourceToAggregateMap);
     return executionContext;
   }
 

@@ -6,7 +6,7 @@ import java.util.Set;
 import java.util.stream.Collectors;
 import org.hypertrace.gateway.service.entity.query.AndNode;
 import org.hypertrace.gateway.service.entity.query.DataFetcherNode;
-import org.hypertrace.gateway.service.entity.query.ExecutionContext;
+import org.hypertrace.gateway.service.entity.query.EntityExecutionContext;
 import org.hypertrace.gateway.service.entity.query.NoOpNode;
 import org.hypertrace.gateway.service.entity.query.OrNode;
 import org.hypertrace.gateway.service.entity.query.PaginateOnlyNode;
@@ -20,17 +20,17 @@ import org.hypertrace.gateway.service.entity.query.SortAndPaginateNode;
  * <p>Returns set of sources for which attributes have already been fetched
  */
 public class ExecutionContextBuilderVisitor implements Visitor<Void> {
-  private final ExecutionContext executionContext;
+  private final EntityExecutionContext executionContext;
 
-  public ExecutionContextBuilderVisitor(ExecutionContext executionContext) {
+  public ExecutionContextBuilderVisitor(EntityExecutionContext executionContext) {
     this.executionContext = executionContext;
   }
 
   /**
    * Removes the attribute selection source using {@link
-   * ExecutionContext#removePendingSelectionSource(String)} and {@link
-   * ExecutionContext#removePendingSelectionSourceForOrderBy(String)}, if the attribute has already
-   * been requested from a different source
+   * EntityExecutionContext#removePendingSelectionSource(String)} and {@link
+   * EntityExecutionContext#removePendingSelectionSourceForOrderBy(String)}, if the attribute has
+   * already been requested from a different source
    *
    * <p>Example: select api.id, api.name api.id -> ["QS", "EDS"] api.name -> ["QS", EDS"]
    *
@@ -42,13 +42,13 @@ public class ExecutionContextBuilderVisitor implements Visitor<Void> {
    * <p>Gather the set of the attributes(say A) fetched from the {@link DataFetcherNode} source
    *
    * <p>for each pending selection source S from {@link
-   * ExecutionContext#getPendingSelectionSources()} and {@link
-   * ExecutionContext#getPendingMetricAggregationSourcesForOrderBy()}, get all the selection
+   * EntityExecutionContext#getPendingSelectionSources()} and {@link
+   * EntityExecutionContext#getPendingMetricAggregationSourcesForOrderBy()}, get all the selection
    * attributes for the source
    *
    * <p>if the selection attributes for that source are already present in the set A, remove this
-   * selection source using {@link ExecutionContext#removePendingSelectionSource(String)} and {@link
-   * ExecutionContext#removePendingSelectionSourceForOrderBy(String)}
+   * selection source using {@link EntityExecutionContext#removePendingSelectionSource(String)} and
+   * {@link EntityExecutionContext#removePendingSelectionSourceForOrderBy(String)}
    */
   @Override
   public Void visit(DataFetcherNode dataFetcherNode) {
@@ -60,7 +60,7 @@ public class ExecutionContextBuilderVisitor implements Visitor<Void> {
 
     // set of attributes which were fetched from the source
     Map<String, Set<String>> sourceToSelectionAttributeMap =
-        executionContext.getSourceToSelectionAttributeMap();
+        executionContext.getExpressionContext().getSourceToSelectionAttributeMap();
 
     Set<String> fetchedAttributes =
         sourceToSelectionAttributeMap.getOrDefault(source, Collections.emptySet());
@@ -70,7 +70,7 @@ public class ExecutionContextBuilderVisitor implements Visitor<Void> {
           getRedundantPendingSelectionSources(
               fetchedAttributes,
               executionContext.getPendingSelectionSources(),
-              executionContext.getSourceToSelectionAttributeMap());
+              executionContext.getExpressionContext().getSourceToSelectionAttributeMap());
       redundantPendingSelectionSources.forEach(executionContext::removePendingSelectionSource);
     }
 
@@ -79,7 +79,7 @@ public class ExecutionContextBuilderVisitor implements Visitor<Void> {
           getRedundantPendingSelectionSources(
               fetchedAttributes,
               executionContext.getPendingSelectionSourcesForOrderBy(),
-              executionContext.getSourceToSelectionOrderByAttributeMap());
+              executionContext.getExpressionContext().getSourceToSelectionOrderByAttributeMap());
       redundantPendingSelectionSourcesForOrderBy.forEach(
           executionContext::removePendingSelectionSourceForOrderBy);
     }

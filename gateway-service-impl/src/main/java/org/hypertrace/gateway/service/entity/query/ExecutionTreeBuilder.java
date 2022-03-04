@@ -13,6 +13,7 @@ import java.util.stream.Collectors;
 import java.util.stream.Stream;
 import org.hypertrace.core.attribute.service.v1.AttributeMetadata;
 import org.hypertrace.core.attribute.service.v1.AttributeSource;
+import org.hypertrace.gateway.service.common.ExpressionContext;
 import org.hypertrace.gateway.service.common.util.ExpressionReader;
 import org.hypertrace.gateway.service.common.util.TimeRangeFilterUtil;
 import org.hypertrace.gateway.service.entity.query.visitor.ExecutionContextBuilderVisitor;
@@ -31,10 +32,10 @@ public class ExecutionTreeBuilder {
   private static final Logger LOG = LoggerFactory.getLogger(ExecutionTreeBuilder.class);
 
   private final Map<String, AttributeMetadata> attributeMetadataMap;
-  private final ExecutionContext executionContext;
+  private final EntityExecutionContext executionContext;
   private final Set<String> sourceSetsIfFilterAndOrderByAreFromSameSourceSets;
 
-  public ExecutionTreeBuilder(ExecutionContext executionContext) {
+  public ExecutionTreeBuilder(EntityExecutionContext executionContext) {
     this.executionContext = executionContext;
     this.attributeMetadataMap =
         executionContext
@@ -44,7 +45,8 @@ public class ExecutionTreeBuilder {
                 executionContext.getEntitiesRequest().getEntityType());
 
     this.sourceSetsIfFilterAndOrderByAreFromSameSourceSets =
-        ExecutionTreeUtils.getSourceSetsIfFilterAndOrderByAreFromSameSourceSets(executionContext);
+        ExpressionContext.getSourceSetsIfFilterAndOrderByAreFromSameSourceSets(
+            executionContext.getExpressionContext());
   }
 
   /**
@@ -69,7 +71,8 @@ public class ExecutionTreeBuilder {
     // (live + non live) does not make sense, since filters on any other data source will anyways
     // filter out the "non live" entities
     boolean areFiltersOnlyOnEds =
-        ExecutionTreeUtils.areFiltersOnlyOnCurrentDataSource(executionContext, EDS.name());
+        ExpressionContext.areFiltersOnlyOnCurrentDataSource(
+            executionContext.getExpressionContext(), EDS.name());
     if (entitiesRequest.getIncludeNonLiveEntities() && areFiltersOnlyOnEds) {
       ExecutionTreeUtils.removeDuplicateSelectionAttributes(executionContext, EDS.name());
 
@@ -104,7 +107,7 @@ public class ExecutionTreeBuilder {
     // optimization where all projections, filters, order by, sort and limit can be pushed down to
     // the data store
     Optional<String> singleSourceForAllAttributes =
-        ExecutionTreeUtils.getSingleSourceForAllAttributes(executionContext);
+        ExecutionTreeUtils.getValidSingleSource(executionContext);
     if (singleSourceForAllAttributes.isPresent()) {
       String source = singleSourceForAllAttributes.get();
       QueryNode rootNode = buildExecutionTreeForSameSourceFilterAndSelection(source);
@@ -194,7 +197,7 @@ public class ExecutionTreeBuilder {
   }
 
   @VisibleForTesting
-  QueryNode buildExecutionTree(ExecutionContext executionContext, QueryNode filterTree) {
+  QueryNode buildExecutionTree(EntityExecutionContext executionContext, QueryNode filterTree) {
     QueryNode rootNode = filterTree;
     // Select attributes from sources in order by but not part of the filter tree
     Set<String> attrSourcesForOrderBy = executionContext.getPendingSelectionSourcesForOrderBy();
@@ -250,17 +253,18 @@ public class ExecutionTreeBuilder {
   }
 
   @VisibleForTesting
-  QueryNode buildFilterTree(ExecutionContext context, Filter filter) {
+  QueryNode buildFilterTree(EntityExecutionContext context, Filter filter) {
+    EntitiesRequest entitiesRequest = executionContext.getEntitiesRequest();
     // Convert the time range into a filter and set it on the request so that all downstream
     // components needn't treat it specially
     Filter timeRangeFilter =
         TimeRangeFilterUtil.addTimeRangeFilter(
             context.getTimestampAttributeId(),
             filter,
-            context.getEntitiesRequest().getStartTimeMillis(),
-            context.getEntitiesRequest().getEndTimeMillis());
+            entitiesRequest.getStartTimeMillis(),
+            entitiesRequest.getEndTimeMillis());
 
-    return buildFilterTree(context.getEntitiesRequest(), timeRangeFilter);
+    return buildFilterTree(entitiesRequest, timeRangeFilter);
   }
 
   @VisibleForTesting
@@ -302,34 +306,40 @@ public class ExecutionTreeBuilder {
   }
 
   private QueryNode checkAndAddSortAndPaginationNode(
-      QueryNode childNode, ExecutionContext executionContext) {
+      QueryNode childNode, EntityExecutionContext executionContext) {
+    EntitiesRequest entitiesRequest = executionContext.getEntitiesRequest();
     // If sort/pagination node is already added or if the child is a NoOp don't add it
     if (executionContext.isSortAndPaginationNodeAdded() || childNode instanceof NoOpNode) {
       return childNode;
     }
     // Add ordering and pagination node
     List<OrderByExpression> selectionOrderByExpressions =
-        executionContext.getSourceToSelectionOrderByExpressionMap().values().stream()
+        executionContext
+            .getExpressionContext()
+            .getSourceToSelectionOrderByExpressionMap()
+            .values()
+            .stream()
             .flatMap(Collection::stream)
             .collect(Collectors.toList());
     List<OrderByExpression> metricOrderByExpressions =
-        executionContext.getSourceToMetricOrderByExpressionMap().values().stream()
+        executionContext
+            .getExpressionContext()
+            .getSourceToMetricOrderByExpressionMap()
+            .values()
+            .stream()
             .flatMap(Collection::stream)
             .collect(Collectors.toList());
     List<OrderByExpression> orderByExpressions =
         Stream.of(selectionOrderByExpressions, metricOrderByExpressions)
             .flatMap(Collection::stream)
             .collect(Collectors.toList());
-    if (orderByExpressions.isEmpty() && executionContext.getEntitiesRequest().getLimit() == 0) {
+    if (orderByExpressions.isEmpty() && entitiesRequest.getLimit() == 0) {
       return childNode;
     }
 
     executionContext.setSortAndPaginationNodeAdded(true);
     return new SortAndPaginateNode(
-        childNode,
-        executionContext.getEntitiesRequest().getLimit(),
-        executionContext.getEntitiesRequest().getOffset(),
-        orderByExpressions);
+        childNode, entitiesRequest.getLimit(), entitiesRequest.getOffset(), orderByExpressions);
   }
 
   private QueryNode createQsDataFetcherNodeWithLimitAndOffset(EntitiesRequest entitiesRequest) {
