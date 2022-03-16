@@ -8,6 +8,7 @@ import com.google.common.annotations.VisibleForTesting;
 import com.google.common.base.Preconditions;
 import com.google.common.base.Strings;
 import com.google.common.collect.ImmutableSet;
+import com.google.common.util.concurrent.ThreadFactoryBuilder;
 import java.util.ArrayList;
 import java.util.Collection;
 import java.util.Collections;
@@ -19,6 +20,8 @@ import java.util.Map;
 import java.util.Optional;
 import java.util.Set;
 import java.util.concurrent.CompletableFuture;
+import java.util.concurrent.ExecutorService;
+import java.util.concurrent.Executors;
 import java.util.stream.Collectors;
 import java.util.stream.IntStream;
 import org.apache.commons.lang3.StringUtils;
@@ -89,6 +92,13 @@ public class EntityInteractionsFetcher {
   private final QueryServiceClient queryServiceClient;
   private final int queryServiceRequestTimeout;
   private final AttributeMetadataProvider metadataProvider;
+  private final ExecutorService executorService =
+      Executors.newFixedThreadPool(
+          3, // considering 1 incoming + 2 max outgoing request
+          new ThreadFactoryBuilder()
+              .setDaemon(true)
+              .setNameFormat("interaction-qs-io-pool-%d")
+              .build());
 
   public EntityInteractionsFetcher(
       QueryServiceClient queryServiceClient,
@@ -120,51 +130,58 @@ public class EntityInteractionsFetcher {
   }
 
   public void populateEntityInteractions(
-      RequestContext context, EntitiesRequest request, Map<EntityKey, Builder> entityBuilders) {
+      RequestContext context,
+      EntitiesRequest entitiesRequest,
+      Map<EntityKey, Builder> entityBuilders) {
     List<EntityInteractionQueryRequest> allQueryRequests = new ArrayList<>();
     // Process the incoming interactions, and prepare QS queries
-    if (!InteractionsRequest.getDefaultInstance().equals(request.getIncomingInteractions())) {
+    if (!InteractionsRequest.getDefaultInstance()
+        .equals(entitiesRequest.getIncomingInteractions())) {
       allQueryRequests.addAll(
           prepareQueryRequests(
               context,
-              request,
+              entitiesRequest,
               entityBuilders,
-              request.getIncomingInteractions(),
+              entitiesRequest.getIncomingInteractions(),
               INCOMING,
               "fromEntityType filter is mandatory for incoming interactions."));
     }
 
     // Process the outgoing interactions, and prepare the QS queries
-    if (!InteractionsRequest.getDefaultInstance().equals(request.getOutgoingInteractions())) {
+    if (!InteractionsRequest.getDefaultInstance()
+        .equals(entitiesRequest.getOutgoingInteractions())) {
       allQueryRequests.addAll(
           prepareQueryRequests(
               context,
-              request,
+              entitiesRequest,
               entityBuilders,
-              request.getOutgoingInteractions(),
+              entitiesRequest.getOutgoingInteractions(),
               OUTGOING,
               "toEntityType filter is mandatory for outgoing interactions."));
     }
 
     // execute all the requests in parallel, and wait for results
-    List<CompletableFuture<EntityInteractionQueryResponse>> completableFutureList =
+    List<CompletableFuture<EntityInteractionQueryResponse>> queryRequestCompletableFutures =
         allQueryRequests.stream()
-            .map(e -> CompletableFuture.supplyAsync(() -> executeQueryRequest(context, e)))
+            .map(
+                e ->
+                    CompletableFuture.supplyAsync(
+                        () -> executeQueryRequest(context, e), this.executorService))
             .collect(Collectors.toList());
 
     // wait and parse result as an when complete
-    completableFutureList.forEach(
-        cf -> {
-          EntityInteractionQueryResponse qsResponse = cf.join();
+    queryRequestCompletableFutures.forEach(
+        queryRequestCompletableFuture -> {
+          EntityInteractionQueryResponse qsResponse = queryRequestCompletableFuture.join();
           InteractionsRequest interactionsRequest =
               qsResponse.getRequest().isIncoming()
-                  ? request.getIncomingInteractions()
-                  : request.getOutgoingInteractions();
+                  ? entitiesRequest.getIncomingInteractions()
+                  : entitiesRequest.getOutgoingInteractions();
           Map<String, FunctionExpression> metricToAggFunction =
               MetricAggregationFunctionUtil.getAggMetricToFunction(
                   interactionsRequest.getSelectionList());
           parseResultSet(
-              request.getEntityType(),
+              entitiesRequest.getEntityType(),
               qsResponse.getRequest().getEntityType(),
               interactionsRequest.getSelectionList(),
               metricToAggFunction,
@@ -218,54 +235,6 @@ public class EntityInteractionsFetcher {
     return requests.entrySet().stream()
         .map(e -> new EntityInteractionQueryRequest(incoming, e.getKey(), e.getValue()))
         .collect(Collectors.toList());
-  }
-
-  private void addInteractions(
-      RequestContext context,
-      EntitiesRequest request,
-      Map<EntityKey, Builder> entityIdToBuilders,
-      InteractionsRequest interactionsRequest,
-      boolean incoming,
-      String errorMsg) {
-
-    if (!interactionsRequest.hasFilter()) {
-      throw new IllegalArgumentException(errorMsg);
-    }
-    if (interactionsRequest.getSelectionCount() == 0) {
-      throw new IllegalArgumentException("Interactions request should have non-empty selections.");
-    }
-
-    Map<String, QueryRequest> requests =
-        buildQueryRequests(
-            request.getStartTimeMillis(),
-            request.getEndTimeMillis(),
-            request.getSpaceId(),
-            request.getEntityType(),
-            interactionsRequest,
-            entityIdToBuilders.keySet(),
-            incoming,
-            context);
-    if (requests.isEmpty()) {
-      throw new IllegalArgumentException(errorMsg);
-    }
-
-    Map<String, FunctionExpression> metricToAggFunction =
-        MetricAggregationFunctionUtil.getAggMetricToFunction(
-            interactionsRequest.getSelectionList());
-    for (Map.Entry<String, QueryRequest> entry : requests.entrySet()) {
-      Iterator<ResultSetChunk> resultSet =
-          queryServiceClient.executeQuery(
-              entry.getValue(), context.getHeaders(), queryServiceRequestTimeout);
-      parseResultSet(
-          request.getEntityType(),
-          entry.getKey(),
-          interactionsRequest.getSelectionList(),
-          metricToAggFunction,
-          resultSet,
-          incoming,
-          entityIdToBuilders,
-          context);
-    }
   }
 
   private Set<String> getOtherEntityTypes(org.hypertrace.gateway.service.v1.common.Filter filter) {
