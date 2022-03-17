@@ -10,10 +10,11 @@ import io.micrometer.core.instrument.Timer;
 import java.time.Duration;
 import java.time.Instant;
 import java.util.ArrayList;
-import java.util.Collection;
 import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
+import java.util.concurrent.CompletableFuture;
+import java.util.concurrent.ExecutorService;
 import java.util.concurrent.TimeUnit;
 import org.hypertrace.core.attribute.service.v1.AttributeMetadata;
 import org.hypertrace.core.query.service.api.ColumnMetadata;
@@ -56,6 +57,7 @@ public class TracesService {
   private final QueryServiceClient queryServiceClient;
   private final int queryServiceReqTimeout;
   private final AttributeMetadataProvider attributeMetadataProvider;
+  private final ExecutorService queryExecutor;
   private final TracesRequestValidator requestValidator;
   private final RequestPreProcessor requestPreProcessor;
 
@@ -65,10 +67,12 @@ public class TracesService {
       QueryServiceClient queryServiceClient,
       int qsRequestTimeout,
       AttributeMetadataProvider attributeMetadataProvider,
-      ScopeFilterConfigs scopeFilterConfigs) {
+      ScopeFilterConfigs scopeFilterConfigs,
+      ExecutorService queryExecutor) {
     this.queryServiceClient = queryServiceClient;
     this.queryServiceReqTimeout = qsRequestTimeout;
     this.attributeMetadataProvider = attributeMetadataProvider;
+    this.queryExecutor = queryExecutor;
     this.requestValidator = new TracesRequestValidator();
     this.requestPreProcessor =
         new RequestPreProcessor(attributeMetadataProvider, scopeFilterConfigs);
@@ -96,18 +100,17 @@ public class TracesService {
 
       TracesResponse.Builder tracesResponseBuilder = TracesResponse.newBuilder();
       // filter traces
+      CompletableFuture<List<Trace>> filteredTraceFuture =
+          CompletableFuture.supplyAsync(
+              () -> filterTraces(context, preProcessedRequest, attributeMap, scope), queryExecutor);
 
-      Collection<Trace> filteredTraces =
-          filterTraces(context, preProcessedRequest, attributeMap, scope);
-      tracesResponseBuilder.addAllTraces(filteredTraces);
       // Get the total API Traces in a separate query because this will scale better
       // for large data-set
       tracesResponseBuilder.setTotal(getTotalFilteredTraces(context, preProcessedRequest, scope));
-
+      tracesResponseBuilder.addAllTraces(filteredTraceFuture.join());
       TracesResponse response = tracesResponseBuilder.build();
-      if (LOG.isDebugEnabled()) {
-        LOG.debug("Traces Service Response: {}", response);
-      }
+      LOG.debug("Traces Service Response: {}", response);
+
       return response;
     } finally {
       queryExecutionTimer.record(
