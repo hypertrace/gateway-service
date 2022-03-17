@@ -94,7 +94,7 @@ public class EntityInteractionsFetcher {
   private final AttributeMetadataProvider metadataProvider;
   private final ExecutorService executorService =
       Executors.newFixedThreadPool(
-          6, // considering (1 incoming edge  + 2 outgoing edge requests) * 2 concurrent
+          6, // considering z(1 incoming edge  + 2 outgoing edge requests) * 2 concurrent
           new ThreadFactoryBuilder()
               .setDaemon(true)
               .setNameFormat("interaction-qs-io-pool-%d")
@@ -174,12 +174,12 @@ public class EntityInteractionsFetcher {
         queryRequestCompletableFuture -> {
           EntityInteractionQueryResponse qsResponse = queryRequestCompletableFuture.join();
           InteractionsRequest interactionsRequest =
-              qsResponse.getRequest().isIncoming()
-                  ? entitiesRequest.getIncomingInteractions()
-                  : entitiesRequest.getOutgoingInteractions();
+              qsResponse.getRequest().getInteractionsRequest();
+
           Map<String, FunctionExpression> metricToAggFunction =
               MetricAggregationFunctionUtil.getAggMetricToFunction(
                   interactionsRequest.getSelectionList());
+
           parseResultSet(
               entitiesRequest.getEntityType(),
               qsResponse.getRequest().getEntityType(),
@@ -233,7 +233,10 @@ public class EntityInteractionsFetcher {
     }
 
     return requests.entrySet().stream()
-        .map(e -> new EntityInteractionQueryRequest(incoming, e.getKey(), e.getValue()))
+        .map(
+            e ->
+                new EntityInteractionQueryRequest(
+                    incoming, e.getKey(), interactionsRequest, e.getValue()))
         .collect(Collectors.toList());
   }
 
