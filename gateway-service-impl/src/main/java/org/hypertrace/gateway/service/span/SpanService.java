@@ -14,6 +14,8 @@ import java.util.Collection;
 import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
+import java.util.concurrent.CompletableFuture;
+import java.util.concurrent.ExecutorService;
 import java.util.concurrent.TimeUnit;
 import org.hypertrace.core.attribute.service.v1.AttributeMetadata;
 import org.hypertrace.core.attribute.service.v1.AttributeScope;
@@ -45,16 +47,19 @@ public class SpanService {
   private final QueryServiceClient queryServiceClient;
   private final int requestTimeout;
   private final AttributeMetadataProvider attributeMetadataProvider;
+  private final ExecutorService queryExecutor;
 
   private Timer queryExecutionTimer;
 
   public SpanService(
       QueryServiceClient queryServiceClient,
       int requestTimeout,
-      AttributeMetadataProvider attributeMetadataProvider) {
+      AttributeMetadataProvider attributeMetadataProvider,
+      ExecutorService queryExecutor) {
     this.queryServiceClient = queryServiceClient;
     this.requestTimeout = requestTimeout;
     this.attributeMetadataProvider = attributeMetadataProvider;
+    this.queryExecutor = queryExecutor;
     initMetrics();
   }
 
@@ -69,11 +74,12 @@ public class SpanService {
       Map<String, AttributeMetadata> attributeMap =
           attributeMetadataProvider.getAttributesMetadata(context, AttributeScope.EVENT.name());
       SpansResponse.Builder spanResponseBuilder = SpansResponse.newBuilder();
+      CompletableFuture<Collection<SpanEvent>> filteredSpanEventsFuture =
+          CompletableFuture.supplyAsync(
+              () -> filterSpans(context, request, attributeMap), queryExecutor);
 
-      Collection<SpanEvent> filteredSpanEvents = filterSpans(context, request, attributeMap);
-
-      spanResponseBuilder.addAllSpans(filteredSpanEvents);
       spanResponseBuilder.setTotal(getTotalFilteredSpans(context, request));
+      spanResponseBuilder.addAllSpans(filteredSpanEventsFuture.join());
 
       SpansResponse response = spanResponseBuilder.build();
       LOG.debug("Span Service Response: {}", response);
