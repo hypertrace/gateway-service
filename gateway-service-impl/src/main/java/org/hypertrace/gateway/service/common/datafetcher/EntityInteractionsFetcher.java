@@ -94,7 +94,7 @@ public class EntityInteractionsFetcher {
   private final AttributeMetadataProvider metadataProvider;
   private final ExecutorService executorService =
       Executors.newFixedThreadPool(
-          6, // considering z(1 incoming edge  + 2 outgoing edge requests) * 2 concurrent
+          6, // considering (1 incoming edge  + 2 outgoing edge requests) * 2 concurrent
           new ThreadFactoryBuilder()
               .setDaemon(true)
               .setNameFormat("interaction-qs-io-pool-%d")
