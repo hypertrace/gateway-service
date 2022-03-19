@@ -539,6 +539,7 @@ public class QueryServiceEntityFetcher implements IEntityFetcher {
             .addSelection(
                 createDistinctCountByColumnSelection(
                     Optional.ofNullable(entityIdAttributeIds.get(0)).orElseThrow()))
+            .setLimit(1)
             .setFilter(filterBuilder)
             .build();
 
