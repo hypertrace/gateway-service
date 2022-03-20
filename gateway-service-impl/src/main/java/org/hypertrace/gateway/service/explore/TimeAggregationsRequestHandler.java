@@ -6,7 +6,9 @@ import java.time.Duration;
 import java.time.temporal.ChronoUnit;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Map;
 import java.util.Optional;
+import org.hypertrace.core.attribute.service.v1.AttributeMetadata;
 import org.hypertrace.core.query.service.api.ColumnMetadata;
 import org.hypertrace.core.query.service.api.QueryRequest;
 import org.hypertrace.core.query.service.api.ResultSetMetadata;
@@ -63,12 +65,7 @@ public class TimeAggregationsRequestHandler extends RequestHandler {
     addGroupByExpressions(builder, request);
 
     // 5. Set Limit.
-    // Scale the limit size based on the limit so that we have a better chance of capturing all the
-    // results within the
-    // time range. This is especially important when the actual Group By list is not empty.
-    builder.setLimit(
-        Math.min(request.getLimit(), 1000)
-            * QueryServiceClient.DEFAULT_QUERY_SERVICE_GROUP_BY_LIMIT);
+    builder.setLimit(request.getLimit());
     requestContext.setOrderByExpressions(getRequestOrderByExpressions(request));
 
     return builder.build();
@@ -182,7 +179,7 @@ public class TimeAggregationsRequestHandler extends RequestHandler {
       ResultSetMetadata resultSetMetadata,
       ExploreResponse.Builder builder,
       ExploreRequestContext requestContext,
-      AttributeMetadataProvider attributeMetadataProvider) {
+      Map<String, AttributeMetadata> resultKeyToAttributeMetadataMap) {
     var rowBuilder = org.hypertrace.gateway.service.v1.common.Row.newBuilder();
 
     // First column is the time column. (Also the column name is "dateTimeConvert", Pinot's function
@@ -203,7 +200,7 @@ public class TimeAggregationsRequestHandler extends RequestHandler {
           resultSetMetadata.getColumnMetadata(i),
           rowBuilder,
           requestContext,
-          attributeMetadataProvider);
+          resultKeyToAttributeMetadataMap);
     }
     builder.addRow(rowBuilder);
   }
@@ -214,7 +211,7 @@ public class TimeAggregationsRequestHandler extends RequestHandler {
       ColumnMetadata metadata,
       org.hypertrace.gateway.service.v1.common.Row.Builder rowBuilder,
       ExploreRequestContext requestContext,
-      AttributeMetadataProvider attributeMetadataProvider) {
+      Map<String, AttributeMetadata> resultKeyToAttributeMetadataMap) {
     TimeAggregation timeAggregation =
         requestContext.getTimeAggregationByAlias(metadata.getColumnName());
     if (timeAggregation != null) { // Time aggregation with Function expression value
@@ -222,12 +219,11 @@ public class TimeAggregationsRequestHandler extends RequestHandler {
           queryServiceValue,
           metadata,
           rowBuilder,
-          requestContext,
-          attributeMetadataProvider,
+          resultKeyToAttributeMetadataMap,
           timeAggregation.getAggregation().getFunction());
     } else { // Simple columnId Expression value eg. groupBy columns or column selections
       handleQueryServiceResponseSingleColumn(
-          queryServiceValue, metadata, rowBuilder, requestContext, attributeMetadataProvider, null);
+          queryServiceValue, metadata, rowBuilder, resultKeyToAttributeMetadataMap, null);
     }
   }
 

@@ -5,6 +5,9 @@ import com.google.protobuf.util.JsonFormat;
 import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
+import java.util.function.Function;
+import java.util.stream.Collectors;
+import java.util.stream.Stream;
 import org.hypertrace.core.attribute.service.v1.AttributeMetadata;
 import org.hypertrace.core.query.service.api.ColumnMetadata;
 import org.hypertrace.core.query.service.api.Filter;
@@ -24,6 +27,7 @@ import org.hypertrace.gateway.service.common.util.OrderByUtil;
 import org.hypertrace.gateway.service.v1.common.Expression;
 import org.hypertrace.gateway.service.v1.common.FunctionExpression;
 import org.hypertrace.gateway.service.v1.common.OrderByExpression;
+import org.hypertrace.gateway.service.v1.common.TimeAggregation;
 import org.hypertrace.gateway.service.v1.explore.ExploreRequest;
 import org.hypertrace.gateway.service.v1.explore.ExploreResponse;
 import org.slf4j.Logger;
@@ -51,11 +55,22 @@ public class RequestHandler implements RequestHandlerWithSorting {
       ExploreRequestContext requestContext, ExploreRequest request) {
     QueryRequest queryRequest =
         buildQueryRequest(requestContext, request, attributeMetadataProvider);
-
+    List<Expression> resultExpressions =
+        Stream.of(
+                request.getSelectionList().stream(),
+                request.getGroupByList().stream(),
+                request.getTimeAggregationList().stream().map(TimeAggregation::getAggregation))
+            .flatMap(Function.identity())
+            .collect(Collectors.toList());
+    Map<String, AttributeMetadata> resultKeyToAttributeMetadataMap =
+        AttributeMetadataUtil.remapAttributeMetadataByResultKey(
+            resultExpressions,
+            attributeMetadataProvider.getAttributesMetadata(
+                requestContext, requestContext.getContext()));
     Iterator<ResultSetChunk> resultSetChunkIterator = executeQuery(requestContext, queryRequest);
 
     return handleQueryServiceResponse(
-        requestContext, resultSetChunkIterator, requestContext, attributeMetadataProvider);
+        requestContext, resultSetChunkIterator, requestContext, resultKeyToAttributeMetadataMap);
   }
 
   QueryRequest buildQueryRequest(
@@ -182,7 +197,7 @@ public class RequestHandler implements RequestHandlerWithSorting {
       ExploreRequestContext context,
       Iterator<ResultSetChunk> resultSetChunkIterator,
       ExploreRequestContext requestContext,
-      AttributeMetadataProvider attributeMetadataProvider) {
+      Map<String, AttributeMetadata> resultKeyToAttributeMetadataMap) {
     ExploreResponse.Builder builder = ExploreResponse.newBuilder();
 
     while (resultSetChunkIterator.hasNext()) {
@@ -206,7 +221,7 @@ public class RequestHandler implements RequestHandlerWithSorting {
                       chunk.getResultSetMetadata(),
                       builder,
                       requestContext,
-                      attributeMetadataProvider));
+                      resultKeyToAttributeMetadataMap));
     }
 
     // If there's a Group By in the request, we need to do the sorting and pagination ourselves.
@@ -231,7 +246,7 @@ public class RequestHandler implements RequestHandlerWithSorting {
       ResultSetMetadata resultSetMetadata,
       ExploreResponse.Builder builder,
       ExploreRequestContext requestContext,
-      AttributeMetadataProvider attributeMetadataProvider) {
+      Map<String, AttributeMetadata> resultKeyToAttributeMetadataMap) {
     var rowBuilder = org.hypertrace.gateway.service.v1.common.Row.newBuilder();
     for (int i = 0; i < resultSetMetadata.getColumnMetadataCount(); i++) {
       handleQueryServiceResponseSingleColumn(
@@ -239,7 +254,7 @@ public class RequestHandler implements RequestHandlerWithSorting {
           resultSetMetadata.getColumnMetadata(i),
           rowBuilder,
           requestContext,
-          attributeMetadataProvider);
+          resultKeyToAttributeMetadataMap);
     }
     builder.addRow(rowBuilder);
   }
@@ -249,39 +264,33 @@ public class RequestHandler implements RequestHandlerWithSorting {
       ColumnMetadata metadata,
       org.hypertrace.gateway.service.v1.common.Row.Builder rowBuilder,
       ExploreRequestContext requestContext,
-      AttributeMetadataProvider attributeMetadataProvider) {
+      Map<String, AttributeMetadata> resultKeyToAttributeMetadataMap) {
     FunctionExpression function =
         requestContext.getFunctionExpressionByAlias(metadata.getColumnName());
     handleQueryServiceResponseSingleColumn(
-        queryServiceValue,
-        metadata,
-        rowBuilder,
-        requestContext,
-        attributeMetadataProvider,
-        function);
+        queryServiceValue, metadata, rowBuilder, resultKeyToAttributeMetadataMap, function);
   }
 
   void handleQueryServiceResponseSingleColumn(
       Value queryServiceValue,
       ColumnMetadata metadata,
       org.hypertrace.gateway.service.v1.common.Row.Builder rowBuilder,
-      ExploreRequestContext requestContext,
-      AttributeMetadataProvider attributeMetadataProvider,
+      Map<String, AttributeMetadata> resultKeyToAttributeMetadataMap,
       FunctionExpression function) {
-    Map<String, AttributeMetadata> attributeMetadataMap =
-        attributeMetadataProvider.getAttributesMetadata(
-            requestContext, requestContext.getContext());
     org.hypertrace.gateway.service.v1.common.Value gwValue;
     if (function != null) { // Function expression value
       gwValue =
           QueryAndGatewayDtoConverter.convertToGatewayValueForMetricValue(
               MetricAggregationFunctionUtil.getValueTypeForFunctionType(
-                  function, attributeMetadataMap),
-              attributeMetadataMap,
+                  function.getFunction(),
+                  resultKeyToAttributeMetadataMap.get(metadata.getColumnName())),
+              resultKeyToAttributeMetadataMap,
               metadata,
               queryServiceValue);
     } else { // Simple columnId Expression value eg. groupBy columns or column selections
-      gwValue = getValueForColumnIdExpression(queryServiceValue, metadata, attributeMetadataMap);
+      gwValue =
+          getValueForColumnIdExpression(
+              queryServiceValue, metadata, resultKeyToAttributeMetadataMap);
     }
 
     rowBuilder.putColumns(metadata.getColumnName(), gwValue);
@@ -290,9 +299,9 @@ public class RequestHandler implements RequestHandlerWithSorting {
   private org.hypertrace.gateway.service.v1.common.Value getValueForColumnIdExpression(
       Value queryServiceValue,
       ColumnMetadata metadata,
-      Map<String, AttributeMetadata> attributeMetadataMap) {
+      Map<String, AttributeMetadata> resultKeyToAttributeMetadataMap) {
     return QueryAndGatewayDtoConverter.convertToGatewayValue(
-        metadata.getColumnName(), queryServiceValue, attributeMetadataMap);
+        metadata.getColumnName(), queryServiceValue, resultKeyToAttributeMetadataMap);
   }
 
   @Override
