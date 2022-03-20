@@ -186,8 +186,11 @@ public class TracesService {
     String firstSelectionAttributeId =
         ExpressionReader.getAttributeIdFromAttributeSelection(request.getSelection(0))
             .orElseThrow();
-    queryBuilder.addSelection(createCountByColumnSelection(firstSelectionAttributeId));
-    QueryRequest queryRequest = queryBuilder.build();
+    QueryRequest queryRequest =
+        queryBuilder
+            .addSelection(createCountByColumnSelection(firstSelectionAttributeId))
+            .setLimit(1)
+            .build();
     Iterator<ResultSetChunk> resultSetChunkIterator =
         queryServiceClient.executeQuery(queryRequest, context.getHeaders(), queryServiceReqTimeout);
     while (resultSetChunkIterator.hasNext()) {
