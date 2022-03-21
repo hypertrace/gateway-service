@@ -8,7 +8,6 @@ import com.google.common.annotations.VisibleForTesting;
 import com.google.common.base.Preconditions;
 import com.google.common.base.Strings;
 import com.google.common.collect.ImmutableSet;
-import com.google.common.util.concurrent.ThreadFactoryBuilder;
 import java.util.ArrayList;
 import java.util.Collection;
 import java.util.Collections;
@@ -21,7 +20,6 @@ import java.util.Optional;
 import java.util.Set;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.ExecutorService;
-import java.util.concurrent.Executors;
 import java.util.stream.Collectors;
 import java.util.stream.IntStream;
 import org.apache.commons.lang3.StringUtils;
@@ -92,21 +90,17 @@ public class EntityInteractionsFetcher {
   private final QueryServiceClient queryServiceClient;
   private final int queryServiceRequestTimeout;
   private final AttributeMetadataProvider metadataProvider;
-  private final ExecutorService executorService =
-      Executors.newFixedThreadPool(
-          6, // considering (1 incoming edge  + 2 outgoing edge requests) * 2 concurrent
-          new ThreadFactoryBuilder()
-              .setDaemon(true)
-              .setNameFormat("interaction-qs-io-pool-%d")
-              .build());
+  private final ExecutorService queryExecutor;
 
   public EntityInteractionsFetcher(
       QueryServiceClient queryServiceClient,
       int qsRequestTimeout,
-      AttributeMetadataProvider metadataProvider) {
+      AttributeMetadataProvider metadataProvider,
+      ExecutorService queryExecutor) {
     this.queryServiceClient = queryServiceClient;
     this.queryServiceRequestTimeout = qsRequestTimeout;
     this.metadataProvider = metadataProvider;
+    this.queryExecutor = queryExecutor;
   }
 
   private List<String> getEntityIdColumnsFromInteraction(
@@ -166,7 +160,7 @@ public class EntityInteractionsFetcher {
             .map(
                 e ->
                     CompletableFuture.supplyAsync(
-                        () -> executeQueryRequest(context, e), this.executorService))
+                        () -> executeQueryRequest(context, e), this.queryExecutor))
             .collect(Collectors.toList());
 
     // wait and parse result as an when complete

@@ -23,6 +23,7 @@ import java.util.List;
 import java.util.Map;
 import java.util.Optional;
 import java.util.Set;
+import java.util.concurrent.ExecutorService;
 import java.util.concurrent.TimeUnit;
 import org.hypertrace.core.attribute.service.v1.AttributeKind;
 import org.hypertrace.core.attribute.service.v1.AttributeMetadata;
@@ -43,6 +44,8 @@ import org.hypertrace.gateway.service.common.config.ScopeFilterConfigs;
 import org.hypertrace.gateway.service.common.converters.QueryRequestUtil;
 import org.hypertrace.gateway.service.entity.config.EntityIdColumnsConfigs;
 import org.hypertrace.gateway.service.entity.config.LogConfig;
+import org.hypertrace.gateway.service.executor.QueryExecutorConfig;
+import org.hypertrace.gateway.service.executor.QueryExecutorServiceFactory;
 import org.hypertrace.gateway.service.v1.common.DomainEntityType;
 import org.hypertrace.gateway.service.v1.common.Expression;
 import org.hypertrace.gateway.service.v1.common.Filter;
@@ -55,6 +58,7 @@ import org.hypertrace.gateway.service.v1.entity.EntitiesRequest;
 import org.hypertrace.gateway.service.v1.entity.EntitiesResponse;
 import org.hypertrace.gateway.service.v1.entity.EntityInteraction;
 import org.hypertrace.gateway.service.v1.entity.InteractionsRequest;
+import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.mockito.Mockito;
@@ -66,6 +70,7 @@ public class EntityServiceInteractionRequestTest extends AbstractGatewayServiceT
   private EntityIdColumnsConfigs entityIdColumnsConfigs;
   private LogConfig logConfig;
   private ScopeFilterConfigs scopeFilterConfigs;
+  private ExecutorService queryExecutor;
 
   @BeforeEach
   public void setup() {
@@ -78,6 +83,14 @@ public class EntityServiceInteractionRequestTest extends AbstractGatewayServiceT
     logConfig = Mockito.mock(LogConfig.class);
     when(logConfig.getQueryThresholdInMillis()).thenReturn(1500L);
     scopeFilterConfigs = new ScopeFilterConfigs(ConfigFactory.empty());
+    queryExecutor =
+        QueryExecutorServiceFactory.buildExecutorService(
+            QueryExecutorConfig.from(this.getConfig()));
+  }
+
+  @AfterEach
+  public void clear() {
+    queryExecutor.shutdown();
   }
 
   private void mockEntityIdColumnConfigs() {
@@ -612,7 +625,8 @@ public class EntityServiceInteractionRequestTest extends AbstractGatewayServiceT
             attributeMetadataProvider,
             entityIdColumnsConfigs,
             scopeFilterConfigs,
-            logConfig);
+            logConfig,
+            queryExecutor);
     EntitiesResponse response = entityService.getEntities(TENANT_ID, request, Map.of());
 
     // validate we have one incoming edge, and two outgoing edge
