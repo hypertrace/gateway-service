@@ -196,6 +196,7 @@ public class SpanService {
     QueryRequest queryRequest =
         createQueryWithFilter(request, context)
             .addSelection(createCountByColumnSelection(timestampAttributeId))
+            .setLimit(1)
             .build();
 
     Iterator<ResultSetChunk> resultSetChunkIterator =
