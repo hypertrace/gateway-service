@@ -112,7 +112,8 @@ public class GatewayServiceImpl extends GatewayServiceGrpc.GatewayServiceImplBas
             attributeMetadataProvider,
             entityIdColumnsConfigs,
             scopeFilterConfigs,
-            logConfig);
+            logConfig,
+            queryExecutor);
     this.exploreService =
         new ExploreService(
             queryServiceClient,

@@ -26,6 +26,7 @@ import java.util.Arrays;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
+import java.util.concurrent.ExecutorService;
 import org.hypertrace.core.attribute.service.v1.AttributeKind;
 import org.hypertrace.core.attribute.service.v1.AttributeMetadata;
 import org.hypertrace.core.attribute.service.v1.AttributeScope;
@@ -48,6 +49,8 @@ import org.hypertrace.gateway.service.common.RequestContext;
 import org.hypertrace.gateway.service.common.config.ScopeFilterConfigs;
 import org.hypertrace.gateway.service.entity.config.EntityIdColumnsConfigs;
 import org.hypertrace.gateway.service.entity.config.LogConfig;
+import org.hypertrace.gateway.service.executor.QueryExecutorConfig;
+import org.hypertrace.gateway.service.executor.QueryExecutorServiceFactory;
 import org.hypertrace.gateway.service.v1.common.Expression;
 import org.hypertrace.gateway.service.v1.common.FunctionType;
 import org.hypertrace.gateway.service.v1.common.LiteralConstant;
@@ -57,6 +60,7 @@ import org.hypertrace.gateway.service.v1.common.TimeAggregation;
 import org.hypertrace.gateway.service.v1.entity.EntitiesRequest;
 import org.hypertrace.gateway.service.v1.entity.EntitiesResponse;
 import org.hypertrace.gateway.service.v1.entity.Entity;
+import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -69,6 +73,7 @@ public class EntityServiceTest extends AbstractGatewayServiceTest {
   private AttributeMetadataProvider attributeMetadataProvider;
   private EntityIdColumnsConfigs entityIdColumnsConfigs;
   private LogConfig logConfig;
+  private ExecutorService queryExecutor;
 
   @BeforeEach
   public void setup() {
@@ -80,6 +85,14 @@ public class EntityServiceTest extends AbstractGatewayServiceTest {
     mock(attributeMetadataProvider);
     logConfig = Mockito.mock(LogConfig.class);
     when(logConfig.getQueryThresholdInMillis()).thenReturn(1500L);
+    queryExecutor =
+        QueryExecutorServiceFactory.buildExecutorService(
+            QueryExecutorConfig.from(this.getConfig()));
+  }
+
+  @AfterEach
+  public void clear() {
+    queryExecutor.shutdown();
   }
 
   private void mockEntityIdColumnConfigs() {
@@ -278,7 +291,8 @@ public class EntityServiceTest extends AbstractGatewayServiceTest {
             attributeMetadataProvider,
             entityIdColumnsConfigs,
             scopeFilterConfigs,
-            logConfig);
+            logConfig,
+            queryExecutor);
     EntitiesResponse response = entityService.getEntities(TENANT_ID, entitiesRequest, Map.of());
     Assertions.assertNotNull(response);
     Assertions.assertEquals(2, response.getTotal());
@@ -312,7 +326,8 @@ public class EntityServiceTest extends AbstractGatewayServiceTest {
             attributeMetadataProvider,
             entityIdColumnsConfigs,
             scopeFilterConfigs,
-            logConfig);
+            logConfig,
+            queryExecutor);
     EntitiesRequest entitiesRequest =
         EntitiesRequest.newBuilder()
             .setEntityType("API")
