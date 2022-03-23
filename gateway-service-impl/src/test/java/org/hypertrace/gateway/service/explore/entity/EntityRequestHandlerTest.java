@@ -129,6 +129,54 @@ public class EntityRequestHandlerTest {
         exploreResponse.getRow(1).getColumnsMap());
   }
 
+  @Test
+  void testHandleRequest_emptyEntityIds() {
+    Expression aggregation = createFunctionExpression("API.external");
+    ExploreRequest exploreRequest =
+        ExploreRequest.newBuilder()
+            .setContext("API")
+            .setStartTimeMillis(123L)
+            .setEndTimeMillis(234L)
+            .setFilter(createEqFilter("API.name", "api1"))
+            .addSelection(aggregation)
+            .addGroupBy(createColumnExpression("API.type"))
+            .build();
+    ExploreRequestContext exploreRequestContext =
+        new ExploreRequestContext("customer1", exploreRequest, Collections.emptyMap());
+    exploreRequestContext.mapAliasToFunctionExpression(
+        "COUNT_API.external_[]", aggregation.getFunction());
+
+    when(attributeMetadataProvider.getAttributeMetadata(exploreRequestContext, "API", "startTime"))
+        .thenReturn(Optional.of(AttributeMetadata.newBuilder().setKey("API.startTime").build()));
+    when(attributeMetadataProvider.getAttributesMetadata(exploreRequestContext, "API"))
+        .thenReturn(
+            Map.of(
+                "API.type",
+                AttributeMetadata.newBuilder()
+                    .setKey("API.type")
+                    .setValueKind(AttributeKind.TYPE_STRING)
+                    .build(),
+                "API.external",
+                AttributeMetadata.newBuilder()
+                    .setKey("API.external")
+                    .setValueKind(AttributeKind.TYPE_STRING)
+                    .build()));
+
+    EntitiesRequest entitiesRequest =
+        EntitiesRequest.newBuilder()
+            .setEntityType("API")
+            .setStartTimeMillis(123L)
+            .setEndTimeMillis(234L)
+            .build();
+    when(queryServiceEntityFetcher.getEntities(
+        any(EntitiesRequestContext.class), eq(entitiesRequest)))
+        .thenReturn(new EntityFetcherResponse());
+
+    ExploreResponse exploreResponse =
+        entityRequestHandler.handleRequest(exploreRequestContext, exploreRequest).build();
+    assertEquals(0, exploreResponse.getRowCount());
+  }
+
   private EntityFetcherResponse mockEntityFetcherResponse() {
     return new EntityFetcherResponse(
         Map.of(

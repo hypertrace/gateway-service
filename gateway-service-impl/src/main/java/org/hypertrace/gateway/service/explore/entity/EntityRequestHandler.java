@@ -95,10 +95,15 @@ public class EntityRequestHandler extends RequestHandler {
     }
 
     Set<String> entityIds = getEntityIds(requestContext, exploreRequest);
+    ExploreResponse.Builder builder = ExploreResponse.newBuilder();
+
+    if (entityIds.isEmpty()) {
+      return builder;
+    }
+
     Iterator<ResultSetChunk> resultSetChunkIterator =
         entityServiceEntityFetcher.getResults(requestContext, exploreRequest, entityIds);
 
-    ExploreResponse.Builder builder = ExploreResponse.newBuilder();
 
     while (resultSetChunkIterator.hasNext()) {
       org.hypertrace.entity.query.service.v1.ResultSetChunk chunk = resultSetChunkIterator.next();
