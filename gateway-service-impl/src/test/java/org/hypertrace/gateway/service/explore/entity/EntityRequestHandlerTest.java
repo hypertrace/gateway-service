@@ -169,7 +169,7 @@ public class EntityRequestHandlerTest {
             .setEndTimeMillis(234L)
             .build();
     when(queryServiceEntityFetcher.getEntities(
-        any(EntitiesRequestContext.class), eq(entitiesRequest)))
+            any(EntitiesRequestContext.class), eq(entitiesRequest)))
         .thenReturn(new EntityFetcherResponse());
 
     ExploreResponse exploreResponse =

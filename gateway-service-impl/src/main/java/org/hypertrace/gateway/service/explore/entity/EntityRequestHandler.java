@@ -104,7 +104,6 @@ public class EntityRequestHandler extends RequestHandler {
     Iterator<ResultSetChunk> resultSetChunkIterator =
         entityServiceEntityFetcher.getResults(requestContext, exploreRequest, entityIds);
 
-
     while (resultSetChunkIterator.hasNext()) {
       org.hypertrace.entity.query.service.v1.ResultSetChunk chunk = resultSetChunkIterator.next();
       getLogger().debug("Received chunk: {}", chunk);
