@@ -26,7 +26,7 @@ public class ExploreRequestContext extends QueryRequestContext {
     this.orderByExpressions = exploreRequest.getOrderByList();
   }
 
-  ExploreRequest getExploreRequest() {
+  public ExploreRequest getExploreRequest() {
     return this.exploreRequest;
   }
 

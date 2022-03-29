@@ -6,9 +6,7 @@ import java.time.Duration;
 import java.time.temporal.ChronoUnit;
 import java.util.ArrayList;
 import java.util.List;
-import java.util.Map;
 import java.util.Optional;
-import org.hypertrace.core.attribute.service.v1.AttributeMetadata;
 import org.hypertrace.core.query.service.api.ColumnMetadata;
 import org.hypertrace.core.query.service.api.QueryRequest;
 import org.hypertrace.core.query.service.api.ResultSetMetadata;
@@ -179,7 +177,7 @@ public class TimeAggregationsRequestHandler extends RequestHandler {
       ResultSetMetadata resultSetMetadata,
       ExploreResponse.Builder builder,
       ExploreRequestContext requestContext,
-      Map<String, AttributeMetadata> resultKeyToAttributeMetadataMap) {
+      AttributeMetadataProvider attributeMetadataProvider) {
     var rowBuilder = org.hypertrace.gateway.service.v1.common.Row.newBuilder();
 
     // First column is the time column. (Also the column name is "dateTimeConvert", Pinot's function
@@ -200,7 +198,7 @@ public class TimeAggregationsRequestHandler extends RequestHandler {
           resultSetMetadata.getColumnMetadata(i),
           rowBuilder,
           requestContext,
-          resultKeyToAttributeMetadataMap);
+          attributeMetadataProvider);
     }
     builder.addRow(rowBuilder);
   }
@@ -211,7 +209,7 @@ public class TimeAggregationsRequestHandler extends RequestHandler {
       ColumnMetadata metadata,
       org.hypertrace.gateway.service.v1.common.Row.Builder rowBuilder,
       ExploreRequestContext requestContext,
-      Map<String, AttributeMetadata> resultKeyToAttributeMetadataMap) {
+      AttributeMetadataProvider attributeMetadataProvider) {
     TimeAggregation timeAggregation =
         requestContext.getTimeAggregationByAlias(metadata.getColumnName());
     if (timeAggregation != null) { // Time aggregation with Function expression value
@@ -219,11 +217,12 @@ public class TimeAggregationsRequestHandler extends RequestHandler {
           queryServiceValue,
           metadata,
           rowBuilder,
-          resultKeyToAttributeMetadataMap,
+          requestContext,
+          attributeMetadataProvider,
           timeAggregation.getAggregation().getFunction());
     } else { // Simple columnId Expression value eg. groupBy columns or column selections
       handleQueryServiceResponseSingleColumn(
-          queryServiceValue, metadata, rowBuilder, resultKeyToAttributeMetadataMap, null);
+          queryServiceValue, metadata, rowBuilder, requestContext, attributeMetadataProvider, null);
     }
   }
 
