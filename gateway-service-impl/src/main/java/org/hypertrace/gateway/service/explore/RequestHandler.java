@@ -99,6 +99,7 @@ public class RequestHandler implements RequestHandlerWithSorting {
     // 3. Add GroupBy
     addGroupByExpressions(builder, request);
 
+    // TODO: Push group by down to QS
     // 4. If there's no Group By, Set Limit, Offset and Order By.
     // Otherwise, specify a large limit and track actual limit, offset and order by expression list
     // so we can compute
