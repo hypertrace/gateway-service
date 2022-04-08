@@ -63,12 +63,7 @@ public class TimeAggregationsRequestHandler extends RequestHandler {
     addGroupByExpressions(builder, request);
 
     // 5. Set Limit.
-    // Scale the limit size based on the limit so that we have a better chance of capturing all the
-    // results within the
-    // time range. This is especially important when the actual Group By list is not empty.
-    builder.setLimit(
-        Math.min(request.getLimit(), 1000)
-            * QueryServiceClient.DEFAULT_QUERY_SERVICE_GROUP_BY_LIMIT);
+    builder.setLimit(request.getLimit());
     requestContext.setOrderByExpressions(getRequestOrderByExpressions(request));
 
     return builder.build();

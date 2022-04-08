@@ -706,6 +706,7 @@ public class QueryServiceEntityFetcherTests {
                       startTime,
                       endTime,
                       createStringFilter(API_DISCOVERY_STATE_ATTR, Operator.EQ, "DISCOVERED")))
+              .setLimit(1)
               .build();
 
       List<ResultSetChunk> resultSetChunks =
