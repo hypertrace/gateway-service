@@ -472,7 +472,7 @@
           }
         }
       ],
-      "limit": 60000
+      "limit": 6
     },
     "response": {
       "isLastChunk": true,

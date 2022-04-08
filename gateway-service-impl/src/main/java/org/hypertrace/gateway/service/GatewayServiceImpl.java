@@ -9,6 +9,7 @@ import io.grpc.ManagedChannelBuilder;
 import io.grpc.stub.StreamObserver;
 import io.micrometer.core.instrument.Counter;
 import java.util.Optional;
+import java.util.concurrent.ExecutorService;
 import org.apache.commons.lang3.StringUtils;
 import org.hypertrace.core.attribute.service.client.AttributeServiceClient;
 import org.hypertrace.core.attribute.service.client.config.AttributeServiceClientConfig;
@@ -27,6 +28,8 @@ import org.hypertrace.gateway.service.common.config.ScopeFilterConfigs;
 import org.hypertrace.gateway.service.entity.EntityService;
 import org.hypertrace.gateway.service.entity.config.EntityIdColumnsConfigs;
 import org.hypertrace.gateway.service.entity.config.LogConfig;
+import org.hypertrace.gateway.service.executor.QueryExecutorConfig;
+import org.hypertrace.gateway.service.executor.QueryExecutorServiceFactory;
 import org.hypertrace.gateway.service.explore.ExploreService;
 import org.hypertrace.gateway.service.logevent.LogEventsService;
 import org.hypertrace.gateway.service.span.SpanService;
@@ -87,6 +90,8 @@ public class GatewayServiceImpl extends GatewayServiceGrpc.GatewayServiceImplBas
     QueryServiceClient queryServiceClient =
         new QueryServiceClient(new QueryServiceConfig(qsConfig));
     int qsRequestTimeout = getRequestTimeoutMillis(qsConfig);
+    ExecutorService queryExecutor =
+        QueryExecutorServiceFactory.buildExecutorService(QueryExecutorConfig.from(appConfig));
 
     EntityServiceClientConfig esConfig = EntityServiceClientConfig.from(appConfig);
     ManagedChannel entityServiceChannel =
@@ -99,9 +104,14 @@ public class GatewayServiceImpl extends GatewayServiceGrpc.GatewayServiceImplBas
     LogConfig logConfig = new LogConfig(appConfig);
     this.traceService =
         new TracesService(
-            queryServiceClient, qsRequestTimeout, attributeMetadataProvider, scopeFilterConfigs);
+            queryServiceClient,
+            qsRequestTimeout,
+            attributeMetadataProvider,
+            scopeFilterConfigs,
+            queryExecutor);
     this.spanService =
-        new SpanService(queryServiceClient, qsRequestTimeout, attributeMetadataProvider);
+        new SpanService(
+            queryServiceClient, qsRequestTimeout, attributeMetadataProvider, queryExecutor);
     this.entityService =
         new EntityService(
             queryServiceClient,
@@ -110,7 +120,8 @@ public class GatewayServiceImpl extends GatewayServiceGrpc.GatewayServiceImplBas
             attributeMetadataProvider,
             entityIdColumnsConfigs,
             scopeFilterConfigs,
-            logConfig);
+            logConfig,
+            queryExecutor);
     this.exploreService =
         new ExploreService(
             queryServiceClient,

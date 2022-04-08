@@ -1,6 +1,7 @@
 package org.hypertrace.gateway.service.explore.entity;
 
 import com.google.common.annotations.VisibleForTesting;
+import com.google.common.collect.Streams;
 import java.util.Iterator;
 import java.util.Map;
 import java.util.Set;
@@ -95,10 +96,14 @@ public class EntityRequestHandler extends RequestHandler {
     }
 
     Set<String> entityIds = getEntityIds(requestContext, exploreRequest);
+    ExploreResponse.Builder builder = ExploreResponse.newBuilder();
+
+    if (entityIds.isEmpty()) {
+      return builder;
+    }
+
     Iterator<ResultSetChunk> resultSetChunkIterator =
         entityServiceEntityFetcher.getResults(requestContext, exploreRequest, entityIds);
-
-    ExploreResponse.Builder builder = ExploreResponse.newBuilder();
 
     while (resultSetChunkIterator.hasNext()) {
       org.hypertrace.entity.query.service.v1.ResultSetChunk chunk = resultSetChunkIterator.next();
@@ -214,6 +219,9 @@ public class EntityRequestHandler extends RequestHandler {
     Map<String, AttributeMetadata> attributeMetadataMap =
         attributeMetadataProvider.getAttributesMetadata(
             requestContext, requestContext.getContext());
+    Map<String, AttributeMetadata> resultKeyToAttributeMetadataMap =
+        this.remapAttributeMetadataByResultName(
+            requestContext.getExploreRequest(), attributeMetadataMap);
     org.hypertrace.gateway.service.v1.common.Value gwValue;
     if (function != null) {
       // Function expression value
@@ -221,16 +229,29 @@ public class EntityRequestHandler extends RequestHandler {
           EntityServiceAndGatewayServiceConverter.convertToGatewayValueForMetricValue(
               MetricAggregationFunctionUtil.getValueTypeForFunctionType(
                   function, attributeMetadataMap),
-              attributeMetadataMap,
+              resultKeyToAttributeMetadataMap,
               metadata,
               value);
     } else {
       // Simple columnId expression value eg. groupBy columns or column selections
       gwValue =
           EntityServiceAndGatewayServiceConverter.convertToGatewayValue(
-              metadata.getColumnName(), value, attributeMetadataMap);
+              metadata.getColumnName(), value, resultKeyToAttributeMetadataMap);
     }
 
     rowBuilder.putColumns(metadata.getColumnName(), gwValue);
+  }
+
+  private Map<String, AttributeMetadata> remapAttributeMetadataByResultName(
+      ExploreRequest request, Map<String, AttributeMetadata> attributeMetadataByIdMap) {
+    return AttributeMetadataUtil.remapAttributeMetadataByResultKey(
+        Streams.concat(
+                request.getSelectionList().stream(),
+                // Add groupBy to Selection list.
+                // The expectation from the Gateway service client is that they do not add the group
+                // by expressions to the selection expressions in the request
+                request.getGroupByList().stream())
+            .collect(Collectors.toUnmodifiableList()),
+        attributeMetadataByIdMap);
   }
 }
