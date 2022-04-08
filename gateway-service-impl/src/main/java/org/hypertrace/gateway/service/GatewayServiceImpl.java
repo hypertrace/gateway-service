@@ -176,7 +176,7 @@ public class GatewayServiceImpl extends GatewayServiceGrpc.GatewayServiceImplBas
       TracesResponse response = traceService.getTracesByFilter(requestContext, request);
       responseObserver.onNext(response);
       responseObserver.onCompleted();
-      gateway-service-impl/src/main/java/org/hypertrace/gateway/service/GatewayServiceImpl.java      serviceResponseSuccessCounter.increment();
+      serviceResponseSuccessCounter.increment();
     } catch (Exception e) {
       LOG.error("Error while handling traces request: {}", request, e);
       serviceResponseErrorCounter.increment();
