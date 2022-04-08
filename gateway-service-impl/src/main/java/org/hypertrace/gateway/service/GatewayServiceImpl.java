@@ -7,9 +7,8 @@ import com.typesafe.config.Config;
 import io.grpc.ManagedChannel;
 import io.grpc.ManagedChannelBuilder;
 import io.grpc.stub.StreamObserver;
-import java.util.Optional;
-
 import io.micrometer.core.instrument.Counter;
+import java.util.Optional;
 import org.apache.commons.lang3.StringUtils;
 import org.hypertrace.core.attribute.service.client.AttributeServiceClient;
 import org.hypertrace.core.attribute.service.client.config.AttributeServiceClientConfig;
@@ -137,11 +136,9 @@ public class GatewayServiceImpl extends GatewayServiceGrpc.GatewayServiceImplBas
 
   private void initMetrics() {
     serviceResponseErrorCounter =
-            PlatformMetricsRegistry.registerCounter(
-                    ERROR_COUNTER_NAME, ImmutableMap.of());
+        PlatformMetricsRegistry.registerCounter(ERROR_COUNTER_NAME, ImmutableMap.of());
     serviceResponseSuccessCounter =
-            PlatformMetricsRegistry.registerCounter(
-                    SUCCESS_COUNTER_NAME, ImmutableMap.of());
+        PlatformMetricsRegistry.registerCounter(SUCCESS_COUNTER_NAME, ImmutableMap.of());
   }
 
   private static int getRequestTimeoutMillis(Config config) {
