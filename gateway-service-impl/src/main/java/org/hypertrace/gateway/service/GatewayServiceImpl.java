@@ -148,10 +148,10 @@ public class GatewayServiceImpl extends GatewayServiceGrpc.GatewayServiceImplBas
   private void initMetrics() {
     serviceResponseErrorCounter =
         PlatformMetricsRegistry.registerCounter(
-            SERVICE_REQUESTS_STATUS_COUNTER, ImmutableMap.of("code", "fail"));
+            SERVICE_REQUESTS_STATUS_COUNTER, ImmutableMap.of("error", "true"));
     serviceResponseSuccessCounter =
         PlatformMetricsRegistry.registerCounter(
-            SERVICE_REQUESTS_STATUS_COUNTER, ImmutableMap.of("code", "success"));
+            SERVICE_REQUESTS_STATUS_COUNTER, ImmutableMap.of("error", "false"));
   }
 
   private static int getRequestTimeoutMillis(Config config) {
