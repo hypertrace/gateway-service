@@ -66,7 +66,8 @@ public class GatewayServiceImpl extends GatewayServiceGrpc.GatewayServiceImplBas
 
   private Counter serviceResponseErrorCounter;
   private Counter serviceResponseSuccessCounter;
-  private static final String SERVICE_REQUESTS_STATUS_COUNTER = "hypertrace.gateway.service.requests.status";
+  private static final String SERVICE_REQUESTS_STATUS_COUNTER =
+      "hypertrace.gateway.service.requests.status";
 
   private final TracesService traceService;
   private final SpanService spanService;
@@ -146,9 +147,11 @@ public class GatewayServiceImpl extends GatewayServiceGrpc.GatewayServiceImplBas
 
   private void initMetrics() {
     serviceResponseErrorCounter =
-        PlatformMetricsRegistry.registerCounter(SERVICE_REQUESTS_STATUS_COUNTER, ImmutableMap.of("code", "fail"));
+        PlatformMetricsRegistry.registerCounter(
+            SERVICE_REQUESTS_STATUS_COUNTER, ImmutableMap.of("code", "fail"));
     serviceResponseSuccessCounter =
-        PlatformMetricsRegistry.registerCounter(SERVICE_REQUESTS_STATUS_COUNTER, ImmutableMap.of("code", "success"));
+        PlatformMetricsRegistry.registerCounter(
+            SERVICE_REQUESTS_STATUS_COUNTER, ImmutableMap.of("code", "success"));
   }
 
   private static int getRequestTimeoutMillis(Config config) {
