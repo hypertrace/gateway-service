@@ -1,12 +1,16 @@
 package org.hypertrace.gateway.service.explore;
 
+import static java.util.function.Predicate.not;
+
 import com.google.common.collect.Streams;
 import com.google.protobuf.InvalidProtocolBufferException;
 import com.google.protobuf.util.JsonFormat;
 import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
+import java.util.Optional;
 import java.util.stream.Collectors;
+import org.hypertrace.core.attribute.service.v1.AttributeKind;
 import org.hypertrace.core.attribute.service.v1.AttributeMetadata;
 import org.hypertrace.core.query.service.api.ColumnMetadata;
 import org.hypertrace.core.query.service.api.Filter;
@@ -23,6 +27,7 @@ import org.hypertrace.gateway.service.common.util.DataCollectionUtil;
 import org.hypertrace.gateway.service.common.util.ExpressionReader;
 import org.hypertrace.gateway.service.common.util.MetricAggregationFunctionUtil;
 import org.hypertrace.gateway.service.common.util.OrderByUtil;
+import org.hypertrace.gateway.service.v1.common.AttributeExpression;
 import org.hypertrace.gateway.service.v1.common.Expression;
 import org.hypertrace.gateway.service.v1.common.FunctionExpression;
 import org.hypertrace.gateway.service.v1.common.OrderByExpression;
@@ -98,6 +103,21 @@ public class RequestHandler implements RequestHandlerWithSorting {
 
     // 3. Add GroupBy
     addGroupByExpressions(builder, request);
+
+    columnSelections.stream()
+        .filter(not(ExpressionReader::isSimpleAttributeSelection))
+        .forEach(
+            expression ->
+                requestContext.mapAliasToMapAttributeExpression(
+                    expression.getAttributeExpression().getAlias(),
+                    expression.getAttributeExpression()));
+    request.getGroupByList().stream()
+        .filter(not(ExpressionReader::isSimpleAttributeSelection))
+        .forEach(
+            expression ->
+                requestContext.mapAliasToMapAttributeExpression(
+                    expression.getAttributeExpression().getAlias(),
+                    expression.getAttributeExpression()));
 
     // 4. If there's no Group By, Set Limit, Offset and Order By.
     // Otherwise, specify a large limit and track actual limit, offset and order by expression list
@@ -255,13 +275,16 @@ public class RequestHandler implements RequestHandlerWithSorting {
       AttributeMetadataProvider attributeMetadataProvider) {
     FunctionExpression function =
         requestContext.getFunctionExpressionByAlias(metadata.getColumnName());
+    AttributeExpression mapAttributeExpression =
+        requestContext.getMapAttributeExpressionByAlias(metadata.getColumnName());
     handleQueryServiceResponseSingleColumn(
         queryServiceValue,
         metadata,
         rowBuilder,
         requestContext,
         attributeMetadataProvider,
-        function);
+        function,
+        mapAttributeExpression);
   }
 
   void handleQueryServiceResponseSingleColumn(
@@ -270,7 +293,8 @@ public class RequestHandler implements RequestHandlerWithSorting {
       org.hypertrace.gateway.service.v1.common.Row.Builder rowBuilder,
       ExploreRequestContext requestContext,
       AttributeMetadataProvider attributeMetadataProvider,
-      FunctionExpression function) {
+      FunctionExpression function,
+      AttributeExpression mapAttributeExpression) {
     Map<String, AttributeMetadata> attributeMetadataMap =
         attributeMetadataProvider.getAttributesMetadata(
             requestContext, requestContext.getContext());
@@ -286,7 +310,16 @@ public class RequestHandler implements RequestHandlerWithSorting {
               resultKeyToAttributeMetadataMap,
               metadata,
               queryServiceValue);
-    } else { // Simple columnId Expression value eg. groupBy columns or column selections
+    } else if (mapAttributeExpression != null) {
+      AttributeKind attributeKind =
+          Optional.ofNullable(attributeMetadataMap.get(mapAttributeExpression.getAttributeId()))
+              .map(AttributeMetadata::getValueKind)
+              .orElse(null);
+      gwValue =
+          QueryAndGatewayDtoConverter.convertToGatewayValueForMapAttributeValue(
+              attributeKind, resultKeyToAttributeMetadataMap, metadata, queryServiceValue);
+    } else {
+      // Simple columnId Expression value eg. groupBy columns or column selections
       gwValue =
           getValueForColumnIdExpression(
               queryServiceValue, metadata, resultKeyToAttributeMetadataMap);

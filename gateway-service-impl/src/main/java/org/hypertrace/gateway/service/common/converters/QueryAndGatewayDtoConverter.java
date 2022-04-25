@@ -570,4 +570,41 @@ public class QueryAndGatewayDtoConverter {
     return QueryAndGatewayDtoConverter.convertQueryValueToGatewayValue(
         queryValue, attributeMetadata);
   }
+
+  public static org.hypertrace.gateway.service.v1.common.Value
+  convertToGatewayValueForMapAttributeValue(
+          AttributeKind attributeKind,
+          Map<String, AttributeMetadata> resultKeyToAttributeMetadataMap,
+          ColumnMetadata metadata,
+          Value queryValue) {
+    String resultKey = metadata.getColumnName();
+    // if there's no override from the map, then this is regular attribute, then use the attribute
+    // map to convert the value
+    AttributeMetadata attributeMetadata;
+    if (attributeKind == null) {
+      attributeMetadata = resultKeyToAttributeMetadataMap.get(resultKey);
+    } else {
+      switch (attributeKind) {
+        case TYPE_STRING_MAP:
+          attributeMetadata =
+              AttributeMetadata.newBuilder()
+                  .setId(metadata.getColumnName())
+                  .setType(AttributeType.ATTRIBUTE)
+                  .setValueKind(AttributeKind.TYPE_STRING)
+                  .build();
+          break;
+        default:
+          LOG.error(
+              "Unrecognized map attribute kind {} for column metadata {}", attributeKind, metadata);
+          attributeMetadata = resultKeyToAttributeMetadataMap.get(resultKey);
+      }
+    }
+    LOG.debug(
+        "Converting {} from type: {} to type: {}",
+        resultKey,
+        metadata.getValueType().name(),
+        attributeMetadata.getValueKind().name());
+    return QueryAndGatewayDtoConverter.convertQueryValueToGatewayValue(
+        queryValue, attributeMetadata);
+  }
 }

@@ -106,16 +106,6 @@ public class AttributeMetadataUtil {
         .getId();
   }
 
-  private static AttributeMetadata getAttributeMetadata(
-      AttributeMetadataProvider attributeMetadataProvider,
-      RequestContext requestContext,
-      String scope,
-      String key) {
-    return attributeMetadataProvider
-        .getAttributeMetadata(requestContext, scope, key)
-        .orElseThrow(() -> new UnknownScopeAndKeyForAttributeException(scope, key));
-  }
-
   public static Map<String, AttributeMetadata> remapAttributeMetadataByResultKey(
       Collection<Expression> selections, Map<String, AttributeMetadata> attributeMetadataByIdMap) {
     return selections.stream()

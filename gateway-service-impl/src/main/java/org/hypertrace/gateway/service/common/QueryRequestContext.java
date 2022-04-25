@@ -3,12 +3,14 @@ package org.hypertrace.gateway.service.common;
 import java.util.HashMap;
 import java.util.Map;
 import java.util.Objects;
+import org.hypertrace.gateway.service.v1.common.AttributeExpression;
 import org.hypertrace.gateway.service.v1.common.FunctionExpression;
 import org.hypertrace.gateway.service.v1.common.TimeAggregation;
 
 // Hold some of request fields and mappings needed when parsing the query service response
 public class QueryRequestContext extends RequestContext {
   private final Map<String, FunctionExpression> aliasToFunctionExpressionMap = new HashMap<>();
+  private final Map<String, AttributeExpression> aliasToMapAttributeExpressionMap = new HashMap<>();
   private final long startTimeMillis;
   private final long endTimeMillis;
   private final Map<String, TimeAggregation> aliasToTimeAggregation = new HashMap<>();
@@ -30,6 +32,15 @@ public class QueryRequestContext extends RequestContext {
 
   public FunctionExpression getFunctionExpressionByAlias(String alias) {
     return aliasToFunctionExpressionMap.get(alias);
+  }
+
+  public void mapAliasToMapAttributeExpression(
+      String alias, AttributeExpression mapAttributeExpression) {
+    aliasToMapAttributeExpressionMap.put(alias, mapAttributeExpression);
+  }
+
+  public AttributeExpression getMapAttributeExpressionByAlias(String alias) {
+    return aliasToMapAttributeExpressionMap.get(alias);
   }
 
   public long getStartTimeMillis() {

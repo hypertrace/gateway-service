@@ -219,10 +219,17 @@ public class TimeAggregationsRequestHandler extends RequestHandler {
           rowBuilder,
           requestContext,
           attributeMetadataProvider,
-          timeAggregation.getAggregation().getFunction());
+          timeAggregation.getAggregation().getFunction(),
+          null);
     } else { // Simple columnId Expression value eg. groupBy columns or column selections
       handleQueryServiceResponseSingleColumn(
-          queryServiceValue, metadata, rowBuilder, requestContext, attributeMetadataProvider, null);
+          queryServiceValue,
+          metadata,
+          rowBuilder,
+          requestContext,
+          attributeMetadataProvider,
+          null,
+          null);
     }
   }
 
