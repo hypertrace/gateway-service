@@ -4,7 +4,6 @@ import java.util.Iterator;
 import java.util.List;
 import java.util.Set;
 import java.util.stream.Collectors;
-import org.hypertrace.core.query.service.client.QueryServiceClient;
 import org.hypertrace.entity.query.service.client.EntityQueryServiceClient;
 import org.hypertrace.entity.query.service.v1.EntityQueryRequest;
 import org.hypertrace.entity.query.service.v1.Expression;
@@ -25,6 +24,8 @@ import org.hypertrace.gateway.service.v1.common.OrderByExpression;
 import org.hypertrace.gateway.service.v1.explore.ExploreRequest;
 
 public class EntityServiceEntityFetcher {
+  private static final int DEFAULT_ENTITY_SERVICE_GROUP_BY_LIMIT = 10000;
+
   private final AttributeMetadataProvider attributeMetadataProvider;
   private final EntityIdColumnsConfigs entityIdColumnsConfigs;
   private final EntityQueryServiceClient entityQueryServiceClient;
@@ -64,7 +65,7 @@ public class EntityServiceEntityFetcher {
     // expression list, so we can compute these once the we get the results.
     if (requestContext.hasGroupBy()) {
       // Will need to do the ordering, limit and offset ourselves after we get the group by results
-      builder.setLimit(QueryServiceClient.DEFAULT_QUERY_SERVICE_GROUP_BY_LIMIT);
+      builder.setLimit(DEFAULT_ENTITY_SERVICE_GROUP_BY_LIMIT);
       requestContext.setOrderByExpressions(getRequestOrderByExpressions(exploreRequest));
     } else {
       // No Group By
