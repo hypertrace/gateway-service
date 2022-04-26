@@ -572,7 +572,7 @@ public class QueryAndGatewayDtoConverter {
   }
 
   public static org.hypertrace.gateway.service.v1.common.Value
-  convertToGatewayValueForMapAttributeValue(
+      convertToGatewayValueForMapAttributeValue(
           AttributeKind attributeKind,
           Map<String, AttributeMetadata> resultKeyToAttributeMetadataMap,
           ColumnMetadata metadata,
