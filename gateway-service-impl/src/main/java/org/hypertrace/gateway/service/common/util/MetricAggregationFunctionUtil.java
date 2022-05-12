@@ -71,20 +71,35 @@ public class MetricAggregationFunctionUtil {
         return AttributeKind.TYPE_INT64;
       case MIN:
       case MAX:
+        {
+          AttributeKind attributeKind = attributeMetadata.getValueKind();
+          // Min/Max/Sum function only applicable to numerical data
+          Preconditions.checkArgument(
+              AttributeKind.TYPE_DOUBLE.equals(attributeKind)
+                  || AttributeKind.TYPE_INT64.equals(attributeKind)
+                  || AttributeKind.TYPE_TIMESTAMP.equals(attributeKind),
+              "Incompatible data type for this function. Function : %s,"
+                  + " Attribute Kind: %s. Attribute ID : %s",
+              functionType.name(),
+              attributeKind.name(),
+              attributeMetadata.getId());
+          return attributeKind;
+        }
       case SUM:
-        AttributeKind attributeKind = attributeMetadata.getValueKind();
-        // Min/Max/Sum function only applicable to numerical data
-        Preconditions.checkArgument(
-            AttributeKind.TYPE_DOUBLE.equals(attributeKind)
-                || AttributeKind.TYPE_INT64.equals(attributeKind)
-                || AttributeKind.TYPE_TIMESTAMP.equals(attributeKind),
-            "Incompatible data type for this function. Function : %s,"
-                + " Attribute Kind: %s. Attribute ID : %s",
-            functionType.name(),
-            attributeKind.name(),
-            attributeMetadata.getId());
+        {
+          AttributeKind attributeKind = attributeMetadata.getValueKind();
+          // Min/Max/Sum function only applicable to numerical data
+          Preconditions.checkArgument(
+              AttributeKind.TYPE_DOUBLE.equals(attributeKind)
+                  || AttributeKind.TYPE_INT64.equals(attributeKind),
+              "Incompatible data type for this function. Function : %s,"
+                  + " Attribute Kind: %s. Attribute ID : %s",
+              functionType.name(),
+              attributeKind.name(),
+              attributeMetadata.getId());
 
-        return attributeKind;
+          return attributeKind;
+        }
       case AVGRATE:
       case AVG:
       case PERCENTILE:
