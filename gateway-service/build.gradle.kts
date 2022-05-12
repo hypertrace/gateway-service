@@ -15,6 +15,10 @@ dependencies {
 
   runtimeOnly("io.grpc:grpc-netty:1.44.0")
   runtimeOnly("org.apache.logging.log4j:log4j-slf4j-impl:2.17.1")
+
+  constraints {
+    runtimeOnly("io.netty:netty-common:4.1.77.Final")
+  }
 }
 
 application {
