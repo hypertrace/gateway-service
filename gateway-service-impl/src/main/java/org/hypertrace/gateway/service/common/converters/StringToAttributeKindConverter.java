@@ -70,7 +70,7 @@ public class StringToAttributeKindConverter extends ToAttributeKindConverter<Str
 
       case TYPE_TIMESTAMP:
         valueBuilder.setValueType(ValueType.TIMESTAMP);
-        valueBuilder.setTimestamp(Long.parseLong(value));
+        valueBuilder.setTimestamp(Double.valueOf(value).longValue());
         return valueBuilder.build();
 
       case TYPE_STRING_MAP:
