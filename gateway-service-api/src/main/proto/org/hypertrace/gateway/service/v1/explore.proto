@@ -10,8 +10,8 @@ import "org/hypertrace/gateway/service/v1/gateway_query.proto";
 message ExploreRequest {
   // The context of this request eg. APIs, API Traces etc.
   string context = 1;
-  sfixed64 start_time_millis = 2;
-  sfixed64 end_time_millis = 3;
+  optional sfixed64 start_time_millis = 2;
+  optional sfixed64 end_time_millis = 3;
 
   // Filters for the WHERE clause
   org.hypertrace.gateway.service.v1.common.Filter filter = 4;

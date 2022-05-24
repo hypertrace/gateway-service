@@ -158,6 +158,6 @@ public class ExploreService {
   }
 
   private boolean hasTimeRange(ExploreRequest request) {
-    return request.getStartTimeMillis() != 0L && request.getEndTimeMillis() != 0L;
+    return request.hasStartTimeMillis() && request.hasEndTimeMillis();
   }
 }
