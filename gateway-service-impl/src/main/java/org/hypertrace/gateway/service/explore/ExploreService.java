@@ -24,6 +24,8 @@ import org.hypertrace.gateway.service.v1.explore.ExploreRequest;
 import org.hypertrace.gateway.service.v1.explore.ExploreResponse;
 
 public class ExploreService {
+  private static final String NO_TIME_RANGE_SPECIFIED_ERROR_MESSAGE = "Source has to set to EDS if "
+      + "no time range specified";
 
   private final AttributeMetadataProvider attributeMetadataProvider;
   private final ExploreRequestValidator exploreRequestValidator = new ExploreRequestValidator();
@@ -129,8 +131,11 @@ public class ExploreService {
               request.getGroupByList());
       Optional<String> source =
           ExpressionContext.getSingleSourceForAllAttributes(expressionContext);
-      if ((source.isPresent() && EDS.toString().equals(source.get())) || !timeRangeSet(request)) {
+      if ((source.isPresent() && EDS.toString().equals(source.get())) || !hasTimeRange(request)) {
         return entityRequestHandler;
+      }
+      if ((source.isPresent() && !EDS.toString().equals(source.get())) && !hasTimeRange(request)) {
+        throw new IllegalArgumentException(NO_TIME_RANGE_SPECIFIED_ERROR_MESSAGE);
       }
     }
 
@@ -152,7 +157,7 @@ public class ExploreService {
     return !request.getTimeAggregationList().isEmpty() && !request.getGroupByList().isEmpty();
   }
 
-  private boolean timeRangeSet(ExploreRequest request) {
+  private boolean hasTimeRange(ExploreRequest request) {
     return request.getStartTimeMillis() != 0L && request.getEndTimeMillis() != 0L;
   }
 }
