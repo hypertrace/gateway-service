@@ -24,8 +24,8 @@ import org.hypertrace.gateway.service.v1.explore.ExploreRequest;
 import org.hypertrace.gateway.service.v1.explore.ExploreResponse;
 
 public class ExploreService {
-  private static final String NO_TIME_RANGE_SPECIFIED_ERROR_MESSAGE = "Source has to set to EDS if "
-      + "no time range specified";
+  private static final String NO_TIME_RANGE_SPECIFIED_ERROR_MESSAGE =
+      "Source has to set to EDS if " + "no time range specified";
 
   private final AttributeMetadataProvider attributeMetadataProvider;
   private final ExploreRequestValidator exploreRequestValidator = new ExploreRequestValidator();
