@@ -129,7 +129,7 @@ public class ExploreService {
               request.getGroupByList());
       Optional<String> source =
           ExpressionContext.getSingleSourceForAllAttributes(expressionContext);
-      if (source.isPresent() && EDS.toString().equals(source.get())) {
+      if ((source.isPresent() && EDS.toString().equals(source.get())) || !timeRangeSet(request)) {
         return entityRequestHandler;
       }
     }
@@ -140,6 +140,7 @@ public class ExploreService {
     if (hasTimeAggregations(request)) {
       return timeAggregationsRequestHandler;
     }
+
     return normalRequestHandler;
   }
 
@@ -149,5 +150,9 @@ public class ExploreService {
 
   private boolean hasTimeAggregationsAndGroupBy(ExploreRequest request) {
     return !request.getTimeAggregationList().isEmpty() && !request.getGroupByList().isEmpty();
+  }
+
+  private boolean timeRangeSet(ExploreRequest request) {
+    return request.getStartTimeMillis() != 0L && request.getEndTimeMillis() != 0;
   }
 }
