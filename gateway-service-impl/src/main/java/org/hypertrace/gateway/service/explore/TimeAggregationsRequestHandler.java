@@ -50,7 +50,9 @@ public class TimeAggregationsRequestHandler extends RequestHandler {
     QueryRequest.Builder builder = QueryRequest.newBuilder();
 
     // 1. Align the startTime and endTime with period boundaries if there are TimeAggregations
-    request = createPeriodBoundaryAlignedExploreRequest(request);
+    if (!request.getDisableTimeIntervalAlignment()) {
+      request = createPeriodBoundaryAlignedExploreRequest(request);
+    }
 
     // 2. Add filter
     builder.setFilter(

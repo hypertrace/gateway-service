@@ -32,6 +32,7 @@ message ExploreRequest {
   int32 offset = 21;
 
   string space_id = 22;
+  bool disable_time_interval_alignment = 23; // false by default for backward compatibility
 }
 
 message ExploreResponse {
