@@ -283,6 +283,8 @@ public class QueryAndGatewayDtoConverter {
         return Operator.CONTAINS_KEY;
       case CONTAINS_KEYVALUE:
         return Operator.CONTAINS_KEYVALUE;
+      case CONTAINS_KEY_LIKE:
+        return Operator.CONTAINS_KEY_LIKE;
     }
     throw new IllegalArgumentException("Unsupported operator " + operator.name());
   }
