@@ -64,6 +64,7 @@ public class EntityService {
       new BulkUpdateEntitiesRequestValidator();
   private final AttributeMetadataProvider metadataProvider;
   private final EntityIdColumnsConfigs entityIdColumnsConfigs;
+  private ExecutorService queryExecutor;
   private final EntityInteractionsFetcher interactionsFetcher;
   private final RequestPreProcessor requestPreProcessor;
   private final ResponsePostProcessor responsePostProcessor;
@@ -84,6 +85,7 @@ public class EntityService {
       ExecutorService queryExecutor) {
     this.metadataProvider = metadataProvider;
     this.entityIdColumnsConfigs = entityIdColumnsConfigs;
+    this.queryExecutor = queryExecutor;
     this.interactionsFetcher =
         new EntityInteractionsFetcher(qsClient, qsRequestTimeout, metadataProvider, queryExecutor);
     this.requestPreProcessor = new RequestPreProcessor(metadataProvider, scopeFilterConfigs);
@@ -167,7 +169,8 @@ public class EntityService {
      */
     EntityResponse response =
         executionTree.acceptVisitor(
-            new ExecutionVisitor(executionContext, EntityQueryHandlerRegistry.get()));
+            new ExecutionVisitor(
+                executionContext, EntityQueryHandlerRegistry.get(), this.queryExecutor));
 
     EntityFetcherResponse entityFetcherResponse = response.getEntityFetcherResponse();
 

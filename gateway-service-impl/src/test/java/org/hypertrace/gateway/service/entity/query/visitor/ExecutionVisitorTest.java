@@ -27,6 +27,7 @@ import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
+import java.util.concurrent.Executors;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
 import org.hypertrace.core.attribute.service.v1.AttributeScope;
@@ -133,7 +134,9 @@ public class ExecutionVisitorTest {
         .thenReturn(queryServiceEntityFetcher);
     when(entityQueryHandlerRegistry.getEntityFetcher(EDS_SOURCE))
         .thenReturn(entityDataServiceEntityFetcher);
-    executionVisitor = new ExecutionVisitor(executionContext, entityQueryHandlerRegistry);
+    executionVisitor =
+        new ExecutionVisitor(
+            executionContext, entityQueryHandlerRegistry, Executors.newSingleThreadExecutor());
   }
 
   @Test
@@ -756,7 +759,9 @@ public class ExecutionVisitorTest {
   @Test
   public void test_visitSelectionNode_differentSource_callSeparatedCalls() {
     ExecutionVisitor executionVisitor =
-        spy(new ExecutionVisitor(executionContext, entityQueryHandlerRegistry));
+        spy(
+            new ExecutionVisitor(
+                executionContext, entityQueryHandlerRegistry, Executors.newSingleThreadExecutor()));
     when(executionContext.getTimestampAttributeId()).thenReturn("API.startTime");
     SelectionNode selectionNode =
         new SelectionNode.Builder(new NoOpNode())
@@ -925,7 +930,9 @@ public class ExecutionVisitorTest {
             .setFilter(generateEQFilter(API_DISCOVERY_STATE, "DISCOVERED"))
             .build();
     ExecutionVisitor executionVisitor =
-        spy(new ExecutionVisitor(executionContext, entityQueryHandlerRegistry));
+        spy(
+            new ExecutionVisitor(
+                executionContext, entityQueryHandlerRegistry, Executors.newSingleThreadExecutor()));
     when(executionContext.getEntitiesRequest()).thenReturn(entitiesRequest);
 
     // Selection node with NoOp child, to short-circuit the call to first service.
