@@ -69,13 +69,13 @@ spec:
             httpGet:
               path: /health
               port: {{ .Values.containerAdminPort }}
-            startupProbe:
-              periodSeconds: {{ int .Values.startupProbe.periodSeconds }}
-              failureThreshold: {{ int .Values.startupProbe.failureThreshold }}
-              timeoutSeconds: {{ int .Values.startupProbe.timeoutSeconds }}
-              httpGet:
-                path: /health
-                port: {{ .Values.containerAdminPort }}
+          startupProbe:
+            periodSeconds: {{ int .Values.startupProbe.periodSeconds }}
+            failureThreshold: {{ int .Values.startupProbe.failureThreshold }}
+            timeoutSeconds: {{ int .Values.startupProbe.timeoutSeconds }}
+            httpGet:
+              path: /health
+              port: {{ .Values.containerAdminPort }}
           resources:
             {{- toYaml .Values.resources | nindent 12 }}
       volumes:
