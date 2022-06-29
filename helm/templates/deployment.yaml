@@ -51,7 +51,7 @@ spec:
               value: "file:///app/resources/configs"
             - name: LOG4J_CONFIGURATION_FILE
               value: "/app/log/log4j2.properties"
-            - name: JAVA_TOOL_OPTIONS
+            - name: JAVA_OPTS
               value: {{ .Values.javaOpts | quote }}
           {{- with .Values.env }}
             {{- toYaml . | nindent 12}}
@@ -63,16 +63,19 @@ spec:
               mountPath: /app/resources/configs/gateway-service/application.conf
               subPath: application.conf
           livenessProbe:
-            initialDelaySeconds: {{ int .Values.livenessProbe.initialDelaySeconds }}
             periodSeconds: {{ int .Values.livenessProbe.periodSeconds }}
-            tcpSocket:
-              port: {{ .Values.containerPortName }}
-          readinessProbe:
-            initialDelaySeconds: {{ int .Values.readinessProbe.initialDelaySeconds }}
-            periodSeconds: {{ int .Values.readinessProbe.periodSeconds }}
+            failureThreshold: {{ int .Values.livenessProbe.failureThreshold }}
+            timeoutSeconds: {{ int .Values.livenessProbe.timeoutSeconds }}
             httpGet:
               path: /health
-              port: admin-port
+              port: {{ .Values.containerAdminPort }}
+          startupProbe:
+            periodSeconds: {{ int .Values.startupProbe.periodSeconds }}
+            failureThreshold: {{ int .Values.startupProbe.failureThreshold }}
+            timeoutSeconds: {{ int .Values.startupProbe.timeoutSeconds }}
+            httpGet:
+              path: /health
+              port: {{ .Values.containerAdminPort }}
           resources:
             {{- toYaml .Values.resources | nindent 12 }}
       volumes:
