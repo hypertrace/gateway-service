@@ -15,10 +15,10 @@ import java.util.Optional;
 import org.hypertrace.core.attribute.service.v1.AttributeKind;
 import org.hypertrace.core.attribute.service.v1.AttributeMetadata;
 import org.hypertrace.core.attribute.service.v1.AttributeType;
-import org.hypertrace.core.query.service.client.QueryServiceClient;
 import org.hypertrace.gateway.service.AbstractGatewayServiceTest;
 import org.hypertrace.gateway.service.common.AttributeMetadataProvider;
 import org.hypertrace.gateway.service.common.RequestContext;
+import org.hypertrace.gateway.service.common.util.QueryServiceClient;
 import org.hypertrace.gateway.service.v1.common.ColumnIdentifier;
 import org.hypertrace.gateway.service.v1.common.Expression;
 import org.hypertrace.gateway.service.v1.common.Filter;
@@ -132,7 +132,7 @@ public class LogEventsServiceTest extends AbstractGatewayServiceTest {
             .build();
 
     LogEventsService logEventsService =
-        new LogEventsService(queryServiceClient, 60_000, attributeMetadataProvider);
+        new LogEventsService(queryServiceClient, attributeMetadataProvider);
 
     String logAttributeString =
         new ObjectMapper()
@@ -141,7 +141,7 @@ public class LogEventsServiceTest extends AbstractGatewayServiceTest {
                     "event", "Acquired lock with 0 transaction waiting",
                     "network", "tcp",
                     "message", "Slow transaction"));
-    when(queryServiceClient.executeQuery(any(), any(), Mockito.anyInt()))
+    when(queryServiceClient.executeQuery(any(), any()))
         .thenReturn(
             List.of(
                     getResultSetChunk(
@@ -159,7 +159,9 @@ public class LogEventsServiceTest extends AbstractGatewayServiceTest {
 
     LogEventsResponse logEventsResponse =
         logEventsService.getLogEventsByFilter(
-            new RequestContext(TENANT_ID, Map.of()), logEventRequest);
+            new RequestContext(
+                org.hypertrace.core.grpcutils.context.RequestContext.forTenantId(TENANT_ID)),
+            logEventRequest);
 
     assertEquals(3, logEventsResponse.getLogEventsCount());
     logEventsResponse

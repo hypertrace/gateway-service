@@ -1,6 +1,7 @@
 package org.hypertrace.gateway.service.common.datafetcher;
 
 import static java.util.Objects.isNull;
+import static org.hypertrace.core.query.service.client.QueryServiceClient.DEFAULT_QUERY_SERVICE_GROUP_BY_LIMIT;
 import static org.hypertrace.gateway.service.common.converters.QueryAndGatewayDtoConverter.convertToQueryExpression;
 import static org.hypertrace.gateway.service.common.converters.QueryRequestUtil.createCountByColumnSelection;
 import static org.hypertrace.gateway.service.common.converters.QueryRequestUtil.createDistinctCountByColumnSelection;
@@ -31,7 +32,6 @@ import org.hypertrace.core.query.service.api.Operator;
 import org.hypertrace.core.query.service.api.QueryRequest;
 import org.hypertrace.core.query.service.api.ResultSetChunk;
 import org.hypertrace.core.query.service.api.Row;
-import org.hypertrace.core.query.service.client.QueryServiceClient;
 import org.hypertrace.gateway.service.common.AttributeMetadataProvider;
 import org.hypertrace.gateway.service.common.QueryRequestContext;
 import org.hypertrace.gateway.service.common.converters.QueryAndGatewayDtoConverter;
@@ -40,6 +40,7 @@ import org.hypertrace.gateway.service.common.util.AttributeMetadataUtil;
 import org.hypertrace.gateway.service.common.util.ExpressionReader;
 import org.hypertrace.gateway.service.common.util.MetricAggregationFunctionUtil;
 import org.hypertrace.gateway.service.common.util.QueryExpressionUtil;
+import org.hypertrace.gateway.service.common.util.QueryServiceClient;
 import org.hypertrace.gateway.service.entity.EntitiesRequestContext;
 import org.hypertrace.gateway.service.entity.EntitiesRequestValidator;
 import org.hypertrace.gateway.service.entity.EntityKey;
@@ -68,17 +69,14 @@ public class QueryServiceEntityFetcher implements IEntityFetcher {
 
   private final EntitiesRequestValidator entitiesRequestValidator = new EntitiesRequestValidator();
   private final QueryServiceClient queryServiceClient;
-  private final int requestTimeout;
   private final AttributeMetadataProvider attributeMetadataProvider;
   private final EntityIdColumnsConfigs entityIdColumnsConfigs;
 
   public QueryServiceEntityFetcher(
       QueryServiceClient queryServiceClient,
-      int qsRequestTimeout,
       AttributeMetadataProvider attributeMetadataProvider,
       EntityIdColumnsConfigs entityIdColumnsConfigs) {
     this.queryServiceClient = queryServiceClient;
-    this.requestTimeout = qsRequestTimeout;
     this.attributeMetadataProvider = attributeMetadataProvider;
     this.entityIdColumnsConfigs = entityIdColumnsConfigs;
   }
@@ -124,7 +122,7 @@ public class QueryServiceEntityFetcher implements IEntityFetcher {
     LOG.debug("Sending Query to Query Service ======== \n {}", queryRequest);
 
     Iterator<ResultSetChunk> resultSetChunkIterator =
-        queryServiceClient.executeQuery(queryRequest, requestContext.getHeaders(), requestTimeout);
+        queryServiceClient.executeQuery(requestContext, queryRequest);
 
     // We want to retain the order as returned from the respective source. Hence using a
     // LinkedHashMap
@@ -198,7 +196,7 @@ public class QueryServiceEntityFetcher implements IEntityFetcher {
 
     // If we cannot apply limit, limit the number of results to a default limit
     if (!canApplyLimit || builder.getGroupByCount() > 1) {
-      builder.setLimit(QueryServiceClient.DEFAULT_QUERY_SERVICE_GROUP_BY_LIMIT);
+      builder.setLimit(DEFAULT_QUERY_SERVICE_GROUP_BY_LIMIT);
     } else {
       builder.setLimit(limit);
     }
@@ -403,7 +401,7 @@ public class QueryServiceEntityFetcher implements IEntityFetcher {
       }
 
       Iterator<ResultSetChunk> resultSetChunkIterator =
-          queryServiceClient.executeQuery(request, requestContext.getHeaders(), requestTimeout);
+          queryServiceClient.executeQuery(requestContext, request);
 
       while (resultSetChunkIterator.hasNext()) {
         ResultSetChunk chunk = resultSetChunkIterator.next();
@@ -548,7 +546,7 @@ public class QueryServiceEntityFetcher implements IEntityFetcher {
     }
 
     Iterator<ResultSetChunk> resultSetChunkIterator =
-        queryServiceClient.executeQuery(queryRequest, requestContext.getHeaders(), requestTimeout);
+        queryServiceClient.executeQuery(requestContext, queryRequest);
 
     while (resultSetChunkIterator.hasNext()) {
       ResultSetChunk chunk = resultSetChunkIterator.next();
@@ -619,7 +617,7 @@ public class QueryServiceEntityFetcher implements IEntityFetcher {
     // We would like to get all entities based on filters so we set the limit to a high value.
     // TODO: Figure out a reasonable computed limit instead of this hardcoded one. Probably
     //  requested limit * expected max number of time series buckets
-    builder.setLimit(QueryServiceClient.DEFAULT_QUERY_SERVICE_GROUP_BY_LIMIT);
+    builder.setLimit(DEFAULT_QUERY_SERVICE_GROUP_BY_LIMIT);
 
     return builder.build();
   }

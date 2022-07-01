@@ -7,10 +7,11 @@ import org.hypertrace.gateway.service.v1.baseline.BaselineTimeAggregation;
 
 public class BaselineRequestContext extends RequestContext {
 
-  private final Map<String, BaselineTimeAggregation> aliasToTimeAggregation = new HashMap();
+  private final Map<String, BaselineTimeAggregation> aliasToTimeAggregation = new HashMap<>();
 
-  public BaselineRequestContext(String tenantId, Map<String, String> headers) {
-    super(tenantId, headers);
+  public BaselineRequestContext(
+      org.hypertrace.core.grpcutils.context.RequestContext grpcRequestContext) {
+    super(grpcRequestContext);
   }
 
   public void mapAliasToTimeAggregation(String alias, BaselineTimeAggregation timeAggregation) {

@@ -1,7 +1,7 @@
 package org.hypertrace.gateway.service.entity;
 
-import java.util.Map;
 import java.util.Objects;
+import org.hypertrace.core.grpcutils.context.RequestContext;
 import org.hypertrace.gateway.service.common.QueryRequestContext;
 
 public class EntitiesRequestContext extends QueryRequestContext {
@@ -9,13 +9,12 @@ public class EntitiesRequestContext extends QueryRequestContext {
   private final String timestampAttributeId;
 
   public EntitiesRequestContext(
-      String tenantId,
+      RequestContext requestContext,
       long startTimeMillis,
       long endTimeMillis,
       String entityType,
-      String timestampAttributeId,
-      Map<String, String> requestHeaders) {
-    super(tenantId, startTimeMillis, endTimeMillis, requestHeaders);
+      String timestampAttributeId) {
+    super(requestContext, startTimeMillis, endTimeMillis);
     this.entityType = entityType;
     this.timestampAttributeId = timestampAttributeId;
   }

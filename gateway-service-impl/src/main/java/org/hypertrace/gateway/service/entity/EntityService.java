@@ -14,7 +14,6 @@ import java.util.concurrent.TimeUnit;
 import org.apache.commons.lang3.StringUtils;
 import org.hypertrace.core.attribute.service.v1.AttributeMetadata;
 import org.hypertrace.core.attribute.service.v1.AttributeSource;
-import org.hypertrace.core.query.service.client.QueryServiceClient;
 import org.hypertrace.core.serviceframework.metrics.PlatformMetricsRegistry;
 import org.hypertrace.entity.query.service.client.EntityQueryServiceClient;
 import org.hypertrace.gateway.service.common.AttributeMetadataProvider;
@@ -29,6 +28,7 @@ import org.hypertrace.gateway.service.common.datafetcher.QueryServiceEntityFetch
 import org.hypertrace.gateway.service.common.transformer.RequestPreProcessor;
 import org.hypertrace.gateway.service.common.transformer.ResponsePostProcessor;
 import org.hypertrace.gateway.service.common.util.AttributeMetadataUtil;
+import org.hypertrace.gateway.service.common.util.QueryServiceClient;
 import org.hypertrace.gateway.service.entity.config.EntityIdColumnsConfigs;
 import org.hypertrace.gateway.service.entity.config.LogConfig;
 import org.hypertrace.gateway.service.entity.query.EntityExecutionContext;
@@ -64,7 +64,7 @@ public class EntityService {
       new BulkUpdateEntitiesRequestValidator();
   private final AttributeMetadataProvider metadataProvider;
   private final EntityIdColumnsConfigs entityIdColumnsConfigs;
-  private ExecutorService queryExecutor;
+  private final ExecutorService queryExecutor;
   private final EntityInteractionsFetcher interactionsFetcher;
   private final RequestPreProcessor requestPreProcessor;
   private final ResponsePostProcessor responsePostProcessor;
@@ -76,7 +76,6 @@ public class EntityService {
 
   public EntityService(
       QueryServiceClient qsClient,
-      int qsRequestTimeout,
       EntityQueryServiceClient edsQueryServiceClient,
       AttributeMetadataProvider metadataProvider,
       EntityIdColumnsConfigs entityIdColumnsConfigs,
@@ -87,25 +86,23 @@ public class EntityService {
     this.entityIdColumnsConfigs = entityIdColumnsConfigs;
     this.queryExecutor = queryExecutor;
     this.interactionsFetcher =
-        new EntityInteractionsFetcher(qsClient, qsRequestTimeout, metadataProvider, queryExecutor);
+        new EntityInteractionsFetcher(qsClient, metadataProvider, queryExecutor);
     this.requestPreProcessor = new RequestPreProcessor(metadataProvider, scopeFilterConfigs);
     this.responsePostProcessor = new ResponsePostProcessor();
     this.edsEntityUpdater = new EdsEntityUpdater(edsQueryServiceClient);
     this.logConfig = logConfig;
 
-    registerEntityFetchers(qsClient, qsRequestTimeout, edsQueryServiceClient);
+    registerEntityFetchers(qsClient, edsQueryServiceClient);
     initMetrics();
   }
 
   private void registerEntityFetchers(
-      QueryServiceClient queryServiceClient,
-      int qsRequestTimeout,
-      EntityQueryServiceClient edsQueryServiceClient) {
+      QueryServiceClient queryServiceClient, EntityQueryServiceClient edsQueryServiceClient) {
     EntityQueryHandlerRegistry registry = EntityQueryHandlerRegistry.get();
     registry.registerEntityFetcher(
         AttributeSource.QS.name(),
         new QueryServiceEntityFetcher(
-            queryServiceClient, qsRequestTimeout, metadataProvider, entityIdColumnsConfigs));
+            queryServiceClient, metadataProvider, entityIdColumnsConfigs));
     registry.registerEntityFetcher(
         AttributeSource.EDS.name(),
         new EntityDataServiceEntityFetcher(
@@ -133,25 +130,22 @@ public class EntityService {
    * </ul>
    */
   public EntitiesResponse getEntities(
-      String tenantId, EntitiesRequest originalRequest, Map<String, String> requestHeaders) {
+      RequestContext requestContext, EntitiesRequest originalRequest) {
     Instant start = Instant.now();
     String timestampAttributeId =
         AttributeMetadataUtil.getTimestampAttributeId(
-            metadataProvider,
-            new RequestContext(tenantId, requestHeaders),
-            originalRequest.getEntityType());
+            metadataProvider, requestContext, originalRequest.getEntityType());
 
     // Set the size for percentiles in order by if it is not set. This is to give UI the time to fix
     // the bug which does not set the size when they have order by in the request.
     originalRequest = OrderByPercentileSizeSetter.setPercentileSize(originalRequest);
     EntitiesRequestContext entitiesRequestContext =
         new EntitiesRequestContext(
-            tenantId,
+            requestContext.getGrpcContext(),
             originalRequest.getStartTimeMillis(),
             originalRequest.getEndTimeMillis(),
             originalRequest.getEntityType(),
-            timestampAttributeId,
-            requestHeaders);
+            timestampAttributeId);
     EntitiesRequest preProcessedRequest =
         requestPreProcessor.process(originalRequest, entitiesRequestContext);
 
@@ -182,10 +176,7 @@ public class EntityService {
     // Add interactions.
     if (!results.isEmpty()) {
       addEntityInteractions(
-          tenantId,
-          preProcessedRequest,
-          entityFetcherResponse.getEntityKeyBuilderMap(),
-          requestHeaders);
+          requestContext, preProcessedRequest, entityFetcherResponse.getEntityKeyBuilderMap());
     }
 
     EntitiesResponse.Builder responseBuilder =
@@ -206,12 +197,10 @@ public class EntityService {
   }
 
   public UpdateEntityResponse updateEntity(
-      String tenantId, UpdateEntityRequest request, Map<String, String> requestHeaders) {
+      RequestContext requestContext, UpdateEntityRequest request) {
     Preconditions.checkArgument(
         StringUtils.isNotBlank(request.getEntityType()),
         "entity_type is mandatory in the request.");
-
-    RequestContext requestContext = new RequestContext(tenantId, requestHeaders);
 
     Map<String, AttributeMetadata> attributeMetadataMap =
         metadataProvider.getAttributesMetadata(requestContext, request.getEntityType());
@@ -219,7 +208,7 @@ public class EntityService {
     updateEntityRequestValidator.validate(request, attributeMetadataMap);
 
     UpdateExecutionContext updateExecutionContext =
-        new UpdateExecutionContext(requestHeaders, attributeMetadataMap);
+        new UpdateExecutionContext(requestContext.getHeaders(), attributeMetadataMap);
 
     // Validations have ensured that only EDS update operation is supported.
     // If in the future we need more sophisticated update across data sources, we'll need
@@ -230,9 +219,7 @@ public class EntityService {
   }
 
   public BulkUpdateEntitiesResponse bulkUpdateEntities(
-      String tenantId, BulkUpdateEntitiesRequest request, Map<String, String> requestHeaders) {
-    RequestContext requestContext = new RequestContext(tenantId, requestHeaders);
-
+      RequestContext requestContext, BulkUpdateEntitiesRequest request) {
     Map<String, AttributeMetadata> attributeMetadataMap =
         metadataProvider.getAttributesMetadata(requestContext, request.getEntityType());
 
@@ -243,22 +230,17 @@ public class EntityService {
     }
 
     UpdateExecutionContext updateExecutionContext =
-        new UpdateExecutionContext(requestHeaders, attributeMetadataMap);
+        new UpdateExecutionContext(requestContext.getHeaders(), attributeMetadataMap);
 
     return edsEntityUpdater.bulkUpdateEntities(request, updateExecutionContext);
   }
 
   private void addEntityInteractions(
-      String tenantId,
-      EntitiesRequest request,
-      Map<EntityKey, Builder> result,
-      Map<String, String> requestHeaders) {
+      RequestContext requestContext, EntitiesRequest request, Map<EntityKey, Builder> result) {
     if (InteractionsRequest.getDefaultInstance().equals(request.getIncomingInteractions())
         && InteractionsRequest.getDefaultInstance().equals(request.getOutgoingInteractions())) {
       return;
     }
-
-    RequestContext requestContext = new RequestContext(tenantId, requestHeaders);
 
     interactionsFetcher.populateEntityInteractions(requestContext, request, result);
   }

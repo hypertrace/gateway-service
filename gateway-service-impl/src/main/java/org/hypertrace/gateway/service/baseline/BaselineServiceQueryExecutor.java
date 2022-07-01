@@ -1,23 +1,20 @@
 package org.hypertrace.gateway.service.baseline;
 
 import java.util.Iterator;
-import java.util.Map;
 import org.hypertrace.core.query.service.api.QueryRequest;
 import org.hypertrace.core.query.service.api.ResultSetChunk;
-import org.hypertrace.core.query.service.client.QueryServiceClient;
+import org.hypertrace.gateway.service.common.RequestContext;
+import org.hypertrace.gateway.service.common.util.QueryServiceClient;
 
 public class BaselineServiceQueryExecutor {
-
-  private final int qsRequestTimeout;
   private final QueryServiceClient queryServiceClient;
 
-  public BaselineServiceQueryExecutor(int qsRequestTimeout, QueryServiceClient queryServiceClient) {
-    this.qsRequestTimeout = qsRequestTimeout;
+  public BaselineServiceQueryExecutor(QueryServiceClient queryServiceClient) {
     this.queryServiceClient = queryServiceClient;
   }
 
   public Iterator<ResultSetChunk> executeQuery(
-      Map<String, String> requestHeaders, QueryRequest aggQueryRequest) {
-    return queryServiceClient.executeQuery(aggQueryRequest, requestHeaders, qsRequestTimeout);
+      RequestContext requestContext, QueryRequest aggQueryRequest) {
+    return queryServiceClient.executeQuery(requestContext, aggQueryRequest);
   }
 }

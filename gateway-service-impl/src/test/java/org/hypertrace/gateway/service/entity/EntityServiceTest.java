@@ -3,6 +3,7 @@ package org.hypertrace.gateway.service.entity;
 import static org.hypertrace.core.query.service.api.Operator.AND;
 import static org.hypertrace.core.query.service.api.Operator.IN;
 import static org.hypertrace.core.query.service.api.Operator.NEQ;
+import static org.hypertrace.core.query.service.client.QueryServiceClient.DEFAULT_QUERY_SERVICE_GROUP_BY_LIMIT;
 import static org.hypertrace.gateway.service.common.QueryServiceRequestAndResponseUtils.createQsAggregationExpression;
 import static org.hypertrace.gateway.service.common.QueryServiceRequestAndResponseUtils.createQsDefaultRequestFilter;
 import static org.hypertrace.gateway.service.common.QueryServiceRequestAndResponseUtils.getResultSetChunk;
@@ -40,13 +41,13 @@ import org.hypertrace.core.query.service.api.ResultSetMetadata;
 import org.hypertrace.core.query.service.api.Row;
 import org.hypertrace.core.query.service.api.Value;
 import org.hypertrace.core.query.service.api.ValueType;
-import org.hypertrace.core.query.service.client.QueryServiceClient;
 import org.hypertrace.entity.query.service.client.EntityQueryServiceClient;
 import org.hypertrace.gateway.service.AbstractGatewayServiceTest;
 import org.hypertrace.gateway.service.common.AttributeMetadataProvider;
 import org.hypertrace.gateway.service.common.QueryServiceRequestAndResponseUtils;
 import org.hypertrace.gateway.service.common.RequestContext;
 import org.hypertrace.gateway.service.common.config.ScopeFilterConfigs;
+import org.hypertrace.gateway.service.common.util.QueryServiceClient;
 import org.hypertrace.gateway.service.entity.config.EntityIdColumnsConfigs;
 import org.hypertrace.gateway.service.entity.config.LogConfig;
 import org.hypertrace.gateway.service.executor.QueryExecutorConfig;
@@ -242,9 +243,9 @@ public class EntityServiceTest extends AbstractGatewayServiceTest {
             .setFilter(queryServiceFilter)
             .addGroupBy(createAttributeExpression("API.apiId"))
             .addGroupBy(createAttributeExpression("API.apiName", "API Name"))
-            .setLimit(QueryServiceClient.DEFAULT_QUERY_SERVICE_GROUP_BY_LIMIT)
+            .setLimit(DEFAULT_QUERY_SERVICE_GROUP_BY_LIMIT)
             .build();
-    when(queryServiceClient.executeQuery(eq(expectedQueryRequest), any(), Mockito.anyInt()))
+    when(queryServiceClient.executeQuery(any(), eq(expectedQueryRequest)))
         .thenReturn(
             List.of(
                     getResultSetChunk(
@@ -272,10 +273,10 @@ public class EntityServiceTest extends AbstractGatewayServiceTest {
             .addSelection(createQsAggregationExpression("COUNT", "API.apiId"))
             .setFilter(queryServiceFilter)
             .addGroupBy(createAttributeExpression("API.apiId"))
-            .setLimit(QueryServiceClient.DEFAULT_QUERY_SERVICE_GROUP_BY_LIMIT)
+            .setLimit(DEFAULT_QUERY_SERVICE_GROUP_BY_LIMIT)
             .build();
 
-    when(queryServiceClient.executeQuery(eq(expectedQueryRequest), any(), Mockito.anyInt()))
+    when(queryServiceClient.executeQuery(any(), eq(expectedQueryRequest)))
         .thenReturn(
             List.of(
                     getResultSetChunk(
@@ -286,14 +287,17 @@ public class EntityServiceTest extends AbstractGatewayServiceTest {
     EntityService entityService =
         new EntityService(
             queryServiceClient,
-            500,
             entityQueryServiceClient,
             attributeMetadataProvider,
             entityIdColumnsConfigs,
             scopeFilterConfigs,
             logConfig,
             queryExecutor);
-    EntitiesResponse response = entityService.getEntities(TENANT_ID, entitiesRequest, Map.of());
+    EntitiesResponse response =
+        entityService.getEntities(
+            new RequestContext(
+                org.hypertrace.core.grpcutils.context.RequestContext.forTenantId(TENANT_ID)),
+            entitiesRequest);
     Assertions.assertNotNull(response);
     Assertions.assertEquals(2, response.getTotal());
     Entity entity1 = response.getEntity(0);
@@ -321,7 +325,6 @@ public class EntityServiceTest extends AbstractGatewayServiceTest {
     EntityService entityService =
         new EntityService(
             queryServiceClient,
-            500,
             entityQueryServiceClient,
             attributeMetadataProvider,
             entityIdColumnsConfigs,
@@ -365,7 +368,7 @@ public class EntityServiceTest extends AbstractGatewayServiceTest {
             .addGroupBy(createAttributeExpression("API.apiName", "API Name"))
             .setLimit(10000)
             .build();
-    when(queryServiceClient.executeQuery(expectedQueryRequest, Map.of(), 500))
+    when(queryServiceClient.executeQuery(any(), eq(expectedQueryRequest)))
         .thenReturn(
             List.of(
                     ResultSetChunk.newBuilder()
@@ -395,7 +398,7 @@ public class EntityServiceTest extends AbstractGatewayServiceTest {
             .addGroupBy(createAttributeExpression("API.apiId"))
             .setLimit(10000)
             .build();
-    when(queryServiceClient.executeQuery(secondQueryRequest, Map.of(), 500))
+    when(queryServiceClient.executeQuery(any(), eq(secondQueryRequest)))
         .thenReturn(
             List.of(
                     ResultSetChunk.newBuilder()
@@ -424,7 +427,7 @@ public class EntityServiceTest extends AbstractGatewayServiceTest {
             .addGroupBy(createTimeColumnGroupByExpression("API.startTime", 60))
             .setLimit(10000)
             .build();
-    when(queryServiceClient.executeQuery(thirdQueryRequest, Map.of(), 500))
+    when(queryServiceClient.executeQuery(any(), eq(thirdQueryRequest)))
         .thenReturn(
             List.of(
                     ResultSetChunk.newBuilder()
@@ -435,7 +438,11 @@ public class EntityServiceTest extends AbstractGatewayServiceTest {
                         .build())
                 .iterator());
 
-    EntitiesResponse response = entityService.getEntities(TENANT_ID, entitiesRequest, Map.of());
+    EntitiesResponse response =
+        entityService.getEntities(
+            new RequestContext(
+                org.hypertrace.core.grpcutils.context.RequestContext.forTenantId(TENANT_ID)),
+            entitiesRequest);
     Assertions.assertNotNull(response);
     Assertions.assertEquals(2, response.getTotal());
     for (Entity entity : response.getEntityList()) {

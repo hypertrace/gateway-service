@@ -2,9 +2,9 @@ package org.hypertrace.gateway.service.explore;
 
 import com.google.common.collect.ImmutableSet;
 import java.util.Set;
-import org.hypertrace.core.query.service.client.QueryServiceClient;
 import org.hypertrace.gateway.service.common.AttributeMetadataProvider;
 import org.hypertrace.gateway.service.common.util.ExpressionReader;
+import org.hypertrace.gateway.service.common.util.QueryServiceClient;
 import org.hypertrace.gateway.service.v1.common.Expression;
 import org.hypertrace.gateway.service.v1.common.Filter;
 import org.hypertrace.gateway.service.v1.common.LiteralConstant;
@@ -20,14 +20,10 @@ public class TimeAggregationsWithGroupByRequestHandler implements IRequestHandle
   private final TimeAggregationsRequestHandler timeAggregationsRequestHandler;
 
   TimeAggregationsWithGroupByRequestHandler(
-      QueryServiceClient queryServiceClient,
-      int requestTimeout,
-      AttributeMetadataProvider attributeMetadataProvider) {
-    this.normalRequestHandler =
-        new RequestHandler(queryServiceClient, requestTimeout, attributeMetadataProvider);
+      QueryServiceClient queryServiceClient, AttributeMetadataProvider attributeMetadataProvider) {
+    this.normalRequestHandler = new RequestHandler(queryServiceClient, attributeMetadataProvider);
     this.timeAggregationsRequestHandler =
-        new TimeAggregationsRequestHandler(
-            queryServiceClient, requestTimeout, attributeMetadataProvider);
+        new TimeAggregationsRequestHandler(queryServiceClient, attributeMetadataProvider);
   }
 
   @Override
@@ -38,8 +34,7 @@ public class TimeAggregationsWithGroupByRequestHandler implements IRequestHandle
     // 1. Create a GroupBy request and get the response for the GroupBy
     ExploreRequest groupByRequest = buildGroupByRequest(request);
     ExploreRequestContext groupByRequestContext =
-        new ExploreRequestContext(
-            requestContext.getTenantId(), groupByRequest, requestContext.getHeaders());
+        new ExploreRequestContext(requestContext.getGrpcContext(), groupByRequest);
     ExploreResponse.Builder groupByResponse =
         normalRequestHandler.handleRequest(groupByRequestContext, groupByRequest);
 
@@ -52,8 +47,7 @@ public class TimeAggregationsWithGroupByRequestHandler implements IRequestHandle
     // the actual query response
     ExploreRequest timeAggregationsRequest = buildTimeAggregationsRequest(request, groupByResponse);
     ExploreRequestContext timeAggregationsRequestContext =
-        new ExploreRequestContext(
-            requestContext.getTenantId(), timeAggregationsRequest, requestContext.getHeaders());
+        new ExploreRequestContext(requestContext.getGrpcContext(), timeAggregationsRequest);
     ExploreResponse.Builder timeAggregationsResponse =
         timeAggregationsRequestHandler.handleRequest(
             timeAggregationsRequestContext, timeAggregationsRequest);

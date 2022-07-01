@@ -3,7 +3,7 @@ package org.hypertrace.gateway.service.explore;
 import static org.hypertrace.core.query.service.client.QueryServiceClient.DEFAULT_QUERY_SERVICE_GROUP_BY_LIMIT;
 
 import java.util.List;
-import java.util.Map;
+import org.hypertrace.core.grpcutils.context.RequestContext;
 import org.hypertrace.gateway.service.common.QueryRequestContext;
 import org.hypertrace.gateway.service.v1.common.OrderByExpression;
 import org.hypertrace.gateway.service.v1.explore.ExploreRequest;
@@ -14,13 +14,9 @@ public class ExploreRequestContext extends QueryRequestContext {
   private boolean hasGroupBy = false;
   private List<OrderByExpression> orderByExpressions;
 
-  public ExploreRequestContext(
-      String tenantId, ExploreRequest exploreRequest, Map<String, String> requestHeaders) {
+  public ExploreRequestContext(RequestContext grpcRequestContext, ExploreRequest exploreRequest) {
     super(
-        tenantId,
-        exploreRequest.getStartTimeMillis(),
-        exploreRequest.getEndTimeMillis(),
-        requestHeaders);
+        grpcRequestContext, exploreRequest.getStartTimeMillis(), exploreRequest.getEndTimeMillis());
 
     this.exploreRequest = exploreRequest;
     this.orderByExpressions = exploreRequest.getOrderByList();

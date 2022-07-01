@@ -11,13 +11,14 @@ import java.util.Map;
 import java.util.Optional;
 import java.util.concurrent.TimeUnit;
 import org.hypertrace.core.attribute.service.v1.AttributeMetadata;
-import org.hypertrace.core.query.service.client.QueryServiceClient;
 import org.hypertrace.core.serviceframework.metrics.PlatformMetricsRegistry;
 import org.hypertrace.entity.query.service.client.EntityQueryServiceClient;
 import org.hypertrace.entity.v1.entitytype.EntityType;
 import org.hypertrace.gateway.service.common.AttributeMetadataProvider;
 import org.hypertrace.gateway.service.common.ExpressionContext;
+import org.hypertrace.gateway.service.common.RequestContext;
 import org.hypertrace.gateway.service.common.config.ScopeFilterConfigs;
+import org.hypertrace.gateway.service.common.util.QueryServiceClient;
 import org.hypertrace.gateway.service.entity.config.EntityIdColumnsConfigs;
 import org.hypertrace.gateway.service.explore.entity.EntityRequestHandler;
 import org.hypertrace.gateway.service.v1.explore.ExploreRequest;
@@ -35,35 +36,29 @@ public class ExploreService {
   private final TimeAggregationsWithGroupByRequestHandler timeAggregationsWithGroupByRequestHandler;
   private final EntityRequestHandler entityRequestHandler;
   private final ScopeFilterConfigs scopeFilterConfigs;
-  private final EntityIdColumnsConfigs entityIdColumnsConfigs;
 
   private Timer queryExecutionTimer;
 
   public ExploreService(
       QueryServiceClient queryServiceClient,
-      int requestTimeout,
       EntityQueryServiceClient entityQueryServiceClient,
       AttributeMetadataProvider attributeMetadataProvider,
       ScopeFilterConfigs scopeFiltersConfig,
       EntityIdColumnsConfigs entityIdColumnsConfigs) {
     this.attributeMetadataProvider = attributeMetadataProvider;
-    this.normalRequestHandler =
-        new RequestHandler(queryServiceClient, requestTimeout, attributeMetadataProvider);
+    this.normalRequestHandler = new RequestHandler(queryServiceClient, attributeMetadataProvider);
     this.timeAggregationsRequestHandler =
-        new TimeAggregationsRequestHandler(
-            queryServiceClient, requestTimeout, attributeMetadataProvider);
+        new TimeAggregationsRequestHandler(queryServiceClient, attributeMetadataProvider);
     this.timeAggregationsWithGroupByRequestHandler =
         new TimeAggregationsWithGroupByRequestHandler(
-            queryServiceClient, requestTimeout, attributeMetadataProvider);
+            queryServiceClient, attributeMetadataProvider);
     this.entityRequestHandler =
         new EntityRequestHandler(
             attributeMetadataProvider,
             entityIdColumnsConfigs,
             queryServiceClient,
-            requestTimeout,
             entityQueryServiceClient);
     this.scopeFilterConfigs = scopeFiltersConfig;
-    this.entityIdColumnsConfigs = entityIdColumnsConfigs;
     initMetrics();
   }
 
@@ -73,13 +68,12 @@ public class ExploreService {
             "hypertrace.explore.query.execution", ImmutableMap.of());
   }
 
-  public ExploreResponse explore(
-      String tenantId, ExploreRequest request, Map<String, String> requestHeaders) {
+  public ExploreResponse explore(RequestContext requestContext, ExploreRequest request) {
 
     final Instant start = Instant.now();
     try {
       ExploreRequestContext exploreRequestContext =
-          new ExploreRequestContext(tenantId, request, requestHeaders);
+          new ExploreRequestContext(requestContext.getGrpcContext(), request);
 
       // Add extra filters based on the scope.
       request =
@@ -92,7 +86,7 @@ public class ExploreService {
                       exploreRequestContext))
               .build();
       ExploreRequestContext newExploreRequestContext =
-          new ExploreRequestContext(tenantId, request, requestHeaders);
+          new ExploreRequestContext(requestContext.getGrpcContext(), request);
 
       Map<String, AttributeMetadata> attributeMetadataMap =
           attributeMetadataProvider.getAttributesMetadata(

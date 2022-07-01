@@ -7,7 +7,6 @@ import java.util.Map;
 import java.util.Set;
 import java.util.stream.Collectors;
 import org.hypertrace.core.attribute.service.v1.AttributeMetadata;
-import org.hypertrace.core.query.service.client.QueryServiceClient;
 import org.hypertrace.entity.query.service.client.EntityQueryServiceClient;
 import org.hypertrace.entity.query.service.v1.ColumnMetadata;
 import org.hypertrace.entity.query.service.v1.ResultSetChunk;
@@ -20,6 +19,7 @@ import org.hypertrace.gateway.service.common.datafetcher.EntityFetcherResponse;
 import org.hypertrace.gateway.service.common.datafetcher.QueryServiceEntityFetcher;
 import org.hypertrace.gateway.service.common.util.AttributeMetadataUtil;
 import org.hypertrace.gateway.service.common.util.MetricAggregationFunctionUtil;
+import org.hypertrace.gateway.service.common.util.QueryServiceClient;
 import org.hypertrace.gateway.service.entity.EntitiesRequestContext;
 import org.hypertrace.gateway.service.entity.config.EntityIdColumnsConfigs;
 import org.hypertrace.gateway.service.explore.ExploreRequestContext;
@@ -56,17 +56,13 @@ public class EntityRequestHandler extends RequestHandler {
       AttributeMetadataProvider attributeMetadataProvider,
       EntityIdColumnsConfigs entityIdColumnsConfigs,
       QueryServiceClient queryServiceClient,
-      int qsRequestTimeout,
       EntityQueryServiceClient entityQueryServiceClient) {
-    super(queryServiceClient, qsRequestTimeout, attributeMetadataProvider);
+    super(queryServiceClient, attributeMetadataProvider);
 
     this.attributeMetadataProvider = attributeMetadataProvider;
     this.queryServiceEntityFetcher =
         new QueryServiceEntityFetcher(
-            queryServiceClient,
-            qsRequestTimeout,
-            attributeMetadataProvider,
-            entityIdColumnsConfigs);
+            queryServiceClient, attributeMetadataProvider, entityIdColumnsConfigs);
     this.entityServiceEntityFetcher =
         new EntityServiceEntityFetcher(
             attributeMetadataProvider, entityIdColumnsConfigs, entityQueryServiceClient);
@@ -76,10 +72,9 @@ public class EntityRequestHandler extends RequestHandler {
   public EntityRequestHandler(
       AttributeMetadataProvider attributeMetadataProvider,
       QueryServiceClient queryServiceClient,
-      int qsRequestTimeout,
       QueryServiceEntityFetcher queryServiceEntityFetcher,
       EntityServiceEntityFetcher entityServiceEntityFetcher) {
-    super(queryServiceClient, qsRequestTimeout, attributeMetadataProvider);
+    super(queryServiceClient, attributeMetadataProvider);
 
     this.attributeMetadataProvider = attributeMetadataProvider;
     this.queryServiceEntityFetcher = queryServiceEntityFetcher;
@@ -172,12 +167,11 @@ public class EntityRequestHandler extends RequestHandler {
         AttributeMetadataUtil.getTimestampAttributeId(
             attributeMetadataProvider, requestContext, entityType);
     return new EntitiesRequestContext(
-        requestContext.getTenantId(),
+        requestContext.getGrpcContext(),
         requestContext.getStartTimeMillis(),
         requestContext.getEndTimeMillis(),
         entityType,
-        timestampAttributeId,
-        requestContext.getHeaders());
+        timestampAttributeId);
   }
 
   private void handleRow(
