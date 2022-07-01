@@ -32,8 +32,8 @@ import org.hypertrace.core.attribute.service.v1.AttributeMetadata;
 import org.hypertrace.core.attribute.service.v1.AttributeMetadataFilter;
 import org.hypertrace.core.query.service.api.QueryRequest;
 import org.hypertrace.core.query.service.api.ResultSetChunk;
-import org.hypertrace.core.query.service.client.QueryServiceClient;
 import org.hypertrace.gateway.service.common.config.ScopeFilterConfigs;
+import org.hypertrace.gateway.service.common.util.QueryServiceClient;
 import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.params.ParameterizedTest;
@@ -79,11 +79,7 @@ public abstract class AbstractServiceTest<
   }
 
   private static Reader readResourceFile(String fileName) {
-    InputStream in =
-        (new RequestContext(TENANT_ID, Map.of()))
-            .getClass()
-            .getClassLoader()
-            .getResourceAsStream(fileName);
+    InputStream in = RequestContext.class.getClassLoader().getResourceAsStream(fileName);
     return new BufferedReader(new InputStreamReader(in));
   }
 
@@ -92,8 +88,7 @@ public abstract class AbstractServiceTest<
 
     AttributeServiceClient attributesServiceClient = mock(AttributeServiceClient.class);
 
-    when(attributesServiceClient.findAttributes(
-            any(new HashMap<String, String>().getClass()), any(AttributeMetadataFilter.class)))
+    when(attributesServiceClient.findAttributes(any(Map.class), any(AttributeMetadataFilter.class)))
         .thenAnswer(
             (Answer<Iterator<AttributeMetadata>>)
                 invocation -> {
@@ -141,8 +136,7 @@ public abstract class AbstractServiceTest<
     // gateway service package
     // and use it's class loader to get the Resource.
     String folderName =
-        (new RequestContext(TENANT_ID, Map.of()))
-            .getClass()
+        RequestContext.class
             .getClassLoader()
             .getResource(String.format("%s/%s", GATEWAY_SERVICE_TEST_REQUESTS_DIR, suiteName))
             .getFile();
@@ -244,12 +238,11 @@ public abstract class AbstractServiceTest<
     Map<QueryRequest, ResultSetChunk> queryRequestResultSetChunkMap =
         readExpectedQueryServiceRequestAndResponse(fileName);
 
-    when(queryServiceClient.executeQuery(
-            any(QueryRequest.class), any(HashMap.class), any(Integer.class)))
+    when(queryServiceClient.executeQuery(any(RequestContext.class), any(QueryRequest.class)))
         .thenAnswer(
             (Answer<Iterator<ResultSetChunk>>)
                 invocation -> {
-                  QueryRequest queryRequest = (QueryRequest) invocation.getArguments()[0];
+                  QueryRequest queryRequest = (QueryRequest) invocation.getArguments()[1];
                   ResultSetChunk resultSetChunk = queryRequestResultSetChunkMap.get(queryRequest);
                   if (resultSetChunk
                       == null) { // This means this QueryRequest object is unexpected.

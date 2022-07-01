@@ -11,6 +11,8 @@ public class GatewayServiceFactory implements GrpcPlatformServiceFactory {
   @Override
   public List<GrpcPlatformService> buildServices(GrpcServiceContainerEnvironment environment) {
     return List.of(
-        new GrpcPlatformService(new GatewayServiceImpl(environment.getConfig(SERVICE_NAME))));
+        new GrpcPlatformService(
+            new GatewayServiceImpl(
+                environment.getConfig(SERVICE_NAME), environment.getChannelRegistry())));
   }
 }

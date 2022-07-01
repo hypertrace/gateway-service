@@ -1,5 +1,7 @@
 package org.hypertrace.gateway.service.entity;
 
+import static org.hypertrace.core.grpcutils.context.RequestContext.forTenantId;
+import static org.hypertrace.core.query.service.client.QueryServiceClient.DEFAULT_QUERY_SERVICE_GROUP_BY_LIMIT;
 import static org.hypertrace.gateway.service.common.QueryServiceRequestAndResponseUtils.createQsAggregationExpression;
 import static org.hypertrace.gateway.service.common.QueryServiceRequestAndResponseUtils.createQsDefaultRequestFilter;
 import static org.hypertrace.gateway.service.common.converters.QueryRequestUtil.createAttributeExpression;
@@ -35,13 +37,13 @@ import org.hypertrace.core.query.service.api.QueryRequest;
 import org.hypertrace.core.query.service.api.ResultSetChunk;
 import org.hypertrace.core.query.service.api.ResultSetMetadata;
 import org.hypertrace.core.query.service.api.Row;
-import org.hypertrace.core.query.service.client.QueryServiceClient;
 import org.hypertrace.entity.query.service.client.EntityQueryServiceClient;
 import org.hypertrace.gateway.service.AbstractGatewayServiceTest;
 import org.hypertrace.gateway.service.common.AttributeMetadataProvider;
 import org.hypertrace.gateway.service.common.RequestContext;
 import org.hypertrace.gateway.service.common.config.ScopeFilterConfigs;
 import org.hypertrace.gateway.service.common.converters.QueryRequestUtil;
+import org.hypertrace.gateway.service.common.util.QueryServiceClient;
 import org.hypertrace.gateway.service.entity.config.EntityIdColumnsConfigs;
 import org.hypertrace.gateway.service.entity.config.LogConfig;
 import org.hypertrace.gateway.service.executor.QueryExecutorConfig;
@@ -348,10 +350,10 @@ public class EntityServiceInteractionRequestTest extends AbstractGatewayServiceT
             .addSelection(createQsAggregationExpression("COUNT", "SERVICE.id"))
             .setFilter(queryServiceFilter)
             .addGroupBy(createAttributeExpression("SERVICE.id"))
-            .setLimit(QueryServiceClient.DEFAULT_QUERY_SERVICE_GROUP_BY_LIMIT)
+            .setLimit(DEFAULT_QUERY_SERVICE_GROUP_BY_LIMIT)
             .build();
 
-    when(queryServiceClient.executeQuery(eq(expectedQueryRequest), any(), Mockito.anyInt()))
+    when(queryServiceClient.executeQuery(any(RequestContext.class), eq(expectedQueryRequest)))
         .thenReturn(
             List.of(
                     ResultSetChunk.newBuilder()
@@ -396,10 +398,10 @@ public class EntityServiceInteractionRequestTest extends AbstractGatewayServiceT
             .setFilter(interactionQueryFilter)
             .addGroupBy(createAttributeExpression("INTERACTION.toServiceId"))
             .addGroupBy(createAttributeExpression("INTERACTION.fromServiceId"))
-            .setLimit(QueryServiceClient.DEFAULT_QUERY_SERVICE_GROUP_BY_LIMIT)
+            .setLimit(DEFAULT_QUERY_SERVICE_GROUP_BY_LIMIT)
             .build();
 
-    when(queryServiceClient.executeQuery(eq(expectedQueryRequest), any(), Mockito.anyInt()))
+    when(queryServiceClient.executeQuery(any(RequestContext.class), eq(expectedQueryRequest)))
         .thenReturn(
             List.of(
                     ResultSetChunk.newBuilder()
@@ -447,10 +449,10 @@ public class EntityServiceInteractionRequestTest extends AbstractGatewayServiceT
             .setFilter(interactionQueryFilter)
             .addGroupBy(createAttributeExpression("INTERACTION.fromServiceId"))
             .addGroupBy(createAttributeExpression("INTERACTION.toServiceId"))
-            .setLimit(QueryServiceClient.DEFAULT_QUERY_SERVICE_GROUP_BY_LIMIT)
+            .setLimit(DEFAULT_QUERY_SERVICE_GROUP_BY_LIMIT)
             .build();
 
-    when(queryServiceClient.executeQuery(eq(expectedQueryRequest), any(), Mockito.anyInt()))
+    when(queryServiceClient.executeQuery(any(RequestContext.class), eq(expectedQueryRequest)))
         .thenReturn(
             List.of(
                     ResultSetChunk.newBuilder()
@@ -498,10 +500,10 @@ public class EntityServiceInteractionRequestTest extends AbstractGatewayServiceT
             .setFilter(interactionQueryFilter)
             .addGroupBy(createAttributeExpression("INTERACTION.fromServiceId"))
             .addGroupBy(createAttributeExpression("INTERACTION.toBackendId"))
-            .setLimit(QueryServiceClient.DEFAULT_QUERY_SERVICE_GROUP_BY_LIMIT)
+            .setLimit(DEFAULT_QUERY_SERVICE_GROUP_BY_LIMIT)
             .build();
 
-    when(queryServiceClient.executeQuery(eq(expectedQueryRequest), any(), Mockito.anyInt()))
+    when(queryServiceClient.executeQuery(any(RequestContext.class), eq(expectedQueryRequest)))
         .thenReturn(
             List.of(
                     ResultSetChunk.newBuilder()
@@ -620,14 +622,14 @@ public class EntityServiceInteractionRequestTest extends AbstractGatewayServiceT
     EntityService entityService =
         new EntityService(
             queryServiceClient,
-            500,
             entityQueryServiceClient,
             attributeMetadataProvider,
             entityIdColumnsConfigs,
             scopeFilterConfigs,
             logConfig,
             queryExecutor);
-    EntitiesResponse response = entityService.getEntities(TENANT_ID, request, Map.of());
+    EntitiesResponse response =
+        entityService.getEntities(new RequestContext(forTenantId(TENANT_ID)), request);
 
     // validate we have one incoming edge, and two outgoing edge
     assertNotNull(response);

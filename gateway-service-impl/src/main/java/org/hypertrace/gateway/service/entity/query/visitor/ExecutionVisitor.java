@@ -122,12 +122,11 @@ public class ExecutionVisitor implements Visitor<EntityResponse> {
     EntitiesRequest entitiesRequest = executionContext.getEntitiesRequest();
     EntitiesRequestContext context =
         new EntitiesRequestContext(
-            executionContext.getTenantId(),
+            executionContext.getEntitiesRequestContext().getGrpcContext(),
             entitiesRequest.getStartTimeMillis(),
             entitiesRequest.getEndTimeMillis(),
             entitiesRequest.getEntityType(),
-            executionContext.getTimestampAttributeId(),
-            executionContext.getRequestHeaders());
+            executionContext.getTimestampAttributeId());
 
     EntitiesRequest.Builder requestBuilder =
         EntitiesRequest.newBuilder(entitiesRequest)
@@ -239,12 +238,11 @@ public class ExecutionVisitor implements Visitor<EntityResponse> {
                   IEntityFetcher entityFetcher = queryHandlerRegistry.getEntityFetcher(source);
                   EntitiesRequestContext context =
                       new EntitiesRequestContext(
-                          executionContext.getTenantId(),
+                          executionContext.getEntitiesRequestContext().getGrpcContext(),
                           request.getStartTimeMillis(),
                           request.getEndTimeMillis(),
                           request.getEntityType(),
-                          executionContext.getTimestampAttributeId(),
-                          executionContext.getRequestHeaders());
+                          executionContext.getTimestampAttributeId());
                   return entityFetcher.getEntities(context, request);
                 })
             .collect(Collectors.toList()));
@@ -270,12 +268,11 @@ public class ExecutionVisitor implements Visitor<EntityResponse> {
                   IEntityFetcher entityFetcher = queryHandlerRegistry.getEntityFetcher(source);
                   EntitiesRequestContext context =
                       new EntitiesRequestContext(
-                          executionContext.getTenantId(),
+                          executionContext.getEntitiesRequestContext().getGrpcContext(),
                           request.getStartTimeMillis(),
                           request.getEndTimeMillis(),
                           request.getEntityType(),
-                          executionContext.getTimestampAttributeId(),
-                          executionContext.getRequestHeaders());
+                          executionContext.getTimestampAttributeId());
                   return entityFetcher.getEntities(context, request);
                 })
             .collect(Collectors.toList()));
@@ -301,12 +298,11 @@ public class ExecutionVisitor implements Visitor<EntityResponse> {
                   IEntityFetcher entityFetcher = queryHandlerRegistry.getEntityFetcher(source);
                   EntitiesRequestContext requestContext =
                       new EntitiesRequestContext(
-                          executionContext.getTenantId(),
+                          executionContext.getEntitiesRequestContext().getGrpcContext(),
                           request.getStartTimeMillis(),
                           request.getEndTimeMillis(),
                           request.getEntityType(),
-                          executionContext.getTimestampAttributeId(),
-                          executionContext.getRequestHeaders());
+                          executionContext.getTimestampAttributeId());
                   return entityFetcher.getTimeAggregatedMetrics(requestContext, request);
                 })
             .collect(Collectors.toList()));

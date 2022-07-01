@@ -8,20 +8,22 @@ import java.util.Objects;
  * example is the incoming tenant id and request headers. Extend this class as you would like.
  */
 public class RequestContext {
-  private final String tenantId;
-  private final Map<String, String> headers;
+  private org.hypertrace.core.grpcutils.context.RequestContext grpcContext;
 
-  public RequestContext(String tenantId, Map<String, String> headers) {
-    this.tenantId = tenantId;
-    this.headers = headers;
+  public RequestContext(org.hypertrace.core.grpcutils.context.RequestContext grpcContext) {
+    this.grpcContext = grpcContext;
   }
 
   public String getTenantId() {
-    return tenantId;
+    return grpcContext.getTenantId().orElseThrow();
   }
 
   public Map<String, String> getHeaders() {
-    return headers;
+    return grpcContext.getRequestHeaders();
+  }
+
+  public org.hypertrace.core.grpcutils.context.RequestContext getGrpcContext() {
+    return grpcContext;
   }
 
   @Override
@@ -29,11 +31,11 @@ public class RequestContext {
     if (this == o) return true;
     if (o == null || getClass() != o.getClass()) return false;
     RequestContext that = (RequestContext) o;
-    return Objects.equals(tenantId, that.tenantId) && Objects.equals(headers, that.headers);
+    return Objects.equals(this.getHeaders(), that.getHeaders());
   }
 
   @Override
   public int hashCode() {
-    return Objects.hash(tenantId, headers);
+    return Objects.hash(this.getHeaders());
   }
 }

@@ -1,12 +1,12 @@
 package org.hypertrace.gateway.service.explore.entity;
 
+import static org.hypertrace.core.grpcutils.context.RequestContext.forTenantId;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.when;
 
-import java.util.Collections;
 import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
@@ -14,7 +14,6 @@ import java.util.Optional;
 import java.util.Set;
 import org.hypertrace.core.attribute.service.v1.AttributeKind;
 import org.hypertrace.core.attribute.service.v1.AttributeMetadata;
-import org.hypertrace.core.query.service.client.QueryServiceClient;
 import org.hypertrace.entity.query.service.v1.ColumnMetadata;
 import org.hypertrace.entity.query.service.v1.ResultSetChunk;
 import org.hypertrace.entity.query.service.v1.ResultSetMetadata;
@@ -22,6 +21,7 @@ import org.hypertrace.entity.query.service.v1.Row;
 import org.hypertrace.gateway.service.common.AttributeMetadataProvider;
 import org.hypertrace.gateway.service.common.datafetcher.EntityFetcherResponse;
 import org.hypertrace.gateway.service.common.datafetcher.QueryServiceEntityFetcher;
+import org.hypertrace.gateway.service.common.util.QueryServiceClient;
 import org.hypertrace.gateway.service.entity.EntitiesRequestContext;
 import org.hypertrace.gateway.service.entity.EntityKey;
 import org.hypertrace.gateway.service.explore.ExploreRequestContext;
@@ -59,7 +59,6 @@ public class EntityRequestHandlerTest {
         new EntityRequestHandler(
             attributeMetadataProvider,
             mock(QueryServiceClient.class),
-            10,
             queryServiceEntityFetcher,
             entityServiceEntityFetcher);
   }
@@ -77,7 +76,7 @@ public class EntityRequestHandlerTest {
             .addGroupBy(createColumnExpression("API.type"))
             .build();
     ExploreRequestContext exploreRequestContext =
-        new ExploreRequestContext("customer1", exploreRequest, Collections.emptyMap());
+        new ExploreRequestContext(forTenantId("customer1"), exploreRequest);
     exploreRequestContext.mapAliasToFunctionExpression(
         "COUNT_API.external_[]", aggregation.getFunction());
 
@@ -142,7 +141,7 @@ public class EntityRequestHandlerTest {
             .addGroupBy(createColumnExpression("API.type"))
             .build();
     ExploreRequestContext exploreRequestContext =
-        new ExploreRequestContext("customer1", exploreRequest, Collections.emptyMap());
+        new ExploreRequestContext(forTenantId("customer1"), exploreRequest);
     exploreRequestContext.mapAliasToFunctionExpression(
         "COUNT_API.external_[]", aggregation.getFunction());
 

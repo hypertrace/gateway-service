@@ -1,5 +1,6 @@
 package org.hypertrace.gateway.service.common.datafetcher;
 
+import static org.hypertrace.core.grpcutils.context.RequestContext.forTenantId;
 import static org.hypertrace.gateway.service.common.converters.QueryRequestUtil.createBetweenTimesFilter;
 import static org.hypertrace.gateway.service.common.converters.QueryRequestUtil.createFilter;
 import static org.hypertrace.gateway.service.common.converters.QueryRequestUtil.createStringArrayLiteralExpression;
@@ -17,7 +18,6 @@ import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableSet;
 import java.util.Collection;
 import java.util.Collections;
-import java.util.HashMap;
 import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.Map;
@@ -115,7 +115,7 @@ public class EntityInteractionsFetcherTest extends AbstractGatewayServiceTest {
         .thenReturn(Optional.of(AttributeMetadata.newBuilder().setId("dummy").build()));
 
     EntityInteractionsFetcher aggregator =
-        new EntityInteractionsFetcher(null, 500, attributeMetadataProvider, queryExecutor);
+        new EntityInteractionsFetcher(null, attributeMetadataProvider, queryExecutor);
     Map<String, QueryRequest> queryRequests =
         aggregator.buildQueryRequests(
             request.getStartTimeMillis(),
@@ -224,7 +224,7 @@ public class EntityInteractionsFetcherTest extends AbstractGatewayServiceTest {
         .thenReturn(Optional.of(AttributeMetadata.newBuilder().setId("dummy").build()));
 
     EntityInteractionsFetcher aggregator =
-        new EntityInteractionsFetcher(null, 500, attributeMetadataProvider, queryExecutor);
+        new EntityInteractionsFetcher(null, attributeMetadataProvider, queryExecutor);
     Map<String, QueryRequest> queryRequests =
         aggregator.buildQueryRequests(
             request.getStartTimeMillis(),
@@ -288,7 +288,7 @@ public class EntityInteractionsFetcherTest extends AbstractGatewayServiceTest {
             Optional.of(AttributeMetadata.newBuilder().setId("INTERACTION.startTime").build()));
 
     EntityInteractionsFetcher aggregator =
-        new EntityInteractionsFetcher(null, 500, attributeMetadataProvider, queryExecutor);
+        new EntityInteractionsFetcher(null, attributeMetadataProvider, queryExecutor);
     Map<String, QueryRequest> queryRequests =
         aggregator.buildQueryRequests(
             request.getStartTimeMillis(),
@@ -407,7 +407,7 @@ public class EntityInteractionsFetcherTest extends AbstractGatewayServiceTest {
             Optional.of(AttributeMetadata.newBuilder().setId("INTERACTION.startTime").build()));
 
     EntityInteractionsFetcher aggregator =
-        new EntityInteractionsFetcher(null, 500, attributeMetadataProvider, queryExecutor);
+        new EntityInteractionsFetcher(null, attributeMetadataProvider, queryExecutor);
     LinkedHashSet<EntityKey> entityKeys = new LinkedHashSet<>();
     entityKeys.add(EntityKey.of("test_name1", "test_type1"));
     entityKeys.add(EntityKey.of("test_name2", "test_type2"));
@@ -507,7 +507,7 @@ public class EntityInteractionsFetcherTest extends AbstractGatewayServiceTest {
         .thenReturn(Optional.of(AttributeMetadata.newBuilder().setId("dummy").build()));
 
     EntityInteractionsFetcher aggregator =
-        new EntityInteractionsFetcher(null, 500, attributeMetadataProvider, queryExecutor);
+        new EntityInteractionsFetcher(null, attributeMetadataProvider, queryExecutor);
     Map<String, QueryRequest> queryRequests =
         aggregator.buildQueryRequests(
             request.getStartTimeMillis(),
@@ -581,12 +581,12 @@ public class EntityInteractionsFetcherTest extends AbstractGatewayServiceTest {
                 Mockito.eq("startTime")))
         .thenReturn(Optional.of(AttributeMetadata.newBuilder().setFqn("dummy").build()));
     EntityInteractionsFetcher aggregator =
-        new EntityInteractionsFetcher(null, 500, attributeMetadataProvider, queryExecutor);
+        new EntityInteractionsFetcher(null, attributeMetadataProvider, queryExecutor);
 
     for (EntitiesRequest request : getInvalidRequests()) {
       try {
         aggregator.populateEntityInteractions(
-            new RequestContext(TENANT_ID, new HashMap<>()), request, Collections.emptyMap());
+            new RequestContext(forTenantId(TENANT_ID)), request, Collections.emptyMap());
         fail("Expected the request to fail. Request: " + request);
       } catch (IllegalArgumentException ignore) {
         // Ignore.

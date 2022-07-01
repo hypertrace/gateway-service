@@ -14,8 +14,10 @@ public class QueryRequestContext extends RequestContext {
   private final Map<String, TimeAggregation> aliasToTimeAggregation = new HashMap<>();
 
   public QueryRequestContext(
-      String tenantId, long startTimeMillis, long endTimeMillis, Map<String, String> headers) {
-    super(tenantId, headers);
+      org.hypertrace.core.grpcutils.context.RequestContext requestContext,
+      long startTimeMillis,
+      long endTimeMillis) {
+    super(requestContext);
     this.startTimeMillis = startTimeMillis;
     this.endTimeMillis = endTimeMillis;
   }

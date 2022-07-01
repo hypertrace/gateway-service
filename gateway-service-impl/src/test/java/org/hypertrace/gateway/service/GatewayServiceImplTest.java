@@ -3,6 +3,7 @@ package org.hypertrace.gateway.service;
 import com.typesafe.config.Config;
 import com.typesafe.config.ConfigFactory;
 import java.io.File;
+import org.hypertrace.core.grpcutils.client.GrpcChannelRegistry;
 import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.Test;
 
@@ -27,6 +28,6 @@ public class GatewayServiceImplTest {
 
   @Test
   public void testServiceImplInitialization() {
-    new GatewayServiceImpl(appConfig);
+    new GatewayServiceImpl(appConfig, new GrpcChannelRegistry());
   }
 }
