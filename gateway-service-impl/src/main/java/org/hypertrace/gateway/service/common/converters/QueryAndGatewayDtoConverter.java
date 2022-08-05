@@ -97,6 +97,7 @@ public class QueryAndGatewayDtoConverter {
         builder.setValueType(org.hypertrace.gateway.service.v1.common.ValueType.BOOL);
         builder.setBoolean(value.getBoolean());
         break;
+      case NULL_STRING:
       case STRING:
         builder.setValueType(org.hypertrace.gateway.service.v1.common.ValueType.STRING);
         builder.setString(value.getString());
@@ -219,6 +220,10 @@ public class QueryAndGatewayDtoConverter {
       case STRING_MAP:
         converter = StringMapToAttributeKindConverter.INSTANCE;
         retValue = converter.convert(value.getStringMapMap(), attributeMetadata.getValueKind());
+        break;
+      case NULL_STRING:
+        converter = NullStringToAttributeKindConverter.INSTANCE;
+        retValue = converter.convert(value.getString(), attributeMetadata.getValueKind());
         break;
       default:
         break;
