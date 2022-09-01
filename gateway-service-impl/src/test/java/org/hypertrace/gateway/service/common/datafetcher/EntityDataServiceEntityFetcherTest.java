@@ -53,7 +53,7 @@ import org.junit.jupiter.api.Test;
 import org.mockito.MockedStatic;
 import org.mockito.Mockito;
 
-public class EntityDataServiceEntityFetcherTests {
+public class EntityDataServiceEntityFetcherTest {
   private static final String TENANT_ID = "tenant-id";
   private static final String API_ID_ATTR = "API.id";
   private static final String API_NAME_ATTR = "API.name";
@@ -263,6 +263,7 @@ public class EntityDataServiceEntityFetcherTests {
               .addAllOrderBy(orderByExpressions)
               .setLimit(limit)
               .setOffset(offset)
+              .setFetchTotal(true)
               .build();
       EntitiesRequestContext entitiesRequestContext =
           new EntitiesRequestContext(
@@ -282,8 +283,15 @@ public class EntityDataServiceEntityFetcherTests {
                   EntityServiceAndGatewayServiceConverter.convertToOrderByExpressions(
                       orderByExpressions))
               .build();
+      TotalEntitiesRequest expectedTotalEntitiesRequest =
+          TotalEntitiesRequest.newBuilder()
+              .setEntityType("API")
+              .setFilter(buildTimeRangeFilter("API.startTime", startTime, endTime))
+              .build();
 
       when(entityQueryServiceClient.execute(any(), any())).thenReturn(Collections.emptyIterator());
+      when(entityQueryServiceClient.total(any(), any()))
+          .thenReturn(TotalEntitiesResponse.newBuilder().setTotal(200L).build());
 
       mockTimestamp("startTime");
       try (MockedStatic<TimestampConfigs> mockedTimestamps =
@@ -293,6 +301,9 @@ public class EntityDataServiceEntityFetcherTests {
             .thenReturn("startTime");
         entityDataServiceEntityFetcher.getEntities(entitiesRequestContext, entitiesRequest);
         verify(entityQueryServiceClient, times(1)).execute(eq(expectedQueryRequest), any());
+
+        entityDataServiceEntityFetcher.getTotal(entitiesRequestContext, entitiesRequest);
+        verify(entityQueryServiceClient, times(1)).total(eq(expectedTotalEntitiesRequest), any());
       }
     }
 
@@ -328,6 +339,7 @@ public class EntityDataServiceEntityFetcherTests {
               .addAllOrderBy(orderByExpressions)
               .setLimit(limit)
               .setOffset(offset)
+              .setFetchTotal(true)
               .build();
       EntitiesRequestContext entitiesRequestContext =
           new EntitiesRequestContext(
@@ -348,10 +360,21 @@ public class EntityDataServiceEntityFetcherTests {
                       orderByExpressions))
               .build();
 
+      TotalEntitiesRequest expectedTotalEntitiesRequest =
+          TotalEntitiesRequest.newBuilder()
+              .setEntityType("API")
+              .setFilter(org.hypertrace.entity.query.service.v1.Filter.getDefaultInstance())
+              .build();
+
       when(entityQueryServiceClient.execute(any(), any())).thenReturn(Collections.emptyIterator());
+      when(entityQueryServiceClient.total(any(), any()))
+          .thenReturn(TotalEntitiesResponse.newBuilder().setTotal(200L).build());
 
       entityDataServiceEntityFetcher.getEntities(entitiesRequestContext, entitiesRequest);
       verify(entityQueryServiceClient, times(1)).execute(eq(expectedQueryRequest), any());
+
+      entityDataServiceEntityFetcher.getTotal(entitiesRequestContext, entitiesRequest);
+      verify(entityQueryServiceClient, times(1)).total(eq(expectedTotalEntitiesRequest), any());
     }
 
     private org.hypertrace.entity.query.service.v1.Filter buildTimeRangeFilter(
