@@ -59,6 +59,7 @@ enum FunctionType {
   // Have thought of introducing a parameter for estimate later.
   PERCENTILE = 8;
   DISTINCTCOUNT = 9;
+  DISTINCT = 10;
 }
 
 enum ValueType {
