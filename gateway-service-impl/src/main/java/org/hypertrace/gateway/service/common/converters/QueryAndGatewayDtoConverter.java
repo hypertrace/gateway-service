@@ -422,7 +422,7 @@ public class QueryAndGatewayDtoConverter {
           if (DISTINCT_ARRAY.name().equals(functionName)) {
             throw new IllegalArgumentException(
                 format(
-                    "Aggregations by the function type: %s is not supported by query service currently",
+                    "Aggregation by the function type: %s is not supported by query service currently",
                     functionName));
           }
           builder.setFunctionName(functionName).setAlias(function.getAlias());
