@@ -59,7 +59,7 @@ enum FunctionType {
   // Have thought of introducing a parameter for estimate later.
   PERCENTILE = 8;
   DISTINCTCOUNT = 9;
-  DISTINCT = 10;
+  DISTINCT_ARRAY = 10; //This is currently supported only for EDS
 }
 
 enum ValueType {

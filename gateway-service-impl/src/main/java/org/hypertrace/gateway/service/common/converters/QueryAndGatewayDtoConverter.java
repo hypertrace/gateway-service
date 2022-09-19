@@ -1,5 +1,8 @@
 package org.hypertrace.gateway.service.common.converters;
 
+import static java.lang.String.format;
+import static org.hypertrace.gateway.service.v1.common.FunctionType.DISTINCT_ARRAY;
+
 import com.google.common.base.Strings;
 import java.time.Duration;
 import java.util.List;
@@ -337,8 +340,7 @@ public class QueryAndGatewayDtoConverter {
       case HEALTH:
       default:
         throw new IllegalArgumentException(
-            String.format(
-                "Cannot convert %s expression to query expression.", expression.getValueCase()));
+            format("Cannot convert %s expression to query expression.", expression.getValueCase()));
     }
   }
 
@@ -416,7 +418,14 @@ public class QueryAndGatewayDtoConverter {
         }
       default:
         {
-          builder.setFunctionName(function.getFunction().name()).setAlias(function.getAlias());
+          String functionName = function.getFunction().name();
+          if (DISTINCT_ARRAY.name().equals(functionName)) {
+            throw new IllegalArgumentException(
+                format(
+                    "Aggregations by the function type: %s is not supported by query service currently",
+                    functionName));
+          }
+          builder.setFunctionName(functionName).setAlias(function.getAlias());
 
           if (function.getArgumentsCount() > 0) {
             function
