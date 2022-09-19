@@ -416,16 +416,14 @@ public class QueryAndGatewayDtoConverter {
           columns.forEach(e -> builder.addArguments(convertToQueryExpression(e)));
           break;
         }
+      case DISTINCT_ARRAY:
+        throw new IllegalArgumentException(
+            format(
+                "Aggregation by the function type: %s is not supported by query service currently",
+                function.getFunction().name()));
       default:
         {
-          String functionName = function.getFunction().name();
-          if (DISTINCT_ARRAY.name().equals(functionName)) {
-            throw new IllegalArgumentException(
-                format(
-                    "Aggregation by the function type: %s is not supported by query service currently",
-                    functionName));
-          }
-          builder.setFunctionName(functionName).setAlias(function.getAlias());
+          builder.setFunctionName(function.getFunction().name()).setAlias(function.getAlias());
 
           if (function.getArgumentsCount() > 0) {
             function
