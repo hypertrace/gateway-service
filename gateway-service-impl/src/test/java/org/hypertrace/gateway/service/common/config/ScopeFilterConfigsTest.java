@@ -1,12 +1,12 @@
 package org.hypertrace.gateway.service.common.config;
 
+import static org.hypertrace.core.grpcutils.context.RequestContext.forTenantId;
 import static org.hypertrace.gateway.service.common.util.QueryExpressionUtil.buildAttributeExpression;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.when;
 
 import com.typesafe.config.Config;
 import com.typesafe.config.ConfigFactory;
-import java.util.Map;
 import java.util.Optional;
 import org.hypertrace.core.attribute.service.v1.AttributeMetadata;
 import org.hypertrace.core.attribute.service.v1.AttributeScope;
@@ -77,7 +77,7 @@ public class ScopeFilterConfigsTest {
                     .setRhs(createLiteralStringExpression("some-col-value")))
             .build();
 
-    RequestContext requestContext = new RequestContext("some-tenant-id", Map.of());
+    RequestContext requestContext = new RequestContext(forTenantId("some-tenant-id"));
     AttributeMetadataProvider attributeMetadataProvider = mock(AttributeMetadataProvider.class);
     when(attributeMetadataProvider.getAttributeMetadata(
             requestContext, AttributeScope.API_TRACE.name(), "apiBoundaryType"))
@@ -179,7 +179,7 @@ public class ScopeFilterConfigsTest {
                     .setRhs(createLiteralStringExpression("some-col-value")))
             .build();
 
-    RequestContext requestContext = new RequestContext("some-tenant-id", Map.of());
+    RequestContext requestContext = new RequestContext(forTenantId("some-tenant-id"));
     AttributeMetadataProvider attributeMetadataProvider = mock(AttributeMetadataProvider.class);
 
     // No change to filters since it will fail to parse the config because of the BOGUSOP unknown
@@ -211,7 +211,7 @@ public class ScopeFilterConfigsTest {
                     .setRhs(createLiteralStringExpression("some-col-value")))
             .build();
 
-    RequestContext requestContext = new RequestContext("some-tenant-id", Map.of());
+    RequestContext requestContext = new RequestContext(forTenantId("some-tenant-id"));
     AttributeMetadataProvider attributeMetadataProvider = mock(AttributeMetadataProvider.class);
 
     Assertions.assertEquals(

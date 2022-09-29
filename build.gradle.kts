@@ -3,8 +3,8 @@ plugins {
   id("org.hypertrace.ci-utils-plugin") version "0.3.0"
   id("org.hypertrace.publish-plugin") version "1.0.2" apply false
   id("org.hypertrace.jacoco-report-plugin") version "0.2.0" apply false
-  id("org.hypertrace.docker-java-application-plugin") version "0.9.0" apply false
-  id("org.hypertrace.docker-publish-plugin") version "0.9.0" apply false
+  id("org.hypertrace.docker-java-application-plugin") version "0.9.4" apply false
+  id("org.hypertrace.docker-publish-plugin") version "0.9.4" apply false
   id("org.hypertrace.code-style-plugin") version "1.1.0" apply false
 }
 

@@ -17,12 +17,12 @@ import org.hypertrace.core.query.service.api.QueryRequest;
 import org.hypertrace.core.query.service.api.ResultSetChunk;
 import org.hypertrace.core.query.service.api.ResultSetMetadata;
 import org.hypertrace.core.query.service.api.Row;
-import org.hypertrace.core.query.service.client.QueryServiceClient;
 import org.hypertrace.core.serviceframework.metrics.PlatformMetricsRegistry;
 import org.hypertrace.gateway.service.common.AttributeMetadataProvider;
 import org.hypertrace.gateway.service.common.RequestContext;
 import org.hypertrace.gateway.service.common.converters.QueryAndGatewayDtoConverter;
 import org.hypertrace.gateway.service.common.util.AttributeMetadataUtil;
+import org.hypertrace.gateway.service.common.util.QueryServiceClient;
 import org.hypertrace.gateway.service.v1.common.OrderByExpression;
 import org.hypertrace.gateway.service.v1.log.events.LogEvent;
 import org.hypertrace.gateway.service.v1.log.events.LogEventsRequest;
@@ -36,17 +36,13 @@ public class LogEventsService {
 
   private static final String LOG_EVENT_SCOPE = "LOG_EVENT";
   private final QueryServiceClient queryServiceClient;
-  private final int requestTimeout;
   private final AttributeMetadataProvider attributeMetadataProvider;
 
   private Timer queryExecutionTimer;
 
   public LogEventsService(
-      QueryServiceClient queryServiceClient,
-      int requestTimeout,
-      AttributeMetadataProvider attributeMetadataProvider) {
+      QueryServiceClient queryServiceClient, AttributeMetadataProvider attributeMetadataProvider) {
     this.queryServiceClient = queryServiceClient;
-    this.requestTimeout = requestTimeout;
     this.attributeMetadataProvider = attributeMetadataProvider;
     initMetrics();
   }
@@ -116,7 +112,7 @@ public class LogEventsService {
     QueryRequest queryRequest = queryBuilder.build();
 
     Iterator<ResultSetChunk> resultSetChunkIterator =
-        queryServiceClient.executeQuery(queryRequest, context.getHeaders(), requestTimeout);
+        queryServiceClient.executeQuery(context, queryRequest);
 
     ResultSetMetadata resultSetMetadata = null;
     while (resultSetChunkIterator.hasNext()) {

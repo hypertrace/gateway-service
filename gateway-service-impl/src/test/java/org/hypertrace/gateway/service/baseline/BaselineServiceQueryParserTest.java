@@ -1,5 +1,6 @@
 package org.hypertrace.gateway.service.baseline;
 
+import static org.hypertrace.core.grpcutils.context.RequestContext.forTenantId;
 import static org.hypertrace.gateway.service.common.QueryServiceRequestAndResponseUtils.getResultSetChunk;
 
 import java.time.Instant;
@@ -77,7 +78,7 @@ public class BaselineServiceQueryParserTest {
                 "SERVICE.Latency",
                 "PERCENTILE_SERVICE.duration_[99]_PT30S"));
     BaselineRequestContext baselineRequestContext =
-        new BaselineRequestContext(TENANT_ID, Collections.EMPTY_MAP);
+        new BaselineRequestContext(forTenantId(TENANT_ID));
     BaselineTimeAggregation baselineTimeAggregation =
         BaselineTimeAggregation.newBuilder()
             .setAggregation(timeAggregation.getAggregation().getFunction())

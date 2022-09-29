@@ -1,5 +1,8 @@
 package org.hypertrace.gateway.service.common.converters;
 
+import static java.lang.String.format;
+import static org.hypertrace.gateway.service.v1.common.FunctionType.DISTINCT_ARRAY;
+
 import com.google.common.base.Strings;
 import java.time.Duration;
 import java.util.List;
@@ -283,6 +286,8 @@ public class QueryAndGatewayDtoConverter {
         return Operator.CONTAINS_KEY;
       case CONTAINS_KEYVALUE:
         return Operator.CONTAINS_KEYVALUE;
+      case CONTAINS_KEY_LIKE:
+        return Operator.CONTAINS_KEY_LIKE;
     }
     throw new IllegalArgumentException("Unsupported operator " + operator.name());
   }
@@ -335,8 +340,7 @@ public class QueryAndGatewayDtoConverter {
       case HEALTH:
       default:
         throw new IllegalArgumentException(
-            String.format(
-                "Cannot convert %s expression to query expression.", expression.getValueCase()));
+            format("Cannot convert %s expression to query expression.", expression.getValueCase()));
     }
   }
 
@@ -412,6 +416,11 @@ public class QueryAndGatewayDtoConverter {
           columns.forEach(e -> builder.addArguments(convertToQueryExpression(e)));
           break;
         }
+      case DISTINCT_ARRAY:
+        throw new IllegalArgumentException(
+            format(
+                "Aggregation by the function type: %s is not supported by query service currently",
+                function.getFunction().name()));
       default:
         {
           builder.setFunctionName(function.getFunction().name()).setAlias(function.getAlias());

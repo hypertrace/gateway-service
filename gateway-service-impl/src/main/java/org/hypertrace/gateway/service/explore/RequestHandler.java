@@ -1,5 +1,7 @@
 package org.hypertrace.gateway.service.explore;
 
+import static org.hypertrace.core.query.service.client.QueryServiceClient.DEFAULT_QUERY_SERVICE_GROUP_BY_LIMIT;
+
 import com.google.common.collect.Streams;
 import com.google.protobuf.InvalidProtocolBufferException;
 import com.google.protobuf.util.JsonFormat;
@@ -15,7 +17,6 @@ import org.hypertrace.core.query.service.api.ResultSetChunk;
 import org.hypertrace.core.query.service.api.ResultSetMetadata;
 import org.hypertrace.core.query.service.api.Row;
 import org.hypertrace.core.query.service.api.Value;
-import org.hypertrace.core.query.service.client.QueryServiceClient;
 import org.hypertrace.gateway.service.common.AttributeMetadataProvider;
 import org.hypertrace.gateway.service.common.converters.QueryAndGatewayDtoConverter;
 import org.hypertrace.gateway.service.common.util.AttributeMetadataUtil;
@@ -23,6 +24,7 @@ import org.hypertrace.gateway.service.common.util.DataCollectionUtil;
 import org.hypertrace.gateway.service.common.util.ExpressionReader;
 import org.hypertrace.gateway.service.common.util.MetricAggregationFunctionUtil;
 import org.hypertrace.gateway.service.common.util.OrderByUtil;
+import org.hypertrace.gateway.service.common.util.QueryServiceClient;
 import org.hypertrace.gateway.service.v1.common.Expression;
 import org.hypertrace.gateway.service.v1.common.FunctionExpression;
 import org.hypertrace.gateway.service.v1.common.OrderByExpression;
@@ -35,16 +37,12 @@ import org.slf4j.LoggerFactory;
 public class RequestHandler implements RequestHandlerWithSorting {
   private static final Logger LOG = LoggerFactory.getLogger(RequestHandler.class);
   private final QueryServiceClient queryServiceClient;
-  private final int requestTimeout;
   private final AttributeMetadataProvider attributeMetadataProvider;
   private final TheRestGroupRequestHandler theRestGroupRequestHandler;
 
   public RequestHandler(
-      QueryServiceClient queryServiceClient,
-      int qsRequestTimeout,
-      AttributeMetadataProvider attributeMetadataProvider) {
+      QueryServiceClient queryServiceClient, AttributeMetadataProvider attributeMetadataProvider) {
     this.queryServiceClient = queryServiceClient;
-    this.requestTimeout = qsRequestTimeout;
     this.attributeMetadataProvider = attributeMetadataProvider;
     this.theRestGroupRequestHandler = new TheRestGroupRequestHandler(this);
   }
@@ -106,7 +104,7 @@ public class RequestHandler implements RequestHandlerWithSorting {
     if (requestContext
         .hasGroupBy()) { // Will need to do the Ordering, Limit and Offset ourselves after we get
       // the Group By Results
-      builder.setLimit(QueryServiceClient.DEFAULT_QUERY_SERVICE_GROUP_BY_LIMIT);
+      builder.setLimit(DEFAULT_QUERY_SERVICE_GROUP_BY_LIMIT);
       requestContext.setOrderByExpressions(getRequestOrderByExpressions(request));
     } else { // No Group By: Use Pinot's Order By, Limit and Offset
       addSortLimitAndOffset(request, builder);
@@ -131,7 +129,7 @@ public class RequestHandler implements RequestHandlerWithSorting {
       }
     }
 
-    return queryServiceClient.executeQuery(queryRequest, context.getHeaders(), requestTimeout);
+    return queryServiceClient.executeQuery(context, queryRequest);
   }
 
   Filter constructQueryServiceFilter(

@@ -15,6 +15,7 @@ import org.hypertrace.core.query.service.api.QueryRequest;
 import org.hypertrace.core.query.service.api.ResultSetChunk;
 import org.hypertrace.gateway.service.baseline.lib.BaselineCalculator;
 import org.hypertrace.gateway.service.common.AttributeMetadataProvider;
+import org.hypertrace.gateway.service.common.RequestContext;
 import org.hypertrace.gateway.service.common.util.AttributeMetadataUtil;
 import org.hypertrace.gateway.service.common.util.QueryExpressionUtil;
 import org.hypertrace.gateway.service.entity.config.EntityIdColumnsConfigs;
@@ -61,12 +62,8 @@ public class BaselineServiceImpl implements BaselineService {
   }
 
   public BaselineEntitiesResponse getBaselineForEntities(
-      String tenantId,
-      BaselineEntitiesRequest originalRequest,
-      Map<String, String> requestHeaders) {
-
-    BaselineRequestContext requestContext =
-        getRequestContext(tenantId, requestHeaders, originalRequest);
+      RequestContext sourceContext, BaselineEntitiesRequest originalRequest) {
+    BaselineRequestContext requestContext = getRequestContext(sourceContext, originalRequest);
     Map<String, AttributeMetadata> attributeMetadataMap =
         attributeMetadataProvider.getAttributesMetadata(
             requestContext, originalRequest.getEntityType());
@@ -107,7 +104,7 @@ public class BaselineServiceImpl implements BaselineService {
               periodSecs,
               entityIdAttributes);
       Iterator<ResultSetChunk> aggResponseChunkIterator =
-          baselineServiceQueryExecutor.executeQuery(requestHeaders, aggQueryRequest);
+          baselineServiceQueryExecutor.executeQuery(requestContext, aggQueryRequest);
       BaselineEntitiesResponse aggEntitiesResponse =
           baselineServiceQueryParser.parseQueryResponse(
               aggResponseChunkIterator,
@@ -150,7 +147,7 @@ public class BaselineServiceImpl implements BaselineService {
               periodSecs,
               entityIdAttributes);
       Iterator<ResultSetChunk> timeSeriesChunkIterator =
-          baselineServiceQueryExecutor.executeQuery(requestHeaders, timeSeriesQueryRequest);
+          baselineServiceQueryExecutor.executeQuery(requestContext, timeSeriesQueryRequest);
       BaselineEntitiesResponse timeSeriesEntitiesResponse =
           baselineServiceQueryParser.parseQueryResponse(
               timeSeriesChunkIterator,
@@ -184,10 +181,9 @@ public class BaselineServiceImpl implements BaselineService {
   }
 
   private BaselineRequestContext getRequestContext(
-      String tenantId,
-      Map<String, String> requestHeaders,
-      BaselineEntitiesRequest baselineEntitiesRequest) {
-    BaselineRequestContext requestContext = new BaselineRequestContext(tenantId, requestHeaders);
+      RequestContext sourceContext, BaselineEntitiesRequest baselineEntitiesRequest) {
+    BaselineRequestContext requestContext =
+        new BaselineRequestContext(sourceContext.getGrpcContext());
     baselineEntitiesRequest
         .getBaselineMetricSeriesRequestList()
         .forEach(

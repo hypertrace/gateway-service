@@ -1,5 +1,6 @@
 package org.hypertrace.gateway.service.entity.query;
 
+import static org.hypertrace.core.grpcutils.context.RequestContext.forTenantId;
 import static org.hypertrace.gateway.service.common.EntitiesRequestAndResponseUtils.buildAggregateExpression;
 import static org.hypertrace.gateway.service.common.EntitiesRequestAndResponseUtils.buildExpression;
 import static org.hypertrace.gateway.service.common.EntitiesRequestAndResponseUtils.buildOrderByExpression;
@@ -174,12 +175,11 @@ public class ExecutionTreeBuilderTest {
   private EntityExecutionContext getExecutionContext(EntitiesRequest entitiesRequest) {
     EntitiesRequestContext entitiesRequestContext =
         new EntitiesRequestContext(
-            TENANT_ID,
+            forTenantId(TENANT_ID),
             entitiesRequest.getStartTimeMillis(),
             entitiesRequest.getEndTimeMillis(),
             "API",
-            "API.startTime",
-            new HashMap<>());
+            "API.startTime");
     return new EntityExecutionContext(
         attributeMetadataProvider, entityIdColumnsConfigs, entitiesRequestContext, entitiesRequest);
   }
@@ -499,7 +499,7 @@ public class ExecutionTreeBuilderTest {
               .setOffset(20)
               .build();
       EntitiesRequestContext entitiesRequestContext =
-          new EntitiesRequestContext(TENANT_ID, 0L, 10L, "API", "API.startTime", new HashMap<>());
+          new EntitiesRequestContext(forTenantId(TENANT_ID), 0L, 10L, "API", "API.startTime");
       EntityExecutionContext executionContext =
           new EntityExecutionContext(
               attributeMetadataProvider,
@@ -538,7 +538,7 @@ public class ExecutionTreeBuilderTest {
               .build();
       EntitiesRequestContext entitiesRequestContext =
           new EntitiesRequestContext(
-              TENANT_ID, startTime, endTime, "API", "API.startTime", new HashMap<>());
+              forTenantId(TENANT_ID), startTime, endTime, "API", "API.startTime");
       EntityExecutionContext executionContext =
           new EntityExecutionContext(
               attributeMetadataProvider,
@@ -575,7 +575,7 @@ public class ExecutionTreeBuilderTest {
             .setOffset(20)
             .build();
     EntitiesRequestContext entitiesRequestContext =
-        new EntitiesRequestContext(TENANT_ID, 0L, 10L, "API", "API.startTime", new HashMap<>());
+        new EntitiesRequestContext(forTenantId(TENANT_ID), 0L, 10L, "API", "API.startTime");
     EntityExecutionContext executionContext =
         new EntityExecutionContext(
             attributeMetadataProvider,
@@ -605,7 +605,7 @@ public class ExecutionTreeBuilderTest {
             .setOffset(0)
             .build();
     EntitiesRequestContext entitiesRequestContext =
-        new EntitiesRequestContext(TENANT_ID, 0L, 10L, "API", "API.startTime", new HashMap<>());
+        new EntitiesRequestContext(forTenantId(TENANT_ID), 0L, 10L, "API", "API.startTime");
     EntityExecutionContext executionContext =
         new EntityExecutionContext(
             attributeMetadataProvider,
@@ -657,7 +657,7 @@ public class ExecutionTreeBuilderTest {
             .setOffset(0)
             .build();
     EntitiesRequestContext entitiesRequestContext =
-        new EntitiesRequestContext(TENANT_ID, 0L, 10L, "API", "API.startTime", new HashMap<>());
+        new EntitiesRequestContext(forTenantId(TENANT_ID), 0L, 10L, "API", "API.startTime");
     EntityExecutionContext executionContext =
         new EntityExecutionContext(
             attributeMetadataProvider,
@@ -710,7 +710,7 @@ public class ExecutionTreeBuilderTest {
             .setOffset(10)
             .build();
     EntitiesRequestContext entitiesRequestContext =
-        new EntitiesRequestContext(TENANT_ID, 0L, 10L, "API", "API.startTime", new HashMap<>());
+        new EntitiesRequestContext(forTenantId(TENANT_ID), 0L, 10L, "API", "API.startTime");
     EntityExecutionContext executionContext =
         new EntityExecutionContext(
             attributeMetadataProvider,
@@ -762,7 +762,7 @@ public class ExecutionTreeBuilderTest {
             .setOffset(10)
             .build();
     EntitiesRequestContext entitiesRequestContext =
-        new EntitiesRequestContext(TENANT_ID, 0L, 10L, "API", "API.startTime", new HashMap<>());
+        new EntitiesRequestContext(forTenantId(TENANT_ID), 0L, 10L, "API", "API.startTime");
     EntityExecutionContext executionContext =
         new EntityExecutionContext(
             attributeMetadataProvider,
@@ -810,12 +810,11 @@ public class ExecutionTreeBuilderTest {
             .build();
     EntitiesRequestContext entitiesRequestContext =
         new EntitiesRequestContext(
-            TENANT_ID,
+            forTenantId(TENANT_ID),
             entitiesRequest.getStartTimeMillis(),
             entitiesRequest.getEndTimeMillis(),
             "API",
-            "API.startTime",
-            new HashMap<>());
+            "API.startTime");
     EntityExecutionContext executionContext =
         new EntityExecutionContext(
             attributeMetadataProvider,
@@ -858,7 +857,7 @@ public class ExecutionTreeBuilderTest {
                     API_NUM_CALLS_ATTR, FunctionType.SUM, "SUM_numCalls", List.of()))
             .build();
     EntitiesRequestContext entitiesRequestContext =
-        new EntitiesRequestContext(TENANT_ID, 0L, 10L, "API", "API.startTime", new HashMap<>());
+        new EntitiesRequestContext(forTenantId(TENANT_ID), 0L, 10L, "API", "API.startTime");
     EntityExecutionContext executionContext =
         new EntityExecutionContext(
             attributeMetadataProvider,
@@ -899,7 +898,7 @@ public class ExecutionTreeBuilderTest {
             .setIncludeNonLiveEntities(true)
             .build();
     EntitiesRequestContext entitiesRequestContext =
-        new EntitiesRequestContext(TENANT_ID, 0L, 10L, "API", "API.startTime", new HashMap<>());
+        new EntitiesRequestContext(forTenantId(TENANT_ID), 0L, 10L, "API", "API.startTime");
     EntityExecutionContext executionContext =
         new EntityExecutionContext(
             attributeMetadataProvider,
@@ -941,12 +940,11 @@ public class ExecutionTreeBuilderTest {
             .build();
     EntitiesRequestContext entitiesRequestContext =
         new EntitiesRequestContext(
-            TENANT_ID,
+            forTenantId(TENANT_ID),
             entitiesRequest.getStartTimeMillis(),
             entitiesRequest.getEndTimeMillis(),
             "API",
-            "API.startTime",
-            new HashMap<>());
+            "API.startTime");
     EntityExecutionContext executionContext =
         new EntityExecutionContext(
             attributeMetadataProvider,
@@ -1002,12 +1000,11 @@ public class ExecutionTreeBuilderTest {
             .build();
     EntitiesRequestContext entitiesRequestContext =
         new EntitiesRequestContext(
-            TENANT_ID,
+            forTenantId(TENANT_ID),
             entitiesRequest.getStartTimeMillis(),
             entitiesRequest.getEndTimeMillis(),
             "API",
-            "API.startTime",
-            new HashMap<>());
+            "API.startTime");
     EntityExecutionContext executionContext =
         new EntityExecutionContext(
             attributeMetadataProvider,
@@ -1042,12 +1039,11 @@ public class ExecutionTreeBuilderTest {
             .build();
     EntitiesRequestContext entitiesRequestContext =
         new EntitiesRequestContext(
-            TENANT_ID,
+            forTenantId(TENANT_ID),
             entitiesRequest.getStartTimeMillis(),
             entitiesRequest.getEndTimeMillis(),
             "API",
-            "API.startTime",
-            new HashMap<>());
+            "API.startTime");
     EntityExecutionContext executionContext =
         new EntityExecutionContext(
             attributeMetadataProvider,
@@ -1082,12 +1078,11 @@ public class ExecutionTreeBuilderTest {
             .build();
     EntitiesRequestContext entitiesRequestContext =
         new EntitiesRequestContext(
-            TENANT_ID,
+            forTenantId(TENANT_ID),
             entitiesRequest.getStartTimeMillis(),
             entitiesRequest.getEndTimeMillis(),
             "API",
-            "API.startTime",
-            new HashMap<>());
+            "API.startTime");
     EntityExecutionContext executionContext =
         new EntityExecutionContext(
             attributeMetadataProvider,
@@ -1114,12 +1109,11 @@ public class ExecutionTreeBuilderTest {
             .build();
     EntitiesRequestContext entitiesRequestContext =
         new EntitiesRequestContext(
-            TENANT_ID,
+            forTenantId(TENANT_ID),
             entitiesRequest.getStartTimeMillis(),
             entitiesRequest.getEndTimeMillis(),
             "API",
-            "API.startTime",
-            new HashMap<>());
+            "API.startTime");
     EntityExecutionContext executionContext =
         new EntityExecutionContext(
             attributeMetadataProvider,

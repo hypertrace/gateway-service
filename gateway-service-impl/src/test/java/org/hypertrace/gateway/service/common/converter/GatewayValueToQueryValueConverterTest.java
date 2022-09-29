@@ -40,6 +40,23 @@ public class GatewayValueToQueryValueConverterTest {
   }
 
   @Test
+  public void testDistinctArrayFunctionExpressionConversionFailure() {
+    Expression gatewayExprArgument =
+        QueryExpressionUtil.buildAttributeExpression("API.apiId").build();
+    Expression gatewayExpr =
+        Expression.newBuilder()
+            .setFunction(
+                FunctionExpression.newBuilder()
+                    .setFunction(FunctionType.DISTINCT_ARRAY)
+                    .addArguments(gatewayExprArgument)
+                    .build())
+            .build();
+    Assertions.assertThrows(
+        IllegalArgumentException.class,
+        () -> QueryAndGatewayDtoConverter.convertToQueryExpression(gatewayExpr));
+  }
+
+  @Test
   public void testExpressionWithOrderBy() {
     getOrderByExpressionMap()
         .forEach(

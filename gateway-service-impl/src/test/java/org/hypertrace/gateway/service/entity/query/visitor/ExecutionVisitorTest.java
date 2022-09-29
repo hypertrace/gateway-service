@@ -1,5 +1,6 @@
 package org.hypertrace.gateway.service.entity.query.visitor;
 
+import static org.hypertrace.core.grpcutils.context.RequestContext.forTenantId;
 import static org.hypertrace.gateway.service.common.EntitiesRequestAndResponseUtils.buildAggregateExpression;
 import static org.hypertrace.gateway.service.common.EntitiesRequestAndResponseUtils.buildExpression;
 import static org.hypertrace.gateway.service.common.EntitiesRequestAndResponseUtils.buildOrderByExpression;
@@ -27,6 +28,7 @@ import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
+import java.util.concurrent.Executors;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
 import org.hypertrace.core.attribute.service.v1.AttributeScope;
@@ -133,7 +135,9 @@ public class ExecutionVisitorTest {
         .thenReturn(queryServiceEntityFetcher);
     when(entityQueryHandlerRegistry.getEntityFetcher(EDS_SOURCE))
         .thenReturn(entityDataServiceEntityFetcher);
-    executionVisitor = new ExecutionVisitor(executionContext, entityQueryHandlerRegistry);
+    executionVisitor =
+        new ExecutionVisitor(
+            executionContext, entityQueryHandlerRegistry, Executors.newSingleThreadExecutor());
   }
 
   @Test
@@ -384,7 +388,6 @@ public class ExecutionVisitorTest {
     long startTime = 0;
     long endTime = 10;
     String tenantId = "TENANT_ID";
-    Map<String, String> requestHeaders = Map.of("x-tenant-id", tenantId);
     AttributeScope entityType = AttributeScope.API;
     Expression selectionExpression = buildExpression(API_NAME_ATTR);
     EntitiesRequest entitiesRequest =
@@ -400,7 +403,7 @@ public class ExecutionVisitorTest {
             .build();
     EntitiesRequestContext entitiesRequestContext =
         new EntitiesRequestContext(
-            tenantId, startTime, endTime, entityType.name(), "API.startTime", requestHeaders);
+            forTenantId(tenantId), startTime, endTime, entityType.name(), "API.startTime");
     Map<EntityKey, Builder> entityKeyBuilderResponseMap =
         Map.of(
             EntityKey.of("entity-id-0"),
@@ -417,7 +420,7 @@ public class ExecutionVisitorTest {
         .thenReturn(Map.of("QS", List.of(selectionExpression)));
     when(executionContext.getEntitiesRequest()).thenReturn(entitiesRequest);
     when(executionContext.getTenantId()).thenReturn(tenantId);
-    when(executionContext.getRequestHeaders()).thenReturn(requestHeaders);
+    when(executionContext.getEntitiesRequestContext()).thenReturn(entitiesRequestContext);
     when(executionContext.getTimestampAttributeId()).thenReturn("API.startTime");
     when(queryServiceEntityFetcher.getEntities(eq(entitiesRequestContext), eq(entitiesRequest)))
         .thenReturn(entityFetcherResponse);
@@ -443,7 +446,6 @@ public class ExecutionVisitorTest {
     long startTime = 0;
     long endTime = 10;
     String tenantId = "TENANT_ID";
-    Map<String, String> requestHeaders = Map.of("x-tenant-id", tenantId);
     AttributeScope entityType = AttributeScope.API;
     Expression selectionExpression = buildExpression(API_NAME_ATTR);
     EntitiesRequest entitiesRequest =
@@ -459,7 +461,7 @@ public class ExecutionVisitorTest {
             .build();
     EntitiesRequestContext entitiesRequestContext =
         new EntitiesRequestContext(
-            tenantId, startTime, endTime, entityType.name(), "API.startTime", requestHeaders);
+            forTenantId(tenantId), startTime, endTime, entityType.name(), "API.startTime");
     Map<EntityKey, Builder> entityKeyBuilderResponseMap =
         Map.of(
             EntityKey.of("entity-id-0"),
@@ -475,7 +477,7 @@ public class ExecutionVisitorTest {
         .thenReturn(Map.of("QS", List.of(selectionExpression)));
     when(executionContext.getEntitiesRequest()).thenReturn(entitiesRequest);
     when(executionContext.getTenantId()).thenReturn(tenantId);
-    when(executionContext.getRequestHeaders()).thenReturn(requestHeaders);
+    when(executionContext.getEntitiesRequestContext()).thenReturn(entitiesRequestContext);
     when(executionContext.getTimestampAttributeId()).thenReturn("API.startTime");
     when(queryServiceEntityFetcher.getEntities(eq(entitiesRequestContext), eq(entitiesRequest)))
         .thenReturn(entityFetcherResponse);
@@ -501,7 +503,6 @@ public class ExecutionVisitorTest {
     long startTime = 0;
     long endTime = 10;
     String tenantId = "TENANT_ID";
-    Map<String, String> requestHeaders = Map.of("x-tenant-id", tenantId);
     AttributeScope entityType = AttributeScope.API;
     Expression selectionExpression = buildExpression(API_NAME_ATTR);
     EntitiesRequest entitiesRequest =
@@ -517,7 +518,7 @@ public class ExecutionVisitorTest {
             .build();
     EntitiesRequestContext entitiesRequestContext =
         new EntitiesRequestContext(
-            tenantId, startTime, endTime, entityType.name(), "API.startTime", requestHeaders);
+            forTenantId(tenantId), startTime, endTime, entityType.name(), "API.startTime");
     Map<EntityKey, Builder> entityKeyBuilderResponseMap =
         Map.of(
             EntityKey.of("entity-id-0"),
@@ -533,7 +534,7 @@ public class ExecutionVisitorTest {
         .thenReturn(Map.of("EDS", List.of(selectionExpression)));
     when(executionContext.getEntitiesRequest()).thenReturn(entitiesRequest);
     when(executionContext.getTenantId()).thenReturn(tenantId);
-    when(executionContext.getRequestHeaders()).thenReturn(requestHeaders);
+    when(executionContext.getEntitiesRequestContext()).thenReturn(entitiesRequestContext);
     when(executionContext.getTimestampAttributeId()).thenReturn("API.startTime");
     when(entityDataServiceEntityFetcher.getEntities(
             eq(entitiesRequestContext), eq(entitiesRequest)))
@@ -553,7 +554,6 @@ public class ExecutionVisitorTest {
     long startTime = 0;
     long endTime = 10;
     String tenantId = "TENANT_ID";
-    Map<String, String> requestHeaders = Map.of("x-tenant-id", tenantId);
     AttributeScope entityType = AttributeScope.API;
     Expression selectionExpression = buildExpression(API_NAME_ATTR);
     EntitiesRequest entitiesRequest =
@@ -566,7 +566,7 @@ public class ExecutionVisitorTest {
             .build();
     EntitiesRequestContext entitiesRequestContext =
         new EntitiesRequestContext(
-            tenantId, startTime, endTime, entityType.name(), "API.startTime", requestHeaders);
+            forTenantId(tenantId), startTime, endTime, entityType.name(), "API.startTime");
     Map<EntityKey, Builder> entityKeyBuilderResponseMap =
         Map.of(
             EntityKey.of("entity-id-0"),
@@ -582,7 +582,7 @@ public class ExecutionVisitorTest {
         .thenReturn(Map.of("QS", List.of(selectionExpression)));
     when(executionContext.getEntitiesRequest()).thenReturn(entitiesRequest);
     when(executionContext.getTenantId()).thenReturn(tenantId);
-    when(executionContext.getRequestHeaders()).thenReturn(requestHeaders);
+    when(executionContext.getEntitiesRequestContext()).thenReturn(entitiesRequestContext);
     when(executionContext.getTimestampAttributeId()).thenReturn("API.startTime");
     when(queryServiceEntityFetcher.getEntities(eq(entitiesRequestContext), eq(entitiesRequest)))
         .thenReturn(entityFetcherResponse);
@@ -608,7 +608,6 @@ public class ExecutionVisitorTest {
     long startTime = 0;
     long endTime = 10;
     String tenantId = "TENANT_ID";
-    Map<String, String> requestHeaders = Map.of("x-tenant-id", tenantId);
     AttributeScope entityType = AttributeScope.API;
     Expression selectionExpression = buildExpression(API_NAME_ATTR);
     Expression metricExpression =
@@ -632,7 +631,7 @@ public class ExecutionVisitorTest {
             .build();
     EntitiesRequestContext entitiesRequestContext =
         new EntitiesRequestContext(
-            tenantId, startTime, endTime, entityType.name(), "API.startTime", requestHeaders);
+            forTenantId(tenantId), startTime, endTime, entityType.name(), "API.startTime");
 
     // Order matters since we will do the pagination ourselves. So we use a LinkedHashMap
     Map<EntityKey, Builder> entityKeyBuilderResponseMap1 = new LinkedHashMap<>();
@@ -691,7 +690,7 @@ public class ExecutionVisitorTest {
         .thenReturn(Map.of("QS", List.of(timeAggregation)));
     when(executionContext.getEntitiesRequest()).thenReturn(entitiesRequest);
     when(executionContext.getTenantId()).thenReturn(tenantId);
-    when(executionContext.getRequestHeaders()).thenReturn(requestHeaders);
+    when(executionContext.getEntitiesRequestContext()).thenReturn(entitiesRequestContext);
     when(executionContext.getTimestampAttributeId()).thenReturn("API.startTime");
     EntitiesRequest entitiesRequestForAttributes =
         EntitiesRequest.newBuilder(entitiesRequest)
@@ -756,7 +755,9 @@ public class ExecutionVisitorTest {
   @Test
   public void test_visitSelectionNode_differentSource_callSeparatedCalls() {
     ExecutionVisitor executionVisitor =
-        spy(new ExecutionVisitor(executionContext, entityQueryHandlerRegistry));
+        spy(
+            new ExecutionVisitor(
+                executionContext, entityQueryHandlerRegistry, Executors.newSingleThreadExecutor()));
     when(executionContext.getTimestampAttributeId()).thenReturn("API.startTime");
     SelectionNode selectionNode =
         new SelectionNode.Builder(new NoOpNode())
@@ -772,6 +773,8 @@ public class ExecutionVisitorTest {
     when(queryServiceEntityFetcher.getEntities(any(), any())).thenReturn(result4);
     when(executionVisitor.visit(any(NoOpNode.class)))
         .thenReturn(new EntityResponse(result4, result4.getEntityKeyBuilderMap().size()));
+    when(executionContext.getEntitiesRequestContext())
+        .thenReturn(mock(EntitiesRequestContext.class));
     executionVisitor.visit(selectionNode);
     verify(entityDataServiceEntityFetcher).getEntities(any(), any());
     verify(queryServiceEntityFetcher).getEntities(any(), any());
@@ -808,7 +811,7 @@ public class ExecutionVisitorTest {
             .build();
     EntitiesRequestContext entitiesRequestContext =
         new EntitiesRequestContext(
-            tenantId, startTime, endTime, entityType.name(), "API.startTime", requestHeaders);
+            forTenantId(tenantId), startTime, endTime, entityType.name(), "API.startTime");
 
     // Order matters since we will do the pagination ourselves. So we use a LinkedHashMap
     Map<EntityKey, Builder> entityKeyBuilderResponseMap1 = new LinkedHashMap<>();
@@ -857,7 +860,7 @@ public class ExecutionVisitorTest {
         .thenReturn(Map.of("QS", List.of(timeAggregation)));
     when(executionContext.getEntitiesRequest()).thenReturn(entitiesRequest);
     when(executionContext.getTenantId()).thenReturn(tenantId);
-    when(executionContext.getRequestHeaders()).thenReturn(requestHeaders);
+    when(executionContext.getEntitiesRequestContext()).thenReturn(entitiesRequestContext);
     when(executionContext.getTimestampAttributeId()).thenReturn("API.startTime");
     EntitiesRequest entitiesRequestForAttributes =
         EntitiesRequest.newBuilder(entitiesRequest)
@@ -925,7 +928,9 @@ public class ExecutionVisitorTest {
             .setFilter(generateEQFilter(API_DISCOVERY_STATE, "DISCOVERED"))
             .build();
     ExecutionVisitor executionVisitor =
-        spy(new ExecutionVisitor(executionContext, entityQueryHandlerRegistry));
+        spy(
+            new ExecutionVisitor(
+                executionContext, entityQueryHandlerRegistry, Executors.newSingleThreadExecutor()));
     when(executionContext.getEntitiesRequest()).thenReturn(entitiesRequest);
 
     // Selection node with NoOp child, to short-circuit the call to first service.

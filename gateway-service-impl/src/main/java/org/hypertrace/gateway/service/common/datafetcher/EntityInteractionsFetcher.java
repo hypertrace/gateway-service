@@ -1,5 +1,6 @@
 package org.hypertrace.gateway.service.common.datafetcher;
 
+import static org.hypertrace.core.query.service.client.QueryServiceClient.DEFAULT_QUERY_SERVICE_GROUP_BY_LIMIT;
 import static org.hypertrace.gateway.service.common.converters.QueryRequestUtil.createFilter;
 import static org.hypertrace.gateway.service.common.converters.QueryRequestUtil.createStringArrayLiteralExpression;
 import static org.hypertrace.gateway.service.common.converters.QueryRequestUtil.createStringNullLiteralExpression;
@@ -32,7 +33,6 @@ import org.hypertrace.core.query.service.api.Operator;
 import org.hypertrace.core.query.service.api.QueryRequest;
 import org.hypertrace.core.query.service.api.ResultSetChunk;
 import org.hypertrace.core.query.service.api.Row;
-import org.hypertrace.core.query.service.client.QueryServiceClient;
 import org.hypertrace.gateway.service.common.AttributeMetadataProvider;
 import org.hypertrace.gateway.service.common.RequestContext;
 import org.hypertrace.gateway.service.common.converters.QueryAndGatewayDtoConverter;
@@ -40,6 +40,7 @@ import org.hypertrace.gateway.service.common.converters.QueryRequestUtil;
 import org.hypertrace.gateway.service.common.util.AttributeMetadataUtil;
 import org.hypertrace.gateway.service.common.util.ExpressionReader;
 import org.hypertrace.gateway.service.common.util.MetricAggregationFunctionUtil;
+import org.hypertrace.gateway.service.common.util.QueryServiceClient;
 import org.hypertrace.gateway.service.entity.EntityKey;
 import org.hypertrace.gateway.service.entity.config.InteractionConfig;
 import org.hypertrace.gateway.service.entity.config.InteractionConfigs;
@@ -88,17 +89,14 @@ public class EntityInteractionsFetcher {
   private static final String COUNT_COLUMN_NAME = "COUNT";
 
   private final QueryServiceClient queryServiceClient;
-  private final int queryServiceRequestTimeout;
   private final AttributeMetadataProvider metadataProvider;
   private final ExecutorService queryExecutor;
 
   public EntityInteractionsFetcher(
       QueryServiceClient queryServiceClient,
-      int qsRequestTimeout,
       AttributeMetadataProvider metadataProvider,
       ExecutorService queryExecutor) {
     this.queryServiceClient = queryServiceClient;
-    this.queryServiceRequestTimeout = qsRequestTimeout;
     this.metadataProvider = metadataProvider;
     this.queryExecutor = queryExecutor;
   }
@@ -189,10 +187,7 @@ public class EntityInteractionsFetcher {
   private EntityInteractionQueryResponse executeQueryRequest(
       RequestContext context, EntityInteractionQueryRequest entityInteractionQueryRequest) {
     Iterator<ResultSetChunk> resultSet =
-        queryServiceClient.executeQuery(
-            entityInteractionQueryRequest.getRequest(),
-            context.getHeaders(),
-            queryServiceRequestTimeout);
+        queryServiceClient.executeQuery(context, entityInteractionQueryRequest.getRequest());
     return new EntityInteractionQueryResponse(entityInteractionQueryRequest, resultSet);
   }
 
@@ -466,7 +461,7 @@ public class EntityInteractionsFetcher {
       if (limit > 0) {
         builderCopy.setLimit(limit);
       } else {
-        builderCopy.setLimit(QueryServiceClient.DEFAULT_QUERY_SERVICE_GROUP_BY_LIMIT);
+        builderCopy.setLimit(DEFAULT_QUERY_SERVICE_GROUP_BY_LIMIT);
       }
 
       queryRequests.put(e, builderCopy.build());

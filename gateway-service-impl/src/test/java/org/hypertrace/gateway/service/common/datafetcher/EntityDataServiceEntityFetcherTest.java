@@ -1,5 +1,6 @@
 package org.hypertrace.gateway.service.common.datafetcher;
 
+import static org.hypertrace.core.grpcutils.context.RequestContext.*;
 import static org.hypertrace.gateway.service.common.EntitiesRequestAndResponseUtils.buildOrderByExpression;
 import static org.hypertrace.gateway.service.common.EntitiesRequestAndResponseUtils.generateEQFilter;
 import static org.hypertrace.gateway.service.common.converters.EntityServiceAndGatewayServiceConverter.convertToEntityServiceExpression;
@@ -52,7 +53,7 @@ import org.junit.jupiter.api.Test;
 import org.mockito.MockedStatic;
 import org.mockito.Mockito;
 
-public class EntityDataServiceEntityFetcherTests {
+public class EntityDataServiceEntityFetcherTest {
   private static final String TENANT_ID = "tenant-id";
   private static final String API_ID_ATTR = "API.id";
   private static final String API_NAME_ATTR = "API.name";
@@ -85,7 +86,6 @@ public class EntityDataServiceEntityFetcherTests {
     int limit = 10;
     int offset = 5;
     String tenantId = "TENANT_ID";
-    Map<String, String> requestHeaders = Map.of("x-tenant-id", tenantId);
     AttributeScope entityType = AttributeScope.API;
     EntitiesRequest entitiesRequest =
         EntitiesRequest.newBuilder()
@@ -103,7 +103,7 @@ public class EntityDataServiceEntityFetcherTests {
             .build();
     EntitiesRequestContext entitiesRequestContext =
         new EntitiesRequestContext(
-            tenantId, startTime, endTime, entityType.name(), "API.startTime", requestHeaders);
+            forTenantId(tenantId), startTime, endTime, entityType.name(), "API.startTime");
 
     EntityQueryRequest expectedQueryRequest =
         EntityQueryRequest.newBuilder()
@@ -125,7 +125,8 @@ public class EntityDataServiceEntityFetcherTests {
     List<ResultSetChunk> resultSetChunks =
         List.of(getResultSetChunk(List.of("API.apiId"), new String[][] {{"apiId1"}, {"apiId2"}}));
 
-    when(entityQueryServiceClient.execute(eq(expectedQueryRequest), eq(requestHeaders)))
+    when(entityQueryServiceClient.execute(
+            eq(expectedQueryRequest), eq(entitiesRequestContext.getHeaders())))
         .thenReturn(resultSetChunks.iterator());
 
     assertEquals(
@@ -141,7 +142,6 @@ public class EntityDataServiceEntityFetcherTests {
     int limit = 0;
     int offset = 0;
     String tenantId = "TENANT_ID";
-    Map<String, String> requestHeaders = Map.of("x-tenant-id", tenantId);
     AttributeScope entityType = AttributeScope.API;
     EntitiesRequest entitiesRequest =
         EntitiesRequest.newBuilder()
@@ -159,7 +159,7 @@ public class EntityDataServiceEntityFetcherTests {
             .build();
     EntitiesRequestContext entitiesRequestContext =
         new EntitiesRequestContext(
-            tenantId, startTime, endTime, entityType.name(), "API.startTime", requestHeaders);
+            forTenantId(tenantId), startTime, endTime, entityType.name(), "API.startTime");
 
     EntityQueryRequest expectedQueryRequest =
         EntityQueryRequest.newBuilder()
@@ -179,7 +179,8 @@ public class EntityDataServiceEntityFetcherTests {
     List<ResultSetChunk> resultSetChunks =
         List.of(getResultSetChunk(List.of("API.apiId"), new String[][] {{"apiId1"}, {"apiId2"}}));
 
-    when(entityQueryServiceClient.execute(eq(expectedQueryRequest), eq(requestHeaders)))
+    when(entityQueryServiceClient.execute(
+            eq(expectedQueryRequest), eq(entitiesRequestContext.getHeaders())))
         .thenReturn(resultSetChunks.iterator());
 
     assertEquals(
@@ -193,7 +194,7 @@ public class EntityDataServiceEntityFetcherTests {
         UnsupportedOperationException.class,
         () -> {
           entityDataServiceEntityFetcher.getTimeAggregatedMetrics(
-              new EntitiesRequestContext(TENANT_ID, 0, 1, "API", "API.startTime", Map.of()),
+              new EntitiesRequestContext(forTenantId(TENANT_ID), 0, 1, "API", "API.startTime"),
               EntitiesRequest.newBuilder().build());
         });
   }
@@ -208,7 +209,6 @@ public class EntityDataServiceEntityFetcherTests {
       int limit = 10;
       int offset = 5;
       String tenantId = "TENANT_ID";
-      Map<String, String> requestHeaders = Map.of("x-tenant-id", tenantId);
       AttributeScope entityType = AttributeScope.API;
       EntitiesRequest entitiesRequest =
           EntitiesRequest.newBuilder()
@@ -226,7 +226,7 @@ public class EntityDataServiceEntityFetcherTests {
               .build();
       EntitiesRequestContext entitiesRequestContext =
           new EntitiesRequestContext(
-              tenantId, startTime, endTime, entityType.name(), "API.startTime", requestHeaders);
+              forTenantId(tenantId), startTime, endTime, entityType.name(), "API.startTime");
 
       TotalEntitiesRequest expectedQueryRequest =
           TotalEntitiesRequest.newBuilder()
@@ -234,7 +234,8 @@ public class EntityDataServiceEntityFetcherTests {
               .setFilter(convertToEntityServiceFilter(entitiesRequest.getFilter()))
               .build();
 
-      when(entityQueryServiceClient.total(eq(expectedQueryRequest), eq(requestHeaders)))
+      when(entityQueryServiceClient.total(
+              eq(expectedQueryRequest), eq(entitiesRequestContext.getHeaders())))
           .thenReturn(TotalEntitiesResponse.newBuilder().setTotal(100L).build());
 
       assertEquals(
@@ -251,7 +252,7 @@ public class EntityDataServiceEntityFetcherTests {
       long endTime = 10L;
       int limit = 0;
       int offset = 0;
-      RequestContext requestContext = RequestContext.forTenantId(TENANT_ID);
+      RequestContext requestContext = forTenantId(TENANT_ID);
       AttributeScope entityType = AttributeScope.API;
       EntitiesRequest entitiesRequest =
           EntitiesRequest.newBuilder()
@@ -262,15 +263,11 @@ public class EntityDataServiceEntityFetcherTests {
               .addAllOrderBy(orderByExpressions)
               .setLimit(limit)
               .setOffset(offset)
+              .setFetchTotal(true)
               .build();
       EntitiesRequestContext entitiesRequestContext =
           new EntitiesRequestContext(
-              requestContext.getTenantId().get(),
-              startTime,
-              endTime,
-              entityType.name(),
-              "API.startTime",
-              requestContext.getRequestHeaders());
+              requestContext, startTime, endTime, entityType.name(), "API.startTime");
 
       EntityQueryRequest expectedQueryRequest =
           EntityQueryRequest.newBuilder()
@@ -286,8 +283,15 @@ public class EntityDataServiceEntityFetcherTests {
                   EntityServiceAndGatewayServiceConverter.convertToOrderByExpressions(
                       orderByExpressions))
               .build();
+      TotalEntitiesRequest expectedTotalEntitiesRequest =
+          TotalEntitiesRequest.newBuilder()
+              .setEntityType("API")
+              .setFilter(buildTimeRangeFilter("API.startTime", startTime, endTime))
+              .build();
 
       when(entityQueryServiceClient.execute(any(), any())).thenReturn(Collections.emptyIterator());
+      when(entityQueryServiceClient.total(any(), any()))
+          .thenReturn(TotalEntitiesResponse.newBuilder().setTotal(200L).build());
 
       mockTimestamp("startTime");
       try (MockedStatic<TimestampConfigs> mockedTimestamps =
@@ -297,6 +301,9 @@ public class EntityDataServiceEntityFetcherTests {
             .thenReturn("startTime");
         entityDataServiceEntityFetcher.getEntities(entitiesRequestContext, entitiesRequest);
         verify(entityQueryServiceClient, times(1)).execute(eq(expectedQueryRequest), any());
+
+        entityDataServiceEntityFetcher.getTotal(entitiesRequestContext, entitiesRequest);
+        verify(entityQueryServiceClient, times(1)).total(eq(expectedTotalEntitiesRequest), any());
       }
     }
 
@@ -321,7 +328,7 @@ public class EntityDataServiceEntityFetcherTests {
       long endTime = 10L;
       int limit = 0;
       int offset = 0;
-      RequestContext requestContext = RequestContext.forTenantId(TENANT_ID);
+      RequestContext requestContext = forTenantId(TENANT_ID);
       AttributeScope entityType = AttributeScope.API;
       EntitiesRequest entitiesRequest =
           EntitiesRequest.newBuilder()
@@ -332,15 +339,11 @@ public class EntityDataServiceEntityFetcherTests {
               .addAllOrderBy(orderByExpressions)
               .setLimit(limit)
               .setOffset(offset)
+              .setFetchTotal(true)
               .build();
       EntitiesRequestContext entitiesRequestContext =
           new EntitiesRequestContext(
-              requestContext.getTenantId().get(),
-              startTime,
-              endTime,
-              entityType.name(),
-              "API.startTime",
-              requestContext.getRequestHeaders());
+              requestContext, startTime, endTime, entityType.name(), "API.startTime");
 
       EntityQueryRequest expectedQueryRequest =
           EntityQueryRequest.newBuilder()
@@ -357,10 +360,21 @@ public class EntityDataServiceEntityFetcherTests {
                       orderByExpressions))
               .build();
 
+      TotalEntitiesRequest expectedTotalEntitiesRequest =
+          TotalEntitiesRequest.newBuilder()
+              .setEntityType("API")
+              .setFilter(org.hypertrace.entity.query.service.v1.Filter.getDefaultInstance())
+              .build();
+
       when(entityQueryServiceClient.execute(any(), any())).thenReturn(Collections.emptyIterator());
+      when(entityQueryServiceClient.total(any(), any()))
+          .thenReturn(TotalEntitiesResponse.newBuilder().setTotal(200L).build());
 
       entityDataServiceEntityFetcher.getEntities(entitiesRequestContext, entitiesRequest);
       verify(entityQueryServiceClient, times(1)).execute(eq(expectedQueryRequest), any());
+
+      entityDataServiceEntityFetcher.getTotal(entitiesRequestContext, entitiesRequest);
+      verify(entityQueryServiceClient, times(1)).total(eq(expectedTotalEntitiesRequest), any());
     }
 
     private org.hypertrace.entity.query.service.v1.Filter buildTimeRangeFilter(

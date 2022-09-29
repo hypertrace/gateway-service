@@ -3,8 +3,8 @@ package org.hypertrace.gateway.service.explore;
 import static org.mockito.Mockito.mock;
 
 import java.util.List;
-import org.hypertrace.core.query.service.client.QueryServiceClient;
 import org.hypertrace.gateway.service.common.AttributeMetadataProvider;
+import org.hypertrace.gateway.service.common.util.QueryServiceClient;
 import org.hypertrace.gateway.service.v1.common.ColumnIdentifier;
 import org.hypertrace.gateway.service.v1.common.Expression;
 import org.hypertrace.gateway.service.v1.common.FunctionExpression;
@@ -74,8 +74,7 @@ public class RequestHandlerTest {
             .build();
 
     RequestHandler requestHandler =
-        new RequestHandler(
-            mock(QueryServiceClient.class), 500, mock(AttributeMetadataProvider.class));
+        new RequestHandler(mock(QueryServiceClient.class), mock(AttributeMetadataProvider.class));
     List<OrderByExpression> orderByExpressions =
         requestHandler.getRequestOrderByExpressions(exploreRequest);
 
@@ -151,8 +150,7 @@ public class RequestHandlerTest {
             .build();
 
     RequestHandler requestHandler =
-        new RequestHandler(
-            mock(QueryServiceClient.class), 500, mock(AttributeMetadataProvider.class));
+        new RequestHandler(mock(QueryServiceClient.class), mock(AttributeMetadataProvider.class));
     List<OrderByExpression> orderByExpressions =
         requestHandler.getRequestOrderByExpressions(exploreRequest);
 
@@ -228,8 +226,7 @@ public class RequestHandlerTest {
             .build();
 
     RequestHandler requestHandler =
-        new RequestHandler(
-            mock(QueryServiceClient.class), 500, mock(AttributeMetadataProvider.class));
+        new RequestHandler(mock(QueryServiceClient.class), mock(AttributeMetadataProvider.class));
     List<OrderByExpression> orderByExpressions =
         requestHandler.getRequestOrderByExpressions(exploreRequest);
 
@@ -300,8 +297,7 @@ public class RequestHandlerTest {
             .build();
 
     RequestHandler requestHandler =
-        new RequestHandler(
-            mock(QueryServiceClient.class), 500, mock(AttributeMetadataProvider.class));
+        new RequestHandler(mock(QueryServiceClient.class), mock(AttributeMetadataProvider.class));
     List<OrderByExpression> orderByExpressions =
         requestHandler.getRequestOrderByExpressions(exploreRequest);
 

@@ -35,6 +35,7 @@ enum Operator {
   LIKE = 15;
   CONTAINS_KEY = 16;
   CONTAINS_KEYVALUE = 17;
+  CONTAINS_KEY_LIKE = 18;
 }
 
 enum FunctionType {
@@ -58,6 +59,7 @@ enum FunctionType {
   // Have thought of introducing a parameter for estimate later.
   PERCENTILE = 8;
   DISTINCTCOUNT = 9;
+  DISTINCT_ARRAY = 10; //This is currently supported only for EDS
 }
 
 enum ValueType {

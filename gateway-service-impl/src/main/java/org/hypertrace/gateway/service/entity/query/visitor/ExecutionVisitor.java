@@ -11,6 +11,8 @@ import java.util.LinkedList;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
+import java.util.concurrent.CompletableFuture;
+import java.util.concurrent.ExecutorService;
 import java.util.stream.Collectors;
 import java.util.stream.IntStream;
 import org.hypertrace.gateway.service.common.datafetcher.EntityFetcherResponse;
@@ -47,12 +49,16 @@ public class ExecutionVisitor implements Visitor<EntityResponse> {
   private static final Logger LOG = LoggerFactory.getLogger(ExecutionVisitor.class);
 
   private final EntityQueryHandlerRegistry queryHandlerRegistry;
+  private final ExecutorService executorService;
   private final EntityExecutionContext executionContext;
 
   public ExecutionVisitor(
-      EntityExecutionContext executionContext, EntityQueryHandlerRegistry queryHandlerRegistry) {
+      EntityExecutionContext executionContext,
+      EntityQueryHandlerRegistry queryHandlerRegistry,
+      ExecutorService executorService) {
     this.executionContext = executionContext;
     this.queryHandlerRegistry = queryHandlerRegistry;
+    this.executorService = executorService;
   }
 
   private static EntityFetcherResponse intersectEntities(List<EntityFetcherResponse> builders) {
@@ -116,12 +122,11 @@ public class ExecutionVisitor implements Visitor<EntityResponse> {
     EntitiesRequest entitiesRequest = executionContext.getEntitiesRequest();
     EntitiesRequestContext context =
         new EntitiesRequestContext(
-            executionContext.getTenantId(),
+            executionContext.getEntitiesRequestContext().getGrpcContext(),
             entitiesRequest.getStartTimeMillis(),
             entitiesRequest.getEndTimeMillis(),
             entitiesRequest.getEntityType(),
-            executionContext.getTimestampAttributeId(),
-            executionContext.getRequestHeaders());
+            executionContext.getTimestampAttributeId());
 
     EntitiesRequest.Builder requestBuilder =
         EntitiesRequest.newBuilder(entitiesRequest)
@@ -157,10 +162,11 @@ public class ExecutionVisitor implements Visitor<EntityResponse> {
     // total, the total number of entities has to be fetched separately
     if (dataFetcherNode.canFetchTotal()) {
       // since, the pagination is pushed down to the data store, total can be requested directly
-      // from the data store
-      return new EntityResponse(
-          entityFetcher.getEntities(context, request),
-          entityFetcher.getTotal(context, entitiesRequest));
+      // from the data store. Request it async to parallelize with rest of entity fetch
+      CompletableFuture<Long> totalFuture =
+          CompletableFuture.supplyAsync(
+              () -> entityFetcher.getTotal(context, entitiesRequest), this.executorService);
+      return new EntityResponse(entityFetcher.getEntities(context, request), totalFuture.join());
     } else {
       // if the data fetcher node is not paginating, the total number of entities is equal to number
       // of records fetched
@@ -232,12 +238,11 @@ public class ExecutionVisitor implements Visitor<EntityResponse> {
                   IEntityFetcher entityFetcher = queryHandlerRegistry.getEntityFetcher(source);
                   EntitiesRequestContext context =
                       new EntitiesRequestContext(
-                          executionContext.getTenantId(),
+                          executionContext.getEntitiesRequestContext().getGrpcContext(),
                           request.getStartTimeMillis(),
                           request.getEndTimeMillis(),
                           request.getEntityType(),
-                          executionContext.getTimestampAttributeId(),
-                          executionContext.getRequestHeaders());
+                          executionContext.getTimestampAttributeId());
                   return entityFetcher.getEntities(context, request);
                 })
             .collect(Collectors.toList()));
@@ -263,12 +268,11 @@ public class ExecutionVisitor implements Visitor<EntityResponse> {
                   IEntityFetcher entityFetcher = queryHandlerRegistry.getEntityFetcher(source);
                   EntitiesRequestContext context =
                       new EntitiesRequestContext(
-                          executionContext.getTenantId(),
+                          executionContext.getEntitiesRequestContext().getGrpcContext(),
                           request.getStartTimeMillis(),
                           request.getEndTimeMillis(),
                           request.getEntityType(),
-                          executionContext.getTimestampAttributeId(),
-                          executionContext.getRequestHeaders());
+                          executionContext.getTimestampAttributeId());
                   return entityFetcher.getEntities(context, request);
                 })
             .collect(Collectors.toList()));
@@ -294,12 +298,11 @@ public class ExecutionVisitor implements Visitor<EntityResponse> {
                   IEntityFetcher entityFetcher = queryHandlerRegistry.getEntityFetcher(source);
                   EntitiesRequestContext requestContext =
                       new EntitiesRequestContext(
-                          executionContext.getTenantId(),
+                          executionContext.getEntitiesRequestContext().getGrpcContext(),
                           request.getStartTimeMillis(),
                           request.getEndTimeMillis(),
                           request.getEntityType(),
-                          executionContext.getTimestampAttributeId(),
-                          executionContext.getRequestHeaders());
+                          executionContext.getTimestampAttributeId());
                   return entityFetcher.getTimeAggregatedMetrics(requestContext, request);
                 })
             .collect(Collectors.toList()));
