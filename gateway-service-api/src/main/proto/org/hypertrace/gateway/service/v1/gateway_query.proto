@@ -14,6 +14,7 @@ enum DomainEntityType {
   SESSION = 6;
   BACKEND = 7;
   DOMAIN = 8;
+  BACKEND_API = 9;
 }
 
 enum Operator {
