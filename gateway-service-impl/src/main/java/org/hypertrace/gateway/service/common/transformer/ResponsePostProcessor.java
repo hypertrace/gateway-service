@@ -30,7 +30,7 @@ public class ResponsePostProcessor {
             .flatMap(Optional::stream)
             .collect(Collectors.toSet());
     Set<String> aggregations =
-        executionContext.getExpressionContext().getSourceToMetricExpressionMap().values().stream()
+        executionContext.getExpressionContext().getSourceToMetricAggregationExpressionMap().values().stream()
             .flatMap(Collection::stream)
             .map(expression -> expression.getFunction().getAlias())
             .collect(Collectors.toSet());

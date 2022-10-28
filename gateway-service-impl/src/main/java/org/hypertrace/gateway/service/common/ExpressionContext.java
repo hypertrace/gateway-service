@@ -1,7 +1,5 @@
 package org.hypertrace.gateway.service.common;
 
-import static java.util.function.Predicate.not;
-
 import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.Sets;
 import java.util.ArrayList;
@@ -34,20 +32,28 @@ public class ExpressionContext {
 
   // selections
   private final List<Expression> selections;
-  private final List<TimeAggregation> timeAggregations;
   private ImmutableMap<String, List<Expression>> sourceToSelectionExpressionMap;
   private ImmutableMap<String, Set<String>> sourceToSelectionAttributeMap;
+  private ImmutableMap<String, Set<String>> selectionAttributeToSourceMap;
 
-  private ImmutableMap<String, List<Expression>> sourceToMetricExpressionMap;
+  private ImmutableMap<String, List<Expression>> sourceToMetricAggregationExpressionMap;
+  private ImmutableMap<String, Set<String>> sourceToMetricAggregationAttributeMap;
+  private ImmutableMap<String, Set<String>> metricAggregationAttributeToSourceMap;
+
+  private final List<TimeAggregation> timeAggregations;
   private ImmutableMap<String, List<TimeAggregation>> sourceToTimeAggregationMap;
+  private ImmutableMap<String, Set<String>> sourceToTimeAggregationAttributeMap;
+  private ImmutableMap<String, Set<String>> timeAggregationAttributeToSourceMap;
 
   // order bys
   private final List<OrderByExpression> orderBys;
   private ImmutableMap<String, List<OrderByExpression>> sourceToSelectionOrderByExpressionMap;
   private ImmutableMap<String, Set<String>> sourceToSelectionOrderByAttributeMap;
+  private ImmutableMap<String, Set<String>> selectionOrderByAttributeToSourceMap;
 
   private ImmutableMap<String, List<OrderByExpression>> sourceToMetricOrderByExpressionMap;
   private ImmutableMap<String, Set<String>> sourceToMetricOrderByAttributeMap;
+  private ImmutableMap<String, Set<String>> metricOrderByAttributeToSourceMap;
 
   // filters
   private final Filter filter;
@@ -58,10 +64,8 @@ public class ExpressionContext {
   // group bys
   private final List<Expression> groupBys;
   private ImmutableMap<String, List<Expression>> sourceToGroupByExpressionMap;
-
-  // map of filter, selections (attribute, metrics, aggregations), group bys, order by attributes to
-  // source map
-  private final Map<String, Set<String>> allAttributesToSourcesMap = new HashMap<>();
+  private ImmutableMap<String, Set<String>> sourceToGroupByAttributeMap;
+  private ImmutableMap<String, Set<String>> groupByAttributeToSourceMap;
 
   public ExpressionContext(
       Map<String, AttributeMetadata> attributeMetadataMap,
@@ -78,7 +82,7 @@ public class ExpressionContext {
     this.orderBys = orderBys;
     this.groupBys = groupBys;
 
-    buildSourceToExpressionMaps();
+    buildSourceToSelectionExpressionMaps();
     buildSourceToFilterExpressionMaps();
     buildSourceToOrderByExpressionMaps();
     buildSourceToGroupByExpressionMaps();
@@ -105,16 +109,24 @@ public class ExpressionContext {
     this.sourceToSelectionAttributeMap = buildSourceToAttributesMap(sourceToSelectionExpressionMap);
   }
 
-  public Map<String, List<Expression>> getSourceToMetricExpressionMap() {
-    return sourceToMetricExpressionMap;
+  public Map<String, Set<String>> getSelectionAttributeToSourceMap() {
+    return selectionAttributeToSourceMap;
+  }
+
+  public Map<String, List<Expression>> getSourceToMetricAggregationExpressionMap() {
+    return sourceToMetricAggregationExpressionMap;
+  }
+
+  public Map<String, Set<String>> getMetricAggregationAttributeToSourceMap() {
+    return metricAggregationAttributeToSourceMap;
   }
 
   public Map<String, List<TimeAggregation>> getSourceToTimeAggregationMap() {
     return sourceToTimeAggregationMap;
   }
 
-  public Map<String, List<Expression>> getSourceToGroupByExpressionMap() {
-    return sourceToGroupByExpressionMap;
+  public Map<String, Set<String>> getTimeAggregationAttributeToSourceMap() {
+    return timeAggregationAttributeToSourceMap;
   }
 
   public Map<String, List<OrderByExpression>> getSourceToSelectionOrderByExpressionMap() {
@@ -125,12 +137,20 @@ public class ExpressionContext {
     return sourceToSelectionOrderByAttributeMap;
   }
 
+  public ImmutableMap<String, Set<String>> getSelectionOrderByAttributeToSourceMap() {
+    return selectionOrderByAttributeToSourceMap;
+  }
+
   public Map<String, List<OrderByExpression>> getSourceToMetricOrderByExpressionMap() {
     return sourceToMetricOrderByExpressionMap;
   }
 
   public Map<String, Set<String>> getSourceToMetricOrderByAttributeMap() {
     return sourceToMetricOrderByAttributeMap;
+  }
+
+  public Map<String, Set<String>> getMetricOrderByAttributeToSourceMap() {
+    return metricOrderByAttributeToSourceMap;
   }
 
   public Map<String, List<Expression>> getSourceToFilterExpressionMap() {
@@ -145,32 +165,44 @@ public class ExpressionContext {
     return filterAttributeToSourceMap;
   }
 
-  public Map<String, Set<String>> getAllAttributesToSourcesMap() {
-    return allAttributesToSourcesMap;
+  public Map<String, List<Expression>> getSourceToGroupByExpressionMap() {
+    return sourceToGroupByExpressionMap;
   }
 
-  private void buildSourceToExpressionMaps() {
+  public ImmutableMap<String, Set<String>> getGroupByAttributeToSourceMap() {
+    return groupByAttributeToSourceMap;
+  }
+
+  private void buildSourceToSelectionExpressionMaps() {
     List<Expression> attributeSelections =
         selections.stream()
             .filter(ExpressionReader::isAttributeSelection)
             .collect(Collectors.toUnmodifiableList());
     sourceToSelectionExpressionMap = getDataSourceToExpressionMap(attributeSelections);
     sourceToSelectionAttributeMap = buildSourceToAttributesMap(sourceToSelectionExpressionMap);
+    selectionAttributeToSourceMap = buildAttributeToSourcesMap(sourceToSelectionAttributeMap);
+
     List<Expression> functionSelections =
         selections.stream()
             .filter(Expression::hasFunction)
             .collect(Collectors.toUnmodifiableList());
-    sourceToMetricExpressionMap = getDataSourceToExpressionMap(functionSelections);
+    sourceToMetricAggregationExpressionMap = getDataSourceToExpressionMap(functionSelections);
+    sourceToMetricAggregationAttributeMap =
+        buildSourceToAttributesMap(sourceToMetricAggregationExpressionMap);
+    metricAggregationAttributeToSourceMap =
+        buildAttributeToSourcesMap(sourceToMetricAggregationAttributeMap);
+
     sourceToTimeAggregationMap = getDataSourceToTimeAggregation(timeAggregations);
+    sourceToTimeAggregationAttributeMap =
+        buildSourceToTimeAggregationAttributesMap(sourceToTimeAggregationMap);
+    timeAggregationAttributeToSourceMap =
+        buildAttributeToSourcesMap(sourceToTimeAggregationAttributeMap);
   }
 
   private void buildSourceToFilterExpressionMaps() {
     sourceToFilterExpressionMap = getSourceToFilterExpressionMap(filter);
     sourceToFilterAttributeMap = buildSourceToAttributesMap(sourceToFilterExpressionMap);
-    filterAttributeToSourceMap =
-        ImmutableMap.<String, Set<String>>builder()
-            .putAll(buildAttributeToSourcesMap(sourceToFilterAttributeMap))
-            .build();
+    filterAttributeToSourceMap = buildAttributeToSourcesMap(sourceToFilterAttributeMap);
   }
 
   private void buildSourceToOrderByExpressionMaps() {
@@ -193,6 +225,8 @@ public class ExpressionContext {
     sourceToSelectionOrderByAttributeMap =
         buildSourceToAttributesMap(
             convertOrderByExpressionToExpression(sourceToSelectionOrderByExpressionMap));
+    selectionOrderByAttributeToSourceMap =
+        buildAttributeToSourcesMap(sourceToSelectionOrderByAttributeMap);
 
     List<OrderByExpression> functionOrderByExpressions =
         orderByExpressions.stream()
@@ -204,10 +238,14 @@ public class ExpressionContext {
     sourceToMetricOrderByAttributeMap =
         buildSourceToAttributesMap(
             convertOrderByExpressionToExpression(sourceToMetricOrderByExpressionMap));
+    metricOrderByAttributeToSourceMap =
+        buildAttributeToSourcesMap(sourceToMetricOrderByAttributeMap);
   }
 
   private void buildSourceToGroupByExpressionMaps() {
     sourceToGroupByExpressionMap = getDataSourceToExpressionMap(groupBys);
+    sourceToGroupByAttributeMap = buildSourceToAttributesMap(sourceToGroupByExpressionMap);
+    groupByAttributeToSourceMap = buildAttributeToSourcesMap(sourceToGroupByAttributeMap);
   }
 
   private ImmutableMap<String, List<OrderByExpression>> getDataSourceToOrderByExpressionMap(
@@ -289,9 +327,6 @@ public class ExpressionContext {
       for (String attributeId : attributeIds) {
         List<AttributeSource> sourcesList = attributeMetadataMap.get(attributeId).getSourcesList();
         sources.retainAll(sourcesList);
-        allAttributesToSourcesMap
-            .computeIfAbsent(attributeId, v -> new HashSet<>())
-            .addAll(sourcesList.stream().map(Enum::name).collect(Collectors.toList()));
       }
       if (sources.isEmpty()) {
         LOG.error("Skipping Expression: {}. No source found", expression);
@@ -326,6 +361,23 @@ public class ExpressionContext {
         .build();
   }
 
+  /**
+   * Given a source to time aggregation map, builds a source to time aggregation attribute map,
+   * where the attribute names are extracted out as column names from the time aggregation
+   */
+  private ImmutableMap<String, Set<String>> buildSourceToTimeAggregationAttributesMap(
+      Map<String, List<TimeAggregation>> sourceToTimeAggregationMap) {
+    return buildSourceToAttributesMap(
+        sourceToTimeAggregationMap.entrySet().stream()
+            .collect(
+                Collectors.toUnmodifiableMap(
+                    Map.Entry::getKey,
+                    entry ->
+                        entry.getValue().stream()
+                            .map(TimeAggregation::getAggregation)
+                            .collect(Collectors.toUnmodifiableList()))));
+  }
+
   private Map<String, List<Expression>> convertOrderByExpressionToExpression(
       Map<String, List<OrderByExpression>> sourceToOrderByExpressions) {
     return sourceToOrderByExpressions.entrySet().stream()
@@ -340,17 +392,37 @@ public class ExpressionContext {
 
   /**
    * Returns a non-empty optional if all the attributes in the selection(attributes and
-   * aggregations), time aggregations, filter and order by can be read from the same source.
+   * aggregations), time aggregations, filters, order bys and group bys can be read from the same
+   * source.
    *
    * @param expressionContext
    * @return
    */
   public static Optional<String> getSingleSourceForAllAttributes(
       ExpressionContext expressionContext) {
-    Optional<String> singleSourceFromKeySets = getSingleSourceFromKeySets(expressionContext);
+    Set<ExpressionLocation> allLocations = Set.of(ExpressionLocation.values());
+    Optional<String> singleSourceFromKeySets =
+        getSingleSourceFromKeySets(expressionContext, allLocations);
 
     return singleSourceFromKeySets.or(
-        () -> getSingleSourceFromAttributeSourceValueSets(expressionContext));
+        () -> getSingleSourceFromAttributeSourceValueSets(expressionContext, allLocations));
+  }
+
+  /**
+   * Returns a non-empty optional if all the attributes in the selection(attributes and
+   * aggregations), time aggregations, filters, order bys and group bys can be read from the same
+   * source, depending on the provided locations
+   *
+   * @param expressionContext
+   * @return
+   */
+  public static Optional<String> getSingleSourceForAttributes(
+      ExpressionContext expressionContext, Set<ExpressionLocation> locations) {
+    Optional<String> singleSourceFromKeySets =
+        getSingleSourceFromKeySets(expressionContext, locations);
+
+    return singleSourceFromKeySets.or(
+        () -> getSingleSourceFromAttributeSourceValueSets(expressionContext, locations));
   }
 
   /**
@@ -360,28 +432,54 @@ public class ExpressionContext {
    * @param expressionContext
    * @return
    */
-  private static Optional<String> getSingleSourceFromKeySets(ExpressionContext expressionContext) {
-    Set<String> selectionsSourceSet =
-        expressionContext.getSourceToSelectionExpressionMap().keySet();
-    Set<String> metricAggregationsSourceSet =
-        expressionContext.getSourceToMetricExpressionMap().keySet();
-    Set<String> timeAggregationsSourceSet =
-        expressionContext.getSourceToTimeAggregationMap().keySet();
-    Set<String> filtersSourceSet = expressionContext.getSourceToFilterExpressionMap().keySet();
-    Set<String> groupBysSourceSet = expressionContext.getSourceToGroupByExpressionMap().keySet();
-    Set<String> selectionOrderBysSourceSet =
-        expressionContext.getSourceToSelectionOrderByExpressionMap().keySet();
-    Set<String> metricAggregationOrderBysSourceSet =
-        expressionContext.getSourceToMetricOrderByExpressionMap().keySet();
+  private static Optional<String> getSingleSourceFromKeySets(
+      ExpressionContext expressionContext, Set<ExpressionLocation> locations) {
+    if (locations.isEmpty()) {
+      return Optional.empty();
+    }
 
     Set<String> sources = new HashSet<>();
-    sources.addAll(selectionsSourceSet);
-    sources.addAll(metricAggregationsSourceSet);
-    sources.addAll(timeAggregationsSourceSet);
-    sources.addAll(filtersSourceSet);
-    sources.addAll(groupBysSourceSet);
-    sources.addAll(selectionOrderBysSourceSet);
-    sources.addAll(metricAggregationOrderBysSourceSet);
+    for (ExpressionLocation location : locations) {
+      switch (location) {
+        case COLUMN_SELECTION:
+          Set<String> selectionsSourceSet =
+              expressionContext.getSourceToSelectionExpressionMap().keySet();
+          sources.addAll(selectionsSourceSet);
+          continue;
+        case METRIC_AGGREGATION:
+          Set<String> metricAggregationsSourceSet =
+              expressionContext.getSourceToMetricAggregationExpressionMap().keySet();
+          sources.addAll(metricAggregationsSourceSet);
+          continue;
+        case TIME_AGGREGATION:
+          Set<String> timeAggregationsSourceSet =
+              expressionContext.getSourceToTimeAggregationMap().keySet();
+          sources.addAll(timeAggregationsSourceSet);
+          continue;
+        case COLUMN_FILTER:
+          Set<String> filtersSourceSet =
+              expressionContext.getSourceToFilterExpressionMap().keySet();
+          sources.addAll(filtersSourceSet);
+          continue;
+        case COLUMN_GROUP_BY:
+          Set<String> groupBysSourceSet =
+              expressionContext.getSourceToGroupByExpressionMap().keySet();
+          sources.addAll(groupBysSourceSet);
+          continue;
+        case COLUMN_ORDER_BY:
+          Set<String> selectionOrderBysSourceSet =
+              expressionContext.getSourceToSelectionOrderByExpressionMap().keySet();
+          sources.addAll(selectionOrderBysSourceSet);
+          continue;
+        case METRIC_ORDER_BY:
+          Set<String> metricAggregationOrderBysSourceSet =
+              expressionContext.getSourceToMetricOrderByExpressionMap().keySet();
+          sources.addAll(metricAggregationOrderBysSourceSet);
+          continue;
+        default:
+          LOG.error("Unrecognised expression location {}", location);
+      }
+    }
     if (sources.size() == 1) {
       return sources.stream().findFirst();
     } else {
@@ -398,25 +496,62 @@ public class ExpressionContext {
    * @return
    */
   private static Optional<String> getSingleSourceFromAttributeSourceValueSets(
-      ExpressionContext expressionContext) {
-    // Compute the intersection of all sources in attributesToSourcesMap and check if it's size is 1
-    Set<String> attributeSourcesIntersection =
-        expressionContext.getAllAttributesToSourcesMap().values().stream()
-            .filter(not(Set::isEmpty))
-            .findFirst()
-            .orElse(Collections.emptySet());
-
-    if (attributeSourcesIntersection.isEmpty()) {
+      ExpressionContext expressionContext, Set<ExpressionLocation> locations) {
+    if (locations.isEmpty()) {
       return Optional.empty();
     }
 
-    attributeSourcesIntersection = new HashSet<>(attributeSourcesIntersection);
-
-    for (Set<String> attributeSourcesSet :
-        expressionContext.getAllAttributesToSourcesMap().values()) {
-      // retainAll() for sets computes the intersections.
-      attributeSourcesIntersection.retainAll(attributeSourcesSet);
+    // retainAll() for sets computes the intersections.
+    Set<String> attributeSourcesIntersection = new HashSet<>();
+    for (ExpressionLocation location : locations) {
+      switch (location) {
+        case COLUMN_SELECTION:
+          expressionContext
+              .getSelectionAttributeToSourceMap()
+              .values()
+              .forEach(attributeSourcesIntersection::retainAll);
+          continue;
+        case METRIC_AGGREGATION:
+          expressionContext
+              .getMetricAggregationAttributeToSourceMap()
+              .values()
+              .forEach(attributeSourcesIntersection::retainAll);
+          continue;
+        case TIME_AGGREGATION:
+          expressionContext
+              .getTimeAggregationAttributeToSourceMap()
+              .values()
+              .forEach(attributeSourcesIntersection::retainAll);
+          continue;
+        case COLUMN_FILTER:
+          expressionContext
+              .getFilterAttributeToSourceMap()
+              .values()
+              .forEach(attributeSourcesIntersection::retainAll);
+          continue;
+        case COLUMN_GROUP_BY:
+          expressionContext
+              .getGroupByAttributeToSourceMap()
+              .values()
+              .forEach(attributeSourcesIntersection::retainAll);
+          continue;
+        case COLUMN_ORDER_BY:
+          expressionContext
+              .getSelectionOrderByAttributeToSourceMap()
+              .values()
+              .forEach(attributeSourcesIntersection::retainAll);
+          continue;
+        case METRIC_ORDER_BY:
+          expressionContext
+              .getMetricOrderByAttributeToSourceMap()
+              .values()
+              .forEach(attributeSourcesIntersection::retainAll);
+          continue;
+        default:
+          LOG.error("Unrecognised expression location {}", location);
+      }
     }
+    attributeSourcesIntersection = new HashSet<>(attributeSourcesIntersection);
 
     if (attributeSourcesIntersection.size() == 1) {
       return attributeSourcesIntersection.stream().findFirst();
@@ -497,7 +632,7 @@ public class ExpressionContext {
    *
    * <p>("API.id" -> ["QS", "EDS"], "API.name" -> "QS")
    */
-  private static Map<String, Set<String>> buildAttributeToSourcesMap(
+  private static ImmutableMap<String, Set<String>> buildAttributeToSourcesMap(
       Map<String, Set<String>> sourcesToAttributeMap) {
     Map<String, Set<String>> attributeToSourcesMap = new HashMap<>();
     for (Map.Entry<String, Set<String>> entry : sourcesToAttributeMap.entrySet()) {
@@ -506,7 +641,7 @@ public class ExpressionContext {
         attributeToSourcesMap.computeIfAbsent(attribute, k -> new HashSet<>()).add(source);
       }
     }
-    return Collections.unmodifiableMap(attributeToSourcesMap);
+    return ImmutableMap.<String, Set<String>>builder().putAll(attributeToSourcesMap).build();
   }
 
   /**
@@ -586,26 +721,40 @@ public class ExpressionContext {
         + attributeMetadataMap
         + ", selections="
         + selections
-        + ", timeAggregations="
-        + timeAggregations
         + ", sourceToSelectionExpressionMap="
         + sourceToSelectionExpressionMap
         + ", sourceToSelectionAttributeMap="
         + sourceToSelectionAttributeMap
-        + ", sourceToMetricExpressionMap="
-        + sourceToMetricExpressionMap
+        + ", selectionAttributeToSourceMap="
+        + selectionAttributeToSourceMap
+        + ", sourceToMetricAggregationExpressionMap="
+        + sourceToMetricAggregationExpressionMap
+        + ", sourceToMetricAggregationAttributeMap="
+        + sourceToMetricAggregationAttributeMap
+        + ", metricAggregationAttributeToSourceMap="
+        + metricAggregationAttributeToSourceMap
+        + ", timeAggregations="
+        + timeAggregations
         + ", sourceToTimeAggregationMap="
         + sourceToTimeAggregationMap
+        + ", sourceToTimeAggregationAttributeMap="
+        + sourceToTimeAggregationAttributeMap
+        + ", timeAggregationAttributeToSourceMap="
+        + timeAggregationAttributeToSourceMap
         + ", orderBys="
         + orderBys
         + ", sourceToSelectionOrderByExpressionMap="
         + sourceToSelectionOrderByExpressionMap
         + ", sourceToSelectionOrderByAttributeMap="
         + sourceToSelectionOrderByAttributeMap
+        + ", selectionOrderByAttributeToSourceMap="
+        + selectionOrderByAttributeToSourceMap
         + ", sourceToMetricOrderByExpressionMap="
         + sourceToMetricOrderByExpressionMap
         + ", sourceToMetricOrderByAttributeMap="
         + sourceToMetricOrderByAttributeMap
+        + ", metricOrderByAttributeToSourceMap="
+        + metricOrderByAttributeToSourceMap
         + ", filter="
         + filter
         + ", sourceToFilterExpressionMap="
@@ -618,8 +767,10 @@ public class ExpressionContext {
         + groupBys
         + ", sourceToGroupByExpressionMap="
         + sourceToGroupByExpressionMap
-        + ", allAttributesToSourcesMap="
-        + allAttributesToSourcesMap
+        + ", sourceToGroupByAttributeMap="
+        + sourceToGroupByAttributeMap
+        + ", groupByAttributeToSourceMap="
+        + groupByAttributeToSourceMap
         + '}';
   }
 }

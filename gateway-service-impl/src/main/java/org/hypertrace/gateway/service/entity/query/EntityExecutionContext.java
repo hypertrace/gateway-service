@@ -186,7 +186,7 @@ public class EntityExecutionContext {
   private void buildSelectionPendingSources() {
     pendingSelectionSources.addAll(expressionContext.getSourceToSelectionExpressionMap().keySet());
     pendingMetricAggregationSources.addAll(
-        expressionContext.getSourceToMetricExpressionMap().keySet());
+        expressionContext.getSourceToMetricAggregationExpressionMap().keySet());
     pendingTimeAggregationSources.addAll(
         expressionContext.getSourceToTimeAggregationMap().keySet());
   }
