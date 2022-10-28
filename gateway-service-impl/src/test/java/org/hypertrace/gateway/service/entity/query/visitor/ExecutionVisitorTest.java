@@ -684,7 +684,7 @@ public class ExecutionVisitorTest {
         .thenReturn(List.of(buildExpression(API_ID_ATTR)));
     when(expressionContext.getSourceToSelectionExpressionMap())
         .thenReturn(Map.of("QS", List.of(selectionExpression)));
-    when(expressionContext.getSourceToMetricExpressionMap())
+    when(expressionContext.getSourceToMetricAggregationExpressionMap())
         .thenReturn(Map.of("QS", List.of(metricExpression)));
     when(expressionContext.getSourceToTimeAggregationMap())
         .thenReturn(Map.of("QS", List.of(timeAggregation)));
@@ -854,7 +854,7 @@ public class ExecutionVisitorTest {
         .thenReturn(List.of(buildExpression(API_ID_ATTR)));
     when(expressionContext.getSourceToSelectionExpressionMap())
         .thenReturn(Map.of("QS", List.of(selectionExpression)));
-    when(expressionContext.getSourceToMetricExpressionMap())
+    when(expressionContext.getSourceToMetricAggregationExpressionMap())
         .thenReturn(Map.of("QS", List.of(metricExpression)));
     when(expressionContext.getSourceToTimeAggregationMap())
         .thenReturn(Map.of("QS", List.of(timeAggregation)));
@@ -986,7 +986,7 @@ public class ExecutionVisitorTest {
     when(executionContext.getPendingSelectionSources()).thenReturn(selectionSource);
     when(executionContext.getPendingMetricAggregationSources()).thenReturn(aggregateSource);
     when(expressionContext.getSourceToSelectionExpressionMap()).thenReturn(sourceToSelectionMap);
-    when(expressionContext.getSourceToMetricExpressionMap()).thenReturn(sourceToAggregateMap);
+    when(expressionContext.getSourceToMetricAggregationExpressionMap()).thenReturn(sourceToAggregateMap);
     return executionContext;
   }
 

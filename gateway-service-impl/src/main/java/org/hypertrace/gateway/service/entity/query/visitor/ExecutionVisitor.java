@@ -261,7 +261,7 @@ public class ExecutionVisitor implements Visitor<EntityResponse> {
                           .addAllSelection(
                               executionContext
                                   .getExpressionContext()
-                                  .getSourceToMetricExpressionMap()
+                                  .getSourceToMetricAggregationExpressionMap()
                                   .get(source))
                           .setFilter(filter)
                           .build();

@@ -39,7 +39,7 @@ public class ResponsePostProcessorTest {
                 List.of(createAttributeExpression("API.id"), createAttributeExpression("API.name")),
                 "QS",
                 List.of(createAttributeExpression("API.serviceId"))));
-    when(expressionContext.getSourceToMetricExpressionMap()).thenReturn(Collections.emptyMap());
+    when(expressionContext.getSourceToMetricAggregationExpressionMap()).thenReturn(Collections.emptyMap());
     when(expressionContext.getSourceToTimeAggregationMap()).thenReturn(Collections.emptyMap());
 
     EntityExecutionContext executionContext = mock(EntityExecutionContext.class);
@@ -81,7 +81,7 @@ public class ResponsePostProcessorTest {
   public void shouldAddMissingAggregations() {
     ExpressionContext expressionContext = mock(ExpressionContext.class);
     when(expressionContext.getSourceToSelectionExpressionMap()).thenReturn(Collections.emptyMap());
-    when(expressionContext.getSourceToMetricExpressionMap())
+    when(expressionContext.getSourceToMetricAggregationExpressionMap())
         .thenReturn(Map.of("QS", List.of(createAggregateExpression("API.duration"))));
     when(expressionContext.getSourceToTimeAggregationMap()).thenReturn(Collections.emptyMap());
 
@@ -119,7 +119,7 @@ public class ResponsePostProcessorTest {
   public void shouldAddMissingTimeAggregations() {
     ExpressionContext expressionContext = mock(ExpressionContext.class);
     when(expressionContext.getSourceToSelectionExpressionMap()).thenReturn(Collections.emptyMap());
-    when(expressionContext.getSourceToMetricExpressionMap()).thenReturn(Collections.emptyMap());
+    when(expressionContext.getSourceToMetricAggregationExpressionMap()).thenReturn(Collections.emptyMap());
     when(expressionContext.getSourceToTimeAggregationMap())
         .thenReturn(Map.of("QS", List.of(createTimeAggregation("API.duration"))));
 

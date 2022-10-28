@@ -31,12 +31,7 @@ class ExpressionContextTest {
             createSourceToExpressionsMap(List.of("QS")),
             createSourceToExpressionsMap(List.of("QS")),
             createSourceToExpressionsMap(List.of("QS")),
-            createSourceToExpressionsMap(List.of("QS")),
-            Map.of(
-                "API.id", Set.of(QS.name()),
-                "API.name", Set.of(QS.name()),
-                "API.duration", Set.of(QS.name()),
-                "API.startTime", Set.of(QS.name())));
+            createSourceToExpressionsMap(List.of("QS")));
 
     assertEquals(
         Optional.of("QS"), ExpressionContext.getSingleSourceForAllAttributes(expressionContext));
@@ -51,12 +46,7 @@ class ExpressionContextTest {
             createSourceToExpressionsMap(List.of("QS", "EDS")),
             createSourceToExpressionsMap(List.of("QS")),
             createSourceToExpressionsMap(List.of("QS")),
-            createSourceToExpressionsMap(List.of("QS")),
-            Map.of(
-                "API.id", Set.of(QS.name()),
-                "API.name", Set.of(QS.name()),
-                "API.duration", Set.of(QS.name(), EDS.name()),
-                "API.startTime", Set.of(QS.name())));
+            createSourceToExpressionsMap(List.of("QS")));
 
     assertEquals(
         Optional.of("QS"), ExpressionContext.getSingleSourceForAllAttributes(expressionContext));
@@ -71,12 +61,7 @@ class ExpressionContextTest {
             createSourceToExpressionsMap(List.of("EDS")),
             createSourceToExpressionsMap(List.of("QS")),
             createSourceToExpressionsMap(List.of("QS")),
-            createSourceToExpressionsMap(List.of("QS")),
-            Map.of(
-                "API.id", Set.of(QS.name()),
-                "API.name", Set.of(QS.name()),
-                "API.duration", Set.of(EDS.name()),
-                "API.startTime", Set.of(QS.name())));
+            createSourceToExpressionsMap(List.of("QS")));
 
     assertEquals(
         Optional.empty(), ExpressionContext.getSingleSourceForAllAttributes(expressionContext));
@@ -92,12 +77,7 @@ class ExpressionContextTest {
             createSourceToExpressionsMap(List.of()),
             createSourceToExpressionsMap(List.of("QS")),
             createSourceToExpressionsMap(List.of("QS")),
-            createSourceToExpressionsMap(List.of()),
-            Map.of(
-                "API.id", Set.of(QS.name()),
-                "API.name", Set.of(QS.name()),
-                "API.duration", Set.of(),
-                "API.startTime", Set.of(QS.name())));
+            createSourceToExpressionsMap(List.of()));
 
     assertEquals(
         Optional.of("QS"), ExpressionContext.getSingleSourceForAllAttributes(expressionContext));
@@ -113,12 +93,7 @@ class ExpressionContextTest {
             createSourceToExpressionsMap(List.of()),
             createSourceToExpressionsMap(List.of()),
             createSourceToExpressionsMap(List.of()),
-            createSourceToExpressionsMap(List.of()),
-            Map.of(
-                "API.id", Set.of(),
-                "API.name", Set.of(),
-                "API.duration", Set.of(),
-                "API.startTime", Set.of()));
+            createSourceToExpressionsMap(List.of()));
 
     assertEquals(
         Optional.empty(), ExpressionContext.getSingleSourceForAllAttributes(expressionContext));
@@ -309,12 +284,11 @@ class ExpressionContextTest {
       Map<String, List<TimeAggregation>> sourceToTimeAggregationMap,
       Map<String, List<OrderByExpression>> sourceToSelectionOrderByExpressionMap,
       Map<String, List<OrderByExpression>> sourceToMetricOrderByExpressionMap,
-      Map<String, List<Expression>> sourceToFilterExpressionMap,
-      Map<String, Set<String>> attributeToSourcesMap) {
+      Map<String, List<Expression>> sourceToFilterExpressionMap) {
     ExpressionContext expressionContext = mock(ExpressionContext.class);
     when(expressionContext.getSourceToSelectionExpressionMap())
         .thenReturn(sourceToSelectionExpressionMap);
-    when(expressionContext.getSourceToMetricExpressionMap())
+    when(expressionContext.getSourceToMetricAggregationExpressionMap())
         .thenReturn(sourceToMetricExpressionMap);
     when(expressionContext.getSourceToTimeAggregationMap()).thenReturn(sourceToTimeAggregationMap);
     when(expressionContext.getSourceToSelectionOrderByExpressionMap())
@@ -323,7 +297,6 @@ class ExpressionContextTest {
         .thenReturn(sourceToMetricOrderByExpressionMap);
     when(expressionContext.getSourceToFilterExpressionMap())
         .thenReturn(sourceToFilterExpressionMap);
-    when(expressionContext.getAllAttributesToSourcesMap()).thenReturn(attributeToSourcesMap);
 
     return expressionContext;
   }
