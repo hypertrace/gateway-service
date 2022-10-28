@@ -3,10 +3,13 @@ package org.hypertrace.gateway.service.explore.entity;
 import com.google.common.annotations.VisibleForTesting;
 import com.google.common.collect.Streams;
 import java.util.Iterator;
+import java.util.List;
 import java.util.Map;
+import java.util.Optional;
 import java.util.Set;
 import java.util.stream.Collectors;
 import org.hypertrace.core.attribute.service.v1.AttributeMetadata;
+import org.hypertrace.core.attribute.service.v1.AttributeSource;
 import org.hypertrace.entity.query.service.client.EntityQueryServiceClient;
 import org.hypertrace.entity.query.service.v1.ColumnMetadata;
 import org.hypertrace.entity.query.service.v1.ResultSetChunk;
@@ -19,13 +22,16 @@ import org.hypertrace.gateway.service.common.converters.EntityServiceAndGatewayS
 import org.hypertrace.gateway.service.common.datafetcher.EntityFetcherResponse;
 import org.hypertrace.gateway.service.common.datafetcher.QueryServiceEntityFetcher;
 import org.hypertrace.gateway.service.common.util.AttributeMetadataUtil;
+import org.hypertrace.gateway.service.common.util.ExpressionReader;
 import org.hypertrace.gateway.service.common.util.MetricAggregationFunctionUtil;
 import org.hypertrace.gateway.service.common.util.QueryServiceClient;
 import org.hypertrace.gateway.service.entity.EntitiesRequestContext;
 import org.hypertrace.gateway.service.entity.config.EntityIdColumnsConfigs;
 import org.hypertrace.gateway.service.explore.ExploreRequestContext;
 import org.hypertrace.gateway.service.explore.RequestHandler;
+import org.hypertrace.gateway.service.v1.common.Filter;
 import org.hypertrace.gateway.service.v1.common.FunctionExpression;
+import org.hypertrace.gateway.service.v1.common.Operator;
 import org.hypertrace.gateway.service.v1.entity.EntitiesRequest;
 import org.hypertrace.gateway.service.v1.entity.Entity.Builder;
 import org.hypertrace.gateway.service.v1.explore.ExploreRequest;
@@ -92,15 +98,24 @@ public class EntityRequestHandler extends RequestHandler {
       requestContext.setHasGroupBy(true);
     }
 
-    Set<String> entityIds = getEntityIds(requestContext, request);
+    Map<String, AttributeMetadata> attributeMetadataMap =
+        attributeMetadataProvider.getAttributesMetadata(requestContext, request.getContext());
+
+    Set<String> entityIds = getEntityIds(requestContext, expressionContext, attributeMetadataMap);
     ExploreResponse.Builder builder = ExploreResponse.newBuilder();
 
     if (entityIds.isEmpty()) {
       return builder;
     }
 
+    Optional<Filter> maybeEdsFilter =
+        buildFilter(request.getFilter(), AttributeSource.EDS, attributeMetadataMap);
+    ExploreRequest.Builder exploreEntityRequestBuilder =
+        ExploreRequest.newBuilder(request).clearFilter();
+    maybeEdsFilter.ifPresent(exploreEntityRequestBuilder::setFilter);
     Iterator<ResultSetChunk> resultSetChunkIterator =
-        entityServiceEntityFetcher.getResults(requestContext, request, entityIds);
+        entityServiceEntityFetcher.getResults(
+            requestContext, exploreEntityRequestBuilder.build(), entityIds);
 
     while (resultSetChunkIterator.hasNext()) {
       org.hypertrace.entity.query.service.v1.ResultSetChunk chunk = resultSetChunkIterator.next();
@@ -144,20 +159,67 @@ public class EntityRequestHandler extends RequestHandler {
   }
 
   private Set<String> getEntityIds(
-      ExploreRequestContext requestContext, ExploreRequest exploreRequest) {
+      ExploreRequestContext requestContext,
+      ExpressionContext expressionContext,
+      Map<String, AttributeMetadata> attributeMetadataMap) {
+    ExploreRequest request = requestContext.getRequest();
     EntitiesRequestContext entitiesRequestContext =
         convert(attributeMetadataProvider, requestContext);
-    EntitiesRequest entitiesRequest =
+    EntitiesRequest.Builder entitiesRequestBuilder =
         EntitiesRequest.newBuilder()
-            .setEntityType(exploreRequest.getContext())
-            .setStartTimeMillis(exploreRequest.getStartTimeMillis())
-            .setEndTimeMillis(exploreRequest.getEndTimeMillis())
-            .build();
+            .setEntityType(request.getContext())
+            .setStartTimeMillis(request.getStartTimeMillis())
+            .setEndTimeMillis(request.getEndTimeMillis());
+    // build qs filter from filter in the request
+    buildFilter(request.getFilter(), AttributeSource.QS, attributeMetadataMap)
+        .ifPresent(entitiesRequestBuilder::setFilter);
     EntityFetcherResponse response =
-        queryServiceEntityFetcher.getEntities(entitiesRequestContext, entitiesRequest);
+        queryServiceEntityFetcher.getEntities(
+            entitiesRequestContext, entitiesRequestBuilder.build());
     return response.getEntityKeyBuilderMap().values().stream()
         .map(Builder::getId)
         .collect(Collectors.toUnmodifiableSet());
+  }
+
+  private Optional<Filter> buildFilter(
+      Filter filter, AttributeSource source, Map<String, AttributeMetadata> attributeMetadataMap) {
+    if (filter.equals(Filter.getDefaultInstance())) {
+      return Optional.empty();
+    }
+
+    Operator operator = filter.getOperator();
+    switch (operator) {
+      case AND:
+      case OR:
+        return buildCompositeFilter(filter, source, operator, attributeMetadataMap);
+      default:
+        List<AttributeSource> sources =
+            attributeMetadataMap
+                .get(
+                    ExpressionReader.getAttributeIdFromAttributeSelection(filter.getLhs())
+                        .orElseThrow())
+                .getSourcesList();
+        return sources.contains(source)
+            ? Optional.of(Filter.newBuilder(filter).build())
+            : Optional.empty();
+    }
+  }
+
+  private Optional<Filter> buildCompositeFilter(
+      Filter filter,
+      AttributeSource source,
+      Operator operator,
+      Map<String, AttributeMetadata> attributeMetadataMap) {
+    Filter.Builder filterBuilder = Filter.newBuilder();
+    for (Filter childFilter : filter.getChildFilterList()) {
+      buildFilter(childFilter, source, attributeMetadataMap).map(filterBuilder::addChildFilter);
+    }
+    if (filterBuilder.getChildFilterCount() > 0) {
+      filterBuilder.setOperator(operator);
+      return Optional.of(filterBuilder.build());
+    } else {
+      return Optional.empty();
+    }
   }
 
   private EntitiesRequestContext convert(

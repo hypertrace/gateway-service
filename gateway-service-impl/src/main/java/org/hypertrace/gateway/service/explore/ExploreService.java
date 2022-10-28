@@ -1,6 +1,12 @@
 package org.hypertrace.gateway.service.explore;
 
 import static org.hypertrace.core.attribute.service.v1.AttributeSource.EDS;
+import static org.hypertrace.gateway.service.common.ExpressionLocation.COLUMN_GROUP_BY;
+import static org.hypertrace.gateway.service.common.ExpressionLocation.COLUMN_ORDER_BY;
+import static org.hypertrace.gateway.service.common.ExpressionLocation.COLUMN_SELECTION;
+import static org.hypertrace.gateway.service.common.ExpressionLocation.METRIC_AGGREGATION;
+import static org.hypertrace.gateway.service.common.ExpressionLocation.METRIC_ORDER_BY;
+import static org.hypertrace.gateway.service.common.ExpressionLocation.TIME_AGGREGATION;
 
 import com.google.common.collect.ImmutableMap;
 import io.micrometer.core.instrument.Timer;
@@ -9,6 +15,7 @@ import java.time.Instant;
 import java.util.Arrays;
 import java.util.Map;
 import java.util.Optional;
+import java.util.Set;
 import java.util.concurrent.TimeUnit;
 import org.hypertrace.core.attribute.service.v1.AttributeMetadata;
 import org.hypertrace.core.serviceframework.metrics.PlatformMetricsRegistry;
@@ -120,7 +127,15 @@ public class ExploreService {
         && !hasTimeAggregations(request)
         && !request.getGroupByList().isEmpty()) {
       Optional<String> source =
-          ExpressionContext.getSingleSourceForAllAttributes(expressionContext);
+          ExpressionContext.getSingleSourceForAttributes(
+              expressionContext,
+              Set.of(
+                  COLUMN_SELECTION,
+                  METRIC_AGGREGATION,
+                  TIME_AGGREGATION,
+                  COLUMN_ORDER_BY,
+                  METRIC_ORDER_BY,
+                  COLUMN_GROUP_BY));
       if ((source.isPresent() && EDS.toString().equals(source.get())) || !hasTimeRange(request)) {
         return entityRequestHandler;
       }
