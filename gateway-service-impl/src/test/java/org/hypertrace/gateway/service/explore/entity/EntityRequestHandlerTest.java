@@ -7,6 +7,7 @@ import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.when;
 
+import java.util.Collections;
 import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
@@ -19,6 +20,7 @@ import org.hypertrace.entity.query.service.v1.ResultSetChunk;
 import org.hypertrace.entity.query.service.v1.ResultSetMetadata;
 import org.hypertrace.entity.query.service.v1.Row;
 import org.hypertrace.gateway.service.common.AttributeMetadataProvider;
+import org.hypertrace.gateway.service.common.ExpressionContext;
 import org.hypertrace.gateway.service.common.datafetcher.EntityFetcherResponse;
 import org.hypertrace.gateway.service.common.datafetcher.QueryServiceEntityFetcher;
 import org.hypertrace.gateway.service.common.util.QueryServiceClient;
@@ -82,19 +84,20 @@ public class EntityRequestHandlerTest {
 
     when(attributeMetadataProvider.getAttributeMetadata(exploreRequestContext, "API", "startTime"))
         .thenReturn(Optional.of(AttributeMetadata.newBuilder().setKey("API.startTime").build()));
+    Map<String, AttributeMetadata> attributeMetadataMap =
+        Map.of(
+            "API.type",
+            AttributeMetadata.newBuilder()
+                .setKey("API.type")
+                .setValueKind(AttributeKind.TYPE_STRING)
+                .build(),
+            "API.external",
+            AttributeMetadata.newBuilder()
+                .setKey("API.external")
+                .setValueKind(AttributeKind.TYPE_STRING)
+                .build());
     when(attributeMetadataProvider.getAttributesMetadata(exploreRequestContext, "API"))
-        .thenReturn(
-            Map.of(
-                "API.type",
-                AttributeMetadata.newBuilder()
-                    .setKey("API.type")
-                    .setValueKind(AttributeKind.TYPE_STRING)
-                    .build(),
-                "API.external",
-                AttributeMetadata.newBuilder()
-                    .setKey("API.external")
-                    .setValueKind(AttributeKind.TYPE_STRING)
-                    .build()));
+        .thenReturn(attributeMetadataMap);
 
     EntitiesRequest entitiesRequest =
         EntitiesRequest.newBuilder()
@@ -108,9 +111,16 @@ public class EntityRequestHandlerTest {
     when(entityServiceEntityFetcher.getResults(
             exploreRequestContext, exploreRequest, Set.of("api1", "api2")))
         .thenReturn(mockResults());
-
+    ExpressionContext expressionContext =
+        new ExpressionContext(
+            attributeMetadataMap,
+            entitiesRequest.getFilter(),
+            entitiesRequest.getSelectionList(),
+            entitiesRequest.getTimeAggregationList(),
+            entitiesRequest.getOrderByList(),
+            Collections.emptyList());
     ExploreResponse exploreResponse =
-        entityRequestHandler.handleRequest(exploreRequestContext, exploreRequest).build();
+        entityRequestHandler.handleRequest(exploreRequestContext, expressionContext).build();
     assertEquals(2, exploreResponse.getRowCount());
     assertEquals(
         Map.of(
@@ -147,19 +157,20 @@ public class EntityRequestHandlerTest {
 
     when(attributeMetadataProvider.getAttributeMetadata(exploreRequestContext, "API", "startTime"))
         .thenReturn(Optional.of(AttributeMetadata.newBuilder().setKey("API.startTime").build()));
+    Map<String, AttributeMetadata> attributeMetadataMap =
+        Map.of(
+            "API.type",
+            AttributeMetadata.newBuilder()
+                .setKey("API.type")
+                .setValueKind(AttributeKind.TYPE_STRING)
+                .build(),
+            "API.external",
+            AttributeMetadata.newBuilder()
+                .setKey("API.external")
+                .setValueKind(AttributeKind.TYPE_STRING)
+                .build());
     when(attributeMetadataProvider.getAttributesMetadata(exploreRequestContext, "API"))
-        .thenReturn(
-            Map.of(
-                "API.type",
-                AttributeMetadata.newBuilder()
-                    .setKey("API.type")
-                    .setValueKind(AttributeKind.TYPE_STRING)
-                    .build(),
-                "API.external",
-                AttributeMetadata.newBuilder()
-                    .setKey("API.external")
-                    .setValueKind(AttributeKind.TYPE_STRING)
-                    .build()));
+        .thenReturn(attributeMetadataMap);
 
     EntitiesRequest entitiesRequest =
         EntitiesRequest.newBuilder()
@@ -171,8 +182,16 @@ public class EntityRequestHandlerTest {
             any(EntitiesRequestContext.class), eq(entitiesRequest)))
         .thenReturn(new EntityFetcherResponse());
 
+    ExpressionContext expressionContext =
+        new ExpressionContext(
+            attributeMetadataMap,
+            entitiesRequest.getFilter(),
+            entitiesRequest.getSelectionList(),
+            entitiesRequest.getTimeAggregationList(),
+            entitiesRequest.getOrderByList(),
+            Collections.emptyList());
     ExploreResponse exploreResponse =
-        entityRequestHandler.handleRequest(exploreRequestContext, exploreRequest).build();
+        entityRequestHandler.handleRequest(exploreRequestContext, expressionContext).build();
     assertEquals(0, exploreResponse.getRowCount());
   }
 

@@ -72,9 +72,6 @@ public class ExploreService {
 
     final Instant start = Instant.now();
     try {
-      ExploreRequestContext exploreRequestContext =
-          new ExploreRequestContext(requestContext.getGrpcContext(), request);
-
       // Add extra filters based on the scope.
       request =
           ExploreRequest.newBuilder(request)
@@ -83,21 +80,28 @@ public class ExploreService {
                       request.getContext(),
                       request.getFilter(),
                       attributeMetadataProvider,
-                      exploreRequestContext))
+                      requestContext))
               .build();
-      ExploreRequestContext newExploreRequestContext =
-          new ExploreRequestContext(requestContext.getGrpcContext(), request);
-
       Map<String, AttributeMetadata> attributeMetadataMap =
-          attributeMetadataProvider.getAttributesMetadata(
-              newExploreRequestContext, request.getContext());
+          attributeMetadataProvider.getAttributesMetadata(requestContext, request.getContext());
+
       exploreRequestValidator.validate(request, attributeMetadataMap);
 
-      IRequestHandler requestHandler = getRequestHandler(request, attributeMetadataMap);
+      ExploreRequestContext exploreRequestContext =
+          new ExploreRequestContext(requestContext.getGrpcContext(), request);
+      ExpressionContext expressionContext =
+          new ExpressionContext(
+              attributeMetadataMap,
+              request.getFilter(),
+              request.getSelectionList(),
+              request.getTimeAggregationList(),
+              request.getOrderByList(),
+              request.getGroupByList());
+
+      IRequestHandler requestHandler = getRequestHandler(request, expressionContext);
 
       ExploreResponse.Builder responseBuilder =
-          requestHandler.handleRequest(newExploreRequestContext, request);
-
+          requestHandler.handleRequest(exploreRequestContext, expressionContext);
       return responseBuilder.build();
     } finally {
       queryExecutionTimer.record(
@@ -111,18 +115,10 @@ public class ExploreService {
   }
 
   private IRequestHandler getRequestHandler(
-      ExploreRequest request, Map<String, AttributeMetadata> attributeMetadataMap) {
+      ExploreRequest request, ExpressionContext expressionContext) {
     if (isContextAnEntityType(request)
         && !hasTimeAggregations(request)
         && !request.getGroupByList().isEmpty()) {
-      ExpressionContext expressionContext =
-          new ExpressionContext(
-              attributeMetadataMap,
-              request.getFilter(),
-              request.getSelectionList(),
-              request.getTimeAggregationList(),
-              request.getOrderByList(),
-              request.getGroupByList());
       Optional<String> source =
           ExpressionContext.getSingleSourceForAllAttributes(expressionContext);
       if ((source.isPresent() && EDS.toString().equals(source.get())) || !hasTimeRange(request)) {

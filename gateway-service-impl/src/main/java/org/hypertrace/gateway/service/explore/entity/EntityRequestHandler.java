@@ -14,6 +14,7 @@ import org.hypertrace.entity.query.service.v1.ResultSetMetadata;
 import org.hypertrace.entity.query.service.v1.Row;
 import org.hypertrace.entity.query.service.v1.Value;
 import org.hypertrace.gateway.service.common.AttributeMetadataProvider;
+import org.hypertrace.gateway.service.common.ExpressionContext;
 import org.hypertrace.gateway.service.common.converters.EntityServiceAndGatewayServiceConverter;
 import org.hypertrace.gateway.service.common.datafetcher.EntityFetcherResponse;
 import org.hypertrace.gateway.service.common.datafetcher.QueryServiceEntityFetcher;
@@ -83,14 +84,15 @@ public class EntityRequestHandler extends RequestHandler {
 
   @Override
   public ExploreResponse.Builder handleRequest(
-      ExploreRequestContext requestContext, ExploreRequest exploreRequest) {
+      ExploreRequestContext requestContext, ExpressionContext expressionContext) {
     // Track if we have Group By so we can determine if we need to do Order By, Limit and Offset
     // ourselves.
-    if (!exploreRequest.getGroupByList().isEmpty()) {
+    ExploreRequest request = requestContext.getRequest();
+    if (!request.getGroupByList().isEmpty()) {
       requestContext.setHasGroupBy(true);
     }
 
-    Set<String> entityIds = getEntityIds(requestContext, exploreRequest);
+    Set<String> entityIds = getEntityIds(requestContext, request);
     ExploreResponse.Builder builder = ExploreResponse.newBuilder();
 
     if (entityIds.isEmpty()) {
@@ -98,7 +100,7 @@ public class EntityRequestHandler extends RequestHandler {
     }
 
     Iterator<ResultSetChunk> resultSetChunkIterator =
-        entityServiceEntityFetcher.getResults(requestContext, exploreRequest, entityIds);
+        entityServiceEntityFetcher.getResults(requestContext, request, entityIds);
 
     while (resultSetChunkIterator.hasNext()) {
       org.hypertrace.entity.query.service.v1.ResultSetChunk chunk = resultSetChunkIterator.next();
@@ -135,8 +137,7 @@ public class EntityRequestHandler extends RequestHandler {
     }
 
     if (requestContext.hasGroupBy() && requestContext.getIncludeRestGroup()) {
-      getTheRestGroupRequestHandler()
-          .getRowsForTheRestGroup(requestContext, exploreRequest, builder);
+      getTheRestGroupRequestHandler().getRowsForTheRestGroup(requestContext, request, builder);
     }
 
     return builder;
@@ -214,8 +215,7 @@ public class EntityRequestHandler extends RequestHandler {
         attributeMetadataProvider.getAttributesMetadata(
             requestContext, requestContext.getContext());
     Map<String, AttributeMetadata> resultKeyToAttributeMetadataMap =
-        this.remapAttributeMetadataByResultName(
-            requestContext.getExploreRequest(), attributeMetadataMap);
+        this.remapAttributeMetadataByResultName(requestContext.getRequest(), attributeMetadataMap);
     org.hypertrace.gateway.service.v1.common.Value gwValue;
     if (function != null) {
       // Function expression value

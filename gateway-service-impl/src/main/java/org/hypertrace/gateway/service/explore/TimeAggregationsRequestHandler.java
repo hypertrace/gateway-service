@@ -39,11 +39,10 @@ public class TimeAggregationsRequestHandler extends RequestHandler {
 
   @Override
   QueryRequest buildQueryRequest(
-      ExploreRequestContext requestContext,
-      ExploreRequest request,
-      AttributeMetadataProvider attributeMetadataProvider) {
+      ExploreRequestContext requestContext, AttributeMetadataProvider attributeMetadataProvider) {
     // Set hasGroupBy=true in the request context since we will group by the timestamp column
     // regardless of the presence of a groupBy or not.
+    ExploreRequest request = requestContext.getRequest();
     requestContext.setHasGroupBy(true);
     QueryRequest.Builder builder = QueryRequest.newBuilder();
 
