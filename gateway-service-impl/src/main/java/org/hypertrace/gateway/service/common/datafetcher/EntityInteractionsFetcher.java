@@ -121,6 +121,90 @@ public class EntityInteractionsFetcher {
     return columnNames;
   }
 
+  private boolean hasInteractionFilters(org.hypertrace.gateway.service.v1.common.Filter filter) {
+    // todo aman - write the logic here
+    return true;
+  }
+
+  public List<EntityKey> fetchInteractionsIdsIfNecessary(
+      RequestContext context, EntitiesRequest entitiesRequest) {
+
+    if (!hasInteractionFilters(entitiesRequest.getIncomingInteractions().getFilter())
+        || !hasInteractionFilters(entitiesRequest.getOutgoingInteractions().getFilter())) {
+      return Collections.emptyList();
+    }
+
+    List<EntityInteractionQueryRequest> allQueryRequests = new ArrayList<>();
+    if (!InteractionsRequest.getDefaultInstance()
+        .equals(entitiesRequest.getIncomingInteractions())) {
+      allQueryRequests.addAll(
+          prepareInteractionIdsQueryRequest(
+              context, entitiesRequest, entitiesRequest.getIncomingInteractions(), INCOMING));
+    }
+
+    // Process the outgoing interactions, and prepare the QS queries
+    if (!InteractionsRequest.getDefaultInstance()
+        .equals(entitiesRequest.getOutgoingInteractions())) {
+      allQueryRequests.addAll(
+          prepareInteractionIdsQueryRequest(
+              context, entitiesRequest, entitiesRequest.getOutgoingInteractions(), OUTGOING));
+    }
+
+    allQueryRequests.forEach(
+        req -> {
+          LOG.info("All Query requests are as follows {}", req);
+        });
+
+    // execute all the requests in parallel, and wait for results
+    List<CompletableFuture<EntityInteractionQueryResponse>> queryRequestCompletableFutures =
+        allQueryRequests.stream()
+            .map(
+                e ->
+                    CompletableFuture.supplyAsync(
+                        () -> executeQueryRequest(context, e), this.queryExecutor))
+            .collect(Collectors.toList());
+
+    List<EntityKey> entityKeys = new ArrayList<>();
+    queryRequestCompletableFutures.forEach(
+        queryRequestCompletableFuture -> {
+          EntityInteractionQueryResponse qsResponse = queryRequestCompletableFuture.join();
+          entityKeys.addAll(parseInteractionResponse(entitiesRequest, qsResponse));
+        });
+
+    LOG.info("Entity Ids are as follows {}", entityKeys);
+    return entityKeys;
+  }
+
+  private List<EntityKey> parseInteractionResponse(
+      EntitiesRequest entitiesRequest, EntityInteractionQueryResponse qsResponse) {
+    List<EntityKey> entityKeys = new ArrayList<>();
+    qsResponse
+        .getResultSetChunkIterator()
+        .forEachRemaining(
+            resultSetChunk -> {
+              LOG.info("Response from interaction request is {} ", resultSetChunk.toString());
+              if (resultSetChunk.getRowCount() < 1) {
+                return;
+              }
+              resultSetChunk
+                  .getRowList()
+                  .forEach(
+                      row -> {
+                        List<String> idColumns =
+                            getEntityIdColumnsFromInteraction(
+                                DomainEntityType.valueOf(entitiesRequest.getEntityType()),
+                                !qsResponse.getRequest().isIncoming());
+                        EntityKey key =
+                            EntityKey.of(
+                                IntStream.range(0, idColumns.size())
+                                    .mapToObj(value -> row.getColumn(value).getString())
+                                    .toArray(String[]::new));
+                        entityKeys.add(key);
+                      });
+            });
+    return entityKeys;
+  }
+
   public void populateEntityInteractions(
       RequestContext context,
       EntitiesRequest entitiesRequest,
@@ -189,6 +273,82 @@ public class EntityInteractionsFetcher {
     Iterator<ResultSetChunk> resultSet =
         queryServiceClient.executeQuery(context, entityInteractionQueryRequest.getRequest());
     return new EntityInteractionQueryResponse(entityInteractionQueryRequest, resultSet);
+  }
+
+  private List<EntityInteractionQueryRequest> prepareInteractionIdsQueryRequest(
+      RequestContext requestContext,
+      EntitiesRequest request,
+      InteractionsRequest interactionsRequest,
+      boolean incoming) {
+    Set<String> entityTypes = getOtherEntityTypes(interactionsRequest.getFilter());
+    if (entityTypes.isEmpty()) {
+      return Collections.emptyList();
+    }
+
+    QueryRequest.Builder builder = QueryRequest.newBuilder();
+    // Filter should include the timestamp filters from parent request first
+    Filter.Builder filterBuilder =
+        Filter.newBuilder()
+            .setOperator(Operator.AND)
+            .addChildFilter(
+                QueryRequestUtil.createBetweenTimesFilter(
+                    AttributeMetadataUtil.getTimestampAttributeId(
+                        metadataProvider, requestContext, SCOPE),
+                    request.getStartTimeMillis(),
+                    request.getEndTimeMillis()));
+
+    this.buildSpaceQueryFilterIfNeeded(requestContext, request.getSpaceId())
+        .ifPresent(filterBuilder::addChildFilter);
+
+    List<String> idColumns =
+        getEntityIdColumnsFromInteraction(
+            DomainEntityType.valueOf(request.getEntityType()), !incoming);
+
+    // Group by the entity id column first, then the other end entity type for the interaction.
+    List<org.hypertrace.core.query.service.api.Expression> idExpressions =
+        idColumns.stream()
+            .map(QueryRequestUtil::createAttributeExpression)
+            .collect(Collectors.toList());
+    builder.addAllGroupBy(idExpressions);
+
+    // adding empty selections
+    List<org.hypertrace.core.query.service.api.Expression> selections = new ArrayList<>();
+    selections.add(
+        QueryRequestUtil.createCountByColumnSelection(
+            Optional.ofNullable(idColumns.get(0)).orElseThrow()));
+
+    QueryRequest protoType = builder.build();
+    Filter protoTypeFilter = filterBuilder.build();
+
+    Map<String, QueryRequest> queryRequests = new HashMap<>();
+
+    // In future we could send these queries in parallel to QueryService so that we can reduce the
+    // response time.
+    for (String e : entityTypes) {
+      DomainEntityType otherEntityType = DomainEntityType.valueOf(e.toUpperCase());
+
+      // Get the filters from the interactions request to 'AND' them with the timestamp filter.
+      Filter.Builder filterCopy = Filter.newBuilder(protoTypeFilter);
+      filterCopy.addChildFilter(
+          convertToQueryFilter(interactionsRequest.getFilter(), otherEntityType));
+
+      QueryRequest.Builder builderCopy = QueryRequest.newBuilder(protoType);
+      builderCopy.setFilter(filterCopy);
+
+      // Add all selections in the correct order. First id, then other entity id and finally
+      // the remaining selections.
+      builderCopy.addAllSelection(idExpressions);
+      selections.forEach(builderCopy::addSelection);
+      builderCopy.setLimit(DEFAULT_QUERY_SERVICE_GROUP_BY_LIMIT);
+      queryRequests.put(e, builderCopy.build());
+    }
+
+    return queryRequests.entrySet().stream()
+        .map(
+            e ->
+                new EntityInteractionQueryRequest(
+                    incoming, e.getKey(), interactionsRequest, e.getValue()))
+        .collect(Collectors.toList());
   }
 
   private List<EntityInteractionQueryRequest> prepareQueryRequests(

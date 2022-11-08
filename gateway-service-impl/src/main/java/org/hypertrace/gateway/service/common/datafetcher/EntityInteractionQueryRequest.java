@@ -35,4 +35,19 @@ public class EntityInteractionQueryRequest {
   public QueryRequest getRequest() {
     return request;
   }
+
+  @Override
+  public String toString() {
+    return "EntityInteractionQueryRequest{"
+        + "isIncoming="
+        + isIncoming
+        + ", entityType='"
+        + entityType
+        + '\''
+        + ", interactionsRequest="
+        + interactionsRequest
+        + ", request="
+        + request
+        + '}';
+  }
 }
