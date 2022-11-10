@@ -1,7 +1,6 @@
 package org.hypertrace.gateway.service.common.converters;
 
 import java.util.List;
-import java.util.Set;
 import org.hypertrace.core.query.service.api.AttributeExpression;
 import org.hypertrace.core.query.service.api.Expression;
 import org.hypertrace.core.query.service.api.Filter;
@@ -88,17 +87,6 @@ public class QueryRequestUtil {
   }
 
   public static Expression createStringArrayLiteralExpression(List<String> strings) {
-    return Expression.newBuilder()
-        .setLiteral(
-            LiteralConstant.newBuilder()
-                .setValue(
-                    Value.newBuilder()
-                        .setValueType(ValueType.STRING_ARRAY)
-                        .addAllStringArray(strings)))
-        .build();
-  }
-
-  public static Expression createStringSetLiteralExpression(Set<String> strings) {
     return Expression.newBuilder()
         .setLiteral(
             LiteralConstant.newBuilder()

@@ -62,6 +62,7 @@ import org.hypertrace.gateway.service.v1.entity.EntityInteraction;
 import org.hypertrace.gateway.service.v1.entity.InteractionsRequest;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
 import org.mockito.Mockito;
 
 public class EntityServiceInteractionRequestTest extends AbstractGatewayServiceTest {
@@ -598,7 +599,7 @@ public class EntityServiceInteractionRequestTest extends AbstractGatewayServiceT
     return toInteraction;
   }
 
-  //  @Test
+  @Test
   public void testGetEntitiesForMultipleTypeInteractionQuery() {
     long endTime = System.currentTimeMillis();
     long startTime = endTime - TimeUnit.DAYS.toMillis(30);

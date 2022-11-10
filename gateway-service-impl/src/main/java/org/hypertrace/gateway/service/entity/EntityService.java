@@ -156,7 +156,7 @@ public class EntityService {
     EntitiesRequest preProcessedRequest =
         requestPreProcessor.process(originalRequest, entitiesRequestContext);
 
-    preProcessedRequest = addEntityIdFromInteractionFilter(requestContext, preProcessedRequest);
+    preProcessedRequest = addEntityIdsFromInteractionFilter(requestContext, preProcessedRequest);
 
     EntityExecutionContext executionContext =
         new EntityExecutionContext(
@@ -244,7 +244,7 @@ public class EntityService {
     return edsEntityUpdater.bulkUpdateEntities(request, updateExecutionContext);
   }
 
-  private EntitiesRequest addEntityIdFromInteractionFilter(
+  private EntitiesRequest addEntityIdsFromInteractionFilter(
       RequestContext requestContext, EntitiesRequest preProcessedRequest) {
     List<EntityKey> entityKeys =
         this.interactionsFetcher.fetchInteractionsIdsIfNecessary(
@@ -286,7 +286,7 @@ public class EntityService {
                             QueryExpressionUtil.getLiteralExpression(
                                     entityKeys.stream()
                                         .map(EntityKey::toString)
-                                        .collect(Collectors.toList()))
+                                        .collect(Collectors.toUnmodifiableList()))
                                 .build())
                         .build())
             .collect(Collectors.toUnmodifiableList());

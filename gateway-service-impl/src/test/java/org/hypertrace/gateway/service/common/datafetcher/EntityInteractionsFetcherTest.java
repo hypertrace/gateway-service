@@ -97,14 +97,6 @@ public class EntityInteractionsFetcherTest extends AbstractGatewayServiceTest {
   @Mock private ExecutorService queryExecutor;
 
   @Test
-  public void testIsSpecialInteractionRequest() {
-    //    EntityInteractionsFetcher aggregator =
-    //        new EntityInteractionsFetcher(null, attributeMetadataProvider, queryExecutor);
-    //    aggregator.isSpecialInteractionRequest(Filter.newBuilder()
-    //        .setChildFilter().build());
-  }
-
-  @Test
   public void testServiceToServiceEdgeQueryRequests() {
     EntitiesRequest request =
         EntitiesRequest.newBuilder()
