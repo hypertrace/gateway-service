@@ -521,7 +521,7 @@ public class EntityServiceInteractionRequestTest extends AbstractGatewayServiceT
                 .iterator());
   }
 
-  private void mockQueryServiceRequestForInteractionFilterRequest(long startTime, long endTime) {
+  private void mockQueryServiceIdsRequestForInteractionFilterRequest(long startTime, long endTime) {
 
     org.hypertrace.core.query.service.api.Filter timesFilter =
         QueryRequestUtil.createBetweenTimesFilter("INTERACTION.startTime", startTime, endTime);
@@ -897,7 +897,7 @@ public class EntityServiceInteractionRequestTest extends AbstractGatewayServiceT
 
     mockQueryServiceRequestForServiceCountWithInteractionFilters(startTime, endTime);
     mockQueryServiceRequestForIncomingServiceWithInteractionFilters(startTime, endTime);
-    mockQueryServiceRequestForInteractionFilterRequest(startTime, endTime);
+    mockQueryServiceIdsRequestForInteractionFilterRequest(startTime, endTime);
 
     EntityService entityService =
         new EntityService(

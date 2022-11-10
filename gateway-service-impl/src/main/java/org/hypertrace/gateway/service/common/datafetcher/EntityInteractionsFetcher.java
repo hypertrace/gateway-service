@@ -291,20 +291,15 @@ public class EntityInteractionsFetcher {
       return Collections.emptyList();
     }
 
-    QueryRequest.Builder builder = QueryRequest.newBuilder();
-    // Filter should include the timestamp filters from parent request first
-    Filter.Builder filterBuilder =
-        Filter.newBuilder()
-            .setOperator(Operator.AND)
-            .addChildFilter(
-                QueryRequestUtil.createBetweenTimesFilter(
-                    AttributeMetadataUtil.getTimestampAttributeId(
-                        metadataProvider, requestContext, SCOPE),
-                    request.getStartTimeMillis(),
-                    request.getEndTimeMillis()));
+    List<Filter> childFilters = new ArrayList<>();
+    childFilters.add(
+        QueryRequestUtil.createBetweenTimesFilter(
+            AttributeMetadataUtil.getTimestampAttributeId(metadataProvider, requestContext, SCOPE),
+            request.getStartTimeMillis(),
+            request.getEndTimeMillis()));
 
     this.buildSpaceQueryFilterIfNeeded(requestContext, request.getSpaceId())
-        .ifPresent(filterBuilder::addChildFilter);
+        .ifPresent(childFilters::add);
 
     List<String> idColumns =
         getEntityIdColumnsFromInteraction(
@@ -315,7 +310,6 @@ public class EntityInteractionsFetcher {
         idColumns.stream()
             .map(QueryRequestUtil::createAttributeExpression)
             .collect(Collectors.toUnmodifiableList());
-    builder.addAllGroupBy(idExpressions);
 
     // adding empty selections
     List<org.hypertrace.core.query.service.api.Expression> selections = new ArrayList<>();
@@ -323,31 +317,26 @@ public class EntityInteractionsFetcher {
         QueryRequestUtil.createCountByColumnSelection(
             Optional.ofNullable(idColumns.get(0)).orElseThrow()));
 
-    QueryRequest defaultQueryRequest = builder.build();
-    Filter defaultFilter = filterBuilder.build();
-
     Map<String, QueryRequest> queryRequests = new HashMap<>();
-
-    // In future we could send these queries in parallel to QueryService so that we can reduce the
-    // response time.
     for (String e : otherEntityTypes) {
       DomainEntityType otherEntityType = DomainEntityType.valueOf(e.toUpperCase());
 
       // Get the filters from the interactions request to 'AND' them with the timestamp
       // defaultFilter.
-      Filter.Builder filterCopy = Filter.newBuilder(defaultFilter);
-      filterCopy.addChildFilter(
+      Filter.Builder filterBuilder = Filter.newBuilder().addAllChildFilter(childFilters);
+      filterBuilder.addChildFilter(
           convertToQueryFilter(interactionsRequest.getFilter(), otherEntityType));
 
-      QueryRequest.Builder builderCopy = QueryRequest.newBuilder(defaultQueryRequest);
-      builderCopy.setFilter(filterCopy);
+      QueryRequest.Builder queryBuilder = QueryRequest.newBuilder();
+      queryBuilder.setFilter(filterBuilder);
+      queryBuilder.addAllGroupBy(idExpressions);
 
       // Add all selections in the correct order. First id, then other entity id and finally
       // the remaining selections.
-      builderCopy.addAllSelection(idExpressions);
-      selections.forEach(builderCopy::addSelection);
-      builderCopy.setLimit(DEFAULT_QUERY_SERVICE_GROUP_BY_LIMIT);
-      queryRequests.put(e, builderCopy.build());
+      queryBuilder.addAllSelection(idExpressions);
+      selections.forEach(queryBuilder::addSelection);
+      queryBuilder.setLimit(DEFAULT_QUERY_SERVICE_GROUP_BY_LIMIT);
+      queryRequests.put(e, queryBuilder.build());
     }
 
     return queryRequests.entrySet().stream()
