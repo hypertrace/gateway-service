@@ -1,5 +1,6 @@
 package org.hypertrace.gateway.service.entity;
 
+import static org.hypertrace.core.query.service.client.QueryServiceClient.DEFAULT_QUERY_SERVICE_GROUP_BY_LIMIT;
 import static org.hypertrace.gateway.service.v1.common.Operator.IN;
 import static org.hypertrace.gateway.service.v1.common.Operator.OR;
 
@@ -12,6 +13,7 @@ import java.time.Instant;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
+import java.util.Set;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.TimeUnit;
 import java.util.stream.Collectors;
@@ -246,7 +248,7 @@ public class EntityService {
 
   private EntitiesRequest addEntityIdsFromInteractionFilter(
       RequestContext requestContext, EntitiesRequest preProcessedRequest) {
-    List<EntityKey> entityKeys =
+    Set<EntityKey> entityKeys =
         this.interactionsFetcher.fetchInteractionsIdsIfNecessary(
             requestContext, preProcessedRequest);
     if (!entityKeys.isEmpty()) {
@@ -270,7 +272,14 @@ public class EntityService {
   }
 
   private Filter createEntityIdInFilter(
-      RequestContext requestContext, String entityType, List<EntityKey> entityKeys) {
+      RequestContext requestContext, String entityType, Set<EntityKey> entityKeys) {
+    List<EntityKey> entities = new ArrayList<>(entityKeys);
+    if (entities.size() > DEFAULT_QUERY_SERVICE_GROUP_BY_LIMIT) {
+      entities = entities.subList(0, DEFAULT_QUERY_SERVICE_GROUP_BY_LIMIT);
+    }
+    List<String> entityIds =
+        entities.stream().map(EntityKey::toString).collect(Collectors.toUnmodifiableList());
+
     List<String> idAttributeIds =
         AttributeMetadataUtil.getIdAttributeIds(
             metadataProvider, entityIdColumnsConfigs, requestContext, entityType);
@@ -282,12 +291,7 @@ public class EntityService {
                     Filter.newBuilder()
                         .setLhs(QueryExpressionUtil.buildAttributeExpression(entityIdAttributeId))
                         .setOperator(IN)
-                        .setRhs(
-                            QueryExpressionUtil.getLiteralExpression(
-                                    entityKeys.stream()
-                                        .map(EntityKey::toString)
-                                        .collect(Collectors.toUnmodifiableList()))
-                                .build())
+                        .setRhs(QueryExpressionUtil.getLiteralExpression(entityIds).build())
                         .build())
             .collect(Collectors.toUnmodifiableList());
     if (entityIdsInFilter.size() == 1) {

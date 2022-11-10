@@ -139,12 +139,12 @@ public class EntityInteractionsFetcher {
     return hasFilters;
   }
 
-  public List<EntityKey> fetchInteractionsIdsIfNecessary(
+  public Set<EntityKey> fetchInteractionsIdsIfNecessary(
       RequestContext context, EntitiesRequest entitiesRequest) {
 
     if (!hasInteractionFilters(entitiesRequest.getIncomingInteractions().getFilter())
-        || !hasInteractionFilters(entitiesRequest.getOutgoingInteractions().getFilter())) {
-      return Collections.emptyList();
+        && !hasInteractionFilters(entitiesRequest.getOutgoingInteractions().getFilter())) {
+      return Collections.emptySet();
     }
 
     List<EntityInteractionQueryRequest> allQueryRequests = new ArrayList<>();
@@ -172,25 +172,23 @@ public class EntityInteractionsFetcher {
                         () -> executeQueryRequest(context, e), this.queryExecutor))
             .collect(Collectors.toUnmodifiableList());
 
-    List<EntityKey> entityKeys = new ArrayList<>();
+    Set<EntityKey> entityKeys = new HashSet<>();
     queryRequestCompletableFutures.forEach(
         queryRequestCompletableFuture -> {
           EntityInteractionQueryResponse qsResponse = queryRequestCompletableFuture.join();
           entityKeys.addAll(parseInteractionIdsResponse(entitiesRequest, qsResponse));
         });
 
-    LOG.info("Entity Ids are as follows {}", entityKeys);
     return entityKeys;
   }
 
-  private List<EntityKey> parseInteractionIdsResponse(
+  private Set<EntityKey> parseInteractionIdsResponse(
       EntitiesRequest entitiesRequest, EntityInteractionQueryResponse qsResponse) {
-    List<EntityKey> entityKeys = new ArrayList<>();
+    Set<EntityKey> entityKeys = new HashSet<>();
     qsResponse
         .getResultSetChunkIterator()
         .forEachRemaining(
             resultSetChunk -> {
-              LOG.info("Response from interaction request is {} ", resultSetChunk.toString());
               if (resultSetChunk.getRowCount() < 1) {
                 return;
               }
@@ -210,7 +208,7 @@ public class EntityInteractionsFetcher {
                         entityKeys.add(key);
                       });
             });
-    return Collections.unmodifiableList(entityKeys);
+    return Collections.unmodifiableSet(entityKeys);
   }
 
   public void populateEntityInteractions(
