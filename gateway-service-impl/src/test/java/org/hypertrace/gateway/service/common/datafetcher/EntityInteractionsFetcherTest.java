@@ -11,7 +11,6 @@ import static org.hypertrace.gateway.service.common.util.QueryExpressionUtil.bui
 import static org.hypertrace.gateway.service.common.util.QueryExpressionUtil.getAggregateFunctionExpression;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
-import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.junit.jupiter.api.Assertions.fail;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.eq;
@@ -19,7 +18,6 @@ import static org.mockito.Mockito.mock;
 
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableSet;
-import com.google.common.collect.Iterators;
 import java.util.Collection;
 import java.util.Collections;
 import java.util.LinkedHashSet;
@@ -56,7 +54,6 @@ import org.hypertrace.gateway.service.v1.entity.EntitiesRequest;
 import org.hypertrace.gateway.service.v1.entity.InteractionsRequest;
 import org.junit.jupiter.api.Test;
 import org.mockito.ArgumentMatchers;
-import org.mockito.Mock;
 import org.mockito.Mockito;
 
 /** Unit tests for {@link EntityInteractionsFetcher} */
@@ -117,9 +114,8 @@ public class EntityInteractionsFetcherTest extends AbstractGatewayServiceTest {
                   "Interaction.metrics.bytes_sent", FunctionType.SUM, "SUM_bytes_sent"))
           .build();
 
-  @Mock private AttributeMetadataProvider attributeMetadataProvider;
-  @Mock private ExecutorService queryExecutor;
-  @Mock private QueryServiceClient queryServiceClient;
+  private AttributeMetadataProvider attributeMetadataProvider;
+  private ExecutorService queryExecutor;
 
   @Test
   public void testFetchInteractionsIds_withoutInteractionFilter() {
@@ -171,12 +167,9 @@ public class EntityInteractionsFetcherTest extends AbstractGatewayServiceTest {
         List.of(
             getResultSetChunk(
                 List.of("INTERACTION.toServiceId"),
-                new String[][] {
-                    {"serviceId1"},
-                    {"serviceId12"}
-                }));
+                new String[][] {{"serviceId1"}, {"serviceId12"}}));
 
-    queryServiceClient = mock(QueryServiceClient.class);
+    QueryServiceClient queryServiceClient = mock(QueryServiceClient.class);
     Mockito.when(
             queryServiceClient.executeQuery(eq(entitiesRequestContext), ArgumentMatchers.any()))
         .thenReturn(resultSetChunks.iterator());
