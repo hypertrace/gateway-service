@@ -179,7 +179,7 @@ public class EntityInteractionsFetcher {
           entityKeys.addAll(parseInteractionIdsResponse(entitiesRequest, qsResponse));
         });
 
-    return entityKeys;
+    return Collections.unmodifiableSet(entityKeys);
   }
 
   private Set<EntityKey> parseInteractionIdsResponse(
