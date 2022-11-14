@@ -374,7 +374,7 @@ public class EntityServiceInteractionRequestTest extends AbstractGatewayServiceT
             "SERVICE.id",
             org.hypertrace.core.query.service.api.Operator.IN,
             createStringArrayLiteralExpression(
-                List.of("test_service_2", "test_service_1", "test_service_3")));
+                List.of("test_service_3", "test_service_2", "test_service_1")));
 
     org.hypertrace.core.query.service.api.Filter filter =
         org.hypertrace.core.query.service.api.Filter.newBuilder()

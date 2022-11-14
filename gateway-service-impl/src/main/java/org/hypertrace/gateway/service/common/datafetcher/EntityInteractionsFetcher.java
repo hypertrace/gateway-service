@@ -8,6 +8,7 @@ import static org.hypertrace.gateway.service.common.converters.QueryRequestUtil.
 import com.google.common.annotations.VisibleForTesting;
 import com.google.common.base.Preconditions;
 import com.google.common.base.Strings;
+import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableSet;
 import java.util.ArrayList;
 import java.util.Collection;
@@ -21,6 +22,7 @@ import java.util.Optional;
 import java.util.Set;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.ExecutorService;
+import java.util.function.Function;
 import java.util.stream.Collectors;
 import java.util.stream.IntStream;
 import org.apache.commons.lang3.StringUtils;
@@ -45,7 +47,6 @@ import org.hypertrace.gateway.service.entity.EntityKey;
 import org.hypertrace.gateway.service.entity.config.InteractionConfig;
 import org.hypertrace.gateway.service.entity.config.InteractionConfigs;
 import org.hypertrace.gateway.service.v1.common.AggregatedMetricValue;
-import org.hypertrace.gateway.service.v1.common.DomainEntityType;
 import org.hypertrace.gateway.service.v1.common.Expression;
 import org.hypertrace.gateway.service.v1.common.Expression.ValueCase;
 import org.hypertrace.gateway.service.v1.common.FunctionExpression;
@@ -101,10 +102,9 @@ public class EntityInteractionsFetcher {
     this.queryExecutor = queryExecutor;
   }
 
-  private List<String> getEntityIdColumnsFromInteraction(
-      DomainEntityType entityType, boolean incoming) {
+  private List<String> getEntityIdColumnsFromInteraction(String entityType, boolean incoming) {
     InteractionConfig interactionConfig =
-        InteractionConfigs.getInteractionAttributeConfig(entityType.name());
+        InteractionConfigs.getInteractionAttributeConfig(entityType);
     if (interactionConfig == null) {
       throw new IllegalArgumentException("Unhandled entityType: " + entityType);
     }
@@ -130,13 +130,7 @@ public class EntityInteractionsFetcher {
           && !StringUtils.equals(attributeId, TO_ENTITY_TYPE_ATTRIBUTE_ID);
     }
 
-    boolean hasFilters = false;
-    if (filter.getChildFilterCount() > 0) {
-      for (org.hypertrace.gateway.service.v1.common.Filter child : filter.getChildFilterList()) {
-        hasFilters = hasFilters || hasInteractionFilters(child);
-      }
-    }
-    return hasFilters;
+    return filter.getChildFilterList().stream().anyMatch(this::hasInteractionFilters);
   }
 
   public Set<EntityKey> fetchInteractionsIdsIfNecessary(
@@ -148,16 +142,14 @@ public class EntityInteractionsFetcher {
     }
 
     List<EntityInteractionQueryRequest> allQueryRequests = new ArrayList<>();
-    if (!InteractionsRequest.getDefaultInstance()
-        .equals(entitiesRequest.getIncomingInteractions())) {
+    if (entitiesRequest.hasIncomingInteractions()) {
       allQueryRequests.addAll(
           prepareInteractionIdsQueryRequest(
               context, entitiesRequest, entitiesRequest.getIncomingInteractions(), INCOMING));
     }
 
     // Process the outgoing interactions, and prepare the QS queries
-    if (!InteractionsRequest.getDefaultInstance()
-        .equals(entitiesRequest.getOutgoingInteractions())) {
+    if (entitiesRequest.hasOutgoingInteractions()) {
       allQueryRequests.addAll(
           prepareInteractionIdsQueryRequest(
               context, entitiesRequest, entitiesRequest.getOutgoingInteractions(), OUTGOING));
@@ -172,14 +164,11 @@ public class EntityInteractionsFetcher {
                         () -> executeQueryRequest(context, e), this.queryExecutor))
             .collect(Collectors.toUnmodifiableList());
 
-    Set<EntityKey> entityKeys = new HashSet<>();
-    queryRequestCompletableFutures.forEach(
-        queryRequestCompletableFuture -> {
-          EntityInteractionQueryResponse qsResponse = queryRequestCompletableFuture.join();
-          entityKeys.addAll(parseInteractionIdsResponse(entitiesRequest, qsResponse));
-        });
-
-    return Collections.unmodifiableSet(entityKeys);
+    return queryRequestCompletableFutures.stream()
+        .map(CompletableFuture::join)
+        .map(response -> parseInteractionIdsResponse(entitiesRequest, response))
+        .flatMap(Collection::stream)
+        .collect(Collectors.toUnmodifiableSet());
   }
 
   private Set<EntityKey> parseInteractionIdsResponse(
@@ -198,7 +187,7 @@ public class EntityInteractionsFetcher {
                       row -> {
                         List<String> idColumns =
                             getEntityIdColumnsFromInteraction(
-                                DomainEntityType.valueOf(entitiesRequest.getEntityType()),
+                                entitiesRequest.getEntityType(),
                                 !qsResponse.getRequest().isIncoming());
                         EntityKey key =
                             EntityKey.of(
@@ -301,9 +290,10 @@ public class EntityInteractionsFetcher {
     this.buildSpaceQueryFilterIfNeeded(requestContext, request.getSpaceId())
         .ifPresent(childFilters::add);
 
-    List<String> idColumns =
-        getEntityIdColumnsFromInteraction(
-            DomainEntityType.valueOf(request.getEntityType()), !incoming);
+    // Id Columns for the requested entity type.
+    // callee interaction attribute in case of incoming edges
+    // and caller interaction attribute in case of outgoing edges.
+    List<String> idColumns = getEntityIdColumnsFromInteraction(request.getEntityType(), !incoming);
 
     // Group by the entity id column first, then the other end entity type for the interaction.
     List<org.hypertrace.core.query.service.api.Expression> idExpressions =
@@ -311,33 +301,37 @@ public class EntityInteractionsFetcher {
             .map(QueryRequestUtil::createAttributeExpression)
             .collect(Collectors.toUnmodifiableList());
 
-    // adding empty selections
-    List<org.hypertrace.core.query.service.api.Expression> selections = new ArrayList<>();
-    selections.add(
-        QueryRequestUtil.createCountByColumnSelection(
-            Optional.ofNullable(idColumns.get(0)).orElseThrow()));
+    // GroupBy queries need at least one aggregate operation in the selection
+    // so we add count(*) as a dummy placeholder.
+    List<org.hypertrace.core.query.service.api.Expression> selections =
+        ImmutableList.of(
+            QueryRequestUtil.createCountByColumnSelection(
+                Optional.ofNullable(idColumns.get(0)).orElseThrow()));
 
-    Map<String, QueryRequest> queryRequests = new HashMap<>();
-    for (String e : otherEntityTypes) {
-      DomainEntityType otherEntityType = DomainEntityType.valueOf(e.toUpperCase());
+    Map<String, QueryRequest> queryRequests =
+        otherEntityTypes.stream()
+            .collect(
+                Collectors.toUnmodifiableMap(
+                    Function.identity(),
+                    otherEntityType -> {
+                      // Get the filters from the interactions request to 'AND' them with the
+                      // timestamp
+                      // defaultFilter.
+                      Filter.Builder filterBuilder =
+                          Filter.newBuilder()
+                              .addAllChildFilter(childFilters)
+                              .addChildFilter(
+                                  convertToQueryFilter(
+                                      interactionsRequest.getFilter(), otherEntityType));
 
-      // Get the filters from the interactions request to 'AND' them with the timestamp
-      // defaultFilter.
-      Filter.Builder filterBuilder = Filter.newBuilder().addAllChildFilter(childFilters);
-      filterBuilder.addChildFilter(
-          convertToQueryFilter(interactionsRequest.getFilter(), otherEntityType));
-
-      QueryRequest.Builder queryBuilder = QueryRequest.newBuilder();
-      queryBuilder.setFilter(filterBuilder);
-      queryBuilder.addAllGroupBy(idExpressions);
-
-      // Add all selections in the correct order. First id, then other entity id and finally
-      // the remaining selections.
-      queryBuilder.addAllSelection(idExpressions);
-      selections.forEach(queryBuilder::addSelection);
-      queryBuilder.setLimit(DEFAULT_QUERY_SERVICE_GROUP_BY_LIMIT);
-      queryRequests.put(e, queryBuilder.build());
-    }
+                      return QueryRequest.newBuilder()
+                          .setFilter(filterBuilder)
+                          .addAllGroupBy(idExpressions)
+                          .addAllSelection(idExpressions)
+                          .addAllSelection(selections)
+                          .setLimit(DEFAULT_QUERY_SERVICE_GROUP_BY_LIMIT)
+                          .build();
+                    }));
 
     return queryRequests.entrySet().stream()
         .map(
@@ -407,7 +401,7 @@ public class EntityInteractionsFetcher {
   }
 
   private Filter convertToQueryFilter(
-      org.hypertrace.gateway.service.v1.common.Filter filter, DomainEntityType otherEntityType) {
+      org.hypertrace.gateway.service.v1.common.Filter filter, String otherEntityType) {
     Filter.Builder builder = Filter.newBuilder();
     builder.setOperator(QueryAndGatewayDtoConverter.convertOperator(filter.getOperator()));
     if (filter.getChildFilterCount() > 0) {
@@ -547,8 +541,7 @@ public class EntityInteractionsFetcher {
     this.buildSpaceQueryFilterIfNeeded(requestContext, spaceId)
         .ifPresent(filterBuilder::addChildFilter);
 
-    List<String> idColumns =
-        getEntityIdColumnsFromInteraction(DomainEntityType.valueOf(entityType), !incoming);
+    List<String> idColumns = getEntityIdColumnsFromInteraction(entityType, !incoming);
 
     // Add a filter on the entityIds
     filterBuilder.addChildFilter(createFilterForEntityKeys(idColumns, entityIds));
@@ -588,9 +581,7 @@ public class EntityInteractionsFetcher {
 
     // In future we could send these queries in parallel to QueryService so that we can reduce the
     // response time.
-    for (String e : entityTypes) {
-      DomainEntityType otherEntityType = DomainEntityType.valueOf(e.toUpperCase());
-
+    for (String otherEntityType : entityTypes) {
       // Get the filters from the interactions request to 'AND' them with the timestamp filter.
       Filter.Builder filterCopy = Filter.newBuilder(protoTypeFilter);
       filterCopy.addChildFilter(
@@ -620,7 +611,7 @@ public class EntityInteractionsFetcher {
         builderCopy.setLimit(DEFAULT_QUERY_SERVICE_GROUP_BY_LIMIT);
       }
 
-      queryRequests.put(e, builderCopy.build());
+      queryRequests.put(otherEntityType, builderCopy.build());
     }
 
     return queryRequests;
@@ -657,7 +648,7 @@ public class EntityInteractionsFetcher {
         // Construct the from/to EntityKeys from the columns
         List<String> idColumns =
             getEntityIdColumnsFromInteraction(
-                DomainEntityType.valueOf(entityType.toUpperCase()),
+                entityType.toUpperCase(),
                 !incoming); // Note: We add the selections it in this order
         EntityKey entityId =
             EntityKey.of(
@@ -666,8 +657,7 @@ public class EntityInteractionsFetcher {
                     .toArray(String[]::new));
 
         List<String> otherIdColumns =
-            getEntityIdColumnsFromInteraction(
-                DomainEntityType.valueOf(otherEntityType.toUpperCase()), incoming);
+            getEntityIdColumnsFromInteraction(otherEntityType.toUpperCase(), incoming);
         EntityKey otherEntityId =
             EntityKey.of(
                 IntStream.range(idColumns.size(), idColumns.size() + otherIdColumns.size())

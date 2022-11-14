@@ -1,8 +1,6 @@
 package org.hypertrace.gateway.service.entity;
 
-import static org.hypertrace.core.query.service.client.QueryServiceClient.DEFAULT_QUERY_SERVICE_GROUP_BY_LIMIT;
 import static org.hypertrace.gateway.service.v1.common.Operator.IN;
-import static org.hypertrace.gateway.service.v1.common.Operator.OR;
 
 import com.google.common.base.Preconditions;
 import com.google.common.collect.ImmutableMap;
@@ -253,10 +251,10 @@ public class EntityService {
             requestContext, preProcessedRequest);
     if (!entityKeys.isEmpty()) {
       Filter entityIdsInFilter =
-          createEntityIdInFilter(requestContext, preProcessedRequest.getEntityType(), entityKeys);
+          createEntityKeysInFilter(requestContext, preProcessedRequest.getEntityType(), entityKeys);
 
       EntitiesRequest.Builder preProcessRequestBuilder = preProcessedRequest.toBuilder();
-      if (preProcessRequestBuilder.getFilter().equals(Filter.getDefaultInstance())) {
+      if (preProcessRequestBuilder.hasFilter()) {
         preProcessRequestBuilder.setFilter(entityIdsInFilter);
       } else {
         preProcessRequestBuilder.setFilter(
@@ -271,34 +269,27 @@ public class EntityService {
     return preProcessedRequest;
   }
 
-  private Filter createEntityIdInFilter(
+  private Filter createEntityKeysInFilter(
       RequestContext requestContext, String entityType, Set<EntityKey> entityKeys) {
-    List<EntityKey> entities = new ArrayList<>(entityKeys);
-    if (entities.size() > DEFAULT_QUERY_SERVICE_GROUP_BY_LIMIT) {
-      entities = entities.subList(0, DEFAULT_QUERY_SERVICE_GROUP_BY_LIMIT);
-    }
     List<String> entityIds =
-        entities.stream().map(EntityKey::toString).collect(Collectors.toUnmodifiableList());
+        entityKeys.stream()
+            .filter(key -> key.getAttributes().size() == 1) // filter out all keys with single id
+            .map(EntityKey::toString)
+            .collect(Collectors.toUnmodifiableList());
 
     List<String> idAttributeIds =
         AttributeMetadataUtil.getIdAttributeIds(
             metadataProvider, entityIdColumnsConfigs, requestContext, entityType);
 
-    List<Filter> entityIdsInFilter =
-        idAttributeIds.stream()
-            .map(
-                entityIdAttributeId ->
-                    Filter.newBuilder()
-                        .setLhs(QueryExpressionUtil.buildAttributeExpression(entityIdAttributeId))
-                        .setOperator(IN)
-                        .setRhs(QueryExpressionUtil.getLiteralExpression(entityIds).build())
-                        .build())
-            .collect(Collectors.toUnmodifiableList());
-    if (entityIdsInFilter.size() == 1) {
-      return entityIdsInFilter.get(0);
-    } else {
-      return Filter.newBuilder().setOperator(OR).addAllChildFilter(entityIdsInFilter).build();
+    if (idAttributeIds.size() != 1) {
+      throw new RuntimeException("Entity Type " + entityType + " should have single ID Attribute");
     }
+
+    return Filter.newBuilder()
+        .setLhs(QueryExpressionUtil.buildAttributeExpression(idAttributeIds.get(0)))
+        .setOperator(IN)
+        .setRhs(QueryExpressionUtil.getLiteralExpression(entityIds).build())
+        .build();
   }
 
   private void addEntityInteractions(
