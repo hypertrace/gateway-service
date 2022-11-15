@@ -174,6 +174,9 @@ public class EntityInteractionsFetcher {
   private Set<EntityKey> parseInteractionIdsResponse(
       EntitiesRequest entitiesRequest, EntityInteractionQueryResponse qsResponse) {
     Set<EntityKey> entityKeys = new HashSet<>();
+    List<String> idColumns =
+        getEntityIdColumnsFromInteraction(
+            entitiesRequest.getEntityType(), !qsResponse.getRequest().isIncoming());
     qsResponse
         .getResultSetChunkIterator()
         .forEachRemaining(
@@ -185,10 +188,6 @@ public class EntityInteractionsFetcher {
                   .getRowList()
                   .forEach(
                       row -> {
-                        List<String> idColumns =
-                            getEntityIdColumnsFromInteraction(
-                                entitiesRequest.getEntityType(),
-                                !qsResponse.getRequest().isIncoming());
                         EntityKey key =
                             EntityKey.of(
                                 IntStream.range(0, idColumns.size())
@@ -648,16 +647,14 @@ public class EntityInteractionsFetcher {
         // Construct the from/to EntityKeys from the columns
         List<String> idColumns =
             getEntityIdColumnsFromInteraction(
-                entityType.toUpperCase(),
-                !incoming); // Note: We add the selections it in this order
+                entityType, !incoming); // Note: We add the selections it in this order
         EntityKey entityId =
             EntityKey.of(
                 IntStream.range(0, idColumns.size())
                     .mapToObj(value -> row.getColumn(value).getString())
                     .toArray(String[]::new));
 
-        List<String> otherIdColumns =
-            getEntityIdColumnsFromInteraction(otherEntityType.toUpperCase(), incoming);
+        List<String> otherIdColumns = getEntityIdColumnsFromInteraction(otherEntityType, incoming);
         EntityKey otherEntityId =
             EntityKey.of(
                 IntStream.range(idColumns.size(), idColumns.size() + otherIdColumns.size())

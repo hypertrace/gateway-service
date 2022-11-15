@@ -282,7 +282,8 @@ public class EntityService {
             metadataProvider, entityIdColumnsConfigs, requestContext, entityType);
 
     if (idAttributeIds.size() != 1) {
-      throw new RuntimeException("Entity Type " + entityType + " should have single ID Attribute");
+      LOG.error("Entity Type {} should have single ID Attribute", entityType);
+      throw Status.UNIMPLEMENTED.asRuntimeException();
     }
 
     return Filter.newBuilder()
