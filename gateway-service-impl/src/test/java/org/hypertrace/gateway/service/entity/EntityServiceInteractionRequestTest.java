@@ -29,6 +29,7 @@ import java.util.Optional;
 import java.util.Set;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.TimeUnit;
+import java.util.stream.Collectors;
 import org.hypertrace.core.attribute.service.v1.AttributeKind;
 import org.hypertrace.core.attribute.service.v1.AttributeMetadata;
 import org.hypertrace.core.attribute.service.v1.AttributeScope;
@@ -369,12 +370,13 @@ public class EntityServiceInteractionRequestTest extends AbstractGatewayServiceT
   private void mockQueryServiceRequestForServiceCountWithInteractionFilters(
       long startTime, long endTime) {
 
+    Set<String> serviceIds = Set.of("test_service_1", "test_service_2", "test_service_3");
+    List<String> entityIds = serviceIds.stream().collect(Collectors.toUnmodifiableList());
     org.hypertrace.core.query.service.api.Filter serviceIdFilter =
         createFilter(
             "SERVICE.id",
             org.hypertrace.core.query.service.api.Operator.IN,
-            createStringSetLiteralExpression(
-                Set.of("test_service_1", "test_service_2", "test_service_3")));
+            createStringArrayLiteralExpression(entityIds));
 
     org.hypertrace.core.query.service.api.Filter filter =
         org.hypertrace.core.query.service.api.Filter.newBuilder()
