@@ -373,8 +373,8 @@ public class EntityServiceInteractionRequestTest extends AbstractGatewayServiceT
         createFilter(
             "SERVICE.id",
             org.hypertrace.core.query.service.api.Operator.IN,
-            createStringArrayLiteralExpression(
-                List.of("test_service_3", "test_service_2", "test_service_1")));
+            createStringSetLiteralExpression(
+                Set.of("test_service_1", "test_service_2", "test_service_3")));
 
     org.hypertrace.core.query.service.api.Filter filter =
         org.hypertrace.core.query.service.api.Filter.newBuilder()
@@ -409,6 +409,18 @@ public class EntityServiceInteractionRequestTest extends AbstractGatewayServiceT
                         .addRow(generateRowFor("test_service_1", "10.0"))
                         .build())
                 .iterator());
+  }
+
+  public org.hypertrace.core.query.service.api.Expression createStringSetLiteralExpression(
+      Set<String> strings) {
+    return org.hypertrace.core.query.service.api.Expression.newBuilder()
+        .setLiteral(
+            org.hypertrace.core.query.service.api.LiteralConstant.newBuilder()
+                .setValue(
+                    org.hypertrace.core.query.service.api.Value.newBuilder()
+                        .setValueType(org.hypertrace.core.query.service.api.ValueType.STRING_ARRAY)
+                        .addAllStringArray(strings)))
+        .build();
   }
 
   private void mockQueryServiceRequestForIncomingServiceInteraction(long startTime, long endTime) {
