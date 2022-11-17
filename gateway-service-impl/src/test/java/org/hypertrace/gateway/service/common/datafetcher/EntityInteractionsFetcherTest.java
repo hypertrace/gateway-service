@@ -137,7 +137,7 @@ public class EntityInteractionsFetcherTest extends AbstractGatewayServiceTest {
 
     EntityInteractionsFetcher interactionsFetcher =
         new EntityInteractionsFetcher(null, attributeMetadataProvider, queryExecutor);
-    List<EntityKey> entityKeys =
+    Set<EntityKey> entityKeys =
         interactionsFetcher.fetchInteractionsIdsIfNecessary(
             new RequestContext(forTenantId(TENANT_ID)), request);
 
@@ -179,7 +179,7 @@ public class EntityInteractionsFetcherTest extends AbstractGatewayServiceTest {
             QueryExecutorConfig.from(this.getConfig()));
     EntityInteractionsFetcher interactionsFetcher =
         new EntityInteractionsFetcher(queryServiceClient, attributeMetadataProvider, queryExecutor);
-    List<EntityKey> entityKeys =
+    Set<EntityKey> entityKeys =
         interactionsFetcher.fetchInteractionsIdsIfNecessary(
             new RequestContext(forTenantId(TENANT_ID)), request);
     assertEquals(entityKeys.size(), 2);

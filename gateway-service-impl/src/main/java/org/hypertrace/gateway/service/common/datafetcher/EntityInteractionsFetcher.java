@@ -15,6 +15,7 @@ import java.util.Collections;
 import java.util.HashMap;
 import java.util.HashSet;
 import java.util.Iterator;
+import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
@@ -132,12 +133,12 @@ public class EntityInteractionsFetcher {
     return filter.getChildFilterList().stream().anyMatch(this::hasInteractionFilters);
   }
 
-  public List<EntityKey> fetchInteractionsIdsIfNecessary(
+  public Set<EntityKey> fetchInteractionsIdsIfNecessary(
       RequestContext context, EntitiesRequest entitiesRequest) {
 
     if (!hasInteractionFilters(entitiesRequest.getIncomingInteractions().getFilter())
         && !hasInteractionFilters(entitiesRequest.getOutgoingInteractions().getFilter())) {
-      return Collections.emptyList();
+      return Collections.emptySet();
     }
 
     List<EntityInteractionQueryRequest> allQueryRequests = new ArrayList<>();
@@ -163,11 +164,13 @@ public class EntityInteractionsFetcher {
                         () -> executeQueryRequest(context, e), this.queryExecutor))
             .collect(Collectors.toUnmodifiableList());
 
-    return queryRequestCompletableFutures.stream()
-        .map(CompletableFuture::join)
-        .map(response -> parseInteractionIdsResponse(entitiesRequest, response))
-        .flatMap(Collection::stream)
-        .collect(Collectors.toUnmodifiableList());
+    LinkedHashSet<EntityKey> entityKeys =
+        queryRequestCompletableFutures.stream()
+            .map(CompletableFuture::join)
+            .map(response -> parseInteractionIdsResponse(entitiesRequest, response))
+            .flatMap(Collection::stream)
+            .collect(Collectors.toCollection(LinkedHashSet::new));
+    return Collections.unmodifiableSet(entityKeys);
   }
 
   private List<EntityKey> parseInteractionIdsResponse(
