@@ -11,7 +11,6 @@ import java.time.Instant;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
-import java.util.Set;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.TimeUnit;
 import java.util.stream.Collectors;
@@ -246,7 +245,7 @@ public class EntityService {
 
   private EntitiesRequest addEntityIdsFromInteractionFilter(
       RequestContext requestContext, EntitiesRequest preProcessedRequest) {
-    Set<EntityKey> entityKeys =
+    List<EntityKey> entityKeys =
         this.interactionsFetcher.fetchInteractionsIdsIfNecessary(
             requestContext, preProcessedRequest);
     if (!entityKeys.isEmpty()) {
@@ -270,7 +269,7 @@ public class EntityService {
   }
 
   private Filter createEntityKeysInFilter(
-      RequestContext requestContext, String entityType, Set<EntityKey> entityKeys) {
+      RequestContext requestContext, String entityType, List<EntityKey> entityKeys) {
     List<String> entityIds =
         entityKeys.stream()
             .filter(key -> key.getAttributes().size() == 1) // filter out all keys with single id
@@ -283,7 +282,9 @@ public class EntityService {
 
     if (idAttributeIds.size() != 1) {
       LOG.error("Entity Type {} should have single ID Attribute", entityType);
-      throw Status.UNIMPLEMENTED.asRuntimeException();
+      throw Status.UNIMPLEMENTED
+          .withDescription("Entity Type " + entityType + " should have single ID Attribute")
+          .asRuntimeException();
     }
 
     return Filter.newBuilder()

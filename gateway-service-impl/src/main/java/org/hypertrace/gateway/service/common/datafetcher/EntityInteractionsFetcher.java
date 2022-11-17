@@ -8,7 +8,6 @@ import static org.hypertrace.gateway.service.common.converters.QueryRequestUtil.
 import com.google.common.annotations.VisibleForTesting;
 import com.google.common.base.Preconditions;
 import com.google.common.base.Strings;
-import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableSet;
 import java.util.ArrayList;
 import java.util.Collection;
@@ -133,12 +132,12 @@ public class EntityInteractionsFetcher {
     return filter.getChildFilterList().stream().anyMatch(this::hasInteractionFilters);
   }
 
-  public Set<EntityKey> fetchInteractionsIdsIfNecessary(
+  public List<EntityKey> fetchInteractionsIdsIfNecessary(
       RequestContext context, EntitiesRequest entitiesRequest) {
 
     if (!hasInteractionFilters(entitiesRequest.getIncomingInteractions().getFilter())
         && !hasInteractionFilters(entitiesRequest.getOutgoingInteractions().getFilter())) {
-      return Collections.emptySet();
+      return Collections.emptyList();
     }
 
     List<EntityInteractionQueryRequest> allQueryRequests = new ArrayList<>();
@@ -168,12 +167,12 @@ public class EntityInteractionsFetcher {
         .map(CompletableFuture::join)
         .map(response -> parseInteractionIdsResponse(entitiesRequest, response))
         .flatMap(Collection::stream)
-        .collect(Collectors.toUnmodifiableSet());
+        .collect(Collectors.toUnmodifiableList());
   }
 
-  private Set<EntityKey> parseInteractionIdsResponse(
+  private List<EntityKey> parseInteractionIdsResponse(
       EntitiesRequest entitiesRequest, EntityInteractionQueryResponse qsResponse) {
-    Set<EntityKey> entityKeys = new HashSet<>();
+    List<EntityKey> entityKeys = new ArrayList<>();
     List<String> idColumns =
         getEntityIdColumnsFromInteraction(
             entitiesRequest.getEntityType(), !qsResponse.getRequest().isIncoming());
@@ -196,7 +195,7 @@ public class EntityInteractionsFetcher {
                         entityKeys.add(key);
                       });
             });
-    return Collections.unmodifiableSet(entityKeys);
+    return Collections.unmodifiableList(entityKeys);
   }
 
   public void populateEntityInteractions(
@@ -300,13 +299,6 @@ public class EntityInteractionsFetcher {
             .map(QueryRequestUtil::createAttributeExpression)
             .collect(Collectors.toUnmodifiableList());
 
-    // GroupBy queries need at least one aggregate operation in the selection
-    // so we add count(*) as a dummy placeholder.
-    List<org.hypertrace.core.query.service.api.Expression> selections =
-        ImmutableList.of(
-            QueryRequestUtil.createCountByColumnSelection(
-                Optional.ofNullable(idColumns.get(0)).orElseThrow()));
-
     Map<String, QueryRequest> queryRequests =
         otherEntityTypes.stream()
             .collect(
@@ -327,7 +319,6 @@ public class EntityInteractionsFetcher {
                           .setFilter(filterBuilder)
                           .addAllGroupBy(idExpressions)
                           .addAllSelection(idExpressions)
-                          .addAllSelection(selections)
                           .setLimit(DEFAULT_QUERY_SERVICE_GROUP_BY_LIMIT)
                           .build();
                     }));

@@ -7,7 +7,6 @@ import static org.hypertrace.gateway.service.common.QueryServiceRequestAndRespon
 import static org.hypertrace.gateway.service.common.converters.QueryRequestUtil.createAttributeExpression;
 import static org.hypertrace.gateway.service.common.converters.QueryRequestUtil.createBetweenTimesFilter;
 import static org.hypertrace.gateway.service.common.converters.QueryRequestUtil.createCompositeFilter;
-import static org.hypertrace.gateway.service.common.converters.QueryRequestUtil.createCountByColumnSelection;
 import static org.hypertrace.gateway.service.common.converters.QueryRequestUtil.createFilter;
 import static org.hypertrace.gateway.service.common.converters.QueryRequestUtil.createStringArrayLiteralExpression;
 import static org.hypertrace.gateway.service.common.converters.QueryRequestUtil.createStringNullLiteralExpression;
@@ -29,7 +28,6 @@ import java.util.Optional;
 import java.util.Set;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.TimeUnit;
-import java.util.stream.Collectors;
 import org.hypertrace.core.attribute.service.v1.AttributeKind;
 import org.hypertrace.core.attribute.service.v1.AttributeMetadata;
 import org.hypertrace.core.attribute.service.v1.AttributeScope;
@@ -370,13 +368,12 @@ public class EntityServiceInteractionRequestTest extends AbstractGatewayServiceT
   private void mockQueryServiceRequestForServiceCountWithInteractionFilters(
       long startTime, long endTime) {
 
-    Set<String> serviceIds = Set.of("test_service_1", "test_service_2", "test_service_3");
-    List<String> entityIds = serviceIds.stream().collect(Collectors.toUnmodifiableList());
     org.hypertrace.core.query.service.api.Filter serviceIdFilter =
         createFilter(
             "SERVICE.id",
             org.hypertrace.core.query.service.api.Operator.IN,
-            createStringArrayLiteralExpression(entityIds));
+            createStringArrayLiteralExpression(
+                List.of("test_service_1", "test_service_2", "test_service_3")));
 
     org.hypertrace.core.query.service.api.Filter filter =
         org.hypertrace.core.query.service.api.Filter.newBuilder()
@@ -411,18 +408,6 @@ public class EntityServiceInteractionRequestTest extends AbstractGatewayServiceT
                         .addRow(generateRowFor("test_service_1", "10.0"))
                         .build())
                 .iterator());
-  }
-
-  public org.hypertrace.core.query.service.api.Expression createStringSetLiteralExpression(
-      Set<String> strings) {
-    return org.hypertrace.core.query.service.api.Expression.newBuilder()
-        .setLiteral(
-            org.hypertrace.core.query.service.api.LiteralConstant.newBuilder()
-                .setValue(
-                    org.hypertrace.core.query.service.api.Value.newBuilder()
-                        .setValueType(org.hypertrace.core.query.service.api.ValueType.STRING_ARRAY)
-                        .addAllStringArray(strings)))
-        .build();
   }
 
   private void mockQueryServiceRequestForIncomingServiceInteraction(long startTime, long endTime) {
@@ -564,7 +549,6 @@ public class EntityServiceInteractionRequestTest extends AbstractGatewayServiceT
     QueryRequest expectedQueryRequest =
         QueryRequest.newBuilder()
             .addSelection(createAttributeExpression("INTERACTION.toServiceId"))
-            .addSelection(createCountByColumnSelection("INTERACTION.toServiceId"))
             .setFilter(interactionQueryFilter)
             .addGroupBy(createAttributeExpression("INTERACTION.toServiceId"))
             .setLimit(DEFAULT_QUERY_SERVICE_GROUP_BY_LIMIT)
