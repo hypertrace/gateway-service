@@ -157,6 +157,7 @@ public class EntityService {
 
     preProcessedRequest = addEntityIdsFromInteractionFilter(requestContext, preProcessedRequest);
 
+    LOG.info("Preprocessed query is {}", preProcessedRequest);
     EntityExecutionContext executionContext =
         new EntityExecutionContext(
             metadataProvider, entityIdColumnsConfigs, entitiesRequestContext, preProcessedRequest);
@@ -253,7 +254,10 @@ public class EntityService {
           createEntityKeysInFilter(requestContext, preProcessedRequest.getEntityType(), entityKeys);
 
       EntitiesRequest.Builder preProcessRequestBuilder = preProcessedRequest.toBuilder();
-      if (preProcessRequestBuilder.hasFilter()) {
+      // This check is required. During the pre-process step,
+      // filter is set to default filter if no filters are provided.
+      if (!preProcessRequestBuilder.hasFilter()
+          || Filter.getDefaultInstance().equals(preProcessRequestBuilder.getFilter())) {
         preProcessRequestBuilder.setFilter(entityIdsInFilter);
       } else {
         preProcessRequestBuilder.setFilter(
