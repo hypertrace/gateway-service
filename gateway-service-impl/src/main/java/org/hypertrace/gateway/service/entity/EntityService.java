@@ -253,7 +253,10 @@ public class EntityService {
           createEntityKeysInFilter(requestContext, preProcessedRequest.getEntityType(), entityKeys);
 
       EntitiesRequest.Builder preProcessRequestBuilder = preProcessedRequest.toBuilder();
-      if (preProcessRequestBuilder.hasFilter()) {
+      // This check is required and we cannot convert this to hasFilter check.
+      // Because during the pre-process step, in some cases
+      // filter is set to default filter if no filters are provided.
+      if (Filter.getDefaultInstance().equals(preProcessRequestBuilder.getFilter())) {
         preProcessRequestBuilder.setFilter(entityIdsInFilter);
       } else {
         preProcessRequestBuilder.setFilter(
