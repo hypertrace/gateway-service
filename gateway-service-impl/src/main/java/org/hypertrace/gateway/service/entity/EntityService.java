@@ -1,5 +1,7 @@
 package org.hypertrace.gateway.service.entity;
 
+import static org.hypertrace.gateway.service.v1.common.Operator.IN;
+
 import com.google.common.base.Preconditions;
 import com.google.common.collect.ImmutableMap;
 import io.grpc.Status;
@@ -11,6 +13,7 @@ import java.util.List;
 import java.util.Map;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.TimeUnit;
+import java.util.stream.Collectors;
 import org.apache.commons.lang3.StringUtils;
 import org.hypertrace.core.attribute.service.v1.AttributeMetadata;
 import org.hypertrace.core.attribute.service.v1.AttributeSource;
@@ -28,6 +31,7 @@ import org.hypertrace.gateway.service.common.datafetcher.QueryServiceEntityFetch
 import org.hypertrace.gateway.service.common.transformer.RequestPreProcessor;
 import org.hypertrace.gateway.service.common.transformer.ResponsePostProcessor;
 import org.hypertrace.gateway.service.common.util.AttributeMetadataUtil;
+import org.hypertrace.gateway.service.common.util.QueryExpressionUtil;
 import org.hypertrace.gateway.service.common.util.QueryServiceClient;
 import org.hypertrace.gateway.service.entity.config.EntityIdColumnsConfigs;
 import org.hypertrace.gateway.service.entity.config.LogConfig;
@@ -37,6 +41,8 @@ import org.hypertrace.gateway.service.entity.query.QueryNode;
 import org.hypertrace.gateway.service.entity.query.visitor.ExecutionVisitor;
 import org.hypertrace.gateway.service.entity.update.EdsEntityUpdater;
 import org.hypertrace.gateway.service.entity.update.UpdateExecutionContext;
+import org.hypertrace.gateway.service.v1.common.Filter;
+import org.hypertrace.gateway.service.v1.common.Operator;
 import org.hypertrace.gateway.service.v1.entity.BulkUpdateEntitiesRequest;
 import org.hypertrace.gateway.service.v1.entity.BulkUpdateEntitiesResponse;
 import org.hypertrace.gateway.service.v1.entity.EntitiesRequest;
@@ -149,6 +155,8 @@ public class EntityService {
     EntitiesRequest preProcessedRequest =
         requestPreProcessor.process(originalRequest, entitiesRequestContext);
 
+    preProcessedRequest = addEntityIdsFromInteractionFilter(requestContext, preProcessedRequest);
+
     EntityExecutionContext executionContext =
         new EntityExecutionContext(
             metadataProvider, entityIdColumnsConfigs, entitiesRequestContext, preProcessedRequest);
@@ -233,6 +241,57 @@ public class EntityService {
         new UpdateExecutionContext(requestContext.getHeaders(), attributeMetadataMap);
 
     return edsEntityUpdater.bulkUpdateEntities(request, updateExecutionContext);
+  }
+
+  private EntitiesRequest addEntityIdsFromInteractionFilter(
+      RequestContext requestContext, EntitiesRequest preProcessedRequest) {
+    List<EntityKey> entityKeys =
+        this.interactionsFetcher.fetchInteractionsIdsIfNecessary(
+            requestContext, preProcessedRequest);
+    if (!entityKeys.isEmpty()) {
+      Filter entityIdsInFilter =
+          createEntityKeysInFilter(requestContext, preProcessedRequest.getEntityType(), entityKeys);
+
+      EntitiesRequest.Builder preProcessRequestBuilder = preProcessedRequest.toBuilder();
+      if (preProcessRequestBuilder.hasFilter()) {
+        preProcessRequestBuilder.setFilter(entityIdsInFilter);
+      } else {
+        preProcessRequestBuilder.setFilter(
+            Filter.newBuilder()
+                .setOperator(Operator.AND)
+                .addChildFilter(preProcessRequestBuilder.getFilter())
+                .addChildFilter(entityIdsInFilter)
+                .build());
+      }
+      preProcessedRequest = preProcessRequestBuilder.build();
+    }
+    return preProcessedRequest;
+  }
+
+  private Filter createEntityKeysInFilter(
+      RequestContext requestContext, String entityType, List<EntityKey> entityKeys) {
+    List<String> entityIds =
+        entityKeys.stream()
+            .filter(key -> key.getAttributes().size() == 1) // filter out all keys with single id
+            .map(EntityKey::toString)
+            .collect(Collectors.toUnmodifiableList());
+
+    List<String> idAttributeIds =
+        AttributeMetadataUtil.getIdAttributeIds(
+            metadataProvider, entityIdColumnsConfigs, requestContext, entityType);
+
+    if (idAttributeIds.size() != 1) {
+      LOG.error("Entity Type {} should have single ID Attribute", entityType);
+      throw Status.UNIMPLEMENTED
+          .withDescription("Entity Type " + entityType + " should have single ID Attribute")
+          .asRuntimeException();
+    }
+
+    return Filter.newBuilder()
+        .setLhs(QueryExpressionUtil.buildAttributeExpression(idAttributeIds.get(0)))
+        .setOperator(IN)
+        .setRhs(QueryExpressionUtil.getLiteralExpression(entityIds).build())
+        .build();
   }
 
   private void addEntityInteractions(

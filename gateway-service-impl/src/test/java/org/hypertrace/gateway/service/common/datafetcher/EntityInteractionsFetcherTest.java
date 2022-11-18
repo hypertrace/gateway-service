@@ -1,6 +1,7 @@
 package org.hypertrace.gateway.service.common.datafetcher;
 
 import static org.hypertrace.core.grpcutils.context.RequestContext.forTenantId;
+import static org.hypertrace.gateway.service.common.QueryServiceRequestAndResponseUtils.getResultSetChunk;
 import static org.hypertrace.gateway.service.common.converters.QueryRequestUtil.createBetweenTimesFilter;
 import static org.hypertrace.gateway.service.common.converters.QueryRequestUtil.createFilter;
 import static org.hypertrace.gateway.service.common.converters.QueryRequestUtil.createStringArrayLiteralExpression;
@@ -12,6 +13,7 @@ import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.junit.jupiter.api.Assertions.fail;
 import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.mock;
 
 import com.google.common.collect.ImmutableList;
@@ -28,13 +30,17 @@ import java.util.concurrent.TimeUnit;
 import org.hypertrace.core.attribute.service.v1.AttributeMetadata;
 import org.hypertrace.core.attribute.service.v1.AttributeScope;
 import org.hypertrace.core.query.service.api.QueryRequest;
+import org.hypertrace.core.query.service.api.ResultSetChunk;
 import org.hypertrace.core.query.service.util.QueryRequestUtil;
 import org.hypertrace.gateway.service.AbstractGatewayServiceTest;
 import org.hypertrace.gateway.service.common.AttributeMetadataProvider;
 import org.hypertrace.gateway.service.common.RequestContext;
 import org.hypertrace.gateway.service.common.util.QueryExpressionUtil;
+import org.hypertrace.gateway.service.common.util.QueryServiceClient;
 import org.hypertrace.gateway.service.entity.EntitiesRequestContext;
 import org.hypertrace.gateway.service.entity.EntityKey;
+import org.hypertrace.gateway.service.executor.QueryExecutorConfig;
+import org.hypertrace.gateway.service.executor.QueryExecutorServiceFactory;
 import org.hypertrace.gateway.service.v1.common.ColumnIdentifier;
 import org.hypertrace.gateway.service.v1.common.DomainEntityType;
 import org.hypertrace.gateway.service.v1.common.Expression;
@@ -47,7 +53,7 @@ import org.hypertrace.gateway.service.v1.common.ValueType;
 import org.hypertrace.gateway.service.v1.entity.EntitiesRequest;
 import org.hypertrace.gateway.service.v1.entity.InteractionsRequest;
 import org.junit.jupiter.api.Test;
-import org.mockito.Mock;
+import org.mockito.ArgumentMatchers;
 import org.mockito.Mockito;
 
 /** Unit tests for {@link EntityInteractionsFetcher} */
@@ -55,6 +61,21 @@ public class EntityInteractionsFetcherTest extends AbstractGatewayServiceTest {
   private final InteractionsRequest fromServiceInteractions =
       InteractionsRequest.newBuilder()
           .setFilter(buildStringFilter("INTERACTION.fromEntityType", Operator.EQ, "SERVICE"))
+          .addSelection(
+              getAggregateFunctionExpression(
+                  "INTERACTION.bytesReceived", FunctionType.SUM, "SUM_bytes_received"))
+          .build();
+
+  private final InteractionsRequest fromServiceInteractionsWithFilters =
+      InteractionsRequest.newBuilder()
+          .setFilter(
+              Filter.newBuilder()
+                  .setOperator(Operator.AND)
+                  .addChildFilter(
+                      buildStringFilter("INTERACTION.fromEntityType", Operator.EQ, "SERVICE"))
+                  .addChildFilter(
+                      buildStringFilter("INTERACTION.otherAttribute", Operator.EQ, "attributeId"))
+                  .build())
           .addSelection(
               getAggregateFunctionExpression(
                   "INTERACTION.bytesReceived", FunctionType.SUM, "SUM_bytes_received"))
@@ -93,8 +114,77 @@ public class EntityInteractionsFetcherTest extends AbstractGatewayServiceTest {
                   "Interaction.metrics.bytes_sent", FunctionType.SUM, "SUM_bytes_sent"))
           .build();
 
-  @Mock private AttributeMetadataProvider attributeMetadataProvider;
-  @Mock private ExecutorService queryExecutor;
+  private AttributeMetadataProvider attributeMetadataProvider;
+  private ExecutorService queryExecutor;
+
+  @Test
+  public void testFetchInteractionsIds_withoutInteractionFilter() {
+    EntitiesRequest request =
+        EntitiesRequest.newBuilder()
+            .setEntityType(DomainEntityType.SERVICE.name())
+            .setStartTimeMillis(System.currentTimeMillis() - TimeUnit.DAYS.toMillis(30))
+            .setEndTimeMillis(System.currentTimeMillis())
+            .addSelection(buildAttributeExpression("SERVICE.name"))
+            .setIncomingInteractions(fromServiceInteractions)
+            .setOutgoingInteractions(toServiceInteractions)
+            .build();
+
+    attributeMetadataProvider = mock(AttributeMetadataProvider.class);
+    Mockito.when(
+            attributeMetadataProvider.getAttributeMetadata(
+                any(), Mockito.eq(AttributeScope.INTERACTION.name()), Mockito.eq("startTime")))
+        .thenReturn(Optional.of(AttributeMetadata.newBuilder().setId("dummy").build()));
+
+    EntityInteractionsFetcher interactionsFetcher =
+        new EntityInteractionsFetcher(null, attributeMetadataProvider, queryExecutor);
+    List<EntityKey> entityKeys =
+        interactionsFetcher.fetchInteractionsIdsIfNecessary(
+            new RequestContext(forTenantId(TENANT_ID)), request);
+
+    assertEquals(entityKeys.size(), 0);
+  }
+
+  @Test
+  public void testFetchInteractionsIds_withInteractionFilter() {
+    EntitiesRequest request =
+        EntitiesRequest.newBuilder()
+            .setEntityType(DomainEntityType.SERVICE.name())
+            .setStartTimeMillis(System.currentTimeMillis() - TimeUnit.DAYS.toMillis(30))
+            .setEndTimeMillis(System.currentTimeMillis())
+            .addSelection(buildAttributeExpression("SERVICE.name"))
+            .setIncomingInteractions(fromServiceInteractionsWithFilters)
+            .setOutgoingInteractions(toServiceInteractions)
+            .build();
+
+    RequestContext entitiesRequestContext = new RequestContext(forTenantId(TENANT_ID));
+    attributeMetadataProvider = mock(AttributeMetadataProvider.class);
+    Mockito.when(
+            attributeMetadataProvider.getAttributeMetadata(
+                any(), Mockito.eq(AttributeScope.INTERACTION.name()), Mockito.eq("startTime")))
+        .thenReturn(Optional.of(AttributeMetadata.newBuilder().setId("dummy").build()));
+
+    List<ResultSetChunk> resultSetChunks =
+        List.of(
+            getResultSetChunk(
+                List.of("INTERACTION.toServiceId"),
+                new String[][] {{"serviceId1"}, {"serviceId12"}}));
+
+    QueryServiceClient queryServiceClient = mock(QueryServiceClient.class);
+    Mockito.when(
+            queryServiceClient.executeQuery(eq(entitiesRequestContext), ArgumentMatchers.any()))
+        .thenReturn(resultSetChunks.iterator());
+
+    ExecutorService queryExecutor =
+        QueryExecutorServiceFactory.buildExecutorService(
+            QueryExecutorConfig.from(this.getConfig()));
+    EntityInteractionsFetcher interactionsFetcher =
+        new EntityInteractionsFetcher(queryServiceClient, attributeMetadataProvider, queryExecutor);
+    List<EntityKey> entityKeys =
+        interactionsFetcher.fetchInteractionsIdsIfNecessary(
+            new RequestContext(forTenantId(TENANT_ID)), request);
+    assertEquals(entityKeys.size(), 2);
+    queryExecutor.shutdown();
+  }
 
   @Test
   public void testServiceToServiceEdgeQueryRequests() {
