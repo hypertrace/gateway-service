@@ -211,7 +211,7 @@ public class GatewayServiceImpl extends GatewayServiceGrpc.GatewayServiceImplBas
       org.hypertrace.gateway.service.v1.entity.EntitiesRequest request,
       StreamObserver<org.hypertrace.gateway.service.v1.entity.EntitiesResponse> responseObserver) {
 
-    LOG.info("Received request: {}", request);
+    LOG.debug("Received request: {}", request);
 
     Optional<String> tenantId =
         org.hypertrace.core.grpcutils.context.RequestContext.CURRENT.get().getTenantId();
