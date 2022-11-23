@@ -10,6 +10,7 @@ import static org.hypertrace.gateway.service.common.util.QueryExpressionUtil.bui
 import static org.hypertrace.gateway.service.common.util.QueryExpressionUtil.buildStringFilter;
 import static org.hypertrace.gateway.service.common.util.QueryExpressionUtil.getAggregateFunctionExpression;
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.junit.jupiter.api.Assertions.fail;
 import static org.mockito.ArgumentMatchers.any;
@@ -118,7 +119,7 @@ public class EntityInteractionsFetcherTest extends AbstractGatewayServiceTest {
   private ExecutorService queryExecutor;
 
   @Test
-  public void testFetchInteractionsIds_withoutInteractionFilter() {
+  public void testhasInteractionFilters_withoutInteractionFilter() {
     EntitiesRequest request =
         EntitiesRequest.newBuilder()
             .setEntityType(DomainEntityType.SERVICE.name())
@@ -137,11 +138,10 @@ public class EntityInteractionsFetcherTest extends AbstractGatewayServiceTest {
 
     EntityInteractionsFetcher interactionsFetcher =
         new EntityInteractionsFetcher(null, attributeMetadataProvider, queryExecutor);
-    List<EntityKey> entityKeys =
-        interactionsFetcher.fetchInteractionsIds(
-            new RequestContext(forTenantId(TENANT_ID)), request);
-
-    assertEquals(entityKeys.size(), 0);
+    assertFalse(
+        interactionsFetcher.hasInteractionFilters(request.getIncomingInteractions().getFilter()));
+    assertFalse(
+        interactionsFetcher.hasInteractionFilters(request.getOutgoingInteractions().getFilter()));
   }
 
   @Test

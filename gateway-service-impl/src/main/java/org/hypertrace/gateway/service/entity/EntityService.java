@@ -215,11 +215,39 @@ public class EntityService {
       RequestContext requestContext,
       EntitiesRequest originalRequest,
       EntitiesRequestContext entitiesRequestContext) {
-
     EntitiesRequest preProcessedRequest =
         requestPreProcessor.process(originalRequest, entitiesRequestContext);
 
-    return addEntityIdsFromInteractionFilter(requestContext, preProcessedRequest);
+    if (!this.interactionsFetcher.hasInteractionFilters(
+            preProcessedRequest.getIncomingInteractions().getFilter())
+        && !this.interactionsFetcher.hasInteractionFilters(
+            preProcessedRequest.getOutgoingInteractions().getFilter())) {
+      return Optional.of(preProcessedRequest);
+    }
+
+    List<EntityKey> entityKeys =
+        this.interactionsFetcher.fetchInteractionsIds(requestContext, preProcessedRequest);
+    if (entityKeys.isEmpty()) {
+      return Optional.empty();
+    }
+
+    Filter entityIdsInFilter =
+        createEntityKeysInFilter(requestContext, preProcessedRequest.getEntityType(), entityKeys);
+    EntitiesRequest.Builder preProcessRequestBuilder = preProcessedRequest.toBuilder();
+    // This check is required and we cannot convert this to hasFilter check.
+    // Because during the pre-process step, in some cases
+    // filter is set to default filter if no filters are provided.
+    if (Filter.getDefaultInstance().equals(preProcessRequestBuilder.getFilter())) {
+      preProcessRequestBuilder.setFilter(entityIdsInFilter);
+    } else {
+      preProcessRequestBuilder.setFilter(
+          Filter.newBuilder()
+              .setOperator(Operator.AND)
+              .addChildFilter(preProcessRequestBuilder.getFilter())
+              .addChildFilter(entityIdsInFilter)
+              .build());
+    }
+    return Optional.of(preProcessRequestBuilder.build());
   }
 
   public UpdateEntityResponse updateEntity(
@@ -259,40 +287,6 @@ public class EntityService {
         new UpdateExecutionContext(requestContext.getHeaders(), attributeMetadataMap);
 
     return edsEntityUpdater.bulkUpdateEntities(request, updateExecutionContext);
-  }
-
-  private Optional<EntitiesRequest> addEntityIdsFromInteractionFilter(
-      RequestContext requestContext, EntitiesRequest preProcessedRequest) {
-    if (!this.interactionsFetcher.hasInteractionFilters(
-            preProcessedRequest.getIncomingInteractions().getFilter())
-        && !this.interactionsFetcher.hasInteractionFilters(
-            preProcessedRequest.getOutgoingInteractions().getFilter())) {
-      return Optional.of(preProcessedRequest);
-    }
-
-    List<EntityKey> entityKeys =
-        this.interactionsFetcher.fetchInteractionsIds(requestContext, preProcessedRequest);
-    if (entityKeys.isEmpty()) {
-      return Optional.empty();
-    }
-    Filter entityIdsInFilter =
-        createEntityKeysInFilter(requestContext, preProcessedRequest.getEntityType(), entityKeys);
-
-    EntitiesRequest.Builder preProcessRequestBuilder = preProcessedRequest.toBuilder();
-    // This check is required and we cannot convert this to hasFilter check.
-    // Because during the pre-process step, in some cases
-    // filter is set to default filter if no filters are provided.
-    if (Filter.getDefaultInstance().equals(preProcessRequestBuilder.getFilter())) {
-      preProcessRequestBuilder.setFilter(entityIdsInFilter);
-    } else {
-      preProcessRequestBuilder.setFilter(
-          Filter.newBuilder()
-              .setOperator(Operator.AND)
-              .addChildFilter(preProcessRequestBuilder.getFilter())
-              .addChildFilter(entityIdsInFilter)
-              .build());
-    }
-    return Optional.of(preProcessRequestBuilder.build());
   }
 
   private Filter createEntityKeysInFilter(

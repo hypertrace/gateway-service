@@ -134,12 +134,6 @@ public class EntityInteractionsFetcher {
 
   public List<EntityKey> fetchInteractionsIds(
       RequestContext context, EntitiesRequest entitiesRequest) {
-
-    if (!hasInteractionFilters(entitiesRequest.getIncomingInteractions().getFilter())
-        && !hasInteractionFilters(entitiesRequest.getOutgoingInteractions().getFilter())) {
-      return Collections.emptyList();
-    }
-
     List<EntityInteractionQueryRequest> allQueryRequests = new ArrayList<>();
     if (entitiesRequest.hasIncomingInteractions()) {
       allQueryRequests.addAll(
