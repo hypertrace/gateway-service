@@ -1,6 +1,6 @@
 package org.hypertrace.gateway.service.explore;
 
-import org.hypertrace.gateway.service.v1.explore.ExploreRequest;
+import org.hypertrace.gateway.service.common.ExpressionContext;
 import org.hypertrace.gateway.service.v1.explore.ExploreResponse;
 
 /**
@@ -17,5 +17,5 @@ import org.hypertrace.gateway.service.v1.explore.ExploreResponse;
  */
 interface IRequestHandler {
   ExploreResponse.Builder handleRequest(
-      ExploreRequestContext requestContext, ExploreRequest request);
+      ExploreRequestContext requestContext, ExpressionContext expressionContext);
 }

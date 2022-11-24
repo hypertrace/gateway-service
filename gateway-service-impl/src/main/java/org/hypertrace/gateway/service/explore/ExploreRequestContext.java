@@ -9,25 +9,24 @@ import org.hypertrace.gateway.service.v1.common.OrderByExpression;
 import org.hypertrace.gateway.service.v1.explore.ExploreRequest;
 
 public class ExploreRequestContext extends QueryRequestContext {
-  private final ExploreRequest exploreRequest;
+  private final ExploreRequest request;
 
   private boolean hasGroupBy = false;
   private List<OrderByExpression> orderByExpressions;
 
-  public ExploreRequestContext(RequestContext grpcRequestContext, ExploreRequest exploreRequest) {
-    super(
-        grpcRequestContext, exploreRequest.getStartTimeMillis(), exploreRequest.getEndTimeMillis());
+  public ExploreRequestContext(RequestContext grpcRequestContext, ExploreRequest request) {
+    super(grpcRequestContext, request.getStartTimeMillis(), request.getEndTimeMillis());
 
-    this.exploreRequest = exploreRequest;
-    this.orderByExpressions = exploreRequest.getOrderByList();
+    this.request = request;
+    this.orderByExpressions = request.getOrderByList();
   }
 
-  public ExploreRequest getExploreRequest() {
-    return this.exploreRequest;
+  public ExploreRequest getRequest() {
+    return this.request;
   }
 
   public String getContext() {
-    return this.exploreRequest.getContext();
+    return this.request.getContext();
   }
 
   /**
@@ -77,19 +76,19 @@ public class ExploreRequestContext extends QueryRequestContext {
   }
 
   public int getOffset() {
-    return this.exploreRequest.getOffset();
+    return this.request.getOffset();
   }
 
   public boolean getIncludeRestGroup() {
-    return this.exploreRequest.getIncludeRestGroup();
+    return this.request.getIncludeRestGroup();
   }
 
   private int getGroupByLimit() {
     // If a request has no group limit, default to row limit
     if (this.providedGroupLimitUnset()) {
-      return this.exploreRequest.getLimit();
+      return this.request.getLimit();
     }
-    return this.exploreRequest.getGroupLimit();
+    return this.request.getGroupLimit();
   }
 
   /**
@@ -100,21 +99,21 @@ public class ExploreRequestContext extends QueryRequestContext {
     // Row limit previously was the number of groups for a grouped + time series request. If group
     // limit isn't set, assume the old format and expand the row limit to default limit
     if (this.providedGroupLimitUnset() && this.hasGroupBy() && this.hasTimeAggregations()) {
-      return Math.max(this.exploreRequest.getLimit(), DEFAULT_QUERY_SERVICE_GROUP_BY_LIMIT);
+      return Math.max(this.request.getLimit(), DEFAULT_QUERY_SERVICE_GROUP_BY_LIMIT);
     }
     // Previously, a rest group would not count against the limit
     if (this.providedGroupLimitUnset() && this.hasGroupBy() && this.getIncludeRestGroup()) {
-      return this.exploreRequest.getLimit() + 1;
+      return this.request.getLimit() + 1;
     }
 
-    return this.exploreRequest.getLimit();
+    return this.request.getLimit();
   }
 
   private boolean providedGroupLimitUnset() {
-    return this.exploreRequest.getGroupLimit() == 0;
+    return this.request.getGroupLimit() == 0;
   }
 
   private boolean hasTimeAggregations() {
-    return !this.exploreRequest.getTimeAggregationList().isEmpty();
+    return !this.request.getTimeAggregationList().isEmpty();
   }
 }

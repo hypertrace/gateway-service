@@ -18,6 +18,7 @@ import org.hypertrace.core.query.service.api.ResultSetMetadata;
 import org.hypertrace.core.query.service.api.Row;
 import org.hypertrace.core.query.service.api.Value;
 import org.hypertrace.gateway.service.common.AttributeMetadataProvider;
+import org.hypertrace.gateway.service.common.ExpressionContext;
 import org.hypertrace.gateway.service.common.converters.QueryAndGatewayDtoConverter;
 import org.hypertrace.gateway.service.common.util.AttributeMetadataUtil;
 import org.hypertrace.gateway.service.common.util.DataCollectionUtil;
@@ -44,14 +45,14 @@ public class RequestHandler implements RequestHandlerWithSorting {
       QueryServiceClient queryServiceClient, AttributeMetadataProvider attributeMetadataProvider) {
     this.queryServiceClient = queryServiceClient;
     this.attributeMetadataProvider = attributeMetadataProvider;
-    this.theRestGroupRequestHandler = new TheRestGroupRequestHandler(this);
+    this.theRestGroupRequestHandler =
+        new TheRestGroupRequestHandler(this, attributeMetadataProvider);
   }
 
   @Override
   public ExploreResponse.Builder handleRequest(
-      ExploreRequestContext requestContext, ExploreRequest request) {
-    QueryRequest queryRequest =
-        buildQueryRequest(requestContext, request, attributeMetadataProvider);
+      ExploreRequestContext requestContext, ExpressionContext expressionContext) {
+    QueryRequest queryRequest = buildQueryRequest(requestContext, attributeMetadataProvider);
 
     Iterator<ResultSetChunk> resultSetChunkIterator = executeQuery(requestContext, queryRequest);
 
@@ -60,11 +61,10 @@ public class RequestHandler implements RequestHandlerWithSorting {
   }
 
   QueryRequest buildQueryRequest(
-      ExploreRequestContext requestContext,
-      ExploreRequest request,
-      AttributeMetadataProvider attributeMetadataProvider) {
+      ExploreRequestContext requestContext, AttributeMetadataProvider attributeMetadataProvider) {
     // Track if we have Group By so we can determine if we need to do Order By, Limit and Offset
     // ourselves.
+    ExploreRequest request = requestContext.getRequest();
     if (!request.getGroupByList().isEmpty()) {
       requestContext.setHasGroupBy(true);
     }
@@ -221,7 +221,7 @@ public class RequestHandler implements RequestHandlerWithSorting {
 
     if (requestContext.hasGroupBy() && requestContext.getIncludeRestGroup()) {
       theRestGroupRequestHandler.getRowsForTheRestGroup(
-          context, requestContext.getExploreRequest(), builder);
+          context, requestContext.getRequest(), builder);
     }
 
     return builder;
@@ -273,8 +273,7 @@ public class RequestHandler implements RequestHandlerWithSorting {
         attributeMetadataProvider.getAttributesMetadata(
             requestContext, requestContext.getContext());
     Map<String, AttributeMetadata> resultKeyToAttributeMetadataMap =
-        this.remapAttributeMetadataByResultName(
-            requestContext.getExploreRequest(), attributeMetadataMap);
+        this.remapAttributeMetadataByResultName(requestContext.getRequest(), attributeMetadataMap);
     org.hypertrace.gateway.service.v1.common.Value gwValue;
     if (function != null) { // Function expression value
       gwValue =

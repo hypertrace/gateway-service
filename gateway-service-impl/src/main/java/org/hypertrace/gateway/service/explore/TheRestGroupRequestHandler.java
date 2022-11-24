@@ -6,6 +6,9 @@ import java.util.Map;
 import java.util.Set;
 import java.util.function.Function;
 import java.util.stream.Collectors;
+import org.hypertrace.core.attribute.service.v1.AttributeMetadata;
+import org.hypertrace.gateway.service.common.AttributeMetadataProvider;
+import org.hypertrace.gateway.service.common.ExpressionContext;
 import org.hypertrace.gateway.service.common.util.ExpressionReader;
 import org.hypertrace.gateway.service.v1.common.Expression;
 import org.hypertrace.gateway.service.v1.common.Filter;
@@ -30,13 +33,17 @@ import org.hypertrace.gateway.service.v1.explore.ExploreResponse;
 public class TheRestGroupRequestHandler {
   private static final String OTHER_COLUMN_VALUE = "__Other";
   private final RequestHandlerWithSorting requestHandler;
+  private final AttributeMetadataProvider attributeMetadataProvider;
 
-  TheRestGroupRequestHandler(RequestHandlerWithSorting requestHandler) {
+  TheRestGroupRequestHandler(
+      RequestHandlerWithSorting requestHandler,
+      AttributeMetadataProvider attributeMetadataProvider) {
     this.requestHandler = requestHandler;
+    this.attributeMetadataProvider = attributeMetadataProvider;
   }
 
   public void getRowsForTheRestGroup(
-      ExploreRequestContext context,
+      ExploreRequestContext requestContext,
       ExploreRequest originalRequest,
       ExploreResponse.Builder originalResponse) {
     // Return if there was no data in the original request
@@ -44,12 +51,23 @@ public class TheRestGroupRequestHandler {
       return;
     }
 
+    Map<String, AttributeMetadata> attributeMetadataMap =
+        attributeMetadataProvider.getAttributesMetadata(
+            requestContext, originalRequest.getContext());
+
     ExploreRequest theRestRequest = createRequest(originalRequest, originalResponse);
     ExploreRequestContext theRestRequestContext =
-        new ExploreRequestContext(context.getGrpcContext(), theRestRequest);
-
+        new ExploreRequestContext(requestContext.getGrpcContext(), theRestRequest);
+    ExpressionContext theRestExpressionContext =
+        new ExpressionContext(
+            attributeMetadataMap,
+            theRestRequest.getFilter(),
+            theRestRequest.getSelectionList(),
+            theRestRequest.getTimeAggregationList(),
+            theRestRequest.getOrderByList(),
+            theRestRequest.getGroupByList());
     ExploreResponse.Builder theRestGroupResponse =
-        requestHandler.handleRequest(theRestRequestContext, theRestRequest);
+        requestHandler.handleRequest(theRestRequestContext, theRestExpressionContext);
 
     List<OrderByExpression> orderByExpressions =
         requestHandler.getRequestOrderByExpressions(theRestRequest);
@@ -57,7 +75,7 @@ public class TheRestGroupRequestHandler {
         originalResponse,
         theRestGroupResponse,
         orderByExpressions,
-        context.getRowLimitAfterRest(), // check how many rows expected from original request
+        requestContext.getRowLimitAfterRest(), // check how many rows expected from original request
         originalRequest.getOffset(),
         requestHandler,
         originalRequest.getGroupByList());

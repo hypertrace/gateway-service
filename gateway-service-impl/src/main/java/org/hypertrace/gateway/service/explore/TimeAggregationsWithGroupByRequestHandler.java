@@ -1,8 +1,11 @@
 package org.hypertrace.gateway.service.explore;
 
 import com.google.common.collect.ImmutableSet;
+import java.util.Map;
 import java.util.Set;
+import org.hypertrace.core.attribute.service.v1.AttributeMetadata;
 import org.hypertrace.gateway.service.common.AttributeMetadataProvider;
+import org.hypertrace.gateway.service.common.ExpressionContext;
 import org.hypertrace.gateway.service.common.util.ExpressionReader;
 import org.hypertrace.gateway.service.common.util.QueryServiceClient;
 import org.hypertrace.gateway.service.v1.common.Expression;
@@ -16,11 +19,13 @@ import org.hypertrace.gateway.service.v1.explore.ExploreResponse;
 
 public class TimeAggregationsWithGroupByRequestHandler implements IRequestHandler {
 
+  private final AttributeMetadataProvider attributeMetadataProvider;
   private final RequestHandler normalRequestHandler;
   private final TimeAggregationsRequestHandler timeAggregationsRequestHandler;
 
   TimeAggregationsWithGroupByRequestHandler(
       QueryServiceClient queryServiceClient, AttributeMetadataProvider attributeMetadataProvider) {
+    this.attributeMetadataProvider = attributeMetadataProvider;
     this.normalRequestHandler = new RequestHandler(queryServiceClient, attributeMetadataProvider);
     this.timeAggregationsRequestHandler =
         new TimeAggregationsRequestHandler(queryServiceClient, attributeMetadataProvider);
@@ -28,15 +33,26 @@ public class TimeAggregationsWithGroupByRequestHandler implements IRequestHandle
 
   @Override
   public ExploreResponse.Builder handleRequest(
-      ExploreRequestContext requestContext, ExploreRequest request) {
+      ExploreRequestContext requestContext, ExpressionContext expressionContext) {
     // This type of handler is always a group by
+    ExploreRequest request = requestContext.getRequest();
     requestContext.setHasGroupBy(true);
+    Map<String, AttributeMetadata> attributeMetadataMap =
+        attributeMetadataProvider.getAttributesMetadata(requestContext, request.getContext());
     // 1. Create a GroupBy request and get the response for the GroupBy
     ExploreRequest groupByRequest = buildGroupByRequest(request);
     ExploreRequestContext groupByRequestContext =
         new ExploreRequestContext(requestContext.getGrpcContext(), groupByRequest);
+    ExpressionContext groupByExpressionContext =
+        new ExpressionContext(
+            attributeMetadataMap,
+            groupByRequest.getFilter(),
+            groupByRequest.getSelectionList(),
+            groupByRequest.getTimeAggregationList(),
+            groupByRequest.getOrderByList(),
+            groupByRequest.getGroupByList());
     ExploreResponse.Builder groupByResponse =
-        normalRequestHandler.handleRequest(groupByRequestContext, groupByRequest);
+        normalRequestHandler.handleRequest(groupByRequestContext, groupByExpressionContext);
 
     // No need for a second query if no results.
     if (groupByResponse.getRowBuilderList().isEmpty()) {
@@ -48,9 +64,17 @@ public class TimeAggregationsWithGroupByRequestHandler implements IRequestHandle
     ExploreRequest timeAggregationsRequest = buildTimeAggregationsRequest(request, groupByResponse);
     ExploreRequestContext timeAggregationsRequestContext =
         new ExploreRequestContext(requestContext.getGrpcContext(), timeAggregationsRequest);
+    ExpressionContext timeAggregationsExpressionContext =
+        new ExpressionContext(
+            attributeMetadataMap,
+            timeAggregationsRequest.getFilter(),
+            timeAggregationsRequest.getSelectionList(),
+            timeAggregationsRequest.getTimeAggregationList(),
+            timeAggregationsRequest.getOrderByList(),
+            timeAggregationsRequest.getGroupByList());
     ExploreResponse.Builder timeAggregationsResponse =
         timeAggregationsRequestHandler.handleRequest(
-            timeAggregationsRequestContext, timeAggregationsRequest);
+            timeAggregationsRequestContext, timeAggregationsExpressionContext);
 
     // 3. If includeRestGroup is set, invoke TheRestGroupRequestHandler
     if (request.getIncludeRestGroup()) {
