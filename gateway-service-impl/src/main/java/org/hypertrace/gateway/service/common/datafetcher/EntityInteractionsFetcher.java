@@ -120,7 +120,7 @@ public class EntityInteractionsFetcher {
     return columnNames;
   }
 
-  private boolean hasInteractionFilters(org.hypertrace.gateway.service.v1.common.Filter filter) {
+  public boolean hasInteractionFilters(org.hypertrace.gateway.service.v1.common.Filter filter) {
     if (ExpressionReader.isSimpleAttributeSelection(filter.getLhs())) {
       String attributeId =
           ExpressionReader.getAttributeIdFromAttributeSelection(filter.getLhs()).orElseThrow();
@@ -132,14 +132,8 @@ public class EntityInteractionsFetcher {
     return filter.getChildFilterList().stream().anyMatch(this::hasInteractionFilters);
   }
 
-  public List<EntityKey> fetchInteractionsIdsIfNecessary(
+  public List<EntityKey> fetchInteractionsIds(
       RequestContext context, EntitiesRequest entitiesRequest) {
-
-    if (!hasInteractionFilters(entitiesRequest.getIncomingInteractions().getFilter())
-        && !hasInteractionFilters(entitiesRequest.getOutgoingInteractions().getFilter())) {
-      return Collections.emptyList();
-    }
-
     List<EntityInteractionQueryRequest> allQueryRequests = new ArrayList<>();
     if (entitiesRequest.hasIncomingInteractions()) {
       allQueryRequests.addAll(
