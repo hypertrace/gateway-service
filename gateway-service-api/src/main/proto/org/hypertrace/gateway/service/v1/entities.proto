@@ -120,3 +120,30 @@ message MultiValuedAttributeOperation {
 
 message BulkUpdateEntitiesResponse {
 }
+
+message BulkUpdateAllMatchingFilterRequest {
+  string entity_type = 1;
+  repeated Update updates = 2;
+}
+
+message Update {
+  org.hypertrace.gateway.service.v1.common.Filter filter = 4;
+  repeated AttributeUpdateOperation operations = 2;
+}
+
+message AttributeUpdateOperation {
+  org.hypertrace.gateway.service.v1.common.ColumnIdentifier attribute = 1;
+  AttributeUpdateOperator operator = 2;
+  org.hypertrace.gateway.service.v1.common.LiteralConstant values = 3;
+
+  enum AttributeUpdateOperator {
+    ATTRIBUTE_UPDATE_OPERATION_UNSPECIFIED = 0;
+    ATTRIBUTE_UPDATE_OPERATOR_SET = 1;
+    ATTRIBUTE_UPDATE_OPERATOR_UNSET = 2;
+    ATTRIBUTE_UPDATE_OPERATOR_ADD_TO_LIST_IF_ABSENT = 3;
+    ATTRIBUTE_UPDATE_OPERATOR_REMOVE_FROM_LIST = 4;
+  }
+}
+
+message BulkUpdateAllMatchingFilterResponse {
+}
