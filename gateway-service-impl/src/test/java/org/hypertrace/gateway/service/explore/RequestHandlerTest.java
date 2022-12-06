@@ -3,8 +3,10 @@ package org.hypertrace.gateway.service.explore;
 import static org.mockito.Mockito.mock;
 
 import java.util.List;
+import org.hypertrace.entity.query.service.client.EntityQueryServiceClient;
 import org.hypertrace.gateway.service.common.AttributeMetadataProvider;
 import org.hypertrace.gateway.service.common.util.QueryServiceClient;
+import org.hypertrace.gateway.service.entity.config.EntityIdColumnsConfigs;
 import org.hypertrace.gateway.service.v1.common.ColumnIdentifier;
 import org.hypertrace.gateway.service.v1.common.Expression;
 import org.hypertrace.gateway.service.v1.common.FunctionExpression;
@@ -74,7 +76,11 @@ public class RequestHandlerTest {
             .build();
 
     RequestHandler requestHandler =
-        new RequestHandler(mock(QueryServiceClient.class), mock(AttributeMetadataProvider.class));
+        new RequestHandler(
+            mock(QueryServiceClient.class),
+            mock(EntityQueryServiceClient.class),
+            mock(AttributeMetadataProvider.class),
+            mock(EntityIdColumnsConfigs.class));
     List<OrderByExpression> orderByExpressions =
         requestHandler.getRequestOrderByExpressions(exploreRequest);
 
@@ -150,7 +156,11 @@ public class RequestHandlerTest {
             .build();
 
     RequestHandler requestHandler =
-        new RequestHandler(mock(QueryServiceClient.class), mock(AttributeMetadataProvider.class));
+        new RequestHandler(
+            mock(QueryServiceClient.class),
+            mock(EntityQueryServiceClient.class),
+            mock(AttributeMetadataProvider.class),
+            mock(EntityIdColumnsConfigs.class));
     List<OrderByExpression> orderByExpressions =
         requestHandler.getRequestOrderByExpressions(exploreRequest);
 
@@ -226,7 +236,11 @@ public class RequestHandlerTest {
             .build();
 
     RequestHandler requestHandler =
-        new RequestHandler(mock(QueryServiceClient.class), mock(AttributeMetadataProvider.class));
+        new RequestHandler(
+            mock(QueryServiceClient.class),
+            mock(EntityQueryServiceClient.class),
+            mock(AttributeMetadataProvider.class),
+            mock(EntityIdColumnsConfigs.class));
     List<OrderByExpression> orderByExpressions =
         requestHandler.getRequestOrderByExpressions(exploreRequest);
 
@@ -297,7 +311,11 @@ public class RequestHandlerTest {
             .build();
 
     RequestHandler requestHandler =
-        new RequestHandler(mock(QueryServiceClient.class), mock(AttributeMetadataProvider.class));
+        new RequestHandler(
+            mock(QueryServiceClient.class),
+            mock(EntityQueryServiceClient.class),
+            mock(AttributeMetadataProvider.class),
+            mock(EntityIdColumnsConfigs.class));
     List<OrderByExpression> orderByExpressions =
         requestHandler.getRequestOrderByExpressions(exploreRequest);
 

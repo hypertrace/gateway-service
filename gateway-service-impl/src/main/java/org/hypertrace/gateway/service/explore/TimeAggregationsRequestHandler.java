@@ -12,12 +12,14 @@ import org.hypertrace.core.query.service.api.QueryRequest;
 import org.hypertrace.core.query.service.api.ResultSetMetadata;
 import org.hypertrace.core.query.service.api.Row;
 import org.hypertrace.core.query.service.api.Value;
+import org.hypertrace.entity.query.service.client.EntityQueryServiceClient;
 import org.hypertrace.gateway.service.common.AttributeMetadataProvider;
 import org.hypertrace.gateway.service.common.converters.QueryAndGatewayDtoConverter;
 import org.hypertrace.gateway.service.common.util.AttributeMetadataUtil;
 import org.hypertrace.gateway.service.common.util.ExpressionReader;
 import org.hypertrace.gateway.service.common.util.QueryExpressionUtil;
 import org.hypertrace.gateway.service.common.util.QueryServiceClient;
+import org.hypertrace.gateway.service.entity.config.EntityIdColumnsConfigs;
 import org.hypertrace.gateway.service.v1.common.OrderByExpression;
 import org.hypertrace.gateway.service.v1.common.Period;
 import org.hypertrace.gateway.service.v1.common.SortOrder;
@@ -33,8 +35,15 @@ public class TimeAggregationsRequestHandler extends RequestHandler {
   private static final Logger LOG = LoggerFactory.getLogger(TimeAggregationsRequestHandler.class);
 
   TimeAggregationsRequestHandler(
-      QueryServiceClient queryServiceClient, AttributeMetadataProvider attributeMetadataProvider) {
-    super(queryServiceClient, attributeMetadataProvider);
+      QueryServiceClient queryServiceClient,
+      EntityQueryServiceClient entityQueryServiceClient,
+      AttributeMetadataProvider attributeMetadataProvider,
+      EntityIdColumnsConfigs entityIdColumnsConfigs) {
+    super(
+        queryServiceClient,
+        entityQueryServiceClient,
+        attributeMetadataProvider,
+        entityIdColumnsConfigs);
   }
 
   @Override

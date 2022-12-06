@@ -46,12 +46,24 @@ public class ExploreService {
       ScopeFilterConfigs scopeFiltersConfig,
       EntityIdColumnsConfigs entityIdColumnsConfigs) {
     this.attributeMetadataProvider = attributeMetadataProvider;
-    this.normalRequestHandler = new RequestHandler(queryServiceClient, attributeMetadataProvider);
+    this.normalRequestHandler =
+        new RequestHandler(
+            queryServiceClient,
+            entityQueryServiceClient,
+            attributeMetadataProvider,
+            entityIdColumnsConfigs);
     this.timeAggregationsRequestHandler =
-        new TimeAggregationsRequestHandler(queryServiceClient, attributeMetadataProvider);
+        new TimeAggregationsRequestHandler(
+            queryServiceClient,
+            entityQueryServiceClient,
+            attributeMetadataProvider,
+            entityIdColumnsConfigs);
     this.timeAggregationsWithGroupByRequestHandler =
         new TimeAggregationsWithGroupByRequestHandler(
-            queryServiceClient, attributeMetadataProvider);
+            queryServiceClient,
+            entityQueryServiceClient,
+            attributeMetadataProvider,
+            entityIdColumnsConfigs);
     this.entityRequestHandler =
         new EntityRequestHandler(
             attributeMetadataProvider,

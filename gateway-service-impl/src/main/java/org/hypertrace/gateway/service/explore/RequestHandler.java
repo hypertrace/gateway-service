@@ -5,11 +5,15 @@ import static org.hypertrace.core.query.service.client.QueryServiceClient.DEFAUL
 import com.google.common.collect.Streams;
 import com.google.protobuf.InvalidProtocolBufferException;
 import com.google.protobuf.util.JsonFormat;
+import java.util.Collections;
 import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
+import java.util.Optional;
+import java.util.Set;
 import java.util.stream.Collectors;
 import org.hypertrace.core.attribute.service.v1.AttributeMetadata;
+import org.hypertrace.core.attribute.service.v1.AttributeSource;
 import org.hypertrace.core.query.service.api.ColumnMetadata;
 import org.hypertrace.core.query.service.api.Filter;
 import org.hypertrace.core.query.service.api.QueryRequest;
@@ -17,18 +21,28 @@ import org.hypertrace.core.query.service.api.ResultSetChunk;
 import org.hypertrace.core.query.service.api.ResultSetMetadata;
 import org.hypertrace.core.query.service.api.Row;
 import org.hypertrace.core.query.service.api.Value;
+import org.hypertrace.entity.query.service.client.EntityQueryServiceClient;
 import org.hypertrace.gateway.service.common.AttributeMetadataProvider;
+import org.hypertrace.gateway.service.common.converters.EntityServiceAndGatewayServiceConverter;
 import org.hypertrace.gateway.service.common.converters.QueryAndGatewayDtoConverter;
+import org.hypertrace.gateway.service.common.datafetcher.EntityFetcherResponse;
+import org.hypertrace.gateway.service.common.datafetcher.QueryServiceEntityFetcher;
 import org.hypertrace.gateway.service.common.util.AttributeMetadataUtil;
 import org.hypertrace.gateway.service.common.util.DataCollectionUtil;
 import org.hypertrace.gateway.service.common.util.ExpressionReader;
 import org.hypertrace.gateway.service.common.util.MetricAggregationFunctionUtil;
 import org.hypertrace.gateway.service.common.util.OrderByUtil;
 import org.hypertrace.gateway.service.common.util.QueryServiceClient;
+import org.hypertrace.gateway.service.entity.EntitiesRequestContext;
+import org.hypertrace.gateway.service.entity.config.EntityIdColumnsConfigs;
+import org.hypertrace.gateway.service.explore.entity.EntityServiceEntityFetcher;
+import org.hypertrace.gateway.service.v1.common.AttributeExpression;
 import org.hypertrace.gateway.service.v1.common.Expression;
 import org.hypertrace.gateway.service.v1.common.FunctionExpression;
 import org.hypertrace.gateway.service.v1.common.OrderByExpression;
 import org.hypertrace.gateway.service.v1.common.TimeAggregation;
+import org.hypertrace.gateway.service.v1.entity.EntitiesRequest;
+import org.hypertrace.gateway.service.v1.entity.Entity.Builder;
 import org.hypertrace.gateway.service.v1.explore.ExploreRequest;
 import org.hypertrace.gateway.service.v1.explore.ExploreResponse;
 import org.slf4j.Logger;
@@ -39,12 +53,25 @@ public class RequestHandler implements RequestHandlerWithSorting {
   private final QueryServiceClient queryServiceClient;
   private final AttributeMetadataProvider attributeMetadataProvider;
   private final TheRestGroupRequestHandler theRestGroupRequestHandler;
+  private final EntityIdColumnsConfigs entityIdColumnsConfigs;
+  private final QueryServiceEntityFetcher queryServiceEntityFetcher;
+  private final EntityServiceEntityFetcher entityServiceEntityFetcher;
 
   public RequestHandler(
-      QueryServiceClient queryServiceClient, AttributeMetadataProvider attributeMetadataProvider) {
+      QueryServiceClient queryServiceClient,
+      EntityQueryServiceClient entityQueryServiceClient,
+      AttributeMetadataProvider attributeMetadataProvider,
+      EntityIdColumnsConfigs entityIdColumnsConfigs) {
     this.queryServiceClient = queryServiceClient;
     this.attributeMetadataProvider = attributeMetadataProvider;
     this.theRestGroupRequestHandler = new TheRestGroupRequestHandler(this);
+    this.entityIdColumnsConfigs = entityIdColumnsConfigs;
+    this.queryServiceEntityFetcher =
+        new QueryServiceEntityFetcher(
+            queryServiceClient, attributeMetadataProvider, entityIdColumnsConfigs);
+    this.entityServiceEntityFetcher =
+        new EntityServiceEntityFetcher(
+            attributeMetadataProvider, entityIdColumnsConfigs, entityQueryServiceClient);
   }
 
   @Override
@@ -69,6 +96,8 @@ public class RequestHandler implements RequestHandlerWithSorting {
       requestContext.setHasGroupBy(true);
     }
 
+    Optional<List<String>> maybeEntityIds = buildEntityIdFilterIfNecessary(requestContext, request);
+    LOG.info("EDS got the entity id as {}", maybeEntityIds);
     QueryRequest.Builder builder = QueryRequest.newBuilder();
 
     // 1. Add selections. All selections should either be only column or only function, never both.
@@ -92,7 +121,11 @@ public class RequestHandler implements RequestHandlerWithSorting {
 
     // 2. Add filter
     builder.setFilter(
-        constructQueryServiceFilter(request, requestContext, attributeMetadataProvider));
+        constructQueryServiceFilter(
+            request,
+            requestContext,
+            attributeMetadataProvider,
+            maybeEntityIds.orElse(Collections.emptyList())));
 
     // 3. Add GroupBy
     addGroupByExpressions(builder, request);
@@ -111,6 +144,161 @@ public class RequestHandler implements RequestHandlerWithSorting {
     }
 
     return builder.build();
+  }
+
+  private Optional<List<String>> buildEntityIdFilterIfNecessary(
+      ExploreRequestContext context, ExploreRequest exploreRequest) {
+    Map<String, AttributeMetadata> attributeMetadataMap =
+        attributeMetadataProvider.getAttributesMetadata(context, exploreRequest.getContext());
+    Optional<org.hypertrace.gateway.service.v1.common.Filter> maybeEdsFilter =
+        buildFilter(exploreRequest.getFilter(), AttributeSource.EDS, attributeMetadataMap);
+    if (maybeEdsFilter.isEmpty()) {
+      return Optional.empty();
+    }
+
+    List<String> entityIdAttributeIds =
+        AttributeMetadataUtil.getIdAttributeIds(
+            attributeMetadataProvider,
+            entityIdColumnsConfigs,
+            context,
+            exploreRequest.getContext());
+
+    Set<String> allEntityIds = this.getEntityIds(context, exploreRequest);
+    ExploreRequest.Builder exploreEntityRequestBuilder =
+        ExploreRequest.newBuilder()
+            .setContext(exploreRequest.getContext())
+            .addAllGroupBy(
+                entityIdAttributeIds.stream()
+                    .map(
+                        attribute ->
+                            Expression.newBuilder()
+                                .setAttributeExpression(
+                                    AttributeExpression.newBuilder()
+                                        .setAttributeId(attribute)
+                                        .build())
+                                .build())
+                    .collect(Collectors.toUnmodifiableList()));
+    maybeEdsFilter.ifPresent(exploreEntityRequestBuilder::setFilter);
+
+    Iterator<org.hypertrace.entity.query.service.v1.ResultSetChunk> resultSetChunkIterator =
+        this.entityServiceEntityFetcher.getResults(
+            context, exploreEntityRequestBuilder.build(), allEntityIds);
+    ExploreResponse.Builder responseBuilder = ExploreResponse.newBuilder();
+    readChunkResults(context, responseBuilder, resultSetChunkIterator);
+
+    List<String> entityIds =
+        responseBuilder.getRowList().stream()
+            .map(row -> row.getColumnsMap().values().stream().findFirst())
+            .filter(Optional::isPresent)
+            .map(Optional::get)
+            .map(org.hypertrace.gateway.service.v1.common.Value::getString)
+            .collect(Collectors.toUnmodifiableList());
+    return Optional.of(entityIds);
+  }
+
+  public void readChunkResults(
+      ExploreRequestContext requestContext,
+      ExploreResponse.Builder builder,
+      Iterator<org.hypertrace.entity.query.service.v1.ResultSetChunk> resultSetChunkIterator) {
+    while (resultSetChunkIterator.hasNext()) {
+      org.hypertrace.entity.query.service.v1.ResultSetChunk chunk = resultSetChunkIterator.next();
+      getLogger().debug("Received chunk: {}", chunk);
+
+      if (chunk.getRowCount() < 1) {
+        break;
+      }
+
+      if (!chunk.hasResultSetMetadata()) {
+        getLogger().warn("Chunk doesn't have result metadata so couldn't process the response.");
+        break;
+      }
+
+      chunk
+          .getRowList()
+          .forEach(
+              row ->
+                  handleRow(
+                      row,
+                      chunk.getResultSetMetadata(),
+                      builder,
+                      requestContext,
+                      attributeMetadataProvider));
+    }
+  }
+
+  private void handleRow(
+      org.hypertrace.entity.query.service.v1.Row row,
+      org.hypertrace.entity.query.service.v1.ResultSetMetadata resultSetMetadata,
+      ExploreResponse.Builder builder,
+      ExploreRequestContext requestContext,
+      AttributeMetadataProvider attributeMetadataProvider) {
+    var rowBuilder = org.hypertrace.gateway.service.v1.common.Row.newBuilder();
+    for (int i = 0; i < resultSetMetadata.getColumnMetadataCount(); i++) {
+      handleColumn(
+          row.getColumn(i),
+          resultSetMetadata.getColumnMetadata(i),
+          rowBuilder,
+          requestContext,
+          attributeMetadataProvider);
+    }
+    builder.addRow(rowBuilder);
+  }
+
+  private void handleColumn(
+      org.hypertrace.entity.query.service.v1.Value value,
+      org.hypertrace.entity.query.service.v1.ColumnMetadata metadata,
+      org.hypertrace.gateway.service.v1.common.Row.Builder rowBuilder,
+      ExploreRequestContext requestContext,
+      AttributeMetadataProvider attributeMetadataProvider) {
+    FunctionExpression function =
+        requestContext.getFunctionExpressionByAlias(metadata.getColumnName());
+    handleColumn(value, metadata, rowBuilder, requestContext, attributeMetadataProvider, function);
+  }
+
+  void handleColumn(
+      org.hypertrace.entity.query.service.v1.Value value,
+      org.hypertrace.entity.query.service.v1.ColumnMetadata metadata,
+      org.hypertrace.gateway.service.v1.common.Row.Builder rowBuilder,
+      ExploreRequestContext requestContext,
+      AttributeMetadataProvider attributeMetadataProvider,
+      FunctionExpression function) {
+    Map<String, AttributeMetadata> attributeMetadataMap =
+        attributeMetadataProvider.getAttributesMetadata(
+            requestContext, requestContext.getContext());
+    Map<String, AttributeMetadata> resultKeyToAttributeMetadataMap =
+        this.remapAttributeMetadataByResultNameForEntity(
+            requestContext.getExploreRequest(), attributeMetadataMap);
+    org.hypertrace.gateway.service.v1.common.Value gwValue;
+    if (function != null) {
+      // Function expression value
+      gwValue =
+          EntityServiceAndGatewayServiceConverter.convertToGatewayValueForMetricValue(
+              MetricAggregationFunctionUtil.getValueTypeForFunctionType(
+                  function, attributeMetadataMap),
+              resultKeyToAttributeMetadataMap,
+              metadata,
+              value);
+    } else {
+      // Simple columnId expression value eg. groupBy columns or column selections
+      gwValue =
+          EntityServiceAndGatewayServiceConverter.convertToGatewayValue(
+              metadata.getColumnName(), value, resultKeyToAttributeMetadataMap);
+    }
+
+    rowBuilder.putColumns(metadata.getColumnName(), gwValue);
+  }
+
+  private Map<String, AttributeMetadata> remapAttributeMetadataByResultNameForEntity(
+      ExploreRequest request, Map<String, AttributeMetadata> attributeMetadataByIdMap) {
+    return AttributeMetadataUtil.remapAttributeMetadataByResultKey(
+        Streams.concat(
+                request.getSelectionList().stream(),
+                // Add groupBy to Selection list.
+                // The expectation from the Gateway service client is that they do not add the group
+                // by expressions to the selection expressions in the request
+                request.getGroupByList().stream())
+            .collect(Collectors.toUnmodifiableList()),
+        attributeMetadataByIdMap);
   }
 
   private Iterator<ResultSetChunk> executeQuery(
@@ -136,14 +324,29 @@ public class RequestHandler implements RequestHandlerWithSorting {
       ExploreRequest request,
       ExploreRequestContext exploreRequestContext,
       AttributeMetadataProvider attributeMetadataProvider) {
-    return QueryAndGatewayDtoConverter.addTimeAndSpaceFiltersAndConvertToQueryFilter(
+    return this.constructQueryServiceFilter(
+        request, exploreRequestContext, attributeMetadataProvider, Collections.emptyList());
+  }
+
+  Filter constructQueryServiceFilter(
+      ExploreRequest request,
+      ExploreRequestContext exploreRequestContext,
+      AttributeMetadataProvider attributeMetadataProvider,
+      List<String> entityIds) {
+    return QueryAndGatewayDtoConverter.addTimeSpaceAndIdFiltersAndConvertToQueryFilter(
         request.getStartTimeMillis(),
         request.getEndTimeMillis(),
         request.getSpaceId(),
+        entityIds,
         AttributeMetadataUtil.getTimestampAttributeId(
             attributeMetadataProvider, exploreRequestContext, request.getContext()),
         AttributeMetadataUtil.getSpaceAttributeId(
             attributeMetadataProvider, exploreRequestContext, request.getContext()),
+        AttributeMetadataUtil.getIdAttributeIds(
+            attributeMetadataProvider,
+            entityIdColumnsConfigs,
+            exploreRequestContext,
+            request.getContext()),
         request.getFilter());
   }
 
@@ -151,6 +354,38 @@ public class RequestHandler implements RequestHandlerWithSorting {
     request
         .getGroupByList()
         .forEach(expression -> addGroupByExpressionToBuilder(builder, expression));
+  }
+
+  public Set<String> getEntityIds(
+      ExploreRequestContext requestContext, ExploreRequest exploreRequest) {
+    EntitiesRequestContext entitiesRequestContext =
+        convert(attributeMetadataProvider, requestContext);
+    EntitiesRequest entitiesRequest =
+        EntitiesRequest.newBuilder()
+            .setEntityType(exploreRequest.getContext())
+            .setStartTimeMillis(exploreRequest.getStartTimeMillis())
+            .setEndTimeMillis(exploreRequest.getEndTimeMillis())
+            .build();
+    EntityFetcherResponse response =
+        queryServiceEntityFetcher.getEntities(entitiesRequestContext, entitiesRequest);
+    return response.getEntityKeyBuilderMap().values().stream()
+        .map(Builder::getId)
+        .collect(Collectors.toUnmodifiableSet());
+  }
+
+  private EntitiesRequestContext convert(
+      AttributeMetadataProvider attributeMetadataProvider, ExploreRequestContext requestContext) {
+    String entityType = requestContext.getContext();
+
+    String timestampAttributeId =
+        AttributeMetadataUtil.getTimestampAttributeId(
+            attributeMetadataProvider, requestContext, entityType);
+    return new EntitiesRequestContext(
+        requestContext.getGrpcContext(),
+        requestContext.getStartTimeMillis(),
+        requestContext.getEndTimeMillis(),
+        entityType,
+        timestampAttributeId);
   }
 
   private void addSortLimitAndOffset(ExploreRequest request, QueryRequest.Builder queryBuilder) {
@@ -348,5 +583,53 @@ public class RequestHandler implements RequestHandlerWithSorting {
                 request.getGroupByList().stream())
             .collect(Collectors.toUnmodifiableList()),
         attributeMetadataByIdMap);
+  }
+
+  private Optional<org.hypertrace.gateway.service.v1.common.Filter> buildFilter(
+      org.hypertrace.gateway.service.v1.common.Filter filter,
+      AttributeSource source,
+      Map<String, AttributeMetadata> attributeMetadataMap) {
+    if (filter.equals(Filter.getDefaultInstance())) {
+      return Optional.empty();
+    }
+
+    org.hypertrace.gateway.service.v1.common.Operator operator = filter.getOperator();
+    switch (operator) {
+      case UNDEFINED:
+        return Optional.empty();
+      case AND:
+      case OR:
+        return buildCompositeFilter(filter, source, operator, attributeMetadataMap);
+      default:
+        List<AttributeSource> sources =
+            attributeMetadataMap
+                .get(
+                    ExpressionReader.getAttributeIdFromAttributeSelection(filter.getLhs())
+                        .orElseThrow())
+                .getSourcesList();
+        return sources.size() == 1 && sources.contains(source)
+            ? Optional.of(
+                org.hypertrace.gateway.service.v1.common.Filter.newBuilder(filter).build())
+            : Optional.empty();
+    }
+  }
+
+  private Optional<org.hypertrace.gateway.service.v1.common.Filter> buildCompositeFilter(
+      org.hypertrace.gateway.service.v1.common.Filter filter,
+      AttributeSource source,
+      org.hypertrace.gateway.service.v1.common.Operator operator,
+      Map<String, AttributeMetadata> attributeMetadataMap) {
+    org.hypertrace.gateway.service.v1.common.Filter.Builder filterBuilder =
+        org.hypertrace.gateway.service.v1.common.Filter.newBuilder();
+    for (org.hypertrace.gateway.service.v1.common.Filter childFilter :
+        filter.getChildFilterList()) {
+      buildFilter(childFilter, source, attributeMetadataMap).map(filterBuilder::addChildFilter);
+    }
+    if (filterBuilder.getChildFilterCount() > 0) {
+      filterBuilder.setOperator(operator);
+      return Optional.of(filterBuilder.build());
+    } else {
+      return Optional.empty();
+    }
   }
 }

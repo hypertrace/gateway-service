@@ -2,9 +2,11 @@ package org.hypertrace.gateway.service.explore;
 
 import com.google.common.collect.ImmutableSet;
 import java.util.Set;
+import org.hypertrace.entity.query.service.client.EntityQueryServiceClient;
 import org.hypertrace.gateway.service.common.AttributeMetadataProvider;
 import org.hypertrace.gateway.service.common.util.ExpressionReader;
 import org.hypertrace.gateway.service.common.util.QueryServiceClient;
+import org.hypertrace.gateway.service.entity.config.EntityIdColumnsConfigs;
 import org.hypertrace.gateway.service.v1.common.Expression;
 import org.hypertrace.gateway.service.v1.common.Filter;
 import org.hypertrace.gateway.service.v1.common.LiteralConstant;
@@ -20,10 +22,22 @@ public class TimeAggregationsWithGroupByRequestHandler implements IRequestHandle
   private final TimeAggregationsRequestHandler timeAggregationsRequestHandler;
 
   TimeAggregationsWithGroupByRequestHandler(
-      QueryServiceClient queryServiceClient, AttributeMetadataProvider attributeMetadataProvider) {
-    this.normalRequestHandler = new RequestHandler(queryServiceClient, attributeMetadataProvider);
+      QueryServiceClient queryServiceClient,
+      EntityQueryServiceClient entityQueryServiceClient,
+      AttributeMetadataProvider attributeMetadataProvider,
+      EntityIdColumnsConfigs entityIdColumnsConfigs) {
+    this.normalRequestHandler =
+        new RequestHandler(
+            queryServiceClient,
+            entityQueryServiceClient,
+            attributeMetadataProvider,
+            entityIdColumnsConfigs);
     this.timeAggregationsRequestHandler =
-        new TimeAggregationsRequestHandler(queryServiceClient, attributeMetadataProvider);
+        new TimeAggregationsRequestHandler(
+            queryServiceClient,
+            entityQueryServiceClient,
+            attributeMetadataProvider,
+            entityIdColumnsConfigs);
   }
 
   @Override

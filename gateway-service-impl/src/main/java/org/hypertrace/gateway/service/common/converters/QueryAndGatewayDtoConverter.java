@@ -5,6 +5,7 @@ import static org.hypertrace.gateway.service.v1.common.FunctionType.DISTINCT_ARR
 
 import com.google.common.base.Strings;
 import java.time.Duration;
+import java.util.Collections;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
@@ -470,6 +471,27 @@ public class QueryAndGatewayDtoConverter {
       String spacesAttributeId,
       org.hypertrace.gateway.service.v1.common.Filter providedFilter) {
 
+    return addTimeSpaceAndIdFiltersAndConvertToQueryFilter(
+        startTimeMillis,
+        endTimeMillis,
+        spaceId,
+        Collections.emptyList(),
+        timestampAttributeId,
+        spacesAttributeId,
+        Collections.emptyList(),
+        providedFilter);
+  }
+
+  public static Filter addTimeSpaceAndIdFiltersAndConvertToQueryFilter(
+      long startTimeMillis,
+      long endTimeMillis,
+      String spaceId,
+      List<String> entityIds,
+      String timestampAttributeId,
+      String spacesAttributeId,
+      List<String> idAttributeId,
+      org.hypertrace.gateway.service.v1.common.Filter providedFilter) {
+
     Filter.Builder compositeFilter = Filter.newBuilder().setOperator(Operator.AND);
     Filter convertedProvidedFilter =
         isNonDefaultFilter(providedFilter)
@@ -489,6 +511,14 @@ public class QueryAndGatewayDtoConverter {
     if (!Strings.isNullOrEmpty(spaceId)) {
       compositeFilter.addChildFilter(
           QueryRequestUtil.createStringFilter(spacesAttributeId, Operator.EQ, spaceId));
+    }
+
+    if (!entityIds.isEmpty()) {
+      compositeFilter.addChildFilter(
+          createIdAttributeFilter(
+              idAttributeId,
+              Operator.IN,
+              QueryRequestUtil.createStringArrayLiteralExpression(entityIds)));
     }
 
     // If only one filter was added, unwrap the one child filter and use that
@@ -527,6 +557,14 @@ public class QueryAndGatewayDtoConverter {
 
   private static boolean isNonDefaultFilter(Filter filter) {
     return filter != null && !Filter.getDefaultInstance().equals(filter);
+  }
+
+  private static Filter createIdAttributeFilter(
+      List<String> idAttribute, Operator operator, Expression expression) {
+    if (idAttribute.size() != 1) {
+      throw new RuntimeException("Can have one single id attribute for an entity");
+    }
+    return QueryRequestUtil.createFilter(idAttribute.get(0), operator, expression);
   }
 
   public static List<OrderByExpression> convertToQueryOrderByExpressions(
