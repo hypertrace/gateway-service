@@ -288,6 +288,7 @@ public class EntityServiceTest extends AbstractGatewayServiceTest {
         new EntityService(
             queryServiceClient,
             entityQueryServiceClient,
+            null,
             attributeMetadataProvider,
             entityIdColumnsConfigs,
             scopeFilterConfigs,
@@ -326,6 +327,7 @@ public class EntityServiceTest extends AbstractGatewayServiceTest {
         new EntityService(
             queryServiceClient,
             entityQueryServiceClient,
+            null,
             attributeMetadataProvider,
             entityIdColumnsConfigs,
             scopeFilterConfigs,

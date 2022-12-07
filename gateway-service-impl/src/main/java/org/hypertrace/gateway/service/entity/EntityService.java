@@ -4,6 +4,10 @@ import static org.hypertrace.gateway.service.v1.common.Operator.IN;
 
 import com.google.common.base.Preconditions;
 import com.google.common.collect.ImmutableMap;
+import com.google.inject.Guice;
+import com.google.inject.Injector;
+import com.google.inject.Key;
+import com.google.inject.TypeLiteral;
 import io.grpc.Status;
 import io.micrometer.core.instrument.Timer;
 import java.time.Duration;
@@ -20,10 +24,14 @@ import org.hypertrace.core.attribute.service.v1.AttributeMetadata;
 import org.hypertrace.core.attribute.service.v1.AttributeSource;
 import org.hypertrace.core.serviceframework.metrics.PlatformMetricsRegistry;
 import org.hypertrace.entity.query.service.client.EntityQueryServiceClient;
+import org.hypertrace.entity.query.service.v1.BulkUpdateAllMatchingFilterRequest;
+import org.hypertrace.entity.query.service.v1.BulkUpdateAllMatchingFilterResponse;
+import org.hypertrace.entity.query.service.v1.EntityQueryServiceGrpc.EntityQueryServiceBlockingStub;
 import org.hypertrace.gateway.service.common.AttributeMetadataProvider;
 import org.hypertrace.gateway.service.common.OrderByPercentileSizeSetter;
 import org.hypertrace.gateway.service.common.RequestContext;
 import org.hypertrace.gateway.service.common.config.ScopeFilterConfigs;
+import org.hypertrace.gateway.service.common.converters.Converter;
 import org.hypertrace.gateway.service.common.datafetcher.EntityDataServiceEntityFetcher;
 import org.hypertrace.gateway.service.common.datafetcher.EntityFetcherResponse;
 import org.hypertrace.gateway.service.common.datafetcher.EntityInteractionsFetcher;
@@ -36,14 +44,18 @@ import org.hypertrace.gateway.service.common.util.QueryExpressionUtil;
 import org.hypertrace.gateway.service.common.util.QueryServiceClient;
 import org.hypertrace.gateway.service.entity.config.EntityIdColumnsConfigs;
 import org.hypertrace.gateway.service.entity.config.LogConfig;
+import org.hypertrace.gateway.service.entity.converter.EntityConverterModule;
 import org.hypertrace.gateway.service.entity.query.EntityExecutionContext;
 import org.hypertrace.gateway.service.entity.query.ExecutionTreeBuilder;
 import org.hypertrace.gateway.service.entity.query.QueryNode;
 import org.hypertrace.gateway.service.entity.query.visitor.ExecutionVisitor;
 import org.hypertrace.gateway.service.entity.update.EdsEntityUpdater;
 import org.hypertrace.gateway.service.entity.update.UpdateExecutionContext;
+import org.hypertrace.gateway.service.entity.validator.BulkUpdateAllMatchingEntitiesUpdateRequestValidator;
 import org.hypertrace.gateway.service.v1.common.Filter;
 import org.hypertrace.gateway.service.v1.common.Operator;
+import org.hypertrace.gateway.service.v1.entity.BulkUpdateAllMatchingEntitiesRequest;
+import org.hypertrace.gateway.service.v1.entity.BulkUpdateAllMatchingEntitiesResponse;
 import org.hypertrace.gateway.service.v1.entity.BulkUpdateEntitiesRequest;
 import org.hypertrace.gateway.service.v1.entity.BulkUpdateEntitiesResponse;
 import org.hypertrace.gateway.service.v1.entity.EntitiesRequest;
@@ -76,6 +88,7 @@ public class EntityService {
   private final RequestPreProcessor requestPreProcessor;
   private final ResponsePostProcessor responsePostProcessor;
   private final EdsEntityUpdater edsEntityUpdater;
+  private final EntityQueryServiceBlockingStub eqsStub;
   private final LogConfig logConfig;
   // Metrics
   private Timer queryBuildTimer;
@@ -84,6 +97,7 @@ public class EntityService {
   public EntityService(
       QueryServiceClient qsClient,
       EntityQueryServiceClient edsQueryServiceClient,
+      final EntityQueryServiceBlockingStub eqsStub,
       AttributeMetadataProvider metadataProvider,
       EntityIdColumnsConfigs entityIdColumnsConfigs,
       ScopeFilterConfigs scopeFilterConfigs,
@@ -97,6 +111,7 @@ public class EntityService {
     this.requestPreProcessor = new RequestPreProcessor(metadataProvider, scopeFilterConfigs);
     this.responsePostProcessor = new ResponsePostProcessor();
     this.edsEntityUpdater = new EdsEntityUpdater(edsQueryServiceClient);
+    this.eqsStub = eqsStub;
     this.logConfig = logConfig;
 
     registerEntityFetchers(qsClient, edsQueryServiceClient);
@@ -287,6 +302,43 @@ public class EntityService {
         new UpdateExecutionContext(requestContext.getHeaders(), attributeMetadataMap);
 
     return edsEntityUpdater.bulkUpdateEntities(request, updateExecutionContext);
+  }
+
+  public BulkUpdateAllMatchingEntitiesResponse bulkUpdateAllMatchingEntities(
+      final RequestContext requestContext, final BulkUpdateAllMatchingEntitiesRequest request) {
+    final BulkUpdateAllMatchingEntitiesUpdateRequestValidator validator =
+        new BulkUpdateAllMatchingEntitiesUpdateRequestValidator(
+            metadataProvider, request, requestContext);
+
+    Status status = validator.validate();
+    if (!status.isOk()) {
+      LOG.error("Bulk update entities request is not valid: {}", status.getDescription());
+      throw status.asRuntimeException();
+    }
+
+    final Injector injector = Guice.createInjector(new EntityConverterModule());
+    final Converter<BulkUpdateAllMatchingEntitiesRequest, BulkUpdateAllMatchingFilterRequest>
+        requestConverter =
+            injector.getInstance(
+                Key.get(
+                    new TypeLiteral<
+                        Converter<
+                            BulkUpdateAllMatchingEntitiesRequest,
+                            BulkUpdateAllMatchingFilterRequest>>() {}));
+    final Converter<BulkUpdateAllMatchingFilterResponse, BulkUpdateAllMatchingEntitiesResponse>
+        responseConverter =
+            injector.getInstance(
+                Key.get(
+                    new TypeLiteral<
+                        Converter<
+                            BulkUpdateAllMatchingFilterResponse,
+                            BulkUpdateAllMatchingEntitiesResponse>>() {}));
+
+    final BulkUpdateAllMatchingFilterResponse response =
+        requestContext
+            .getGrpcContext()
+            .call(() -> eqsStub.bulkUpdateAllMatchingFilter(requestConverter.convert(request)));
+    return responseConverter.convert(response);
   }
 
   private Filter createEntityKeysInFilter(

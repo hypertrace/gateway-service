@@ -134,7 +134,7 @@ message Update {
 message UpdateOperation {
   org.hypertrace.gateway.service.v1.common.ColumnIdentifier attribute = 1;
   Operator operator = 2;
-  org.hypertrace.gateway.service.v1.common.LiteralConstant values = 3;
+  org.hypertrace.gateway.service.v1.common.LiteralConstant value = 3;
 
   enum Operator {
     OPERATION_UNSPECIFIED = 0;
