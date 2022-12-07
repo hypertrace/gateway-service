@@ -11,7 +11,6 @@ import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
-import java.util.Set;
 import org.hypertrace.core.attribute.service.v1.AttributeKind;
 import org.hypertrace.core.attribute.service.v1.AttributeMetadata;
 import org.hypertrace.entity.query.service.client.EntityQueryServiceClient;
@@ -108,9 +107,9 @@ public class EntityRequestHandlerTest {
     when(queryServiceEntityFetcher.getEntities(
             any(EntitiesRequestContext.class), eq(entitiesRequest)))
         .thenReturn(mockEntityFetcherResponse());
-    when(entityServiceEntityFetcher.getResults(
-            exploreRequestContext, exploreRequest, Set.of("api1", "api2")))
-        .thenReturn(mockResults());
+    //    when(entityServiceEntityFetcher.getResults(
+    //            exploreRequestContext, exploreRequest, Set.of("api1", "api2")))
+    //        .thenReturn(mockResults());
 
     ExploreResponse exploreResponse =
         entityRequestHandler.handleRequest(exploreRequestContext, exploreRequest).build();

@@ -23,7 +23,6 @@ import org.hypertrace.core.query.service.api.Row;
 import org.hypertrace.core.query.service.api.Value;
 import org.hypertrace.entity.query.service.client.EntityQueryServiceClient;
 import org.hypertrace.gateway.service.common.AttributeMetadataProvider;
-import org.hypertrace.gateway.service.common.converters.EntityServiceAndGatewayServiceConverter;
 import org.hypertrace.gateway.service.common.converters.QueryAndGatewayDtoConverter;
 import org.hypertrace.gateway.service.common.datafetcher.EntityFetcherResponse;
 import org.hypertrace.gateway.service.common.datafetcher.QueryServiceEntityFetcher;
@@ -177,118 +176,17 @@ public class RequestHandler implements RequestHandlerWithSorting {
             .addAllGroupBy(groupBySelections);
     maybeEdsFilter.ifPresent(exploreRequestBuilder::setFilter);
 
-    Iterator<org.hypertrace.entity.query.service.v1.ResultSetChunk> resultSetChunkIterator =
+    List<org.hypertrace.gateway.service.v1.common.Row> resultRows =
         this.entityServiceEntityFetcher.getResults(
             context, exploreRequestBuilder.build(), allEntityIds);
-    ExploreResponse.Builder responseBuilder = ExploreResponse.newBuilder();
-    readEntityServiceChunkResults(context, responseBuilder, resultSetChunkIterator);
 
     return Optional.of(
-        responseBuilder.getRowList().stream()
+        resultRows.stream()
             .map(row -> row.getColumnsMap().values().stream().findFirst())
             .filter(Optional::isPresent)
             .map(Optional::get)
             .map(org.hypertrace.gateway.service.v1.common.Value::getString)
             .collect(Collectors.toUnmodifiableList()));
-  }
-
-  void readEntityServiceChunkResults(
-      ExploreRequestContext requestContext,
-      ExploreResponse.Builder builder,
-      Iterator<org.hypertrace.entity.query.service.v1.ResultSetChunk> resultSetChunkIterator) {
-    while (resultSetChunkIterator.hasNext()) {
-      org.hypertrace.entity.query.service.v1.ResultSetChunk chunk = resultSetChunkIterator.next();
-      getLogger().debug("Received chunk: {}", chunk);
-
-      if (chunk.getRowCount() < 1) {
-        break;
-      }
-
-      if (!chunk.hasResultSetMetadata()) {
-        getLogger().warn("Chunk doesn't have result metadata so couldn't process the response.");
-        break;
-      }
-
-      chunk
-          .getRowList()
-          .forEach(
-              row ->
-                  handleEntityServiceResultRow(
-                      row,
-                      chunk.getResultSetMetadata(),
-                      builder,
-                      requestContext,
-                      attributeMetadataProvider));
-    }
-  }
-
-  private void handleEntityServiceResultRow(
-      org.hypertrace.entity.query.service.v1.Row row,
-      org.hypertrace.entity.query.service.v1.ResultSetMetadata resultSetMetadata,
-      ExploreResponse.Builder builder,
-      ExploreRequestContext requestContext,
-      AttributeMetadataProvider attributeMetadataProvider) {
-    var rowBuilder = org.hypertrace.gateway.service.v1.common.Row.newBuilder();
-    for (int i = 0; i < resultSetMetadata.getColumnMetadataCount(); i++) {
-      org.hypertrace.entity.query.service.v1.ColumnMetadata metadata =
-          resultSetMetadata.getColumnMetadata(i);
-      FunctionExpression function =
-          requestContext.getFunctionExpressionByAlias(metadata.getColumnName());
-      handleEntityServiceResultColumn(
-          row.getColumn(i),
-          metadata,
-          rowBuilder,
-          requestContext,
-          attributeMetadataProvider,
-          function);
-    }
-    builder.addRow(rowBuilder);
-  }
-
-  private void handleEntityServiceResultColumn(
-      org.hypertrace.entity.query.service.v1.Value value,
-      org.hypertrace.entity.query.service.v1.ColumnMetadata metadata,
-      org.hypertrace.gateway.service.v1.common.Row.Builder rowBuilder,
-      ExploreRequestContext requestContext,
-      AttributeMetadataProvider attributeMetadataProvider,
-      FunctionExpression function) {
-    Map<String, AttributeMetadata> attributeMetadataMap =
-        attributeMetadataProvider.getAttributesMetadata(
-            requestContext, requestContext.getContext());
-    Map<String, AttributeMetadata> resultKeyToAttributeMetadataMap =
-        this.remapAttributeMetadataByResultNameForEntity(
-            requestContext.getExploreRequest(), attributeMetadataMap);
-    org.hypertrace.gateway.service.v1.common.Value gwValue;
-    if (function != null) {
-      // Function expression value
-      gwValue =
-          EntityServiceAndGatewayServiceConverter.convertToGatewayValueForMetricValue(
-              MetricAggregationFunctionUtil.getValueTypeForFunctionType(
-                  function, attributeMetadataMap),
-              resultKeyToAttributeMetadataMap,
-              metadata,
-              value);
-    } else {
-      // Simple columnId expression value eg. groupBy columns or column selections
-      gwValue =
-          EntityServiceAndGatewayServiceConverter.convertToGatewayValue(
-              metadata.getColumnName(), value, resultKeyToAttributeMetadataMap);
-    }
-
-    rowBuilder.putColumns(metadata.getColumnName(), gwValue);
-  }
-
-  private Map<String, AttributeMetadata> remapAttributeMetadataByResultNameForEntity(
-      ExploreRequest request, Map<String, AttributeMetadata> attributeMetadataByIdMap) {
-    return AttributeMetadataUtil.remapAttributeMetadataByResultKey(
-        Streams.concat(
-                request.getSelectionList().stream(),
-                // Add groupBy to Selection list.
-                // The expectation from the Gateway service client is that they do not add the group
-                // by expressions to the selection expressions in the request
-                request.getGroupByList().stream())
-            .collect(Collectors.toUnmodifiableList()),
-        attributeMetadataByIdMap);
   }
 
   private Iterator<ResultSetChunk> executeQuery(

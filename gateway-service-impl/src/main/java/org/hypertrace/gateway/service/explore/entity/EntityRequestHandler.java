@@ -1,10 +1,8 @@
 package org.hypertrace.gateway.service.explore.entity;
 
 import com.google.common.annotations.VisibleForTesting;
-import java.util.Iterator;
 import java.util.Set;
 import org.hypertrace.entity.query.service.client.EntityQueryServiceClient;
-import org.hypertrace.entity.query.service.v1.ResultSetChunk;
 import org.hypertrace.gateway.service.common.AttributeMetadataProvider;
 import org.hypertrace.gateway.service.common.datafetcher.QueryServiceEntityFetcher;
 import org.hypertrace.gateway.service.common.util.QueryServiceClient;
@@ -91,10 +89,8 @@ public class EntityRequestHandler extends RequestHandler {
       return builder;
     }
 
-    Iterator<ResultSetChunk> resultSetChunkIterator =
-        entityServiceEntityFetcher.getResults(requestContext, exploreRequest, entityIds);
-
-    readEntityServiceChunkResults(requestContext, builder, resultSetChunkIterator);
+    builder.addAllRow(
+        entityServiceEntityFetcher.getResults(requestContext, exploreRequest, entityIds));
 
     // If there's a Group By in the request, we need to do the sorting and pagination ourselves.
     if (requestContext.hasGroupBy()) {
