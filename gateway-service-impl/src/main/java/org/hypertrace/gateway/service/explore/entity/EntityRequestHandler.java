@@ -94,7 +94,7 @@ public class EntityRequestHandler extends RequestHandler {
     Iterator<ResultSetChunk> resultSetChunkIterator =
         entityServiceEntityFetcher.getResults(requestContext, exploreRequest, entityIds);
 
-    readChunkResults(requestContext, builder, resultSetChunkIterator);
+    readEntityServiceChunkResults(requestContext, builder, resultSetChunkIterator);
 
     // If there's a Group By in the request, we need to do the sorting and pagination ourselves.
     if (requestContext.hasGroupBy()) {

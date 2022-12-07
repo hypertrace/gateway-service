@@ -53,7 +53,7 @@ public class ExpressionReader {
     }
   }
 
-  public static Optional<String> /**/ getAttributeIdFromAttributeSelection(Expression expression) {
+  public static Optional<String> getAttributeIdFromAttributeSelection(Expression expression) {
     switch (expression.getValueCase()) {
       case COLUMNIDENTIFIER:
         return Optional.of(expression.getColumnIdentifier().getColumnName());

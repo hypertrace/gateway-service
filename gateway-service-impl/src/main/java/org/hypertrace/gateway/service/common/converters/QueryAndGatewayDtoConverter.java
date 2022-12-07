@@ -562,7 +562,7 @@ public class QueryAndGatewayDtoConverter {
   private static Filter createIdAttributeFilter(
       List<String> idAttribute, Operator operator, Expression expression) {
     if (idAttribute.size() != 1) {
-      throw new RuntimeException("Can have one single id attribute for an entity");
+      throw new RuntimeException("Cannot have more than one id attribute for an entity");
     }
     return QueryRequestUtil.createFilter(idAttribute.get(0), operator, expression);
   }
