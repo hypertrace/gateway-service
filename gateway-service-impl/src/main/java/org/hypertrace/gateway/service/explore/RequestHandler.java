@@ -97,7 +97,6 @@ public class RequestHandler implements RequestHandlerWithSorting {
     }
 
     Optional<List<String>> maybeEntityIds = buildEntityIdFilterIfNecessary(requestContext, request);
-    LOG.info("EDS got the entity id as {}", maybeEntityIds);
     QueryRequest.Builder builder = QueryRequest.newBuilder();
 
     // 1. Add selections. All selections should either be only column or only function, never both.
@@ -163,7 +162,7 @@ public class RequestHandler implements RequestHandlerWithSorting {
             context,
             exploreRequest.getContext());
 
-    Set<String> allEntityIds = this.getEntityIds(context, exploreRequest);
+    Set<String> allEntityIds = this.getEntityIdsFromQueryService(context, exploreRequest);
     ExploreRequest.Builder exploreEntityRequestBuilder =
         ExploreRequest.newBuilder()
             .setContext(exploreRequest.getContext())
@@ -356,18 +355,27 @@ public class RequestHandler implements RequestHandlerWithSorting {
         .forEach(expression -> addGroupByExpressionToBuilder(builder, expression));
   }
 
-  public Set<String> getEntityIds(
+  public Set<String> getEntityIdsFromQueryService(
       ExploreRequestContext requestContext, ExploreRequest exploreRequest) {
     EntitiesRequestContext entitiesRequestContext =
         convert(attributeMetadataProvider, requestContext);
-    EntitiesRequest entitiesRequest =
+
+    EntitiesRequest.Builder entitiesRequest =
         EntitiesRequest.newBuilder()
             .setEntityType(exploreRequest.getContext())
             .setStartTimeMillis(exploreRequest.getStartTimeMillis())
-            .setEndTimeMillis(exploreRequest.getEndTimeMillis())
-            .build();
+            .setEndTimeMillis(exploreRequest.getEndTimeMillis());
+
+    Map<String, AttributeMetadata> attributeMetadataMap =
+        attributeMetadataProvider.getAttributesMetadata(
+            requestContext, exploreRequest.getContext());
+    Optional<org.hypertrace.gateway.service.v1.common.Filter> maybeQsFilters =
+        buildFilter(exploreRequest.getFilter(), AttributeSource.QS, attributeMetadataMap);
+    maybeQsFilters.ifPresent(entitiesRequest::setFilter);
+
+    LOG.info("QS Query is {}", entitiesRequest);
     EntityFetcherResponse response =
-        queryServiceEntityFetcher.getEntities(entitiesRequestContext, entitiesRequest);
+        queryServiceEntityFetcher.getEntities(entitiesRequestContext, entitiesRequest.build());
     return response.getEntityKeyBuilderMap().values().stream()
         .map(Builder::getId)
         .collect(Collectors.toUnmodifiableSet());
@@ -589,7 +597,7 @@ public class RequestHandler implements RequestHandlerWithSorting {
       org.hypertrace.gateway.service.v1.common.Filter filter,
       AttributeSource source,
       Map<String, AttributeMetadata> attributeMetadataMap) {
-    if (filter.equals(Filter.getDefaultInstance())) {
+    if (filter.equals(org.hypertrace.gateway.service.v1.common.Filter.getDefaultInstance())) {
       return Optional.empty();
     }
 
@@ -607,11 +615,19 @@ public class RequestHandler implements RequestHandlerWithSorting {
                     ExpressionReader.getAttributeIdFromAttributeSelection(filter.getLhs())
                         .orElseThrow())
                 .getSourcesList();
-        return sources.size() == 1 && sources.contains(source)
+        return isValidSource(sources, source)
             ? Optional.of(
                 org.hypertrace.gateway.service.v1.common.Filter.newBuilder(filter).build())
             : Optional.empty();
     }
+  }
+
+  private boolean isValidSource(List<AttributeSource> availableSources, AttributeSource source) {
+    if (AttributeSource.EDS.equals(source)) {
+      return availableSources.size() == 1 && availableSources.contains(source);
+    }
+
+    return availableSources.contains(source);
   }
 
   private Optional<org.hypertrace.gateway.service.v1.common.Filter> buildCompositeFilter(
@@ -623,7 +639,8 @@ public class RequestHandler implements RequestHandlerWithSorting {
         org.hypertrace.gateway.service.v1.common.Filter.newBuilder();
     for (org.hypertrace.gateway.service.v1.common.Filter childFilter :
         filter.getChildFilterList()) {
-      buildFilter(childFilter, source, attributeMetadataMap).map(filterBuilder::addChildFilter);
+      buildFilter(childFilter, source, attributeMetadataMap)
+          .ifPresent(filterBuilder::addChildFilter);
     }
     if (filterBuilder.getChildFilterCount() > 0) {
       filterBuilder.setOperator(operator);

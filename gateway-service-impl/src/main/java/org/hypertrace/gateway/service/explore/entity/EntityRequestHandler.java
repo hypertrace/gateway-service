@@ -84,7 +84,7 @@ public class EntityRequestHandler extends RequestHandler {
       requestContext.setHasGroupBy(true);
     }
 
-    Set<String> entityIds = getEntityIds(requestContext, exploreRequest);
+    Set<String> entityIds = getEntityIdsFromQueryService(requestContext, exploreRequest);
     ExploreResponse.Builder builder = ExploreResponse.newBuilder();
 
     if (entityIds.isEmpty()) {
