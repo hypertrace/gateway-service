@@ -310,7 +310,7 @@ public class EntityService {
         new BulkUpdateAllMatchingEntitiesUpdateRequestValidator(
             metadataProvider, request, requestContext);
 
-    Status status = validator.validate();
+    final Status status = validator.validate();
     if (!status.isOk()) {
       LOG.error("Bulk update entities request is not valid: {}", status.getDescription());
       throw status.asRuntimeException();

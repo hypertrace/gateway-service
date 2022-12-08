@@ -16,7 +16,10 @@ import static org.hypertrace.gateway.service.common.converters.QueryRequestUtil.
 import static org.hypertrace.gateway.service.common.converters.QueryRequestUtil.createTimeColumnGroupByExpression;
 import static org.hypertrace.gateway.service.common.util.QueryExpressionUtil.alignToPeriodBoundary;
 import static org.hypertrace.gateway.service.common.util.QueryExpressionUtil.buildAttributeExpression;
+import static org.hypertrace.gateway.service.common.util.QueryExpressionUtil.buildStringFilter;
 import static org.hypertrace.gateway.service.common.util.QueryExpressionUtil.getAggregateFunctionExpression;
+import static org.hypertrace.gateway.service.v1.common.ValueType.STRING;
+import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.when;
@@ -42,6 +45,11 @@ import org.hypertrace.core.query.service.api.Row;
 import org.hypertrace.core.query.service.api.Value;
 import org.hypertrace.core.query.service.api.ValueType;
 import org.hypertrace.entity.query.service.client.EntityQueryServiceClient;
+import org.hypertrace.entity.query.service.v1.AttributeUpdateOperation;
+import org.hypertrace.entity.query.service.v1.AttributeUpdateOperation.AttributeUpdateOperator;
+import org.hypertrace.entity.query.service.v1.BulkUpdateAllMatchingFilterRequest;
+import org.hypertrace.entity.query.service.v1.BulkUpdateAllMatchingFilterResponse;
+import org.hypertrace.entity.query.service.v1.EntityQueryServiceGrpc.EntityQueryServiceBlockingStub;
 import org.hypertrace.gateway.service.AbstractGatewayServiceTest;
 import org.hypertrace.gateway.service.common.AttributeMetadataProvider;
 import org.hypertrace.gateway.service.common.QueryServiceRequestAndResponseUtils;
@@ -52,15 +60,20 @@ import org.hypertrace.gateway.service.entity.config.EntityIdColumnsConfigs;
 import org.hypertrace.gateway.service.entity.config.LogConfig;
 import org.hypertrace.gateway.service.executor.QueryExecutorConfig;
 import org.hypertrace.gateway.service.executor.QueryExecutorServiceFactory;
+import org.hypertrace.gateway.service.v1.common.ColumnIdentifier;
 import org.hypertrace.gateway.service.v1.common.Expression;
 import org.hypertrace.gateway.service.v1.common.FunctionType;
 import org.hypertrace.gateway.service.v1.common.LiteralConstant;
 import org.hypertrace.gateway.service.v1.common.Operator;
 import org.hypertrace.gateway.service.v1.common.Period;
 import org.hypertrace.gateway.service.v1.common.TimeAggregation;
+import org.hypertrace.gateway.service.v1.entity.BulkUpdateAllMatchingEntitiesRequest;
+import org.hypertrace.gateway.service.v1.entity.BulkUpdateAllMatchingEntitiesResponse;
 import org.hypertrace.gateway.service.v1.entity.EntitiesRequest;
 import org.hypertrace.gateway.service.v1.entity.EntitiesResponse;
 import org.hypertrace.gateway.service.v1.entity.Entity;
+import org.hypertrace.gateway.service.v1.entity.Update;
+import org.hypertrace.gateway.service.v1.entity.UpdateOperation;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.BeforeEach;
@@ -71,6 +84,7 @@ public class EntityServiceTest extends AbstractGatewayServiceTest {
 
   private QueryServiceClient queryServiceClient;
   private EntityQueryServiceClient entityQueryServiceClient;
+  private EntityQueryServiceBlockingStub entityQueryStub;
   private AttributeMetadataProvider attributeMetadataProvider;
   private EntityIdColumnsConfigs entityIdColumnsConfigs;
   private LogConfig logConfig;
@@ -82,6 +96,7 @@ public class EntityServiceTest extends AbstractGatewayServiceTest {
     mockEntityIdColumnConfigs();
     queryServiceClient = Mockito.mock(QueryServiceClient.class);
     entityQueryServiceClient = Mockito.mock(EntityQueryServiceClient.class);
+    entityQueryStub = Mockito.mock(EntityQueryServiceBlockingStub.class);
     attributeMetadataProvider = Mockito.mock(AttributeMetadataProvider.class);
     mock(attributeMetadataProvider);
     logConfig = Mockito.mock(LogConfig.class);
@@ -457,6 +472,94 @@ public class EntityServiceTest extends AbstractGatewayServiceTest {
             "POST", entity.getAttributeMap().get("API Http method").getString());
       }
     }
+  }
+
+  @Test
+  void testBulkUpdateAllMatchingEntities() {
+    final RequestContext requestContext =
+        new RequestContext(
+            org.hypertrace.core.grpcutils.context.RequestContext.forTenantId(TENANT_ID));
+    final EntityService entityService =
+        new EntityService(
+            queryServiceClient,
+            entityQueryServiceClient,
+            entityQueryStub,
+            attributeMetadataProvider,
+            entityIdColumnsConfigs,
+            new ScopeFilterConfigs(ConfigFactory.empty()),
+            logConfig,
+            queryExecutor);
+
+    final BulkUpdateAllMatchingEntitiesRequest request =
+        BulkUpdateAllMatchingEntitiesRequest.newBuilder()
+            .setEntityType("API")
+            .addUpdates(
+                Update.newBuilder()
+                    .setFilter(buildStringFilter("API.apiId", Operator.EQ, "some-api"))
+                    .addOperations(
+                        UpdateOperation.newBuilder()
+                            .setAttribute(
+                                ColumnIdentifier.newBuilder().setColumnName("API.httpMethod"))
+                            .setOperator(UpdateOperation.Operator.OPERATOR_SET)
+                            .setValue(
+                                LiteralConstant.newBuilder()
+                                    .setValue(
+                                        org.hypertrace.gateway.service.v1.common.Value.newBuilder()
+                                            .setValueType(STRING)
+                                            .setString("GET")))))
+            .build();
+    final BulkUpdateAllMatchingEntitiesResponse expectedResult =
+        BulkUpdateAllMatchingEntitiesResponse.newBuilder().build();
+
+    final BulkUpdateAllMatchingFilterRequest eqsRequest =
+        BulkUpdateAllMatchingFilterRequest.newBuilder()
+            .setEntityType("API")
+            .addUpdates(
+                org.hypertrace.entity.query.service.v1.Update.newBuilder()
+                    .setFilter(
+                        org.hypertrace.entity.query.service.v1.Filter.newBuilder()
+                            .setLhs(
+                                org.hypertrace.entity.query.service.v1.Expression.newBuilder()
+                                    .setColumnIdentifier(
+                                        org.hypertrace.entity.query.service.v1.ColumnIdentifier
+                                            .newBuilder()
+                                            .setColumnName("API.apiId")))
+                            .setOperator(org.hypertrace.entity.query.service.v1.Operator.EQ)
+                            .setRhs(
+                                org.hypertrace.entity.query.service.v1.Expression.newBuilder()
+                                    .setLiteral(
+                                        org.hypertrace.entity.query.service.v1.LiteralConstant
+                                            .newBuilder()
+                                            .setValue(
+                                                org.hypertrace.entity.query.service.v1.Value
+                                                    .newBuilder()
+                                                    .setValueType(
+                                                        org.hypertrace.entity.query.service.v1
+                                                            .ValueType.STRING)
+                                                    .setString("some-api")))))
+                    .addOperations(
+                        AttributeUpdateOperation.newBuilder()
+                            .setAttribute(
+                                org.hypertrace.entity.query.service.v1.ColumnIdentifier.newBuilder()
+                                    .setColumnName("API.httpMethod"))
+                            .setOperator(AttributeUpdateOperator.ATTRIBUTE_UPDATE_OPERATOR_SET)
+                            .setValue(
+                                org.hypertrace.entity.query.service.v1.LiteralConstant.newBuilder()
+                                    .setValue(
+                                        org.hypertrace.entity.query.service.v1.Value.newBuilder()
+                                            .setValueType(
+                                                org.hypertrace.entity.query.service.v1.ValueType
+                                                    .STRING)
+                                            .setString("GET")))))
+            .build();
+    final BulkUpdateAllMatchingFilterResponse eqsResponse =
+        BulkUpdateAllMatchingFilterResponse.newBuilder().build();
+
+    when(entityQueryStub.bulkUpdateAllMatchingFilter(eqsRequest)).thenReturn(eqsResponse);
+
+    final BulkUpdateAllMatchingEntitiesResponse result =
+        entityService.bulkUpdateAllMatchingEntities(requestContext, request);
+    assertEquals(expectedResult, result);
   }
 
   private Expression getStringListLiteral(List<String> values) {

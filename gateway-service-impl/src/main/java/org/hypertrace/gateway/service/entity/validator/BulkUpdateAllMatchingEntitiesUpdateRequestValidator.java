@@ -77,11 +77,6 @@ public class BulkUpdateAllMatchingEntitiesUpdateRequestValidator {
           String.format("Attribute %s does not exist", attributeId));
     }
 
-    if (!metadata.getCustom()) {
-      return Status.INVALID_ARGUMENT.withDescription(
-          String.format("Attribute %s is not a custom attribute", attributeId));
-    }
-
     if (!metadata.getSourcesList().contains(AttributeSource.EDS)) {
       return Status.INVALID_ARGUMENT.withDescription(
           "Only EDS attributes are supported for update right now");
