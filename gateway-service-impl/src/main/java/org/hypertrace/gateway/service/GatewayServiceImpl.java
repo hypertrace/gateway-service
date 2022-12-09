@@ -1,5 +1,7 @@
 package org.hypertrace.gateway.service;
 
+import static org.hypertrace.core.grpcutils.client.RequestContextClientCallCredsProviderFactory.getClientCallCredsProvider;
+
 import com.google.common.base.Preconditions;
 import com.google.common.collect.ImmutableMap;
 import com.google.protobuf.ServiceException;
@@ -13,7 +15,6 @@ import org.apache.commons.lang3.StringUtils;
 import org.hypertrace.core.attribute.service.client.AttributeServiceClient;
 import org.hypertrace.core.attribute.service.client.config.AttributeServiceClientConfig;
 import org.hypertrace.core.grpcutils.client.GrpcChannelRegistry;
-import org.hypertrace.core.grpcutils.client.RequestContextClientCallCredsProviderFactory;
 import org.hypertrace.core.query.service.api.QueryServiceGrpc;
 import org.hypertrace.core.query.service.client.QueryServiceConfig;
 import org.hypertrace.core.serviceframework.metrics.PlatformMetricsRegistry;
@@ -96,9 +97,7 @@ public class GatewayServiceImpl extends GatewayServiceGrpc.GatewayServiceImplBas
             QueryServiceGrpc.newBlockingStub(
                     grpcChannelRegistry.forPlaintextAddress(
                         qsConfig.getQueryServiceHost(), qsConfig.getQueryServicePort()))
-                .withCallCredentials(
-                    RequestContextClientCallCredsProviderFactory.getClientCallCredsProvider()
-                        .get()),
+                .withCallCredentials(getClientCallCredsProvider().get()),
             Duration.ofMillis(untypedQsConfig.getInt(REQUEST_TIMEOUT_CONFIG_KEY)));
     ExecutorService queryExecutor =
         QueryExecutorServiceFactory.buildExecutorService(QueryExecutorConfig.from(appConfig));
@@ -106,7 +105,8 @@ public class GatewayServiceImpl extends GatewayServiceGrpc.GatewayServiceImplBas
     EntityServiceClientConfig esConfig = EntityServiceClientConfig.from(appConfig);
     final EntityQueryServiceBlockingStub eqsStub =
         EntityQueryServiceGrpc.newBlockingStub(
-            grpcChannelRegistry.forPlaintextAddress(esConfig.getHost(), esConfig.getPort()));
+                grpcChannelRegistry.forPlaintextAddress(esConfig.getHost(), esConfig.getPort()))
+            .withCallCredentials(getClientCallCredsProvider().get());
     EntityQueryServiceClient eqsClient =
         new EntityQueryServiceClient(
             grpcChannelRegistry.forPlaintextAddress(esConfig.getHost(), esConfig.getPort()));
