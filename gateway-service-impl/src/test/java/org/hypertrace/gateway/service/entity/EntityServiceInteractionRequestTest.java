@@ -823,6 +823,7 @@ public class EntityServiceInteractionRequestTest extends AbstractGatewayServiceT
         new EntityService(
             queryServiceClient,
             entityQueryServiceClient,
+            null,
             attributeMetadataProvider,
             entityIdColumnsConfigs,
             scopeFilterConfigs,
@@ -901,6 +902,7 @@ public class EntityServiceInteractionRequestTest extends AbstractGatewayServiceT
         new EntityService(
             queryServiceClient,
             entityQueryServiceClient,
+            null,
             attributeMetadataProvider,
             entityIdColumnsConfigs,
             scopeFilterConfigs,

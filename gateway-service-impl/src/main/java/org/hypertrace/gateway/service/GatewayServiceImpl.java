@@ -18,6 +18,8 @@ import org.hypertrace.core.query.service.api.QueryServiceGrpc;
 import org.hypertrace.core.query.service.client.QueryServiceConfig;
 import org.hypertrace.core.serviceframework.metrics.PlatformMetricsRegistry;
 import org.hypertrace.entity.query.service.client.EntityQueryServiceClient;
+import org.hypertrace.entity.query.service.v1.EntityQueryServiceGrpc;
+import org.hypertrace.entity.query.service.v1.EntityQueryServiceGrpc.EntityQueryServiceBlockingStub;
 import org.hypertrace.entity.service.client.config.EntityServiceClientConfig;
 import org.hypertrace.gateway.service.baseline.BaselineService;
 import org.hypertrace.gateway.service.baseline.BaselineServiceImpl;
@@ -38,6 +40,8 @@ import org.hypertrace.gateway.service.span.SpanService;
 import org.hypertrace.gateway.service.trace.TracesService;
 import org.hypertrace.gateway.service.v1.baseline.BaselineEntitiesRequest;
 import org.hypertrace.gateway.service.v1.baseline.BaselineEntitiesResponse;
+import org.hypertrace.gateway.service.v1.entity.BulkUpdateAllMatchingEntitiesRequest;
+import org.hypertrace.gateway.service.v1.entity.BulkUpdateAllMatchingEntitiesResponse;
 import org.hypertrace.gateway.service.v1.entity.BulkUpdateEntitiesRequest;
 import org.hypertrace.gateway.service.v1.entity.BulkUpdateEntitiesResponse;
 import org.hypertrace.gateway.service.v1.entity.EntitiesResponse;
@@ -100,6 +104,9 @@ public class GatewayServiceImpl extends GatewayServiceGrpc.GatewayServiceImplBas
         QueryExecutorServiceFactory.buildExecutorService(QueryExecutorConfig.from(appConfig));
 
     EntityServiceClientConfig esConfig = EntityServiceClientConfig.from(appConfig);
+    final EntityQueryServiceBlockingStub eqsStub =
+        EntityQueryServiceGrpc.newBlockingStub(
+            grpcChannelRegistry.forPlaintextAddress(esConfig.getHost(), esConfig.getPort()));
     EntityQueryServiceClient eqsClient =
         new EntityQueryServiceClient(
             grpcChannelRegistry.forPlaintextAddress(esConfig.getHost(), esConfig.getPort()));
@@ -115,6 +122,7 @@ public class GatewayServiceImpl extends GatewayServiceGrpc.GatewayServiceImplBas
         new EntityService(
             queryServiceClient,
             eqsClient,
+            eqsStub,
             attributeMetadataProvider,
             entityIdColumnsConfigs,
             scopeFilterConfigs,
@@ -302,6 +310,35 @@ public class GatewayServiceImpl extends GatewayServiceGrpc.GatewayServiceImplBas
 
       BulkUpdateEntitiesResponse response =
           entityService.bulkUpdateEntities(
+              new RequestContext(
+                  org.hypertrace.core.grpcutils.context.RequestContext.CURRENT.get()),
+              request);
+
+      LOG.debug("Received response: {}", response);
+      responseObserver.onNext(response);
+      responseObserver.onCompleted();
+      requestStatusSuccessCounter.increment();
+    } catch (Exception e) {
+      LOG.error("Error while handling bulkUpdateEntities: {}.", request, e);
+      requestStatusErrorCounter.increment();
+      responseObserver.onError(e);
+    }
+  }
+
+  @Override
+  public void bulkUpdateAllMatchingEntities(
+      final BulkUpdateAllMatchingEntitiesRequest request,
+      final StreamObserver<BulkUpdateAllMatchingEntitiesResponse> responseObserver) {
+    LOG.debug("Received request: {}", request);
+
+    try {
+      org.hypertrace.core.grpcutils.context.RequestContext.CURRENT
+          .get()
+          .getTenantId()
+          .orElseThrow(() -> new ServiceException("Tenant id is missing in the request."));
+
+      final BulkUpdateAllMatchingEntitiesResponse response =
+          entityService.bulkUpdateAllMatchingEntities(
               new RequestContext(
                   org.hypertrace.core.grpcutils.context.RequestContext.CURRENT.get()),
               request);
