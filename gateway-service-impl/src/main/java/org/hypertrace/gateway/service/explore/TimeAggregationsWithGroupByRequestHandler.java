@@ -211,7 +211,9 @@ public class TimeAggregationsWithGroupByRequestHandler implements IRequestHandle
         case UNRECOGNIZED:
         case UNSET:
           LOG.error(
-              "Unable to extract value for column {} and value {}", groupByResultName, groupByValue);
+              "Unable to extract value for column {} and value {}",
+              groupByResultName,
+              groupByValue);
       }
     }
 
