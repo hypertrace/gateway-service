@@ -1,8 +1,13 @@
 package org.hypertrace.gateway.service.explore;
 
+import com.google.common.annotations.VisibleForTesting;
+import com.google.common.collect.Streams;
+import java.util.Map;
 import java.util.Optional;
+import java.util.stream.Collectors;
 import org.hypertrace.core.attribute.service.v1.AttributeMetadata;
 import org.hypertrace.gateway.service.common.AttributeMetadataProvider;
+import org.hypertrace.gateway.service.common.util.AttributeMetadataUtil;
 import org.hypertrace.gateway.service.common.util.ExpressionReader;
 import org.hypertrace.gateway.service.common.util.QueryServiceClient;
 import org.hypertrace.gateway.service.v1.common.Expression;
@@ -10,6 +15,7 @@ import org.hypertrace.gateway.service.v1.common.Filter;
 import org.hypertrace.gateway.service.v1.common.LiteralConstant;
 import org.hypertrace.gateway.service.v1.common.Operator;
 import org.hypertrace.gateway.service.v1.common.Row;
+import org.hypertrace.gateway.service.v1.common.TimeAggregation;
 import org.hypertrace.gateway.service.v1.common.Value;
 import org.hypertrace.gateway.service.v1.common.ValueType;
 import org.hypertrace.gateway.service.v1.explore.ExploreRequest;
@@ -31,6 +37,16 @@ public class TimeAggregationsWithGroupByRequestHandler implements IRequestHandle
     this.normalRequestHandler = new RequestHandler(queryServiceClient, attributeMetadataProvider);
     this.timeAggregationsRequestHandler =
         new TimeAggregationsRequestHandler(queryServiceClient, attributeMetadataProvider);
+  }
+
+  @VisibleForTesting
+  TimeAggregationsWithGroupByRequestHandler(
+      AttributeMetadataProvider attributeMetadataProvider,
+      RequestHandler normalRequestHandler,
+      TimeAggregationsRequestHandler timeAggregationsRequestHandler) {
+    this.attributeMetadataProvider = attributeMetadataProvider;
+    this.normalRequestHandler = normalRequestHandler;
+    this.timeAggregationsRequestHandler = timeAggregationsRequestHandler;
   }
 
   @Override
@@ -137,16 +153,21 @@ public class TimeAggregationsWithGroupByRequestHandler implements IRequestHandle
       ExploreRequestContext originalRequestContext,
       Expression groupBy,
       ExploreResponse.Builder exploreResponse) {
-    String groupByResultName = ExpressionReader.getSelectionResultName(groupBy).orElseThrow();
-    Optional<AttributeMetadata> maybeGroupByAttributeMetadata =
-        attributeMetadataProvider.getAttributeMetadata(
-            originalRequestContext, originalRequestContext.getContext(), groupByResultName);
+    String groupByResultName =
+        ExpressionReader.getAttributeIdFromAttributeSelection(groupBy).orElseThrow();
+    Map<String, AttributeMetadata> attributeMetadataMap =
+        attributeMetadataProvider.getAttributesMetadata(
+            originalRequestContext, originalRequestContext.getContext());
+    Map<String, AttributeMetadata> resultKeyToAttributeMetadataMap =
+        remapAttributeMetadataByResultName(
+            originalRequestContext.getExploreRequest(), attributeMetadataMap);
 
-    if (maybeGroupByAttributeMetadata.isEmpty()) {
+    if (!resultKeyToAttributeMetadataMap.containsKey(groupByResultName)) {
       return Optional.empty();
     }
 
-    AttributeMetadata groupByAttributeMetadata = maybeGroupByAttributeMetadata.get();
+    AttributeMetadata groupByAttributeMetadata =
+        resultKeyToAttributeMetadataMap.get(groupByResultName);
     // RHS value of in clause filter should always be an array to apply IN filter clause on groupBy
     // expression
     Value.Builder valueBuilder = Value.newBuilder();
@@ -232,5 +253,19 @@ public class TimeAggregationsWithGroupByRequestHandler implements IRequestHandle
         .setRhs(
             Expression.newBuilder()
                 .setLiteral(LiteralConstant.newBuilder().setValue(inClauseValues)));
+  }
+
+  private Map<String, AttributeMetadata> remapAttributeMetadataByResultName(
+      ExploreRequest request, Map<String, AttributeMetadata> attributeMetadataByIdMap) {
+    return AttributeMetadataUtil.remapAttributeMetadataByResultKey(
+        Streams.concat(
+                request.getSelectionList().stream(),
+                request.getTimeAggregationList().stream().map(TimeAggregation::getAggregation),
+                // Add groupBy to Selection list.
+                // The expectation from the Gateway service client is that they do not add the group
+                // by expressions to the selection expressions in the request
+                request.getGroupByList().stream())
+            .collect(Collectors.toUnmodifiableList()),
+        attributeMetadataByIdMap);
   }
 }
