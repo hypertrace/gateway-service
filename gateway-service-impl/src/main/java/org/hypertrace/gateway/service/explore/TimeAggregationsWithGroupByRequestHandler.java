@@ -137,12 +137,12 @@ public class TimeAggregationsWithGroupByRequestHandler implements IRequestHandle
         .getGroupByList()
         .forEach(
             groupBy -> {
-              Optional<Value> maybeInClauseValues =
+              Optional<Value> maybeInClauseValue =
                   getInClauseValues(originalRequestContext, groupBy, groupByResponse);
-              maybeInClauseValues.ifPresent(
-                  inClauseValues ->
+              maybeInClauseValue.ifPresent(
+                  inClauseValue ->
                       filterBuilder.addChildFilter(
-                          createInClauseChildFilter(groupBy, inClauseValues)));
+                          createInClauseChildFilter(groupBy, inClauseValue)));
             });
 
     return filterBuilder;
@@ -188,13 +188,13 @@ public class TimeAggregationsWithGroupByRequestHandler implements IRequestHandle
   }
 
   private Filter.Builder createInClauseChildFilter(
-      Expression groupBySelectionExpression, Value inClauseValues) {
+      Expression groupBySelectionExpression, Value inClauseValue) {
     return Filter.newBuilder()
         .setLhs(groupBySelectionExpression)
         .setOperator(Operator.IN)
         .setRhs(
             Expression.newBuilder()
-                .setLiteral(LiteralConstant.newBuilder().setValue(inClauseValues)));
+                .setLiteral(LiteralConstant.newBuilder().setValue(inClauseValue)));
   }
 
   private void buildInClauseFilterValue(Value value, Value.Builder valueBuilder) {
