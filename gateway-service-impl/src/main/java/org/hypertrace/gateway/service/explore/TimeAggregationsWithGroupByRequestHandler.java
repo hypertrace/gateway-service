@@ -183,40 +183,7 @@ public class TimeAggregationsWithGroupByRequestHandler implements IRequestHandle
 
     for (Row row : exploreResponse.getRowList()) {
       Value groupByValue = row.getColumnsMap().get(groupByResultName);
-      switch (groupByValue.getValueType()) {
-        case STRING:
-          valueBuilder.addStringArray(groupByValue.getString());
-          continue;
-        case STRING_ARRAY:
-          valueBuilder.addAllStringArray(groupByValue.getStringArrayList());
-          continue;
-        case LONG:
-          valueBuilder.addLongArray(groupByValue.getLong());
-          continue;
-        case LONG_ARRAY:
-          valueBuilder.addAllLongArray(groupByValue.getLongArrayList());
-          continue;
-        case BOOL:
-          valueBuilder.addBooleanArray(groupByValue.getBoolean());
-          continue;
-        case BOOLEAN_ARRAY:
-          valueBuilder.addAllBooleanArray(groupByValue.getBooleanArrayList());
-          continue;
-        case DOUBLE:
-          valueBuilder.addDoubleArray(groupByValue.getDouble());
-          continue;
-        case DOUBLE_ARRAY:
-          valueBuilder.addAllDoubleArray(groupByValue.getDoubleArrayList());
-          continue;
-        case TIMESTAMP:
-        case STRING_MAP:
-        case UNRECOGNIZED:
-        case UNSET:
-          LOG.error(
-              "Unable to extract value for column {} and value {}",
-              groupByResultName,
-              groupByValue);
-      }
+      buildInClauseFilterValue(groupByValue, valueBuilder);
     }
 
     return Optional.of(valueBuilder.build());
@@ -230,6 +197,40 @@ public class TimeAggregationsWithGroupByRequestHandler implements IRequestHandle
         .setRhs(
             Expression.newBuilder()
                 .setLiteral(LiteralConstant.newBuilder().setValue(inClauseValues)));
+  }
+
+  private void buildInClauseFilterValue(Value value, Value.Builder valueBuilder) {
+    switch (value.getValueType()) {
+      case STRING:
+        valueBuilder.addStringArray(value.getString());
+        break;
+      case STRING_ARRAY:
+        valueBuilder.addAllStringArray(value.getStringArrayList());
+        break;
+      case LONG:
+        valueBuilder.addLongArray(value.getLong());
+        break;
+      case LONG_ARRAY:
+        valueBuilder.addAllLongArray(value.getLongArrayList());
+        break;
+      case BOOL:
+        valueBuilder.addBooleanArray(value.getBoolean());
+        break;
+      case BOOLEAN_ARRAY:
+        valueBuilder.addAllBooleanArray(value.getBooleanArrayList());
+        break;
+      case DOUBLE:
+        valueBuilder.addDoubleArray(value.getDouble());
+        break;
+      case DOUBLE_ARRAY:
+        valueBuilder.addAllDoubleArray(value.getDoubleArrayList());
+        break;
+      case TIMESTAMP:
+      case STRING_MAP:
+      case UNRECOGNIZED:
+      case UNSET:
+        LOG.error("Unable to extract value from {}", value);
+    }
   }
 
   private Optional<ValueType> getInClauseFilterValueType(AttributeMetadata attributeMetadata) {
