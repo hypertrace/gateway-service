@@ -167,8 +167,6 @@ public class TimeAggregationsWithGroupByRequestHandler implements IRequestHandle
 
     AttributeMetadata groupByAttributeMetadata =
         resultKeyToAttributeMetadataMap.get(groupByResultName);
-    // RHS value of in clause filter should always be an array to apply IN filter clause on groupBy
-    // expression
     Optional<ValueType> maybeValueType = getInClauseFilterValueType(groupByAttributeMetadata);
     if (maybeValueType.isEmpty()) {
       LOG.error(
