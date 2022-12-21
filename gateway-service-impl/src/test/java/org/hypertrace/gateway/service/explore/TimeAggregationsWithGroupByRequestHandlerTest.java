@@ -28,21 +28,16 @@ import org.hypertrace.gateway.service.v1.common.Value;
 import org.hypertrace.gateway.service.v1.common.ValueType;
 import org.hypertrace.gateway.service.v1.explore.ExploreRequest;
 import org.hypertrace.gateway.service.v1.explore.ExploreResponse;
-import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.Mock;
+import org.mockito.junit.jupiter.MockitoExtension;
 
+@ExtendWith(MockitoExtension.class)
 public class TimeAggregationsWithGroupByRequestHandlerTest {
   @Mock private AttributeMetadataProvider attributeMetadataProvider;
   @Mock private RequestHandler normalRequestHandler;
   @Mock private TimeAggregationsRequestHandler timeAggregationsRequestHandler;
-
-  @BeforeEach
-  public void setup() {
-    attributeMetadataProvider = mock(AttributeMetadataProvider.class);
-    normalRequestHandler = mock(RequestHandler.class);
-    timeAggregationsRequestHandler = mock(TimeAggregationsRequestHandler.class);
-  }
 
   @Test
   public void testTimeAggregationsWithGroupBy_multiValuedField() {
@@ -111,6 +106,15 @@ public class TimeAggregationsWithGroupByRequestHandlerTest {
                             .setValueType(ValueType.STRING_ARRAY)
                             .addAllStringArray(List.of("label1", "label2", "label3"))
                             .build())
+                    .build())
+            .addRow(
+                Row.newBuilder()
+                    .putColumns(
+                        "API.labels",
+                        Value.newBuilder()
+                            .setValueType(ValueType.STRING_ARRAY)
+                            .addAllStringArray(List.of("label4", "label5", "label6"))
+                            .build())
                     .build());
     when(normalRequestHandler.handleRequest(any(ExploreRequestContext.class), eq(groupByRequest)))
         .thenReturn(groupByExploreResponseBuilder);
@@ -151,6 +155,9 @@ public class TimeAggregationsWithGroupByRequestHandlerTest {
                                                     .addStringArray("label1")
                                                     .addStringArray("label2")
                                                     .addStringArray("label3")
+                                                    .addStringArray("label4")
+                                                    .addStringArray("label5")
+                                                    .addStringArray("label6")
                                                     .build())
                                             .build())
                                     .build())

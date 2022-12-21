@@ -1,6 +1,5 @@
 package org.hypertrace.gateway.service.explore;
 
-import com.google.common.annotations.VisibleForTesting;
 import com.google.common.collect.Streams;
 import java.util.Map;
 import java.util.Optional;
@@ -24,6 +23,7 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 public class TimeAggregationsWithGroupByRequestHandler implements IRequestHandler {
+
   private static final Logger LOG =
       LoggerFactory.getLogger(TimeAggregationsWithGroupByRequestHandler.class);
 
@@ -39,7 +39,6 @@ public class TimeAggregationsWithGroupByRequestHandler implements IRequestHandle
         new TimeAggregationsRequestHandler(queryServiceClient, attributeMetadataProvider);
   }
 
-  @VisibleForTesting
   TimeAggregationsWithGroupByRequestHandler(
       AttributeMetadataProvider attributeMetadataProvider,
       RequestHandler normalRequestHandler,
@@ -170,35 +169,17 @@ public class TimeAggregationsWithGroupByRequestHandler implements IRequestHandle
         resultKeyToAttributeMetadataMap.get(groupByResultName);
     // RHS value of in clause filter should always be an array to apply IN filter clause on groupBy
     // expression
-    Value.Builder valueBuilder = Value.newBuilder();
-    switch (groupByAttributeMetadata.getValueKind()) {
-      case TYPE_STRING:
-      case TYPE_STRING_ARRAY:
-        valueBuilder.setValueType(ValueType.STRING_ARRAY);
-        break;
-      case TYPE_INT64:
-      case TYPE_INT64_ARRAY:
-        valueBuilder.setValueType(ValueType.LONG_ARRAY);
-        break;
-      case TYPE_DOUBLE:
-      case TYPE_DOUBLE_ARRAY:
-        valueBuilder.setValueType(ValueType.DOUBLE_ARRAY);
-        break;
-      case TYPE_BOOL:
-      case TYPE_BOOL_ARRAY:
-        valueBuilder.setValueType(ValueType.BOOLEAN_ARRAY);
-        break;
-      case TYPE_STRING_MAP:
-      case TYPE_TIMESTAMP:
-      case TYPE_BYTES:
-      case UNRECOGNIZED:
-      case KIND_UNDEFINED:
-        LOG.error(
-            "Group by isn't supported for attribute metadata {} of expression {}",
-            groupByAttributeMetadata,
-            groupBy);
-        break;
+    Optional<ValueType> maybeValueType = getInClauseFilterValueType(groupByAttributeMetadata);
+    if (maybeValueType.isEmpty()) {
+      LOG.error(
+          "Group by isn't supported for attribute metadata {} of expression {}",
+          groupByAttributeMetadata,
+          groupBy);
+      return Optional.empty();
     }
+
+    ValueType valueType = maybeValueType.get();
+    Value.Builder valueBuilder = Value.newBuilder().setValueType(valueType);
 
     for (Row row : exploreResponse.getRowList()) {
       Value groupByValue = row.getColumnsMap().get(groupByResultName);
@@ -238,10 +219,6 @@ public class TimeAggregationsWithGroupByRequestHandler implements IRequestHandle
       }
     }
 
-    if (valueBuilder.getValueType() == null) {
-      return Optional.empty();
-    }
-
     return Optional.of(valueBuilder.build());
   }
 
@@ -253,6 +230,32 @@ public class TimeAggregationsWithGroupByRequestHandler implements IRequestHandle
         .setRhs(
             Expression.newBuilder()
                 .setLiteral(LiteralConstant.newBuilder().setValue(inClauseValues)));
+  }
+
+  private Optional<ValueType> getInClauseFilterValueType(AttributeMetadata attributeMetadata) {
+    // RHS value of in clause filter should always be an array to apply IN filter clause on groupBy
+    // expression
+    switch (attributeMetadata.getValueKind()) {
+      case TYPE_STRING:
+      case TYPE_STRING_ARRAY:
+        return Optional.of(ValueType.STRING_ARRAY);
+      case TYPE_INT64:
+      case TYPE_INT64_ARRAY:
+        return Optional.of(ValueType.LONG_ARRAY);
+      case TYPE_DOUBLE:
+      case TYPE_DOUBLE_ARRAY:
+        return Optional.of(ValueType.DOUBLE_ARRAY);
+      case TYPE_BOOL:
+      case TYPE_BOOL_ARRAY:
+        return Optional.of(ValueType.BOOLEAN_ARRAY);
+      case TYPE_STRING_MAP:
+      case TYPE_TIMESTAMP:
+      case TYPE_BYTES:
+      case UNRECOGNIZED:
+      case KIND_UNDEFINED:
+      default:
+        return Optional.empty();
+    }
   }
 
   private Map<String, AttributeMetadata> remapAttributeMetadataByResultName(
