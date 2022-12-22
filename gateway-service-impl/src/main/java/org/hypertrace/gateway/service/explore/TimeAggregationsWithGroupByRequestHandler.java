@@ -152,8 +152,7 @@ public class TimeAggregationsWithGroupByRequestHandler implements IRequestHandle
       ExploreRequestContext originalRequestContext,
       Expression groupBy,
       ExploreResponse.Builder exploreResponse) {
-    String groupByResultName =
-        ExpressionReader.getSelectionResultName(groupBy).orElseThrow();
+    String groupByResultName = ExpressionReader.getSelectionResultName(groupBy).orElseThrow();
     Map<String, AttributeMetadata> attributeMetadataMap =
         attributeMetadataProvider.getAttributesMetadata(
             originalRequestContext, originalRequestContext.getContext());
