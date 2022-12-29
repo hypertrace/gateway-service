@@ -30,6 +30,7 @@ import java.util.Arrays;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
+import java.util.UUID;
 import java.util.concurrent.ExecutorService;
 import org.hypertrace.core.attribute.service.v1.AttributeKind;
 import org.hypertrace.core.attribute.service.v1.AttributeMetadata;
@@ -50,6 +51,8 @@ import org.hypertrace.entity.query.service.v1.AttributeUpdateOperation.Attribute
 import org.hypertrace.entity.query.service.v1.BulkUpdateAllMatchingFilterRequest;
 import org.hypertrace.entity.query.service.v1.BulkUpdateAllMatchingFilterResponse;
 import org.hypertrace.entity.query.service.v1.EntityQueryServiceGrpc.EntityQueryServiceBlockingStub;
+import org.hypertrace.entity.query.service.v1.UpdateSummary;
+import org.hypertrace.entity.query.service.v1.UpdatedEntity;
 import org.hypertrace.gateway.service.AbstractGatewayServiceTest;
 import org.hypertrace.gateway.service.common.AttributeMetadataProvider;
 import org.hypertrace.gateway.service.common.QueryServiceRequestAndResponseUtils;
@@ -72,6 +75,7 @@ import org.hypertrace.gateway.service.v1.entity.BulkUpdateAllMatchingEntitiesRes
 import org.hypertrace.gateway.service.v1.entity.EntitiesRequest;
 import org.hypertrace.gateway.service.v1.entity.EntitiesResponse;
 import org.hypertrace.gateway.service.v1.entity.Entity;
+import org.hypertrace.gateway.service.v1.entity.EntityUpdateSummary;
 import org.hypertrace.gateway.service.v1.entity.Update;
 import org.hypertrace.gateway.service.v1.entity.UpdateOperation;
 import org.junit.jupiter.api.AfterEach;
@@ -508,8 +512,15 @@ public class EntityServiceTest extends AbstractGatewayServiceTest {
                                             .setValueType(STRING)
                                             .setString("GET")))))
             .build();
+    final String updatedId = UUID.randomUUID().toString();
     final BulkUpdateAllMatchingEntitiesResponse expectedResult =
-        BulkUpdateAllMatchingEntitiesResponse.newBuilder().build();
+        BulkUpdateAllMatchingEntitiesResponse.newBuilder()
+            .addSummaries(
+                EntityUpdateSummary.newBuilder()
+                    .addUpdatedEntities(
+                        org.hypertrace.gateway.service.v1.entity.UpdatedEntity.newBuilder()
+                            .setId(updatedId)))
+            .build();
 
     final BulkUpdateAllMatchingFilterRequest eqsRequest =
         BulkUpdateAllMatchingFilterRequest.newBuilder()
@@ -553,7 +564,11 @@ public class EntityServiceTest extends AbstractGatewayServiceTest {
                                             .setString("GET")))))
             .build();
     final BulkUpdateAllMatchingFilterResponse eqsResponse =
-        BulkUpdateAllMatchingFilterResponse.newBuilder().build();
+        BulkUpdateAllMatchingFilterResponse.newBuilder()
+            .addSummaries(
+                UpdateSummary.newBuilder()
+                    .addUpdatedEntities(UpdatedEntity.newBuilder().setId(updatedId)))
+            .build();
 
     when(entityQueryStub.bulkUpdateAllMatchingFilter(eqsRequest)).thenReturn(eqsResponse);
 

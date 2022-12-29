@@ -146,4 +146,13 @@ message UpdateOperation {
 }
 
 message BulkUpdateAllMatchingEntitiesResponse {
+  repeated EntityUpdateSummary summaries = 1;
+}
+
+message EntityUpdateSummary {
+  repeated UpdatedEntity updated_entities = 1;
+}
+
+message UpdatedEntity {
+  string id = 1;
 }
