@@ -3,11 +3,12 @@ package org.hypertrace.gateway.service.explore;
 import static org.mockito.Mockito.mock;
 
 import java.util.List;
-import org.hypertrace.entity.query.service.client.EntityQueryServiceClient;
 import org.hypertrace.gateway.service.common.AttributeMetadataProvider;
+import org.hypertrace.gateway.service.common.datafetcher.QueryServiceEntityFetcher;
 import org.hypertrace.gateway.service.common.util.QueryExpressionUtil;
 import org.hypertrace.gateway.service.common.util.QueryServiceClient;
 import org.hypertrace.gateway.service.entity.config.EntityIdColumnsConfigs;
+import org.hypertrace.gateway.service.explore.entity.EntityServiceEntityFetcher;
 import org.hypertrace.gateway.service.v1.common.Expression;
 import org.hypertrace.gateway.service.v1.common.FunctionExpression;
 import org.hypertrace.gateway.service.v1.common.FunctionType;
@@ -67,9 +68,10 @@ public class TimeAggregationsRequestHandlerTest {
     TimeAggregationsRequestHandler requestHandler =
         new TimeAggregationsRequestHandler(
             mock(QueryServiceClient.class),
-            mock(EntityQueryServiceClient.class),
             mock(AttributeMetadataProvider.class),
-            mock(EntityIdColumnsConfigs.class));
+            mock(EntityIdColumnsConfigs.class),
+            mock(QueryServiceEntityFetcher.class),
+            mock(EntityServiceEntityFetcher.class));
     List<OrderByExpression> orderByExpressions =
         requestHandler.getRequestOrderByExpressions(exploreRequest);
 
@@ -125,9 +127,10 @@ public class TimeAggregationsRequestHandlerTest {
     TimeAggregationsRequestHandler requestHandler =
         new TimeAggregationsRequestHandler(
             mock(QueryServiceClient.class),
-            mock(EntityQueryServiceClient.class),
             mock(AttributeMetadataProvider.class),
-            mock(EntityIdColumnsConfigs.class));
+            mock(EntityIdColumnsConfigs.class),
+            mock(QueryServiceEntityFetcher.class),
+            mock(EntityServiceEntityFetcher.class));
     List<OrderByExpression> orderByExpressions =
         requestHandler.getRequestOrderByExpressions(exploreRequest);
 

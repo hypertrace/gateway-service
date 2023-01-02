@@ -1,8 +1,6 @@
 package org.hypertrace.gateway.service.explore.entity;
 
-import com.google.common.annotations.VisibleForTesting;
 import java.util.Set;
-import org.hypertrace.entity.query.service.client.EntityQueryServiceClient;
 import org.hypertrace.gateway.service.common.AttributeMetadataProvider;
 import org.hypertrace.gateway.service.common.datafetcher.QueryServiceEntityFetcher;
 import org.hypertrace.gateway.service.common.util.QueryServiceClient;
@@ -29,47 +27,20 @@ import org.hypertrace.gateway.service.v1.explore.ExploreResponse;
  * </ul>
  */
 public class EntityRequestHandler extends RequestHandler {
-  private final AttributeMetadataProvider attributeMetadataProvider;
-
-  private final QueryServiceEntityFetcher queryServiceEntityFetcher;
   private final EntityServiceEntityFetcher entityServiceEntityFetcher;
 
   public EntityRequestHandler(
       AttributeMetadataProvider attributeMetadataProvider,
       EntityIdColumnsConfigs entityIdColumnsConfigs,
       QueryServiceClient queryServiceClient,
-      EntityQueryServiceClient entityQueryServiceClient) {
-    super(
-        queryServiceClient,
-        entityQueryServiceClient,
-        attributeMetadataProvider,
-        entityIdColumnsConfigs);
-
-    this.attributeMetadataProvider = attributeMetadataProvider;
-    this.queryServiceEntityFetcher =
-        new QueryServiceEntityFetcher(
-            queryServiceClient, attributeMetadataProvider, entityIdColumnsConfigs);
-    this.entityServiceEntityFetcher =
-        new EntityServiceEntityFetcher(
-            attributeMetadataProvider, entityIdColumnsConfigs, entityQueryServiceClient);
-  }
-
-  @VisibleForTesting
-  public EntityRequestHandler(
-      AttributeMetadataProvider attributeMetadataProvider,
-      QueryServiceClient queryServiceClient,
-      EntityQueryServiceClient entityQueryServiceClient,
       QueryServiceEntityFetcher queryServiceEntityFetcher,
-      EntityServiceEntityFetcher entityServiceEntityFetcher,
-      EntityIdColumnsConfigs entityIdColumnsConfigs) {
+      EntityServiceEntityFetcher entityServiceEntityFetcher) {
     super(
         queryServiceClient,
-        entityQueryServiceClient,
         attributeMetadataProvider,
-        entityIdColumnsConfigs);
-
-    this.attributeMetadataProvider = attributeMetadataProvider;
-    this.queryServiceEntityFetcher = queryServiceEntityFetcher;
+        entityIdColumnsConfigs,
+        queryServiceEntityFetcher,
+        entityServiceEntityFetcher);
     this.entityServiceEntityFetcher = entityServiceEntityFetcher;
   }
 

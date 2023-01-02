@@ -21,7 +21,6 @@ import org.hypertrace.core.query.service.api.ResultSetChunk;
 import org.hypertrace.core.query.service.api.ResultSetMetadata;
 import org.hypertrace.core.query.service.api.Row;
 import org.hypertrace.core.query.service.api.Value;
-import org.hypertrace.entity.query.service.client.EntityQueryServiceClient;
 import org.hypertrace.gateway.service.common.AttributeMetadataProvider;
 import org.hypertrace.gateway.service.common.converters.QueryAndGatewayDtoConverter;
 import org.hypertrace.gateway.service.common.datafetcher.EntityFetcherResponse;
@@ -59,19 +58,16 @@ public class RequestHandler implements RequestHandlerWithSorting {
 
   public RequestHandler(
       QueryServiceClient queryServiceClient,
-      EntityQueryServiceClient entityQueryServiceClient,
       AttributeMetadataProvider attributeMetadataProvider,
-      EntityIdColumnsConfigs entityIdColumnsConfigs) {
+      EntityIdColumnsConfigs entityIdColumnsConfigs,
+      QueryServiceEntityFetcher queryServiceEntityFetcher,
+      EntityServiceEntityFetcher entityServiceEntityFetcher) {
     this.queryServiceClient = queryServiceClient;
     this.attributeMetadataProvider = attributeMetadataProvider;
     this.theRestGroupRequestHandler = new TheRestGroupRequestHandler(this);
     this.entityIdColumnsConfigs = entityIdColumnsConfigs;
-    this.queryServiceEntityFetcher =
-        new QueryServiceEntityFetcher(
-            queryServiceClient, attributeMetadataProvider, entityIdColumnsConfigs);
-    this.entityServiceEntityFetcher =
-        new EntityServiceEntityFetcher(
-            attributeMetadataProvider, entityIdColumnsConfigs, entityQueryServiceClient);
+    this.queryServiceEntityFetcher = queryServiceEntityFetcher;
+    this.entityServiceEntityFetcher = entityServiceEntityFetcher;
   }
 
   @Override

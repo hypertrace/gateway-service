@@ -7,17 +7,13 @@ import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.when;
 
-import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
+import java.util.Set;
 import org.hypertrace.core.attribute.service.v1.AttributeKind;
 import org.hypertrace.core.attribute.service.v1.AttributeMetadata;
-import org.hypertrace.entity.query.service.client.EntityQueryServiceClient;
-import org.hypertrace.entity.query.service.v1.ColumnMetadata;
-import org.hypertrace.entity.query.service.v1.ResultSetChunk;
-import org.hypertrace.entity.query.service.v1.ResultSetMetadata;
-import org.hypertrace.entity.query.service.v1.Row;
+import org.hypertrace.core.attribute.service.v1.AttributeSource;
 import org.hypertrace.gateway.service.common.AttributeMetadataProvider;
 import org.hypertrace.gateway.service.common.datafetcher.EntityFetcherResponse;
 import org.hypertrace.gateway.service.common.datafetcher.QueryServiceEntityFetcher;
@@ -40,6 +36,7 @@ import org.hypertrace.gateway.service.v1.entity.Entity;
 import org.hypertrace.gateway.service.v1.explore.ExploreRequest;
 import org.hypertrace.gateway.service.v1.explore.ExploreResponse;
 import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
 import org.mockito.Mock;
 
 public class EntityRequestHandlerTest {
@@ -58,14 +55,13 @@ public class EntityRequestHandlerTest {
     this.entityRequestHandler =
         new EntityRequestHandler(
             attributeMetadataProvider,
+            mock(EntityIdColumnsConfigs.class),
             mock(QueryServiceClient.class),
-            mock(EntityQueryServiceClient.class),
             queryServiceEntityFetcher,
-            entityServiceEntityFetcher,
-            mock(EntityIdColumnsConfigs.class));
+            entityServiceEntityFetcher);
   }
 
-  //  @Test
+  @Test
   void shouldBuildEntityResponse_multipleDataSources() {
     Expression aggregation = createFunctionExpression("API.external");
     ExploreRequest exploreRequest =
@@ -91,11 +87,19 @@ public class EntityRequestHandlerTest {
                 AttributeMetadata.newBuilder()
                     .setKey("API.type")
                     .setValueKind(AttributeKind.TYPE_STRING)
+                    .addSources(AttributeSource.EDS)
                     .build(),
                 "API.external",
                 AttributeMetadata.newBuilder()
                     .setKey("API.external")
                     .setValueKind(AttributeKind.TYPE_STRING)
+                    .addSources(AttributeSource.EDS)
+                    .build(),
+                "API.name",
+                AttributeMetadata.newBuilder()
+                    .setKey("API.name")
+                    .setValueKind(AttributeKind.TYPE_STRING)
+                    .addSources(AttributeSource.EDS)
                     .build()));
 
     EntitiesRequest entitiesRequest =
@@ -107,9 +111,9 @@ public class EntityRequestHandlerTest {
     when(queryServiceEntityFetcher.getEntities(
             any(EntitiesRequestContext.class), eq(entitiesRequest)))
         .thenReturn(mockEntityFetcherResponse());
-    //    when(entityServiceEntityFetcher.getResults(
-    //            exploreRequestContext, exploreRequest, Set.of("api1", "api2")))
-    //        .thenReturn(mockResults());
+    when(entityServiceEntityFetcher.getResults(
+            exploreRequestContext, exploreRequest, Set.of("api1", "api2")))
+        .thenReturn(mockResults());
 
     ExploreResponse exploreResponse =
         entityRequestHandler.handleRequest(exploreRequestContext, exploreRequest).build();
@@ -130,7 +134,7 @@ public class EntityRequestHandlerTest {
         exploreResponse.getRow(1).getColumnsMap());
   }
 
-  //  @Test
+  @Test
   void testHandleRequest_emptyEntityIds() {
     Expression aggregation = createFunctionExpression("API.external");
     ExploreRequest exploreRequest =
@@ -156,11 +160,19 @@ public class EntityRequestHandlerTest {
                 AttributeMetadata.newBuilder()
                     .setKey("API.type")
                     .setValueKind(AttributeKind.TYPE_STRING)
+                    .addSources(AttributeSource.EDS)
                     .build(),
                 "API.external",
                 AttributeMetadata.newBuilder()
                     .setKey("API.external")
                     .setValueKind(AttributeKind.TYPE_STRING)
+                    .addSources(AttributeSource.EDS)
+                    .build(),
+                "API.name",
+                AttributeMetadata.newBuilder()
+                    .setKey("API.name")
+                    .setValueKind(AttributeKind.TYPE_STRING)
+                    .addSources(AttributeSource.EDS)
                     .build()));
 
     EntitiesRequest entitiesRequest =
@@ -187,43 +199,36 @@ public class EntityRequestHandlerTest {
             Entity.newBuilder().setEntityType("API").setId("api2")));
   }
 
-  private Iterator<ResultSetChunk> mockResults() {
-    ResultSetChunk chunk =
-        ResultSetChunk.newBuilder()
-            .setResultSetMetadata(
-                ResultSetMetadata.newBuilder()
-                    .addColumnMetadata(
-                        ColumnMetadata.newBuilder().setColumnName("API.type").build())
-                    .addColumnMetadata(
-                        ColumnMetadata.newBuilder().setColumnName("COUNT_API.external_[]").build())
+  private List<org.hypertrace.gateway.service.v1.common.Row> mockResults() {
+    return List.of(
+        org.hypertrace.gateway.service.v1.common.Row.newBuilder()
+            .putColumns(
+                "API.type",
+                org.hypertrace.gateway.service.v1.common.Value.newBuilder()
+                    .setValueType(org.hypertrace.gateway.service.v1.common.ValueType.STRING)
+                    .setString("HTTP")
                     .build())
-            .addRow(
-                Row.newBuilder()
-                    .addColumn(
-                        org.hypertrace.entity.query.service.v1.Value.newBuilder()
-                            .setValueType(org.hypertrace.entity.query.service.v1.ValueType.STRING)
-                            .setString("HTTP")
-                            .build())
-                    .addColumn(
-                        org.hypertrace.entity.query.service.v1.Value.newBuilder()
-                            .setValueType(org.hypertrace.entity.query.service.v1.ValueType.LONG)
-                            .setLong(12))
+            .putColumns(
+                "COUNT_API.external_[]",
+                org.hypertrace.gateway.service.v1.common.Value.newBuilder()
+                    .setValueType(org.hypertrace.gateway.service.v1.common.ValueType.LONG)
+                    .setLong(12)
                     .build())
-            .addRow(
-                Row.newBuilder()
-                    .addColumn(
-                        org.hypertrace.entity.query.service.v1.Value.newBuilder()
-                            .setValueType(org.hypertrace.entity.query.service.v1.ValueType.STRING)
-                            .setString("GRPC")
-                            .build())
-                    .addColumn(
-                        org.hypertrace.entity.query.service.v1.Value.newBuilder()
-                            .setValueType(org.hypertrace.entity.query.service.v1.ValueType.LONG)
-                            .setLong(24))
+            .build(),
+        org.hypertrace.gateway.service.v1.common.Row.newBuilder()
+            .putColumns(
+                "API.type",
+                org.hypertrace.gateway.service.v1.common.Value.newBuilder()
+                    .setValueType(org.hypertrace.gateway.service.v1.common.ValueType.STRING)
+                    .setString("GRPC")
                     .build())
-            .build();
-
-    return List.of(chunk).iterator();
+            .putColumns(
+                "COUNT_API.external_[]",
+                org.hypertrace.gateway.service.v1.common.Value.newBuilder()
+                    .setValueType(org.hypertrace.gateway.service.v1.common.ValueType.LONG)
+                    .setLong(24)
+                    .build())
+            .build());
   }
 
   private Filter createEqFilter(String column, String value) {
