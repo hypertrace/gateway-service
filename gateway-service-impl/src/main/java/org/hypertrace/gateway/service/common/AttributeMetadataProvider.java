@@ -26,7 +26,7 @@ public class AttributeMetadataProvider {
   private static final Logger LOG = LoggerFactory.getLogger(AttributeMetadataProvider.class);
 
   private static final int DEFAULT_CACHE_SIZE = 4096;
-  private static final int DEFAULT_EXPIRE_DURATION_MIN = 60; // 60 min
+  private static final int DEFAULT_EXPIRE_DURATION_MIN = 3; // 3 min
   // AttributeScope to Map<id, AttributeMetadata>
   private final LoadingCache<AttributeCacheKey<String>, Map<String, AttributeMetadata>>
       scopeToMapOfIdAndAttributeMetadataCache;

@@ -49,6 +49,7 @@ import org.slf4j.LoggerFactory;
 
 public class RequestHandler implements RequestHandlerWithSorting {
   private static final Logger LOG = LoggerFactory.getLogger(RequestHandler.class);
+
   private final QueryServiceClient queryServiceClient;
   private final AttributeMetadataProvider attributeMetadataProvider;
   private final TheRestGroupRequestHandler theRestGroupRequestHandler;

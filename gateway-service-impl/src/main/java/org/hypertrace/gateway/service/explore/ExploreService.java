@@ -25,6 +25,7 @@ import org.hypertrace.gateway.service.v1.explore.ExploreRequest;
 import org.hypertrace.gateway.service.v1.explore.ExploreResponse;
 
 public class ExploreService {
+
   private static final String NO_TIME_RANGE_SPECIFIED_ERROR_MESSAGE =
       "Source has to set to EDS if " + "no time range specified";
 
@@ -60,10 +61,7 @@ public class ExploreService {
             entityIdColumnsConfigs);
     this.timeAggregationsWithGroupByRequestHandler =
         new TimeAggregationsWithGroupByRequestHandler(
-            queryServiceClient,
-            entityQueryServiceClient,
-            attributeMetadataProvider,
-            entityIdColumnsConfigs);
+            attributeMetadataProvider, normalRequestHandler, timeAggregationsRequestHandler);
     this.entityRequestHandler =
         new EntityRequestHandler(
             attributeMetadataProvider,
