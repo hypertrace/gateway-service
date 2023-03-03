@@ -1,6 +1,7 @@
 package org.hypertrace.gateway.service.common;
 
 import java.util.Map;
+import org.hypertrace.core.grpcutils.context.RequestContextConstants;
 import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.Test;
 
@@ -48,7 +49,8 @@ public class AttributeCacheKeyTest {
   private RequestContext buildContext(String tenantId, Map<String, String> headers) {
     org.hypertrace.core.grpcutils.context.RequestContext grpcContext =
         org.hypertrace.core.grpcutils.context.RequestContext.forTenantId(tenantId);
-    headers.forEach(grpcContext::add);
+    grpcContext.removeHeader(RequestContextConstants.REQUEST_ID_HEADER_KEY);
+    headers.forEach(grpcContext::put);
     return new RequestContext(grpcContext);
   }
 }
