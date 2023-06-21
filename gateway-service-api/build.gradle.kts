@@ -44,7 +44,12 @@ sourceSets {
 }
 
 dependencies {
-  api("io.grpc:grpc-protobuf:1.50.0")
-  api("io.grpc:grpc-stub:1.50.0")
+  api("io.grpc:grpc-protobuf:1.56.0")
+  api("io.grpc:grpc-stub:1.56.0")
   api("javax.annotation:javax.annotation-api:1.3.2")
+  constraints {
+    implementation("com.google.guava:guava:32.0.1-jre") {
+      because("https://nvd.nist.gov/vuln/detail/CVE-2023-2976")
+    }
+  }
 }
