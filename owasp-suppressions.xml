@@ -9,4 +9,12 @@
     <cpe>cpe:/a:utils_project:utils</cpe>
     <cpe>cpe:/a:service_project:service</cpe>
   </suppress>
+  <suppress until="2023-06-30Z">
+    <notes><![CDATA[
+   Doesn't appear to be a real vulnerability, jackson maintainers discuss at https://github.com/FasterXML/jackson-databind/issues/3973
+   Revisit when suppression expires
+   ]]></notes>
+    <packageUrl regex="true">^pkg:maven/com\.fasterxml\.jackson\.core/jackson\-databind@.*$</packageUrl>
+    <vulnerabilityName>CVE-2023-35116</vulnerabilityName>
+  </suppress>
 </suppressions>
