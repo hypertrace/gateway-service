@@ -9,7 +9,7 @@
     <cpe>cpe:/a:utils_project:utils</cpe>
     <cpe>cpe:/a:service_project:service</cpe>
   </suppress>
-  <suppress until="2023-06-30Z">
+  <suppress until="2023-07-31Z">
     <notes><![CDATA[
    Doesn't appear to be a real vulnerability, jackson maintainers discuss at https://github.com/FasterXML/jackson-databind/issues/3973
    Revisit when suppression expires
