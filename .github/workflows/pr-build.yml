@@ -1,11 +1,11 @@
-name: build and validate
+name: build and test
 on:
+  schedule:
+    - cron: 10 0 * * 1
   push:
     branches:
       - main
   pull_request_target:
-    branches: 
-      - main
 
 jobs:
   build:
@@ -15,12 +15,11 @@ jobs:
       - name: Check out code
         uses: actions/checkout@v3
         with:
-          ref: ${{github.event.pull_request.head.ref}}
-          repository: ${{github.event.pull_request.head.repo.full_name}}
           fetch-depth: 0
 
       - name: Login to Docker Hub
         uses: docker/login-action@v2
+        if: github.event_name != 'pull_request' || github.event.pull_request.head.repo.full_name == github.repository
         with:
           username: ${{ secrets.DOCKERHUB_READ_USER }}
           password: ${{ secrets.DOCKERHUB_READ_TOKEN }}
@@ -34,6 +33,53 @@ jobs:
         uses: hypertrace/github-actions/trivy-image-scan@main
         with:
           image: hypertrace/gateway-service
+          output-mode: github
+
+  test:
+    runs-on: ubuntu-22.04
+    steps:
+      # Set fetch-depth: 0 to fetch commit history and tags for use in version calculation
+      - name: Check out code
+        uses: actions/checkout@v3
+        with:
+          fetch-depth: 0
+
+      - name: Unit test
+        uses: hypertrace/github-actions/gradle@main
+        with:
+          args: jacocoTestReport
+
+      - name: Upload coverage to Codecov
+        uses: codecov/codecov-action@v3
+        with:
+          name: unit test reports
+          flags: unit
+
+      - name: copy test reports
+        uses: hypertrace/github-actions/gradle@main
+        with:
+          args: copyAllReports --output-dir=/tmp/test-reports
+        if: failure()
+
+      - name: Archive test reports
+        uses: actions/upload-artifact@v3
+        with:
+          name: test-reports
+          path: /tmp/test-reports
+        if: always()
+
+      - name: Publish Unit Test Results
+        uses: EnricoMi/publish-unit-test-result-action@v2
+        if: (success() || failure()) && (github.event_name != 'pull_request' || github.event.pull_request.head.repo.full_name == github.repository)
+        with:
+          github_token: ${{ secrets.GITHUB_TOKEN }}
+          files: ./**/build/test-results/**/*.xml
+
+  dependency-check:
+    runs-on: ubuntu-22.04
+    steps:
+      - name: Dependency Check
+        uses: hypertrace/github-actions/dependency-check@main
 
   validate-helm-charts:
     runs-on: ubuntu-22.04
