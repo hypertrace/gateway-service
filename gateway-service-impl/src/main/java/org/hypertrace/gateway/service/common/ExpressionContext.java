@@ -425,6 +425,17 @@ public class ExpressionContext {
     }
   }
 
+  public static boolean areAllFieldsOnlyOnCurrentDataSource(
+      ExpressionContext expressionContext, String currentSource) {
+    Map<String, Set<String>> allAttributesToSourcesMap =
+        expressionContext.getAllAttributesToSourcesMap();
+
+    LOG.info("All Attributes to source map is {}", allAttributesToSourcesMap);
+    // all the filter attribute sources should contain current source
+    return allAttributesToSourcesMap.values().stream()
+        .allMatch(sources -> sources.contains(currentSource));
+  }
+
   public static boolean areFiltersOnlyOnCurrentDataSource(
       ExpressionContext expressionContext, String currentSource) {
     Map<String, Set<String>> sourceToFilterAttributeMap =

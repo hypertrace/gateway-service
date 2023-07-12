@@ -8,6 +8,7 @@ import org.hypertrace.entity.query.service.client.EntityQueryServiceClient;
 import org.hypertrace.entity.query.service.v1.EntityQueryRequest;
 import org.hypertrace.entity.query.service.v1.Expression;
 import org.hypertrace.entity.query.service.v1.Filter;
+import org.hypertrace.entity.query.service.v1.Filter.Builder;
 import org.hypertrace.entity.query.service.v1.LiteralConstant;
 import org.hypertrace.entity.query.service.v1.Operator;
 import org.hypertrace.entity.query.service.v1.ResultSetChunk;
@@ -91,6 +92,16 @@ public class EntityServiceEntityFetcher {
 
   private Filter.Builder buildFilter(
       ExploreRequest exploreRequest, List<String> entityIdAttributeIds, Set<String> entityIds) {
+    Builder filterBuilder =
+        Filter.newBuilder()
+            .setOperator(Operator.AND)
+            .addChildFilter(
+                EntityServiceAndGatewayServiceConverter.convertToEntityServiceFilter(
+                    exploreRequest.getFilter()));
+    if (entityIds.isEmpty()) {
+      return filterBuilder;
+    }
+
     List<Filter> entityIdsInFilter =
         entityIdAttributeIds.stream()
             .map(
@@ -112,11 +123,6 @@ public class EntityServiceEntityFetcher {
                         .build())
             .collect(Collectors.toUnmodifiableList());
 
-    return Filter.newBuilder()
-        .setOperator(Operator.AND)
-        .addChildFilter(
-            EntityServiceAndGatewayServiceConverter.convertToEntityServiceFilter(
-                exploreRequest.getFilter()))
-        .addAllChildFilter(entityIdsInFilter);
+    return filterBuilder.addAllChildFilter(entityIdsInFilter);
   }
 }

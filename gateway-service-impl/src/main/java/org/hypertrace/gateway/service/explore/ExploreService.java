@@ -26,9 +26,6 @@ import org.hypertrace.gateway.service.v1.explore.ExploreResponse;
 
 public class ExploreService {
 
-  private static final String NO_TIME_RANGE_SPECIFIED_ERROR_MESSAGE =
-      "Source has to set to EDS if " + "no time range specified";
-
   private final AttributeMetadataProvider attributeMetadataProvider;
   private final ExploreRequestValidator exploreRequestValidator = new ExploreRequestValidator();
 
@@ -124,16 +121,19 @@ public class ExploreService {
               request.getTimeAggregationList(),
               request.getOrderByList(),
               request.getGroupByList());
-      Optional<String> source =
-          ExpressionContext.getSingleSourceForAllAttributes(expressionContext);
-      if ((source.isPresent() && EDS.toString().equals(source.get())) || !hasTimeRange(request)) {
+
+      boolean allFieldsOnEDS =
+          ExpressionContext.areAllFieldsOnlyOnCurrentDataSource(expressionContext, EDS.name());
+      if (allFieldsOnEDS && request.getIncludeNonLiveEntities()) {
         return entityRequestHandler;
       }
-      if ((source.isPresent() && !EDS.toString().equals(source.get())) && !hasTimeRange(request)) {
-        throw new IllegalArgumentException(NO_TIME_RANGE_SPECIFIED_ERROR_MESSAGE);
+
+      Optional<String> source =
+          ExpressionContext.getSingleSourceForAllAttributes(expressionContext);
+      if ((source.isPresent() && EDS.toString().equals(source.get()))) {
+        return entityRequestHandler;
       }
     }
-
     if (hasTimeAggregationsAndGroupBy(request)) {
       return timeAggregationsWithGroupByRequestHandler;
     }

@@ -32,6 +32,7 @@ message ExploreRequest {
   int32 offset = 21;
 
   string space_id = 22;
+  bool include_non_live_entities = 23;
 }
 
 message ExploreResponse {
