@@ -17,6 +17,7 @@ message SpansRequest {
   int32 offset = 6;
   int32 limit = 7;
   string space_id = 8;
+  bool fetch_total = 9;
 }
 
 // Span can be the entry / exit API point.
