@@ -75,7 +75,10 @@ public class SpanService {
           CompletableFuture.supplyAsync(
               () -> filterSpans(context, request, attributeMap), queryExecutor);
 
-      spanResponseBuilder.setTotal(getTotalFilteredSpans(context, request));
+      if (!request.getDisableTotalComputation()) {
+        spanResponseBuilder.setTotal(getTotalFilteredSpans(context, request));
+      }
+
       spanResponseBuilder.addAllSpans(filteredSpanEventsFuture.join());
 
       SpansResponse response = spanResponseBuilder.build();

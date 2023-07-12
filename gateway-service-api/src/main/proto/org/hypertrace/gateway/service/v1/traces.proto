@@ -23,6 +23,10 @@ message TracesRequest {
   int32 offset = 6;
   int32 limit = 7;
   string space_id = 9;
+
+  oneof requiresTotal {
+    bool disableTotalComputation = 10;
+  }
 }
 
 message TracesResponse {

@@ -103,7 +103,10 @@ public class TracesService {
 
       // Get the total API Traces in a separate query because this will scale better
       // for large data-set
-      tracesResponseBuilder.setTotal(getTotalFilteredTraces(context, preProcessedRequest, scope));
+      if (!request.getDisableTotalComputation()) {
+        tracesResponseBuilder.setTotal(getTotalFilteredTraces(context, preProcessedRequest, scope));
+      }
+
       tracesResponseBuilder.addAllTraces(filteredTraceFuture.join());
       TracesResponse response = tracesResponseBuilder.build();
       LOG.debug("Traces Service Response: {}", response);
