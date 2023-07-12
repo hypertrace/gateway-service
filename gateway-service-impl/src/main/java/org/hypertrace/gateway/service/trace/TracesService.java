@@ -173,7 +173,6 @@ public class TracesService {
 
   int getTotalFilteredTraces(RequestContext context, TracesRequest request, TraceScope scope) {
     int total = -1;
-    request.hasFilter();
     if (request.getFetchTotal()) {
       total = 0;
       Builder queryBuilder = createQueryWithFilter(request, scope, context);
