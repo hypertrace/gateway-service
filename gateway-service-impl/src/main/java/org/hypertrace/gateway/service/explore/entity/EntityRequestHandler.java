@@ -1,13 +1,10 @@
 package org.hypertrace.gateway.service.explore.entity;
 
-<<<<<<< Updated upstream
 import com.google.common.annotations.VisibleForTesting;
 import com.google.common.collect.Streams;
+import java.util.HashSet;
 import java.util.Iterator;
 import java.util.Map;
-=======
-import java.util.HashSet;
->>>>>>> Stashed changes
 import java.util.Set;
 import java.util.stream.Collectors;
 import org.hypertrace.core.attribute.service.v1.AttributeMetadata;
@@ -94,14 +91,10 @@ public class EntityRequestHandler extends RequestHandler {
       requestContext.setHasGroupBy(true);
     }
 
-<<<<<<< Updated upstream
-    Set<String> entityIds = getEntityIds(requestContext, exploreRequest);
-=======
->>>>>>> Stashed changes
     ExploreResponse.Builder builder = ExploreResponse.newBuilder();
     Set<String> entityIds = new HashSet<>();
     if (!exploreRequest.getIncludeNonLiveEntities()) {
-      entityIds.addAll(getEntityIdsFromQueryService(requestContext, exploreRequest));
+      entityIds.addAll(getEntityIds(requestContext, exploreRequest));
       if (entityIds.isEmpty()) {
         return builder;
       }
