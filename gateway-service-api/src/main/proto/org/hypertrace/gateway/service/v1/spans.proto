@@ -30,5 +30,5 @@ message SpanEvent {
 
 message SpansResponse {
   repeated SpanEvent spans = 1;
-  int32 total = 2;
+  optional int32 total = 2;
 }

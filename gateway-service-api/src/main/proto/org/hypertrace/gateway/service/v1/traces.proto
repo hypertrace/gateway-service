@@ -28,7 +28,7 @@ message TracesRequest {
 
 message TracesResponse {
   repeated Trace traces = 1;
-  int32 total = 2;
+  optional int32 total = 2;
 }
 
 message Trace {
