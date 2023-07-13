@@ -23,6 +23,7 @@ import org.hypertrace.gateway.service.explore.ExploreRequestContext;
 import org.hypertrace.gateway.service.v1.explore.ExploreRequest;
 
 public class EntityServiceEntityFetcher {
+  private static final int LIMIT_ENTITY_REQUEST = 10_000;
   private final AttributeMetadataProvider attributeMetadataProvider;
   private final EntityIdColumnsConfigs entityIdColumnsConfigs;
   private final EntityQueryServiceClient entityQueryServiceClient;
@@ -56,7 +57,7 @@ public class EntityServiceEntityFetcher {
 
     addGroupBys(exploreRequest, builder);
     addSelections(requestContext, exploreRequest, builder);
-
+    builder.setLimit(LIMIT_ENTITY_REQUEST);
     return builder.build();
   }
 

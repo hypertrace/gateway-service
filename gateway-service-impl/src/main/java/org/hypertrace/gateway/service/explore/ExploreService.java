@@ -151,8 +151,4 @@ public class ExploreService {
   private boolean hasTimeAggregationsAndGroupBy(ExploreRequest request) {
     return !request.getTimeAggregationList().isEmpty() && !request.getGroupByList().isEmpty();
   }
-
-  private boolean hasTimeRange(ExploreRequest request) {
-    return request.hasStartTimeMillis() && request.hasEndTimeMillis();
-  }
 }

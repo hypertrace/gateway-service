@@ -1,5 +1,8 @@
 package org.hypertrace.gateway.service.explore.entity;
 
+import static java.util.Collections.unmodifiableSet;
+import static java.util.stream.Collectors.toUnmodifiableSet;
+
 import com.google.common.annotations.VisibleForTesting;
 import com.google.common.collect.Streams;
 import java.util.HashSet;
@@ -101,7 +104,8 @@ public class EntityRequestHandler extends RequestHandler {
     }
 
     Iterator<ResultSetChunk> resultSetChunkIterator =
-        entityServiceEntityFetcher.getResults(requestContext, exploreRequest, entityIds);
+        entityServiceEntityFetcher.getResults(
+            requestContext, exploreRequest, unmodifiableSet(entityIds));
 
     while (resultSetChunkIterator.hasNext()) {
       org.hypertrace.entity.query.service.v1.ResultSetChunk chunk = resultSetChunkIterator.next();
@@ -159,7 +163,7 @@ public class EntityRequestHandler extends RequestHandler {
         queryServiceEntityFetcher.getEntities(entitiesRequestContext, entitiesRequest);
     return response.getEntityKeyBuilderMap().values().stream()
         .map(Builder::getId)
-        .collect(Collectors.toUnmodifiableSet());
+        .collect(toUnmodifiableSet());
   }
 
   private EntitiesRequestContext convert(
