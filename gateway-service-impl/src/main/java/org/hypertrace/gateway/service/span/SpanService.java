@@ -78,7 +78,7 @@ public class SpanService {
         spanResponseBuilder.setTotal(getTotalFilteredSpans(context, request));
         spanResponseBuilder.addAllSpans(filteredSpanEventsFuture.join());
       } else {
-        // if total is not request, we can fetch the spans in the same thread.
+        // As the total value is not requested, fetching the spans within the same thread.
         spanResponseBuilder.addAllSpans(filterSpans(context, request, attributeMap));
       }
 

@@ -108,7 +108,7 @@ public class TracesService {
         tracesResponseBuilder.setTotal(getTotalFilteredTraces(context, preProcessedRequest, scope));
         tracesResponseBuilder.addAllTraces(filteredTraceFuture.join());
       } else {
-        // if total is not requested, we can fetch traces in the same thread.
+        // As the total value is not requested, fetching the traces within the same thread.
         tracesResponseBuilder.addAllTraces(
             filterTraces(context, preProcessedRequest, attributeMap, scope));
       }
