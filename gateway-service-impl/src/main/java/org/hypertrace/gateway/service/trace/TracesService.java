@@ -96,15 +96,22 @@ public class TracesService {
       requestValidator.validate(preProcessedRequest, attributeMap);
 
       TracesResponse.Builder tracesResponseBuilder = TracesResponse.newBuilder();
-      // filter traces
-      CompletableFuture<List<Trace>> filteredTraceFuture =
-          CompletableFuture.supplyAsync(
-              () -> filterTraces(context, preProcessedRequest, attributeMap, scope), queryExecutor);
+      if (preProcessedRequest.getFetchTotal()) {
+        // filter traces
+        CompletableFuture<List<Trace>> filteredTraceFuture =
+            CompletableFuture.supplyAsync(
+                () -> filterTraces(context, preProcessedRequest, attributeMap, scope),
+                queryExecutor);
 
-      // Get the total API Traces in a separate query because this will scale better
-      // for large data-set
-      tracesResponseBuilder.setTotal(getTotalFilteredTraces(context, preProcessedRequest, scope));
-      tracesResponseBuilder.addAllTraces(filteredTraceFuture.join());
+        // Get the total API Traces in a separate query because this will scale better
+        // for large data-set
+        tracesResponseBuilder.setTotal(getTotalFilteredTraces(context, preProcessedRequest, scope));
+        tracesResponseBuilder.addAllTraces(filteredTraceFuture.join());
+      } else {
+        // As the total value is not requested, fetching the traces within the same thread.
+        tracesResponseBuilder.addAllTraces(
+            filterTraces(context, preProcessedRequest, attributeMap, scope));
+      }
       TracesResponse response = tracesResponseBuilder.build();
       LOG.debug("Traces Service Response: {}", response);
 
