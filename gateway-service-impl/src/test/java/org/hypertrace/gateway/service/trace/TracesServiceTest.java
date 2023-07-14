@@ -99,6 +99,15 @@ public class TracesServiceTest extends AbstractGatewayServiceTest {
                     "API_TRACE.startTime", startTime, endTime))
             .build();
 
+    QueryRequest expectedTotalQueryRequest =
+        QueryRequest.newBuilder()
+            .addSelection(QueryRequestUtil.createCountByColumnSelection("API_TRACE.apiName"))
+            .setFilter(
+                QueryRequestUtil.createBetweenTimesFilter(
+                    "API_TRACE.startTime", startTime, endTime))
+            .setLimit(1)
+            .build();
+
     when(queryServiceClient.executeQuery(any(), eq(expectedQueryRequest)))
         .thenReturn(
             List.of(
@@ -106,12 +115,18 @@ public class TracesServiceTest extends AbstractGatewayServiceTest {
                         List.of("API_TRACE.apiName"), new String[][] {{"apiName1"}, {"apiName2"}}))
                 .iterator());
 
+    when(queryServiceClient.executeQuery(any(), eq(expectedTotalQueryRequest)))
+        .thenReturn(
+            List.of(getResultSetChunk(List.of("COUNT_API_TRACE_apiName"), new String[][] {{"2"}}))
+                .iterator());
+
     TracesResponse response = tracesService.getTracesByFilter(requestContext, tracesRequest);
 
     verify(queryServiceClient, times(1)).executeQuery(any(), eq(expectedQueryRequest));
+    verify(queryServiceClient, times(0)).executeQuery(any(), eq(expectedTotalQueryRequest));
 
     assertNotNull(response);
-    assertEquals(-1, response.getTotal());
+    assertEquals(0, response.getTotal());
   }
 
   @Test

@@ -91,6 +91,14 @@ public class SpanServiceTest extends AbstractGatewayServiceTest {
                 QueryRequestUtil.createBetweenTimesFilter("EVENT.startTime", startTime, endTime))
             .build();
 
+    QueryRequest expectedTotalQueryRequest =
+        QueryRequest.newBuilder()
+            .addSelection(QueryRequestUtil.createCountByColumnSelection("EVENT.startTime"))
+            .setFilter(
+                QueryRequestUtil.createBetweenTimesFilter("EVENT.startTime", startTime, endTime))
+            .setLimit(1)
+            .build();
+
     when(queryServiceClient.executeQuery(any(), eq(expectedQueryRequest)))
         .thenReturn(
             List.of(
@@ -98,12 +106,18 @@ public class SpanServiceTest extends AbstractGatewayServiceTest {
                         List.of("EVENT.apiName"), new String[][] {{"apiName1"}, {"apiName2"}}))
                 .iterator());
 
+    when(queryServiceClient.executeQuery(any(), eq(expectedTotalQueryRequest)))
+        .thenReturn(
+            List.of(getResultSetChunk(List.of("COUNT_EVENT_apiName"), new String[][] {{"2"}}))
+                .iterator());
+
     SpansResponse response = spanService.getSpansByFilter(requestContext, spansRequest);
 
     verify(queryServiceClient, times(1)).executeQuery(any(), eq(expectedQueryRequest));
+    verify(queryServiceClient, times(0)).executeQuery(any(), eq(expectedTotalQueryRequest));
 
     assertNotNull(response);
-    assertEquals(-1, response.getTotal());
+    assertEquals(0, response.getTotal());
   }
 
   @Test

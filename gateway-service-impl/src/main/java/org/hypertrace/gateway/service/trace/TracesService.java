@@ -96,15 +96,22 @@ public class TracesService {
       requestValidator.validate(preProcessedRequest, attributeMap);
 
       TracesResponse.Builder tracesResponseBuilder = TracesResponse.newBuilder();
-      // filter traces
-      CompletableFuture<List<Trace>> filteredTraceFuture =
-          CompletableFuture.supplyAsync(
-              () -> filterTraces(context, preProcessedRequest, attributeMap, scope), queryExecutor);
+      if (preProcessedRequest.getFetchTotal()) {
+        // filter traces
+        CompletableFuture<List<Trace>> filteredTraceFuture =
+            CompletableFuture.supplyAsync(
+                () -> filterTraces(context, preProcessedRequest, attributeMap, scope),
+                queryExecutor);
 
-      // Get the total API Traces in a separate query because this will scale better
-      // for large data-set
-      tracesResponseBuilder.setTotal(getTotalFilteredTraces(context, preProcessedRequest, scope));
-      tracesResponseBuilder.addAllTraces(filteredTraceFuture.join());
+        // Get the total API Traces in a separate query because this will scale better
+        // for large data-set
+        tracesResponseBuilder.setTotal(getTotalFilteredTraces(context, preProcessedRequest, scope));
+        tracesResponseBuilder.addAllTraces(filteredTraceFuture.join());
+      } else {
+        // if total is not requested, we can fetch traces in the same thread.
+        tracesResponseBuilder.addAllTraces(
+            filterTraces(context, preProcessedRequest, attributeMap, scope));
+      }
       TracesResponse response = tracesResponseBuilder.build();
       LOG.debug("Traces Service Response: {}", response);
 
@@ -172,55 +179,51 @@ public class TracesService {
   }
 
   int getTotalFilteredTraces(RequestContext context, TracesRequest request, TraceScope scope) {
-    int total = -1;
-    if (request.getFetchTotal()) {
-      total = 0;
-      Builder queryBuilder = createQueryWithFilter(request, scope, context);
-      // validated that the selection is not empty
-      if (request.getSelectionCount() < 1) {
-        throw new IllegalArgumentException("Query request does not have any selection");
+    int total = 0;
+    Builder queryBuilder = createQueryWithFilter(request, scope, context);
+    // validated that the selection is not empty
+    if (request.getSelectionCount() < 1) {
+      throw new IllegalArgumentException("Query request does not have any selection");
+    }
+
+    String firstSelectionAttributeId =
+        ExpressionReader.getAttributeIdFromAttributeSelection(request.getSelection(0))
+            .orElseThrow();
+    QueryRequest queryRequest =
+        queryBuilder
+            .addSelection(createCountByColumnSelection(firstSelectionAttributeId))
+            .setLimit(1)
+            .build();
+
+    Iterator<ResultSetChunk> resultSetChunkIterator =
+        queryServiceClient.executeQuery(context, queryRequest);
+    while (resultSetChunkIterator.hasNext()) {
+      ResultSetChunk chunk = resultSetChunkIterator.next();
+      if (LOG.isDebugEnabled()) {
+        LOG.debug("Received chunk: " + chunk.toString());
       }
 
-      String firstSelectionAttributeId =
-          ExpressionReader.getAttributeIdFromAttributeSelection(request.getSelection(0))
-              .orElseThrow();
-      QueryRequest queryRequest =
-          queryBuilder
-              .addSelection(createCountByColumnSelection(firstSelectionAttributeId))
-              .setLimit(1)
-              .build();
+      // There should be only 1 result
+      if (chunk.getRowCount() != 1 && chunk.getResultSetMetadata().getColumnMetadataCount() != 1) {
+        LOG.error(
+            "Count the Api Traces total returned in multiple row / column. "
+                + "Total Row: {}, Total Column: {}",
+            chunk.getRowCount(),
+            chunk.getResultSetMetadata().getColumnMetadataCount());
+        break;
+      }
 
-      Iterator<ResultSetChunk> resultSetChunkIterator =
-          queryServiceClient.executeQuery(context, queryRequest);
-      while (resultSetChunkIterator.hasNext()) {
-        ResultSetChunk chunk = resultSetChunkIterator.next();
-        if (LOG.isDebugEnabled()) {
-          LOG.debug("Received chunk: " + chunk.toString());
-        }
-
-        // There should be only 1 result
-        if (chunk.getRowCount() != 1
-            && chunk.getResultSetMetadata().getColumnMetadataCount() != 1) {
+      // There's only 1 result with 1 column. If there's no result, Pinot doesn't
+      // return any row unfortunately
+      if (chunk.getRowCount() > 0) {
+        Row row = chunk.getRow(0);
+        String totalStr = row.getColumn(0).getString();
+        try {
+          total = Integer.parseInt(totalStr);
+        } catch (NumberFormatException nfe) {
           LOG.error(
-              "Count the Api Traces total returned in multiple row / column. "
-                  + "Total Row: {}, Total Column: {}",
-              chunk.getRowCount(),
-              chunk.getResultSetMetadata().getColumnMetadataCount());
-          break;
-        }
-
-        // There's only 1 result with 1 column. If there's no result, Pinot doesn't
-        // return any row unfortunately
-        if (chunk.getRowCount() > 0) {
-          Row row = chunk.getRow(0);
-          String totalStr = row.getColumn(0).getString();
-          try {
-            total = Integer.parseInt(totalStr);
-          } catch (NumberFormatException nfe) {
-            LOG.error(
-                "Unable to convert Total to a number. Received value: {} from Query Service",
-                totalStr);
-          }
+              "Unable to convert Total to a number. Received value: {} from Query Service",
+              totalStr);
         }
       }
     }

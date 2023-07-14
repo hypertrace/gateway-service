@@ -71,12 +71,16 @@ public class SpanService {
       Map<String, AttributeMetadata> attributeMap =
           attributeMetadataProvider.getAttributesMetadata(context, AttributeScope.EVENT.name());
       SpansResponse.Builder spanResponseBuilder = SpansResponse.newBuilder();
-      CompletableFuture<Collection<SpanEvent>> filteredSpanEventsFuture =
-          CompletableFuture.supplyAsync(
-              () -> filterSpans(context, request, attributeMap), queryExecutor);
-
-      spanResponseBuilder.setTotal(getTotalFilteredSpans(context, request));
-      spanResponseBuilder.addAllSpans(filteredSpanEventsFuture.join());
+      if (request.getFetchTotal()) {
+        CompletableFuture<Collection<SpanEvent>> filteredSpanEventsFuture =
+            CompletableFuture.supplyAsync(
+                () -> filterSpans(context, request, attributeMap), queryExecutor);
+        spanResponseBuilder.setTotal(getTotalFilteredSpans(context, request));
+        spanResponseBuilder.addAllSpans(filteredSpanEventsFuture.join());
+      } else {
+        // if total is not request, we can fetch the spans in the same thread.
+        spanResponseBuilder.addAllSpans(filterSpans(context, request, attributeMap));
+      }
 
       SpansResponse response = spanResponseBuilder.build();
       LOG.debug("Span Service Response: {}", response);
@@ -185,50 +189,46 @@ public class SpanService {
   }
 
   private int getTotalFilteredSpans(RequestContext context, SpansRequest request) {
-    int total = -1;
-    if (request.getFetchTotal()) {
-      total = 0;
-      String timestampAttributeId =
-          getTimestampAttributeId(
-              this.attributeMetadataProvider, context, AttributeScope.EVENT.name());
+    int total = 0;
+    String timestampAttributeId =
+        getTimestampAttributeId(
+            this.attributeMetadataProvider, context, AttributeScope.EVENT.name());
 
-      QueryRequest queryRequest =
-          createQueryWithFilter(request, context)
-              .addSelection(createCountByColumnSelection(timestampAttributeId))
-              .setLimit(1)
-              .build();
+    QueryRequest queryRequest =
+        createQueryWithFilter(request, context)
+            .addSelection(createCountByColumnSelection(timestampAttributeId))
+            .setLimit(1)
+            .build();
 
-      Iterator<ResultSetChunk> resultSetChunkIterator =
-          queryServiceClient.executeQuery(context, queryRequest);
-      while (resultSetChunkIterator.hasNext()) {
-        ResultSetChunk chunk = resultSetChunkIterator.next();
-        if (LOG.isDebugEnabled()) {
-          LOG.debug("Received chunk: " + chunk.toString());
-        }
+    Iterator<ResultSetChunk> resultSetChunkIterator =
+        queryServiceClient.executeQuery(context, queryRequest);
+    while (resultSetChunkIterator.hasNext()) {
+      ResultSetChunk chunk = resultSetChunkIterator.next();
+      if (LOG.isDebugEnabled()) {
+        LOG.debug("Received chunk: " + chunk.toString());
+      }
 
-        // There should be only 1 result
-        if (chunk.getRowCount() != 1
-            && chunk.getResultSetMetadata().getColumnMetadataCount() != 1) {
+      // There should be only 1 result
+      if (chunk.getRowCount() != 1 && chunk.getResultSetMetadata().getColumnMetadataCount() != 1) {
+        LOG.error(
+            "Count the Api Traces total returned in multiple row / column. "
+                + "Total Row: {}, Total Column: {}",
+            chunk.getRowCount(),
+            chunk.getResultSetMetadata().getColumnMetadataCount());
+        break;
+      }
+
+      // There's only 1 result with 1 column. If there's no result, Pinot doesn't
+      // return any row unfortunately
+      if (chunk.getRowCount() > 0) {
+        Row row = chunk.getRow(0);
+        String totalStr = row.getColumn(0).getString();
+        try {
+          total = Integer.parseInt(totalStr);
+        } catch (NumberFormatException nfe) {
           LOG.error(
-              "Count the Api Traces total returned in multiple row / column. "
-                  + "Total Row: {}, Total Column: {}",
-              chunk.getRowCount(),
-              chunk.getResultSetMetadata().getColumnMetadataCount());
-          break;
-        }
-
-        // There's only 1 result with 1 column. If there's no result, Pinot doesn't
-        // return any row unfortunately
-        if (chunk.getRowCount() > 0) {
-          Row row = chunk.getRow(0);
-          String totalStr = row.getColumn(0).getString();
-          try {
-            total = Integer.parseInt(totalStr);
-          } catch (NumberFormatException nfe) {
-            LOG.error(
-                "Unable to convert Total to a number. Received value: {} from Query Service",
-                totalStr);
-          }
+              "Unable to convert Total to a number. Received value: {} from Query Service",
+              totalStr);
         }
       }
     }
