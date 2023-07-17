@@ -122,10 +122,26 @@ public class ExploreService {
               request.getOrderByList(),
               request.getGroupByList());
 
-      boolean allFieldsOnEDS =
-          ExpressionContext.areAllFieldsOnlyOnCurrentDataSource(expressionContext, EDS.name());
-      if (allFieldsOnEDS && request.getIncludeNonLiveEntities()) {
-        return entityRequestHandler;
+      /*
+      This has been added because we wanted to use entity request handler if non-live entities
+      are requested. Following scenarios needs to be catered while checking for non-live entities
+
+      Case 1: all attributes, source is QS, EDS
+      1. Non-Live entities = false, normalRequestHandler must be selected
+      2. Non-Live entities = true, entityRequestHandler must be selected
+
+      Case 2: some attributes, Source is QS only
+      Ignore the non-live entities flag and return normalRequestHandler
+
+      Case 3: common source for all attributes is EDS only,
+      Ignore the non-live entities flag and return entityRequestHandler
+       */
+      if (includeNonLiveEntities(request)) {
+        boolean allFieldsOnEDS =
+            ExpressionContext.areAllFieldsOnlyOnCurrentDataSource(expressionContext, EDS.name());
+        if (allFieldsOnEDS) {
+          return entityRequestHandler;
+        }
       }
 
       Optional<String> source =
@@ -142,6 +158,12 @@ public class ExploreService {
     }
 
     return normalRequestHandler;
+  }
+
+  private boolean includeNonLiveEntities(ExploreRequest request) {
+    return request.hasContextOption()
+        && request.getContextOption().hasEntityOption()
+        && request.getContextOption().getEntityOption().getIncludeNonLiveEntities();
   }
 
   private boolean hasTimeAggregations(ExploreRequest request) {

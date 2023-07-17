@@ -8,6 +8,7 @@ import com.google.common.collect.Streams;
 import java.util.HashSet;
 import java.util.Iterator;
 import java.util.Map;
+import java.util.Optional;
 import java.util.Set;
 import java.util.stream.Collectors;
 import org.hypertrace.core.attribute.service.v1.AttributeMetadata;
@@ -31,6 +32,7 @@ import org.hypertrace.gateway.service.explore.RequestHandler;
 import org.hypertrace.gateway.service.v1.common.FunctionExpression;
 import org.hypertrace.gateway.service.v1.entity.EntitiesRequest;
 import org.hypertrace.gateway.service.v1.entity.Entity.Builder;
+import org.hypertrace.gateway.service.v1.explore.EntityOption;
 import org.hypertrace.gateway.service.v1.explore.ExploreRequest;
 import org.hypertrace.gateway.service.v1.explore.ExploreResponse;
 
@@ -96,8 +98,9 @@ public class EntityRequestHandler extends RequestHandler {
 
     ExploreResponse.Builder builder = ExploreResponse.newBuilder();
     Set<String> entityIds = new HashSet<>();
-    if (!exploreRequest.getIncludeNonLiveEntities()) {
-      entityIds.addAll(getEntityIds(requestContext, exploreRequest));
+    Optional<EntityOption> maybeEntityOption = getEntityOption(exploreRequest);
+    if (requestOnLiveEntities(maybeEntityOption)) {
+      entityIds.addAll(getEntityIdsFromQueryService(requestContext, exploreRequest));
       if (entityIds.isEmpty()) {
         return builder;
       }
@@ -149,7 +152,7 @@ public class EntityRequestHandler extends RequestHandler {
     return builder;
   }
 
-  private Set<String> getEntityIds(
+  private Set<String> getEntityIdsFromQueryService(
       ExploreRequestContext requestContext, ExploreRequest exploreRequest) {
     EntitiesRequestContext entitiesRequestContext =
         convert(attributeMetadataProvider, requestContext);
@@ -254,5 +257,21 @@ public class EntityRequestHandler extends RequestHandler {
                 request.getGroupByList().stream())
             .collect(Collectors.toUnmodifiableList()),
         attributeMetadataByIdMap);
+  }
+
+  private boolean requestOnLiveEntities(Optional<EntityOption> entityOption) {
+    if (entityOption.isEmpty()) {
+      return true;
+    }
+    return !entityOption.get().getIncludeNonLiveEntities();
+  }
+
+  private Optional<EntityOption> getEntityOption(ExploreRequest exploreRequest) {
+    if (!exploreRequest.hasContextOption()) {
+      return Optional.empty();
+    }
+    return exploreRequest.getContextOption().hasEntityOption()
+        ? Optional.of(exploreRequest.getContextOption().getEntityOption())
+        : Optional.empty();
   }
 }
