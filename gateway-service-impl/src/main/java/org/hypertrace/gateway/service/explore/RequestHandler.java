@@ -98,17 +98,20 @@ public class RequestHandler implements RequestHandlerWithSorting {
     // 3. Add GroupBy
     addGroupByExpressions(builder, request);
 
-    // 4. If there's no Group By, Set Limit, Offset and Order By.
-    // Otherwise, specify a large limit and track actual limit, offset and order by expression list
-    // so we can compute
-    // these once the we get the results.
-    if (requestContext
-        .hasGroupBy()) { // Will need to do the Ordering, Limit and Offset ourselves after we get
-      // the Group By Results
-      builder.setLimit(DEFAULT_QUERY_SERVICE_GROUP_BY_LIMIT);
-      requestContext.setOrderByExpressions(getRequestOrderByExpressions(request));
-    } else { // No Group By: Use Pinot's Order By, Limit and Offset
-      addSortLimitAndOffset(request, builder);
+    // 4. Add Order By
+    addSort(request, builder);
+
+    // 5. Set Limit, Offset
+    if (requestContext.hasGroupBy()) {
+      // providing both group by and order by doesn't provide right results in pinot
+      // we will set new limit as <request's offset + request's limit> with no offset
+      // later we will just skip results till provided offset in request
+      int newLimit =
+          Math.min(request.getOffset() + request.getLimit(), DEFAULT_QUERY_SERVICE_GROUP_BY_LIMIT);
+      builder.setLimit(newLimit);
+    } else {
+      builder.setLimit(request.getLimit());
+      builder.setOffset(request.getOffset());
     }
 
     return builder.build();
@@ -154,15 +157,12 @@ public class RequestHandler implements RequestHandlerWithSorting {
         .forEach(expression -> addGroupByExpressionToBuilder(builder, expression));
   }
 
-  private void addSortLimitAndOffset(ExploreRequest request, QueryRequest.Builder queryBuilder) {
+  private void addSort(ExploreRequest request, QueryRequest.Builder queryBuilder) {
     if (request.getOrderByCount() > 0) {
       List<OrderByExpression> orderByExpressions = request.getOrderByList();
       queryBuilder.addAllOrderBy(
           QueryAndGatewayDtoConverter.convertToQueryOrderByExpressions(orderByExpressions));
     }
-
-    queryBuilder.setLimit(request.getLimit());
-    queryBuilder.setOffset(request.getOffset());
   }
 
   @Override
@@ -310,12 +310,10 @@ public class RequestHandler implements RequestHandlerWithSorting {
       int offset) {
     List<org.hypertrace.gateway.service.v1.common.Row.Builder> rowBuilders =
         builder.getRowBuilderList();
-
-    List<org.hypertrace.gateway.service.v1.common.Row.Builder> sortedRowBuilders =
-        sortAndPaginateRowBuilders(rowBuilders, orderByExpressions, limit, offset);
-
+    List<org.hypertrace.gateway.service.v1.common.Row.Builder> rowBuildersPostSkip =
+        rowBuilders.stream().skip(offset).collect(Collectors.toUnmodifiableList());
     builder.clearRow();
-    sortedRowBuilders.forEach(builder::addRow);
+    rowBuildersPostSkip.forEach(builder::addRow);
   }
 
   protected List<org.hypertrace.gateway.service.v1.common.Row.Builder> sortAndPaginateRowBuilders(
