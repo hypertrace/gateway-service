@@ -26,9 +26,6 @@ import org.hypertrace.gateway.service.v1.explore.ExploreResponse;
 
 public class ExploreService {
 
-  private static final String NO_TIME_RANGE_SPECIFIED_ERROR_MESSAGE =
-      "Source has to set to EDS if " + "no time range specified";
-
   private final AttributeMetadataProvider attributeMetadataProvider;
   private final ExploreRequestValidator exploreRequestValidator = new ExploreRequestValidator();
 
@@ -124,16 +121,35 @@ public class ExploreService {
               request.getTimeAggregationList(),
               request.getOrderByList(),
               request.getGroupByList());
+
+      /*
+      This has been added because we wanted to use entity request handler if non-live entities
+      are requested. Following scenarios needs to be catered while checking for non-live entities
+
+      Case 1: all attributes, source is QS, EDS
+      1. Non-Live entities = false, normalRequestHandler must be selected
+      2. Non-Live entities = true, entityRequestHandler must be selected
+
+      Case 2: some attributes, Source is QS only
+      Ignore the non-live entities flag and return normalRequestHandler
+
+      Case 3: common source for all attributes is EDS only,
+      Ignore the non-live entities flag and return entityRequestHandler
+       */
+      if (includeNonLiveEntities(request)) {
+        boolean allFieldsOnEDS =
+            ExpressionContext.areAllFieldsOnlyOnCurrentDataSource(expressionContext, EDS.name());
+        if (allFieldsOnEDS) {
+          return entityRequestHandler;
+        }
+      }
+
       Optional<String> source =
           ExpressionContext.getSingleSourceForAllAttributes(expressionContext);
-      if ((source.isPresent() && EDS.toString().equals(source.get())) || !hasTimeRange(request)) {
+      if ((source.isPresent() && EDS.toString().equals(source.get()))) {
         return entityRequestHandler;
       }
-      if ((source.isPresent() && !EDS.toString().equals(source.get())) && !hasTimeRange(request)) {
-        throw new IllegalArgumentException(NO_TIME_RANGE_SPECIFIED_ERROR_MESSAGE);
-      }
     }
-
     if (hasTimeAggregationsAndGroupBy(request)) {
       return timeAggregationsWithGroupByRequestHandler;
     }
@@ -144,15 +160,17 @@ public class ExploreService {
     return normalRequestHandler;
   }
 
+  private boolean includeNonLiveEntities(ExploreRequest request) {
+    return request.hasContextOption()
+        && request.getContextOption().hasEntityOption()
+        && request.getContextOption().getEntityOption().getIncludeNonLiveEntities();
+  }
+
   private boolean hasTimeAggregations(ExploreRequest request) {
     return !request.getTimeAggregationList().isEmpty();
   }
 
   private boolean hasTimeAggregationsAndGroupBy(ExploreRequest request) {
     return !request.getTimeAggregationList().isEmpty() && !request.getGroupByList().isEmpty();
-  }
-
-  private boolean hasTimeRange(ExploreRequest request) {
-    return request.hasStartTimeMillis() && request.hasEndTimeMillis();
   }
 }
