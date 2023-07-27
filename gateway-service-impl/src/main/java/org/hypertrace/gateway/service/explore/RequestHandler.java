@@ -1,7 +1,5 @@
 package org.hypertrace.gateway.service.explore;
 
-import static org.hypertrace.core.query.service.client.QueryServiceClient.DEFAULT_QUERY_SERVICE_GROUP_BY_LIMIT;
-
 import com.google.common.collect.Streams;
 import com.google.protobuf.InvalidProtocolBufferException;
 import com.google.protobuf.util.JsonFormat;
@@ -20,7 +18,6 @@ import org.hypertrace.core.query.service.api.Value;
 import org.hypertrace.gateway.service.common.AttributeMetadataProvider;
 import org.hypertrace.gateway.service.common.converters.QueryAndGatewayDtoConverter;
 import org.hypertrace.gateway.service.common.util.AttributeMetadataUtil;
-import org.hypertrace.gateway.service.common.util.DataCollectionUtil;
 import org.hypertrace.gateway.service.common.util.ExpressionReader;
 import org.hypertrace.gateway.service.common.util.MetricAggregationFunctionUtil;
 import org.hypertrace.gateway.service.common.util.OrderByUtil;
@@ -95,24 +92,19 @@ public class RequestHandler implements RequestHandlerWithSorting {
     builder.setFilter(
         constructQueryServiceFilter(request, requestContext, attributeMetadataProvider));
 
+    if (requestContext.hasGroupBy() && requestContext.getOffset() > 0) {
+      // providing both group by and offset doesn't provide right results in pinot
+      // throwing unsupported operation exception for this case
+      LOG.error("Query having group by along with offset is not supported : {}", request);
+      throw new UnsupportedOperationException(
+          "Query with group by along with offset is not supported " + request);
+    }
+
     // 3. Add GroupBy
     addGroupByExpressions(builder, request);
 
-    // 4. Add Order By
-    addSort(request, builder);
-
-    // 5. Set Limit, Offset
-    if (requestContext.hasGroupBy()) {
-      // providing both group by and order by doesn't provide right results in pinot
-      // we will set new limit as <request's offset + request's limit> with no offset
-      // later we will just skip results till provided offset in request
-      int newLimit =
-          Math.min(request.getOffset() + request.getLimit(), DEFAULT_QUERY_SERVICE_GROUP_BY_LIMIT);
-      builder.setLimit(newLimit);
-    } else {
-      builder.setLimit(request.getLimit());
-      builder.setOffset(request.getOffset());
-    }
+    // 4. Add order by along with setting limit, offset
+    addSortLimitAndOffset(request, builder);
 
     return builder.build();
   }
@@ -157,12 +149,15 @@ public class RequestHandler implements RequestHandlerWithSorting {
         .forEach(expression -> addGroupByExpressionToBuilder(builder, expression));
   }
 
-  private void addSort(ExploreRequest request, QueryRequest.Builder queryBuilder) {
+  private void addSortLimitAndOffset(ExploreRequest request, QueryRequest.Builder queryBuilder) {
     if (request.getOrderByCount() > 0) {
       List<OrderByExpression> orderByExpressions = request.getOrderByList();
       queryBuilder.addAllOrderBy(
           QueryAndGatewayDtoConverter.convertToQueryOrderByExpressions(orderByExpressions));
     }
+
+    queryBuilder.setLimit(request.getLimit());
+    queryBuilder.setOffset(request.getOffset());
   }
 
   @Override
@@ -308,23 +303,7 @@ public class RequestHandler implements RequestHandlerWithSorting {
       List<OrderByExpression> orderByExpressions,
       int limit,
       int offset) {
-    List<org.hypertrace.gateway.service.v1.common.Row.Builder> rowBuilders =
-        builder.getRowBuilderList();
-    List<org.hypertrace.gateway.service.v1.common.Row.Builder> rowBuildersPostSkip =
-        rowBuilders.stream().skip(offset).collect(Collectors.toUnmodifiableList());
-    builder.clearRow();
-    rowBuildersPostSkip.forEach(builder::addRow);
-  }
-
-  protected List<org.hypertrace.gateway.service.v1.common.Row.Builder> sortAndPaginateRowBuilders(
-      List<org.hypertrace.gateway.service.v1.common.Row.Builder> rowBuilders,
-      List<OrderByExpression> orderByExpressions,
-      int limit,
-      int offset) {
-    RowComparator rowComparator = new RowComparator(orderByExpressions);
-
-    return DataCollectionUtil.limitAndSort(
-        rowBuilders.stream(), limit, offset, orderByExpressions.size(), rowComparator);
+    // Nothing to do here
   }
 
   protected Logger getLogger() {
