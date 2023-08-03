@@ -54,7 +54,7 @@ public class RequestHandler implements RequestHandlerWithSorting {
     Iterator<ResultSetChunk> resultSetChunkIterator = executeQuery(requestContext, queryRequest);
 
     return handleQueryServiceResponse(
-        requestContext, resultSetChunkIterator, requestContext, attributeMetadataProvider);
+        request, requestContext, resultSetChunkIterator, requestContext, attributeMetadataProvider);
   }
 
   QueryRequest buildQueryRequest(
@@ -104,7 +104,7 @@ public class RequestHandler implements RequestHandlerWithSorting {
     addGroupByExpressions(builder, request);
 
     // 4. Add order by along with setting limit, offset
-    addSortLimitAndOffset(request, builder);
+    addSortLimitAndOffset(request, requestContext, builder);
 
     return builder.build();
   }
@@ -149,14 +149,23 @@ public class RequestHandler implements RequestHandlerWithSorting {
         .forEach(expression -> addGroupByExpressionToBuilder(builder, expression));
   }
 
-  private void addSortLimitAndOffset(ExploreRequest request, QueryRequest.Builder queryBuilder) {
+  private void addSortLimitAndOffset(
+      ExploreRequest request,
+      ExploreRequestContext requestContext,
+      QueryRequest.Builder queryBuilder) {
     if (request.getOrderByCount() > 0) {
       List<OrderByExpression> orderByExpressions = request.getOrderByList();
       queryBuilder.addAllOrderBy(
           QueryAndGatewayDtoConverter.convertToQueryOrderByExpressions(orderByExpressions));
     }
 
-    queryBuilder.setLimit(request.getLimit());
+    // handle group by scenario with group limit set
+    if (requestContext.hasGroupBy() && request.getGroupLimit() > 0) {
+      // in group by scenario, set limit to minimum of limit or group-limit
+      queryBuilder.setLimit(Math.min(request.getLimit(), request.getGroupLimit()));
+    } else {
+      queryBuilder.setLimit(request.getLimit());
+    }
     queryBuilder.setOffset(request.getOffset());
   }
 
@@ -176,6 +185,7 @@ public class RequestHandler implements RequestHandlerWithSorting {
   }
 
   private ExploreResponse.Builder handleQueryServiceResponse(
+      ExploreRequest request,
       ExploreRequestContext context,
       Iterator<ResultSetChunk> resultSetChunkIterator,
       ExploreRequestContext requestContext,
@@ -215,7 +225,11 @@ public class RequestHandler implements RequestHandlerWithSorting {
           requestContext.getOffset());
     }
 
-    if (requestContext.hasGroupBy() && requestContext.getIncludeRestGroup()) {
+    // If request has group by, and includeRestGroup is set, and we have not reached limit
+    // then invoke TheRestGroupRequestHandler
+    if (requestContext.hasGroupBy()
+        && requestContext.getIncludeRestGroup()
+        && builder.getRowCount() < request.getLimit()) {
       theRestGroupRequestHandler.getRowsForTheRestGroup(
           context, requestContext.getExploreRequest(), builder);
     }
