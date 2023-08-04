@@ -175,7 +175,14 @@ public class RequestHandler implements RequestHandlerWithSorting {
       // we will add offset to limit itself and then ignore results till offset in response
       limit += request.getOffset();
       // don't exceed default group by limit
-      limit = Math.min(limit, DEFAULT_QUERY_SERVICE_GROUP_BY_LIMIT);
+      if (limit > DEFAULT_QUERY_SERVICE_GROUP_BY_LIMIT) {
+        LOG.error(
+            "Trying to query for rows more than the default limit {} : {}",
+            DEFAULT_QUERY_SERVICE_GROUP_BY_LIMIT,
+            request);
+        throw new UnsupportedOperationException(
+            "Trying to query for rows more than the default limit " + request);
+      }
       queryBuilder.setLimit(limit);
     } else {
       queryBuilder.setLimit(request.getLimit());
