@@ -1,5 +1,7 @@
 package org.hypertrace.gateway.service.explore;
 
+import static org.hypertrace.core.query.service.client.QueryServiceClient.DEFAULT_QUERY_SERVICE_GROUP_BY_LIMIT;
+
 import com.google.common.collect.Streams;
 import com.google.protobuf.InvalidProtocolBufferException;
 import com.google.protobuf.util.JsonFormat;
@@ -172,6 +174,8 @@ public class RequestHandler implements RequestHandlerWithSorting {
       // pinot doesn't handle offset with group by correctly
       // we will add offset to limit itself and then ignore results till offset in response
       limit += request.getOffset();
+      // don't exceed default group by limit
+      limit = Math.min(limit, DEFAULT_QUERY_SERVICE_GROUP_BY_LIMIT);
       queryBuilder.setLimit(limit);
     } else {
       queryBuilder.setLimit(request.getLimit());
