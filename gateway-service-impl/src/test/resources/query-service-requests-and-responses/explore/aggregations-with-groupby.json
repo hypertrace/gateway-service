@@ -100,24 +100,7 @@
           }
         }
       ],
-      "orderBy": [
-        {
-          "expression": {
-            "function": {
-              "functionName": "COUNT",
-              "arguments": [
-                {
-                  "attributeExpression": {
-                    "attributeId": "API_TRACE.apiTraceId"
-                  }
-                }
-              ],
-              "alias": "COUNT#COUNT:Api.Trace|apiTraceId"
-            }
-          }
-        }
-      ],
-      "limit": 10
+      "limit": 10000
     },
     "response": {
       "isLastChunk": true,
@@ -138,13 +121,39 @@
         {
           "column": [
             {
-              "string": "auditservice"
+              "string": "checkoutservice"
             },
             {
-              "string": "26.20000"
+              "string": "290.39980"
             },
             {
-              "string": "5"
+              "string": "1003"
+            }
+          ]
+        },
+        {
+          "column": [
+            {
+              "string": "dataservice"
+            },
+            {
+              "string": "70.19372"
+            },
+            {
+              "string": "19466"
+            }
+          ]
+        },
+        {
+          "column": [
+            {
+              "string": "recommendationservice"
+            },
+            {
+              "string": "50.10688"
+            },
+            {
+              "string": "1104"
             }
           ]
         },
@@ -164,26 +173,52 @@
         {
           "column": [
             {
-              "string": "null"
+              "string": "partnerintegrationservice"
             },
             {
-              "string": "14.47222"
+              "string": "42.08581"
             },
             {
-              "string": "72"
+              "string": "3263"
             }
           ]
         },
         {
           "column": [
             {
-              "string": "paymentservice"
+              "string": "frontend"
             },
             {
-              "string": "1.18182"
+              "string": "37.88183"
             },
             {
-              "string": "88"
+              "string": "15689"
+            }
+          ]
+        },
+        {
+          "column": [
+            {
+              "string": "auditservice"
+            },
+            {
+              "string": "26.20000"
+            },
+            {
+              "string": "5"
+            }
+          ]
+        },
+        {
+          "column": [
+            {
+              "string": "dummypartner"
+            },
+            {
+              "string": "24.13552"
+            },
+            {
+              "string": "3232"
             }
           ]
         },
@@ -203,6 +238,19 @@
         {
           "column": [
             {
+              "string": "adservice"
+            },
+            {
+              "string": "18.08212"
+            },
+            {
+              "string": "755"
+            }
+          ]
+        },
+        {
+          "column": [
+            {
               "string": "emailservice"
             },
             {
@@ -216,13 +264,26 @@
         {
           "column": [
             {
-              "string": "shippingservice"
+              "string": "null"
             },
             {
-              "string": "10.40663"
+              "string": "14.47222"
             },
             {
-              "string": "332"
+              "string": "72"
+            }
+          ]
+        },
+        {
+          "column": [
+            {
+              "string": "orderservice"
+            },
+            {
+              "string": "12.69599"
+            },
+            {
+              "string": "5480"
             }
           ]
         },
@@ -242,6 +303,58 @@
         {
           "column": [
             {
+              "string": "shippingservice"
+            },
+            {
+              "string": "10.40663"
+            },
+            {
+              "string": "332"
+            }
+          ]
+        },
+        {
+          "column": [
+            {
+              "string": "productcatalogservice"
+            },
+            {
+              "string": "8.75851"
+            },
+            {
+              "string": "8812"
+            }
+          ]
+        },
+        {
+          "column": [
+            {
+              "string": "cartservice"
+            },
+            {
+              "string": "5.61975"
+            },
+            {
+              "string": "1023"
+            }
+          ]
+        },
+        {
+          "column": [
+            {
+              "string": "loginservice"
+            },
+            {
+              "string": "2.90305"
+            },
+            {
+              "string": "1475"
+            }
+          ]
+        },
+        {
+          "column": [
+            {
               "string": "userservice"
             },
             {
@@ -255,13 +368,26 @@
         {
           "column": [
             {
-              "string": "adservice"
+              "string": "currencyservice"
             },
             {
-              "string": "18.08212"
+              "string": "1.81675"
             },
             {
-              "string": "755"
+              "string": "2974"
+            }
+          ]
+        },
+        {
+          "column": [
+            {
+              "string": "paymentservice"
+            },
+            {
+              "string": "1.18182"
+            },
+            {
+              "string": "88"
             }
           ]
         }

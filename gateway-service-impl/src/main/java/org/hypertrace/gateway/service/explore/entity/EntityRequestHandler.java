@@ -7,7 +7,6 @@ import com.google.common.annotations.VisibleForTesting;
 import com.google.common.collect.Streams;
 import java.util.HashSet;
 import java.util.Iterator;
-import java.util.List;
 import java.util.Map;
 import java.util.Optional;
 import java.util.Set;
@@ -24,16 +23,13 @@ import org.hypertrace.gateway.service.common.converters.EntityServiceAndGatewayS
 import org.hypertrace.gateway.service.common.datafetcher.EntityFetcherResponse;
 import org.hypertrace.gateway.service.common.datafetcher.QueryServiceEntityFetcher;
 import org.hypertrace.gateway.service.common.util.AttributeMetadataUtil;
-import org.hypertrace.gateway.service.common.util.DataCollectionUtil;
 import org.hypertrace.gateway.service.common.util.MetricAggregationFunctionUtil;
 import org.hypertrace.gateway.service.common.util.QueryServiceClient;
 import org.hypertrace.gateway.service.entity.EntitiesRequestContext;
 import org.hypertrace.gateway.service.entity.config.EntityIdColumnsConfigs;
 import org.hypertrace.gateway.service.explore.ExploreRequestContext;
 import org.hypertrace.gateway.service.explore.RequestHandler;
-import org.hypertrace.gateway.service.explore.RowComparator;
 import org.hypertrace.gateway.service.v1.common.FunctionExpression;
-import org.hypertrace.gateway.service.v1.common.OrderByExpression;
 import org.hypertrace.gateway.service.v1.entity.EntitiesRequest;
 import org.hypertrace.gateway.service.v1.entity.Entity.Builder;
 import org.hypertrace.gateway.service.v1.explore.EntityOption;
@@ -154,33 +150,6 @@ public class EntityRequestHandler extends RequestHandler {
     }
 
     return builder;
-  }
-
-  @Override
-  public void sortAndPaginatePostProcess(
-      ExploreResponse.Builder builder,
-      List<OrderByExpression> orderByExpressions,
-      int limit,
-      int offset) {
-    List<org.hypertrace.gateway.service.v1.common.Row.Builder> rowBuilders =
-        builder.getRowBuilderList();
-
-    List<org.hypertrace.gateway.service.v1.common.Row.Builder> sortedRowBuilders =
-        sortAndPaginateRowBuilders(rowBuilders, orderByExpressions, limit, offset);
-
-    builder.clearRow();
-    sortedRowBuilders.forEach(builder::addRow);
-  }
-
-  protected List<org.hypertrace.gateway.service.v1.common.Row.Builder> sortAndPaginateRowBuilders(
-      List<org.hypertrace.gateway.service.v1.common.Row.Builder> rowBuilders,
-      List<OrderByExpression> orderByExpressions,
-      int limit,
-      int offset) {
-    RowComparator rowComparator = new RowComparator(orderByExpressions);
-
-    return DataCollectionUtil.limitAndSort(
-        rowBuilders.stream(), limit, offset, orderByExpressions.size(), rowComparator);
   }
 
   private Set<String> getEntityIdsFromQueryService(
