@@ -1,7 +1,5 @@
 package org.hypertrace.gateway.service.explore;
 
-import static org.hypertrace.core.query.service.client.QueryServiceClient.DEFAULT_QUERY_SERVICE_GROUP_BY_LIMIT;
-
 import com.google.common.collect.Streams;
 import com.google.protobuf.InvalidProtocolBufferException;
 import com.google.protobuf.util.JsonFormat;
@@ -94,15 +92,12 @@ public class RequestHandler implements RequestHandlerWithSorting {
     builder.setFilter(
         constructQueryServiceFilter(request, requestContext, attributeMetadataProvider));
 
-    if (requestContext.hasGroupBy() && request.getIncludeRestGroup() && request.getOffset() > 0) {
-      // including rest group with offset is an invalid combination
+    if (requestContext.hasGroupBy() && requestContext.getOffset() > 0) {
+      // providing both group by and offset doesn't provide right results in pinot
       // throwing unsupported operation exception for this case
-      LOG.error(
-          "Query having group by with both offset and include rest is an invalid combination : {}",
-          request);
+      LOG.error("Query having group by along with offset is not supported : {}", request);
       throw new UnsupportedOperationException(
-          "Query having group by with both offset and include rest is an invalid combination "
-              + request);
+          "Query with group by along with offset is not supported " + request);
     }
 
     // 3. Add GroupBy
@@ -165,29 +160,13 @@ public class RequestHandler implements RequestHandlerWithSorting {
     }
 
     // handle group by scenario with group limit set
-    if (requestContext.hasGroupBy()) {
-      int limit = request.getLimit();
-      if (request.getGroupLimit() > 0) {
-        // in group by scenario, set limit to minimum of limit or group-limit
-        limit = Math.min(request.getLimit(), request.getGroupLimit());
-      }
-      // pinot doesn't handle offset with group by correctly
-      // we will add offset to limit itself and then ignore results till offset in response
-      limit += request.getOffset();
-      // don't exceed default group by limit
-      if (limit > DEFAULT_QUERY_SERVICE_GROUP_BY_LIMIT) {
-        LOG.error(
-            "Trying to query for rows more than the default limit {} : {}",
-            DEFAULT_QUERY_SERVICE_GROUP_BY_LIMIT,
-            request);
-        throw new UnsupportedOperationException(
-            "Trying to query for rows more than the default limit " + request);
-      }
-      queryBuilder.setLimit(limit);
+    if (requestContext.hasGroupBy() && request.getGroupLimit() > 0) {
+      // in group by scenario, set limit to minimum of limit or group-limit
+      queryBuilder.setLimit(Math.min(request.getLimit(), request.getGroupLimit()));
     } else {
       queryBuilder.setLimit(request.getLimit());
-      queryBuilder.setOffset(request.getOffset());
     }
+    queryBuilder.setOffset(request.getOffset());
   }
 
   @Override
@@ -338,14 +317,7 @@ public class RequestHandler implements RequestHandlerWithSorting {
       List<OrderByExpression> orderByExpressions,
       int limit,
       int offset) {
-    if (offset > 0) {
-      List<org.hypertrace.gateway.service.v1.common.Row.Builder> rowBuilders =
-          builder.getRowBuilderList();
-      List<org.hypertrace.gateway.service.v1.common.Row.Builder> rowBuildersPostSkip =
-          rowBuilders.stream().skip(offset).collect(Collectors.toUnmodifiableList());
-      builder.clearRow();
-      rowBuildersPostSkip.forEach(builder::addRow);
-    }
+    // Nothing to do here
   }
 
   protected Logger getLogger() {
