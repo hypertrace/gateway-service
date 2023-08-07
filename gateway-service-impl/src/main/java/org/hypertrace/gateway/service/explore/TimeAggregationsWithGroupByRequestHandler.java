@@ -75,18 +75,11 @@ public class TimeAggregationsWithGroupByRequestHandler implements IRequestHandle
         timeAggregationsRequestHandler.handleRequest(
             timeAggregationsRequestContext, timeAggregationsRequest);
 
-    // 3. If includeRestGroup is set, and we have not reached limit
-    //    then invoke TheRestGroupRequestHandler
-    if (request.getIncludeRestGroup()
-        && timeAggregationsResponse.getRowCount() < request.getLimit()) {
-      ExploreRequest requestWithUpdatedLimit =
-          request.toBuilder()
-              .setLimit(request.getLimit() - timeAggregationsResponse.getRowCount())
-              .build();
+    // 3. If includeRestGroup is set, invoke TheRestGroupRequestHandler
+    if (request.getIncludeRestGroup()) {
       timeAggregationsRequestHandler
           .getTheRestGroupRequestHandler()
-          .getRowsForTheRestGroup(
-              requestContext, requestWithUpdatedLimit, timeAggregationsResponse);
+          .getRowsForTheRestGroup(requestContext, request, timeAggregationsResponse);
     }
 
     return timeAggregationsResponse;

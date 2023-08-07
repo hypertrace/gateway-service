@@ -110,24 +110,7 @@
           }
         }
       ],
-      "orderBy": [
-        {
-          "expression": {
-            "function": {
-              "functionName": "COUNT",
-              "arguments": [
-                {
-                  "attributeExpression": {
-                    "attributeId": "API_TRACE.apiTraceId"
-                  }
-                }
-              ],
-              "alias": "COUNT#COUNT:Api.Trace|apiTraceId"
-            }
-          }
-        }
-      ],
-      "limit": 11
+      "limit": 10000
     },
     "response": {
       "isLastChunk": true,
@@ -154,13 +137,45 @@
               "string": "checkoutservice"
             },
             {
-              "string": "POST /shippinginfo"
+              "string": "POST /checkout"
             },
             {
-              "string": "26.20000"
+              "string": "290.39980"
             },
             {
-              "string": "5"
+              "string": "1003"
+            }
+          ]
+        },
+        {
+          "column": [
+            {
+              "string": "dataservice"
+            },
+            {
+              "string": "GET /products"
+            },
+            {
+              "string": "70.19372"
+            },
+            {
+              "string": "19466"
+            }
+          ]
+        },
+        {
+          "column": [
+            {
+              "string": "recommendationservice"
+            },
+            {
+              "string": "POST /new"
+            },
+            {
+              "string": "50.10688"
+            },
+            {
+              "string": "1104"
             }
           ]
         },
@@ -186,13 +201,45 @@
               "string": "checkoutservice"
             },
             {
-              "string": "POST /v2/cart"
+              "string": "GET /cart"
             },
             {
-              "string": "14.47222"
+              "string": "42.08581"
             },
             {
-              "string": "72"
+              "string": "3263"
+            }
+          ]
+        },
+        {
+          "column": [
+            {
+              "string": "recommendationservice"
+            },
+            {
+              "string": "GET /prices"
+            },
+            {
+              "string": "37.88183"
+            },
+            {
+              "string": "15689"
+            }
+          ]
+        },
+        {
+          "column": [
+            {
+              "string": "checkoutservice"
+            },
+            {
+              "string": "POST /shippinginfo"
+            },
+            {
+              "string": "26.20000"
+            },
+            {
+              "string": "5"
             }
           ]
         },
@@ -202,13 +249,13 @@
               "string": "dataservice"
             },
             {
-              "string": "GET /product/879"
+              "string": "POST /user"
             },
             {
-              "string": "1.18182"
+              "string": "24.13552"
             },
             {
-              "string": "88"
+              "string": "3232"
             }
           ]
         },
@@ -231,6 +278,22 @@
         {
           "column": [
             {
+              "string": "checkoutservice"
+            },
+            {
+              "string": "POST /v2/checkout"
+            },
+            {
+              "string": "18.08212"
+            },
+            {
+              "string": "755"
+            }
+          ]
+        },
+        {
+          "column": [
+            {
               "string": "dataservice"
             },
             {
@@ -241,6 +304,54 @@
             },
             {
               "string": "198"
+            }
+          ]
+        },
+        {
+          "column": [
+            {
+              "string": "checkoutservice"
+            },
+            {
+              "string": "POST /v2/cart"
+            },
+            {
+              "string": "14.47222"
+            },
+            {
+              "string": "72"
+            }
+          ]
+        },
+        {
+          "column": [
+            {
+              "string": "dataservice"
+            },
+            {
+              "string": "GET /product/1"
+            },
+            {
+              "string": "12.69599"
+            },
+            {
+              "string": "5480"
+            }
+          ]
+        },
+        {
+          "column": [
+            {
+              "string": "checkoutservice"
+            },
+            {
+              "string": "GET /user/45/cart"
+            },
+            {
+              "string": "11.32703"
+            },
+            {
+              "string": "370"
             }
           ]
         },
@@ -263,16 +374,48 @@
         {
           "column": [
             {
+              "string": "dataservice"
+            },
+            {
+              "string": "GET /user/34/rating"
+            },
+            {
+              "string": "8.75851"
+            },
+            {
+              "string": "8812"
+            }
+          ]
+        },
+        {
+          "column": [
+            {
               "string": "checkoutservice"
             },
             {
-              "string": "GET /user/45/cart"
+              "string": "POST /v3/checkout"
             },
             {
-              "string": "11.32703"
+              "string": "5.61975"
             },
             {
-              "string": "370"
+              "string": "1023"
+            }
+          ]
+        },
+        {
+          "column": [
+            {
+              "string": "recommendationservice"
+            },
+            {
+              "string": "GET /user/76/recommendations"
+            },
+            {
+              "string": "2.90305"
+            },
+            {
+              "string": "1475"
             }
           ]
         },
@@ -298,13 +441,29 @@
               "string": "checkoutservice"
             },
             {
-              "string": "POST /v2/checkout"
+              "string": "GET /users/78/cart"
             },
             {
-              "string": "18.08212"
+              "string": "1.81675"
             },
             {
-              "string": "755"
+              "string": "2974"
+            }
+          ]
+        },
+        {
+          "column": [
+            {
+              "string": "dataservice"
+            },
+            {
+              "string": "GET /product/879"
+            },
+            {
+              "string": "1.18182"
+            },
+            {
+              "string": "88"
             }
           ]
         }
@@ -775,7 +934,7 @@
           }
         }
       ],
-      "limit": 11
+      "limit": 10
     },
     "response": {
       "isLastChunk": true,
