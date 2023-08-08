@@ -232,6 +232,43 @@
           }
         }
       ],
+      "orderBy": [
+        {
+          "expression": {
+            "function": {
+              "functionName": "dateTimeConvert",
+              "arguments": [
+                {
+                  "attributeExpression": {
+                    "attributeId": "SERVICE.startTime"
+                  }
+                },
+                {
+                  "literal": {
+                    "value": {
+                      "string": "1:MILLISECONDS:EPOCH"
+                    }
+                  }
+                },
+                {
+                  "literal": {
+                    "value": {
+                      "string": "1:MILLISECONDS:EPOCH"
+                    }
+                  }
+                },
+                {
+                  "literal": {
+                    "value": {
+                      "string": "3600:SECONDS"
+                    }
+                  }
+                }
+              ]
+            }
+          }
+        }
+      ],
       "limit": 6
     },
     "response": {
@@ -421,6 +458,36 @@
           }
         }
       ],
+      "orderBy": [{
+        "expression": {
+          "function": {
+            "functionName": "dateTimeConvert",
+            "arguments": [{
+              "attributeExpression": {
+                "attributeId": "SERVICE.startTime"
+              }
+            }, {
+              "literal": {
+                "value": {
+                  "string": "1:MILLISECONDS:EPOCH"
+                }
+              }
+            }, {
+              "literal": {
+                "value": {
+                  "string": "1:MILLISECONDS:EPOCH"
+                }
+              }
+            }, {
+              "literal": {
+                "value": {
+                  "string": "3600:SECONDS"
+                }
+              }
+            }]
+          }
+        }
+      }],
       "limit": 2
     },
     "response": {

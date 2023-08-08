@@ -138,6 +138,58 @@
           }
         }
       ],
+      "orderBy": [
+        {
+          "expression": {
+            "function": {
+              "functionName": "dateTimeConvert",
+              "arguments": [
+                {
+                  "attributeExpression": {
+                    "attributeId": "API_TRACE.startTime"
+                  }
+                },
+                {
+                  "literal": {
+                    "value": {
+                      "string": "1:MILLISECONDS:EPOCH"
+                    }
+                  }
+                },
+                {
+                  "literal": {
+                    "value": {
+                      "string": "1:MILLISECONDS:EPOCH"
+                    }
+                  }
+                },
+                {
+                  "literal": {
+                    "value": {
+                      "string": "60:SECONDS"
+                    }
+                  }
+                }
+              ]
+            }
+          }
+        },
+        {
+          "expression": {
+            "function": {
+              "functionName": "AVG",
+              "arguments": [
+                {
+                  "attributeExpression": {
+                    "attributeId": "API_TRACE.duration"
+                  }
+                }
+              ],
+              "alias": "AVG#results/avgLatency:API_TRACE|duration"
+            }
+          }
+        }
+      ],
       "limit": 10
     },
     "response": {
