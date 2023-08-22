@@ -71,12 +71,16 @@ public class SpanService {
       Map<String, AttributeMetadata> attributeMap =
           attributeMetadataProvider.getAttributesMetadata(context, AttributeScope.EVENT.name());
       SpansResponse.Builder spanResponseBuilder = SpansResponse.newBuilder();
-      CompletableFuture<Collection<SpanEvent>> filteredSpanEventsFuture =
-          CompletableFuture.supplyAsync(
-              () -> filterSpans(context, request, attributeMap), queryExecutor);
-
-      spanResponseBuilder.setTotal(getTotalFilteredSpans(context, request));
-      spanResponseBuilder.addAllSpans(filteredSpanEventsFuture.join());
+      if (request.getFetchTotal()) {
+        CompletableFuture<Collection<SpanEvent>> filteredSpanEventsFuture =
+            CompletableFuture.supplyAsync(
+                () -> filterSpans(context, request, attributeMap), queryExecutor);
+        spanResponseBuilder.setTotal(getTotalFilteredSpans(context, request));
+        spanResponseBuilder.addAllSpans(filteredSpanEventsFuture.join());
+      } else {
+        // As the total value is not requested, fetching the spans within the same thread.
+        spanResponseBuilder.addAllSpans(filterSpans(context, request, attributeMap));
+      }
 
       SpansResponse response = spanResponseBuilder.build();
       LOG.debug("Span Service Response: {}", response);

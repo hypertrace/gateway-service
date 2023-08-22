@@ -75,16 +75,9 @@ public class TimeAggregationsRequestHandlerTest {
     List<OrderByExpression> orderByExpressions =
         requestHandler.getRequestOrderByExpressions(exploreRequest);
 
-    Assertions.assertEquals(2, orderByExpressions.size());
-    // Should add the interval start time order by as the first in the list
-    Assertions.assertEquals(
-        OrderByExpression.newBuilder()
-            .setOrder(SortOrder.ASC)
-            .setExpression(
-                QueryExpressionUtil.buildAttributeExpression(ColumnName.INTERVAL_START_TIME.name()))
-            .build(),
-        orderByExpressions.get(0));
-    // Should switch out the alias in the OrderBy expression
+    // order by alias remains the same
+    Assertions.assertEquals(1, orderByExpressions.size());
+    // check the OrderBy expression
     Assertions.assertEquals(
         OrderByExpression.newBuilder()
             .setOrder(SortOrder.DESC)
@@ -98,7 +91,7 @@ public class TimeAggregationsRequestHandlerTest {
                                 QueryExpressionUtil.buildAttributeExpression(
                                     "Api.Trace.metrics.duration_millis"))))
             .build(),
-        orderByExpressions.get(1));
+        orderByExpressions.get(0));
   }
 
   @Test

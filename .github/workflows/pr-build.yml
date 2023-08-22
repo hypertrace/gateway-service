@@ -1,38 +1,25 @@
-name: build and validate
+name: build and test
 on:
+  schedule:
+    - cron: 11 0 * * 1
   push:
     branches:
       - main
-  pull_request_target:
-    branches: 
-      - main
+  pull_request:
 
 jobs:
   build:
-    runs-on: ubuntu-20.04
+    runs-on: ubuntu-22.04
     steps:
        # Set fetch-depth: 0 to fetch commit history and tags for use in version calculation
       - name: Check out code
-        uses: actions/checkout@v2.3.4
+        uses: actions/checkout@v3
         with:
-          ref: ${{github.event.pull_request.head.ref}}
-          repository: ${{github.event.pull_request.head.repo.full_name}}
           fetch-depth: 0
-      
-      - name: create checksum file
-        uses: hypertrace/github-actions/checksum@main
-
-      - name: Cache packages
-        uses: actions/cache@v2
-        with:
-          path: ~/.gradle
-          key: gradle-packages-${{ runner.os }}-${{ github.job }}-${{ hashFiles('**/checksum.txt') }}
-          restore-keys: |
-            gradle-packages-${{ runner.os }}-${{ github.job }}
-            gradle-packages-${{ runner.os }}
 
       - name: Login to Docker Hub
-        uses: docker/login-action@v1
+        uses: docker/login-action@v2
+        if: github.event_name != 'pull_request' || github.event.pull_request.head.repo.full_name == github.repository
         with:
           username: ${{ secrets.DOCKERHUB_READ_USER }}
           password: ${{ secrets.DOCKERHUB_READ_TOKEN }}
@@ -42,23 +29,63 @@ jobs:
         with: 
           args: build dockerBuildImages
 
-      - name: Determine docker tag
-        id: tag
-        run: echo ::set-output name=tag::$(./gradlew -q printDockerImageDefaultTag | head -1)
-
-      - name: Scan docker image
-        uses: azure/container-scan@v0.1
+      - name: Run Trivy vulnerability scanner
+        uses: hypertrace/github-actions/trivy-image-scan@main
         with:
-          image-name: hypertrace/gateway-service:${{ steps.tag.outputs.tag }}
-        env:
-          DOCKLE_HOST: "unix:///var/run/docker.sock"
-        continue-on-error: true
+          image: hypertrace/gateway-service
+          output-mode: github
+
+  test:
+    runs-on: ubuntu-22.04
+    steps:
+      # Set fetch-depth: 0 to fetch commit history and tags for use in version calculation
+      - name: Check out code
+        uses: actions/checkout@v3
+        with:
+          fetch-depth: 0
+
+      - name: Unit test
+        uses: hypertrace/github-actions/gradle@main
+        with:
+          args: jacocoTestReport
+
+      - name: Upload coverage to Codecov
+        uses: codecov/codecov-action@v3
+        with:
+          name: unit test reports
+          flags: unit
+
+      - name: copy test reports
+        uses: hypertrace/github-actions/gradle@main
+        with:
+          args: copyAllReports --output-dir=/tmp/test-reports
+        if: failure()
+
+      - name: Archive test reports
+        uses: actions/upload-artifact@v3
+        with:
+          name: test-reports
+          path: /tmp/test-reports
+        if: failure()
+
+      - name: Publish Unit Test Results
+        uses: EnricoMi/publish-unit-test-result-action@v2
+        if: (success() || failure()) && (github.event_name != 'pull_request' || github.event.pull_request.head.repo.full_name == github.repository)
+        with:
+          github_token: ${{ secrets.GITHUB_TOKEN }}
+          files: ./**/build/test-results/**/*.xml
+
+  dependency-check:
+    runs-on: ubuntu-22.04
+    steps:
+      - name: Dependency Check
+        uses: hypertrace/github-actions/dependency-check@main
 
   validate-helm-charts:
-    runs-on: ubuntu-20.04
+    runs-on: ubuntu-22.04
     steps:
       - name: Check out code
-        uses: actions/checkout@v2.3.4
+        uses: actions/checkout@v3
         with:
           ref: ${{github.event.pull_request.head.ref}}
           repository: ${{github.event.pull_request.head.repo.full_name}}
@@ -66,20 +93,3 @@ jobs:
 
       - name: validate charts
         uses: hypertrace/github-actions/validate-charts@main
-
-  snyk-scan:
-    runs-on: ubuntu-20.04
-    steps:
-    # Set fetch-depth: 0 to fetch commit history and tags for use in version calculation
-      - name: Check out code
-        uses: actions/checkout@v2.3.4
-        with:
-          ref: ${{github.event.pull_request.head.ref}}
-          repository: ${{github.event.pull_request.head.repo.full_name}}
-          fetch-depth: 0
-      - name: Setup snyk
-        uses: snyk/actions/setup@0.3.0
-      - name: Snyk test
-        run: snyk test --all-sub-projects --org=hypertrace --severity-threshold=low --policy-path=.snyk --configuration-matching='^runtimeClasspath$' --remote-repo-url='${{ github.server_url }}/${{ github.repository }}.git'
-        env:
-          SNYK_TOKEN: ${{ secrets.SNYK_TOKEN }}

@@ -1,5 +1,7 @@
 package org.hypertrace.gateway.service.explore.entity;
 
+import java.util.HashSet;
+import java.util.Optional;
 import java.util.Set;
 import org.hypertrace.gateway.service.common.AttributeMetadataProvider;
 import org.hypertrace.gateway.service.common.datafetcher.QueryServiceEntityFetcher;
@@ -7,6 +9,7 @@ import org.hypertrace.gateway.service.common.util.QueryServiceClient;
 import org.hypertrace.gateway.service.entity.config.EntityIdColumnsConfigs;
 import org.hypertrace.gateway.service.explore.ExploreRequestContext;
 import org.hypertrace.gateway.service.explore.RequestHandler;
+import org.hypertrace.gateway.service.v1.explore.EntityOption;
 import org.hypertrace.gateway.service.v1.explore.ExploreRequest;
 import org.hypertrace.gateway.service.v1.explore.ExploreResponse;
 
@@ -28,6 +31,8 @@ import org.hypertrace.gateway.service.v1.explore.ExploreResponse;
  */
 public class EntityRequestHandler extends RequestHandler {
   private final EntityServiceEntityFetcher entityServiceEntityFetcher;
+  private final AttributeMetadataProvider attributeMetadataProvider;
+  private final QueryServiceEntityFetcher queryServiceEntityFetcher;
 
   public EntityRequestHandler(
       AttributeMetadataProvider attributeMetadataProvider,
@@ -41,7 +46,9 @@ public class EntityRequestHandler extends RequestHandler {
         entityIdColumnsConfigs,
         queryServiceEntityFetcher,
         entityServiceEntityFetcher);
+    this.attributeMetadataProvider = attributeMetadataProvider;
     this.entityServiceEntityFetcher = entityServiceEntityFetcher;
+    this.queryServiceEntityFetcher = queryServiceEntityFetcher;
   }
 
   @Override
@@ -53,11 +60,14 @@ public class EntityRequestHandler extends RequestHandler {
       requestContext.setHasGroupBy(true);
     }
 
-    Set<String> entityIds = getEntityIdsFromQueryService(requestContext, exploreRequest);
     ExploreResponse.Builder builder = ExploreResponse.newBuilder();
-
-    if (entityIds.isEmpty()) {
-      return builder;
+    Set<String> entityIds = new HashSet<>();
+    Optional<EntityOption> maybeEntityOption = getEntityOption(exploreRequest);
+    if (requestOnLiveEntities(maybeEntityOption)) {
+      entityIds.addAll(getEntityIdsFromQueryService(requestContext, exploreRequest));
+      if (entityIds.isEmpty()) {
+        return builder;
+      }
     }
 
     builder.addAllRow(
@@ -78,5 +88,21 @@ public class EntityRequestHandler extends RequestHandler {
     }
 
     return builder;
+  }
+
+  private boolean requestOnLiveEntities(Optional<EntityOption> entityOption) {
+    if (entityOption.isEmpty()) {
+      return true;
+    }
+    return !entityOption.get().getIncludeNonLiveEntities();
+  }
+
+  private Optional<EntityOption> getEntityOption(ExploreRequest exploreRequest) {
+    if (!exploreRequest.hasContextOption()) {
+      return Optional.empty();
+    }
+    return exploreRequest.getContextOption().hasEntityOption()
+        ? Optional.of(exploreRequest.getContextOption().getEntityOption())
+        : Optional.empty();
   }
 }

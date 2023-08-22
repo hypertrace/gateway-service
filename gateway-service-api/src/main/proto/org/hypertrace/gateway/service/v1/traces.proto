@@ -23,11 +23,12 @@ message TracesRequest {
   int32 offset = 6;
   int32 limit = 7;
   string space_id = 9;
+  bool fetch_total = 10;
 }
 
 message TracesResponse {
   repeated Trace traces = 1;
-  int32 total = 2;
+  optional int32 total = 2;
 }
 
 message Trace {

@@ -13,6 +13,7 @@ import org.hypertrace.entity.query.service.v1.ColumnMetadata;
 import org.hypertrace.entity.query.service.v1.EntityQueryRequest;
 import org.hypertrace.entity.query.service.v1.Expression;
 import org.hypertrace.entity.query.service.v1.Filter;
+import org.hypertrace.entity.query.service.v1.Filter.Builder;
 import org.hypertrace.entity.query.service.v1.LiteralConstant;
 import org.hypertrace.entity.query.service.v1.Operator;
 import org.hypertrace.entity.query.service.v1.ResultSetChunk;
@@ -34,6 +35,7 @@ import org.slf4j.LoggerFactory;
 
 public class EntityServiceEntityFetcher {
   private static final Logger LOGGER = LoggerFactory.getLogger(EntityServiceEntityFetcher.class);
+  private static final int DEFAULT_ENTITY_REQUEST_LIMIT = 10_000;
   private final AttributeMetadataProvider attributeMetadataProvider;
   private final EntityIdColumnsConfigs entityIdColumnsConfigs;
   private final EntityQueryServiceClient entityQueryServiceClient;
@@ -167,7 +169,7 @@ public class EntityServiceEntityFetcher {
 
     addGroupBys(exploreRequest, builder);
     addSelections(requestContext, exploreRequest, builder);
-
+    builder.setLimit(DEFAULT_ENTITY_REQUEST_LIMIT);
     return builder.build();
   }
 
@@ -203,6 +205,16 @@ public class EntityServiceEntityFetcher {
 
   private Filter.Builder buildFilter(
       ExploreRequest exploreRequest, List<String> entityIdAttributeIds, Set<String> entityIds) {
+    Builder filterBuilder =
+        Filter.newBuilder()
+            .setOperator(Operator.AND)
+            .addChildFilter(
+                EntityServiceAndGatewayServiceConverter.convertToEntityServiceFilter(
+                    exploreRequest.getFilter()));
+    if (entityIds.isEmpty()) {
+      return filterBuilder;
+    }
+
     List<Filter> entityIdsInFilter =
         entityIdAttributeIds.stream()
             .map(
@@ -224,11 +236,6 @@ public class EntityServiceEntityFetcher {
                         .build())
             .collect(Collectors.toUnmodifiableList());
 
-    return Filter.newBuilder()
-        .setOperator(Operator.AND)
-        .addChildFilter(
-            EntityServiceAndGatewayServiceConverter.convertToEntityServiceFilter(
-                exploreRequest.getFilter()))
-        .addAllChildFilter(entityIdsInFilter);
+    return filterBuilder.addAllChildFilter(entityIdsInFilter);
   }
 }

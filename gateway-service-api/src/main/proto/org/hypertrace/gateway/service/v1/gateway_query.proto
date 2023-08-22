@@ -37,6 +37,7 @@ enum Operator {
   CONTAINS_KEY = 16;
   CONTAINS_KEYVALUE = 17;
   CONTAINS_KEY_LIKE = 18;
+  NOT_CONTAINS_KEY = 19;
 }
 
 enum FunctionType {
