@@ -22,6 +22,8 @@ public class AttributeMetadataProviderTest {
   @Test
   public void testGetAttributeMetadata() {
     AttributeServiceClient attributesServiceClient = mock(AttributeServiceClient.class);
+    RequestContext requestContext1 =
+        buildContext("test-tenant-id", Map.of("test-header-key", "test-header-value"));
     List<AttributeMetadata> attributesList1 =
         List.of(
             AttributeMetadata.newBuilder()
@@ -40,7 +42,7 @@ public class AttributeMetadataProviderTest {
                 .setId("API.serviceId")
                 .build());
     when(attributesServiceClient.findAttributes(
-            eq(Map.of("test-header-key", "test-header-value")),
+            eq(requestContext1.getHeaders()),
             eq(
                 AttributeMetadataFilter.newBuilder()
                     .addScopeString(AttributeScope.API.name())
@@ -49,9 +51,6 @@ public class AttributeMetadataProviderTest {
 
     AttributeMetadataProvider attributeMetadataProvider =
         new AttributeMetadataProvider(attributesServiceClient);
-
-    RequestContext requestContext1 =
-        new RequestContext("test-tenant-id", Map.of("test-header-key", "test-header-value"));
 
     AttributeMetadata attributeMetadata =
         attributeMetadataProvider
@@ -91,7 +90,7 @@ public class AttributeMetadataProviderTest {
     // the other for (Api, id)
     verify(attributesServiceClient, times(2))
         .findAttributes(
-            eq(Map.of("test-header-key", "test-header-value")),
+            eq(requestContext1.getHeaders()),
             eq(
                 AttributeMetadataFilter.newBuilder()
                     .addScopeString(AttributeScope.API.name())
@@ -108,16 +107,16 @@ public class AttributeMetadataProviderTest {
                 .setScopeString(AttributeScope.API.name())
                 .setKey("apiId")
                 .build());
+
+    RequestContext requestContext2 =
+        buildContext("test-tenant-id-2", Map.of("test-header-key", "test-header-value-2"));
     when(attributesServiceClient.findAttributes(
-            eq(Map.of("test-header-key", "test-header-value-2")),
+            eq(requestContext2.getHeaders()),
             eq(
                 AttributeMetadataFilter.newBuilder()
                     .addScopeString(AttributeScope.API.name())
                     .build())))
         .thenAnswer((Answer<Iterator<AttributeMetadata>>) invocation -> attributesList2.iterator());
-
-    RequestContext requestContext2 =
-        new RequestContext("test-tenant-id-2", Map.of("test-header-key", "test-header-value-2"));
 
     attributeMetadata =
         attributeMetadataProvider
@@ -153,7 +152,7 @@ public class AttributeMetadataProviderTest {
     // 2 for a different tenant on (Api, id) and (Api, name2)
     verify(attributesServiceClient, times(2))
         .findAttributes(
-            eq(Map.of("test-header-key", "test-header-value-2")),
+            eq(requestContext2.getHeaders()),
             eq(
                 AttributeMetadataFilter.newBuilder()
                     .addScopeString(AttributeScope.API.name())
@@ -183,8 +182,11 @@ public class AttributeMetadataProviderTest {
             .build();
     List<AttributeMetadata> attributesList1 =
         List.of(attributeMetadata1, attributeMetadata2, attributeMetadata3);
+    RequestContext requestContext1 =
+        buildContext("test-tenant-id", Map.of("test-header-key", "test-header-value"));
+
     when(attributesServiceClient.findAttributes(
-            eq(Map.of("test-header-key", "test-header-value")),
+            eq(requestContext1.getHeaders()),
             eq(
                 AttributeMetadataFilter.newBuilder()
                     .addScopeString(AttributeScope.API.name())
@@ -193,9 +195,6 @@ public class AttributeMetadataProviderTest {
 
     AttributeMetadataProvider attributeMetadataProvider =
         new AttributeMetadataProvider(attributesServiceClient);
-
-    RequestContext requestContext1 =
-        new RequestContext("test-tenant-id", Map.of("test-header-key", "test-header-value"));
 
     Map<String, AttributeMetadata> attributeIdToMetadata =
         attributeMetadataProvider.getAttributesMetadata(requestContext1, AttributeScope.API.name());
@@ -224,7 +223,7 @@ public class AttributeMetadataProviderTest {
     // value should be cached.
     verify(attributesServiceClient, times(1))
         .findAttributes(
-            eq(Map.of("test-header-key", "test-header-value")),
+            eq(requestContext1.getHeaders()),
             eq(
                 AttributeMetadataFilter.newBuilder()
                     .addScopeString(AttributeScope.API.name())
@@ -244,16 +243,15 @@ public class AttributeMetadataProviderTest {
             .setId("API.apiId")
             .build();
     List<AttributeMetadata> attributesList2 = List.of(attributeMetadata4, attributeMetadata5);
+    RequestContext requestContext2 =
+        buildContext("test-tenant-id-2", Map.of("test-header-key", "test-header-value-2"));
     when(attributesServiceClient.findAttributes(
-            eq(Map.of("test-header-key", "test-header-value-2")),
+            eq(requestContext2.getHeaders()),
             eq(
                 AttributeMetadataFilter.newBuilder()
                     .addScopeString(AttributeScope.API.name())
                     .build())))
         .thenAnswer((Answer<Iterator<AttributeMetadata>>) invocation -> attributesList2.iterator());
-
-    RequestContext requestContext2 =
-        new RequestContext("test-tenant-id-2", Map.of("test-header-key", "test-header-value-2"));
 
     attributeIdToMetadata =
         attributeMetadataProvider.getAttributesMetadata(requestContext2, AttributeScope.API.name());
@@ -269,10 +267,17 @@ public class AttributeMetadataProviderTest {
     // 1 call to attribute service for a different tenant
     verify(attributesServiceClient, times(1))
         .findAttributes(
-            eq(Map.of("test-header-key", "test-header-value-2")),
+            eq(requestContext2.getHeaders()),
             eq(
                 AttributeMetadataFilter.newBuilder()
                     .addScopeString(AttributeScope.API.name())
                     .build()));
+  }
+
+  private RequestContext buildContext(String tenantId, Map<String, String> headers) {
+    org.hypertrace.core.grpcutils.context.RequestContext grpcContext =
+        org.hypertrace.core.grpcutils.context.RequestContext.forTenantId(tenantId);
+    headers.forEach(grpcContext::add);
+    return new RequestContext(grpcContext);
   }
 }

@@ -43,7 +43,7 @@ public class UpdateEntityRequestValidator extends RequestValidator<UpdateEntityR
       // only 1 attribute source is supported
       AttributeMetadata metadata = attributeMetadataMap.get(attributeId);
       Preconditions.checkArgument(
-          metadata.getSourcesCount() == 1 && metadata.getSources(0).equals(AttributeSource.EDS),
+          metadata.getSourcesCount() > 0 && metadata.getSourcesList().contains(AttributeSource.EDS),
           "Only EDS attributes are supported for update right now");
     }
   }

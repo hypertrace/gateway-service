@@ -1,22 +1,26 @@
 package org.hypertrace.gateway.service;
 
+import static org.hypertrace.core.grpcutils.client.RequestContextClientCallCredsProviderFactory.getClientCallCredsProvider;
+
 import com.google.common.base.Preconditions;
 import com.google.common.collect.ImmutableMap;
 import com.google.protobuf.ServiceException;
 import com.typesafe.config.Config;
-import io.grpc.ManagedChannel;
-import io.grpc.ManagedChannelBuilder;
 import io.grpc.stub.StreamObserver;
 import io.micrometer.core.instrument.Counter;
+import java.time.Duration;
 import java.util.Optional;
 import java.util.concurrent.ExecutorService;
 import org.apache.commons.lang3.StringUtils;
 import org.hypertrace.core.attribute.service.client.AttributeServiceClient;
 import org.hypertrace.core.attribute.service.client.config.AttributeServiceClientConfig;
-import org.hypertrace.core.query.service.client.QueryServiceClient;
+import org.hypertrace.core.grpcutils.client.GrpcChannelRegistry;
+import org.hypertrace.core.query.service.api.QueryServiceGrpc;
 import org.hypertrace.core.query.service.client.QueryServiceConfig;
 import org.hypertrace.core.serviceframework.metrics.PlatformMetricsRegistry;
 import org.hypertrace.entity.query.service.client.EntityQueryServiceClient;
+import org.hypertrace.entity.query.service.v1.EntityQueryServiceGrpc;
+import org.hypertrace.entity.query.service.v1.EntityQueryServiceGrpc.EntityQueryServiceBlockingStub;
 import org.hypertrace.entity.service.client.config.EntityServiceClientConfig;
 import org.hypertrace.gateway.service.baseline.BaselineService;
 import org.hypertrace.gateway.service.baseline.BaselineServiceImpl;
@@ -25,6 +29,7 @@ import org.hypertrace.gateway.service.baseline.BaselineServiceQueryParser;
 import org.hypertrace.gateway.service.common.AttributeMetadataProvider;
 import org.hypertrace.gateway.service.common.RequestContext;
 import org.hypertrace.gateway.service.common.config.ScopeFilterConfigs;
+import org.hypertrace.gateway.service.common.util.QueryServiceClient;
 import org.hypertrace.gateway.service.entity.EntityService;
 import org.hypertrace.gateway.service.entity.config.EntityIdColumnsConfigs;
 import org.hypertrace.gateway.service.entity.config.LogConfig;
@@ -36,6 +41,8 @@ import org.hypertrace.gateway.service.span.SpanService;
 import org.hypertrace.gateway.service.trace.TracesService;
 import org.hypertrace.gateway.service.v1.baseline.BaselineEntitiesRequest;
 import org.hypertrace.gateway.service.v1.baseline.BaselineEntitiesResponse;
+import org.hypertrace.gateway.service.v1.entity.BulkUpdateAllMatchingEntitiesRequest;
+import org.hypertrace.gateway.service.v1.entity.BulkUpdateAllMatchingEntitiesResponse;
 import org.hypertrace.gateway.service.v1.entity.BulkUpdateEntitiesRequest;
 import org.hypertrace.gateway.service.v1.entity.BulkUpdateEntitiesResponse;
 import org.hypertrace.gateway.service.v1.entity.EntitiesResponse;
@@ -62,7 +69,6 @@ public class GatewayServiceImpl extends GatewayServiceGrpc.GatewayServiceImplBas
 
   private static final String QUERY_SERVICE_CONFIG_KEY = "query.service.config";
   private static final String REQUEST_TIMEOUT_CONFIG_KEY = "request.timeout";
-  private static final int DEFAULT_REQUEST_TIMEOUT_MILLIS = 10000;
 
   private Counter requestStatusErrorCounter;
   private Counter requestStatusSuccessCounter;
@@ -76,47 +82,47 @@ public class GatewayServiceImpl extends GatewayServiceGrpc.GatewayServiceImplBas
   private final BaselineService baselineService;
   private final LogEventsService logEventsService;
 
-  public GatewayServiceImpl(Config appConfig) {
+  public GatewayServiceImpl(Config appConfig, GrpcChannelRegistry grpcChannelRegistry) {
     AttributeServiceClientConfig asConfig = AttributeServiceClientConfig.from(appConfig);
-    ManagedChannel attributeServiceChannel =
-        ManagedChannelBuilder.forAddress(asConfig.getHost(), asConfig.getPort())
-            .usePlaintext()
-            .build();
-    AttributeServiceClient asClient = new AttributeServiceClient(attributeServiceChannel);
+    AttributeServiceClient asClient =
+        new AttributeServiceClient(
+            grpcChannelRegistry.forPlaintextAddress(asConfig.getHost(), asConfig.getPort()));
     AttributeMetadataProvider attributeMetadataProvider = new AttributeMetadataProvider(asClient);
     EntityIdColumnsConfigs entityIdColumnsConfigs = EntityIdColumnsConfigs.fromConfig(appConfig);
 
-    Config qsConfig = appConfig.getConfig(QUERY_SERVICE_CONFIG_KEY);
+    Config untypedQsConfig = appConfig.getConfig(QUERY_SERVICE_CONFIG_KEY);
+    QueryServiceConfig qsConfig = new QueryServiceConfig(untypedQsConfig);
     QueryServiceClient queryServiceClient =
-        new QueryServiceClient(new QueryServiceConfig(qsConfig));
-    int qsRequestTimeout = getRequestTimeoutMillis(qsConfig);
+        new QueryServiceClient(
+            QueryServiceGrpc.newBlockingStub(
+                    grpcChannelRegistry.forPlaintextAddress(
+                        qsConfig.getQueryServiceHost(), qsConfig.getQueryServicePort()))
+                .withCallCredentials(getClientCallCredsProvider().get()),
+            Duration.ofMillis(untypedQsConfig.getInt(REQUEST_TIMEOUT_CONFIG_KEY)));
     ExecutorService queryExecutor =
         QueryExecutorServiceFactory.buildExecutorService(QueryExecutorConfig.from(appConfig));
 
     EntityServiceClientConfig esConfig = EntityServiceClientConfig.from(appConfig);
-    ManagedChannel entityServiceChannel =
-        ManagedChannelBuilder.forAddress(esConfig.getHost(), esConfig.getPort())
-            .usePlaintext()
-            .build();
-    EntityQueryServiceClient eqsClient = new EntityQueryServiceClient(entityServiceChannel);
+    final EntityQueryServiceBlockingStub eqsStub =
+        EntityQueryServiceGrpc.newBlockingStub(
+                grpcChannelRegistry.forPlaintextAddress(esConfig.getHost(), esConfig.getPort()))
+            .withCallCredentials(getClientCallCredsProvider().get());
+    EntityQueryServiceClient eqsClient =
+        new EntityQueryServiceClient(
+            grpcChannelRegistry.forPlaintextAddress(esConfig.getHost(), esConfig.getPort()));
 
     ScopeFilterConfigs scopeFilterConfigs = new ScopeFilterConfigs(appConfig);
     LogConfig logConfig = new LogConfig(appConfig);
     this.traceService =
         new TracesService(
-            queryServiceClient,
-            qsRequestTimeout,
-            attributeMetadataProvider,
-            scopeFilterConfigs,
-            queryExecutor);
+            queryServiceClient, attributeMetadataProvider, scopeFilterConfigs, queryExecutor);
     this.spanService =
-        new SpanService(
-            queryServiceClient, qsRequestTimeout, attributeMetadataProvider, queryExecutor);
+        new SpanService(queryServiceClient, attributeMetadataProvider, queryExecutor);
     this.entityService =
         new EntityService(
             queryServiceClient,
-            qsRequestTimeout,
             eqsClient,
+            eqsStub,
             attributeMetadataProvider,
             entityIdColumnsConfigs,
             scopeFilterConfigs,
@@ -125,7 +131,6 @@ public class GatewayServiceImpl extends GatewayServiceGrpc.GatewayServiceImplBas
     this.exploreService =
         new ExploreService(
             queryServiceClient,
-            qsRequestTimeout,
             eqsClient,
             attributeMetadataProvider,
             scopeFilterConfigs,
@@ -133,15 +138,14 @@ public class GatewayServiceImpl extends GatewayServiceGrpc.GatewayServiceImplBas
     BaselineServiceQueryParser baselineServiceQueryParser =
         new BaselineServiceQueryParser(attributeMetadataProvider);
     BaselineServiceQueryExecutor baselineServiceQueryExecutor =
-        new BaselineServiceQueryExecutor(qsRequestTimeout, queryServiceClient);
+        new BaselineServiceQueryExecutor(queryServiceClient);
     this.baselineService =
         new BaselineServiceImpl(
             attributeMetadataProvider,
             baselineServiceQueryParser,
             baselineServiceQueryExecutor,
             entityIdColumnsConfigs);
-    this.logEventsService =
-        new LogEventsService(queryServiceClient, qsRequestTimeout, attributeMetadataProvider);
+    this.logEventsService = new LogEventsService(queryServiceClient, attributeMetadataProvider);
     initMetrics();
   }
 
@@ -152,13 +156,6 @@ public class GatewayServiceImpl extends GatewayServiceGrpc.GatewayServiceImplBas
     requestStatusSuccessCounter =
         PlatformMetricsRegistry.registerCounter(
             SERVICE_REQUESTS_STATUS_COUNTER, ImmutableMap.of("error", "false"));
-  }
-
-  private static int getRequestTimeoutMillis(Config config) {
-    if (config.hasPath(REQUEST_TIMEOUT_CONFIG_KEY)) {
-      return config.getInt(REQUEST_TIMEOUT_CONFIG_KEY);
-    }
-    return DEFAULT_REQUEST_TIMEOUT_MILLIS;
   }
 
   @Override
@@ -177,11 +174,7 @@ public class GatewayServiceImpl extends GatewayServiceGrpc.GatewayServiceImplBas
 
     try {
       RequestContext requestContext =
-          new RequestContext(
-              tenantId.get(),
-              org.hypertrace.core.grpcutils.context.RequestContext.CURRENT
-                  .get()
-                  .getRequestHeaders());
+          new RequestContext(org.hypertrace.core.grpcutils.context.RequestContext.CURRENT.get());
 
       TracesResponse response = traceService.getTracesByFilter(requestContext, request);
       responseObserver.onNext(response);
@@ -209,11 +202,7 @@ public class GatewayServiceImpl extends GatewayServiceGrpc.GatewayServiceImplBas
 
     try {
       RequestContext context =
-          new RequestContext(
-              tenantId.get(),
-              org.hypertrace.core.grpcutils.context.RequestContext.CURRENT
-                  .get()
-                  .getRequestHeaders());
+          new RequestContext(org.hypertrace.core.grpcutils.context.RequestContext.CURRENT.get());
       SpansResponse response = spanService.getSpansByFilter(context, request);
       responseObserver.onNext(response);
       responseObserver.onCompleted();
@@ -256,11 +245,9 @@ public class GatewayServiceImpl extends GatewayServiceGrpc.GatewayServiceImplBas
 
       EntitiesResponse response =
           entityService.getEntities(
-              tenantId.get(),
-              request,
-              org.hypertrace.core.grpcutils.context.RequestContext.CURRENT
-                  .get()
-                  .getRequestHeaders());
+              new RequestContext(
+                  org.hypertrace.core.grpcutils.context.RequestContext.CURRENT.get()),
+              request);
 
       LOG.debug("Received response: {}", response);
 
@@ -292,11 +279,9 @@ public class GatewayServiceImpl extends GatewayServiceGrpc.GatewayServiceImplBas
     try {
       UpdateEntityResponse response =
           entityService.updateEntity(
-              tenantId.get(),
-              request,
-              org.hypertrace.core.grpcutils.context.RequestContext.CURRENT
-                  .get()
-                  .getRequestHeaders());
+              new RequestContext(
+                  org.hypertrace.core.grpcutils.context.RequestContext.CURRENT.get()),
+              request);
 
       if (LOG.isDebugEnabled()) {
         LOG.debug("Received response: {}", response);
@@ -318,19 +303,45 @@ public class GatewayServiceImpl extends GatewayServiceGrpc.GatewayServiceImplBas
     LOG.debug("Received request: {}", request);
 
     try {
-      String tenantId =
-          org.hypertrace.core.grpcutils.context.RequestContext.CURRENT
-              .get()
-              .getTenantId()
-              .orElseThrow(() -> new ServiceException("Tenant id is missing in the request."));
+      org.hypertrace.core.grpcutils.context.RequestContext.CURRENT
+          .get()
+          .getTenantId()
+          .orElseThrow(() -> new ServiceException("Tenant id is missing in the request."));
 
       BulkUpdateEntitiesResponse response =
           entityService.bulkUpdateEntities(
-              tenantId,
-              request,
-              org.hypertrace.core.grpcutils.context.RequestContext.CURRENT
-                  .get()
-                  .getRequestHeaders());
+              new RequestContext(
+                  org.hypertrace.core.grpcutils.context.RequestContext.CURRENT.get()),
+              request);
+
+      LOG.debug("Received response: {}", response);
+      responseObserver.onNext(response);
+      responseObserver.onCompleted();
+      requestStatusSuccessCounter.increment();
+    } catch (Exception e) {
+      LOG.error("Error while handling bulkUpdateEntities: {}.", request, e);
+      requestStatusErrorCounter.increment();
+      responseObserver.onError(e);
+    }
+  }
+
+  @Override
+  public void bulkUpdateAllMatchingEntities(
+      final BulkUpdateAllMatchingEntitiesRequest request,
+      final StreamObserver<BulkUpdateAllMatchingEntitiesResponse> responseObserver) {
+    LOG.debug("Received request: {}", request);
+
+    try {
+      org.hypertrace.core.grpcutils.context.RequestContext.CURRENT
+          .get()
+          .getTenantId()
+          .orElseThrow(() -> new ServiceException("Tenant id is missing in the request."));
+
+      final BulkUpdateAllMatchingEntitiesResponse response =
+          entityService.bulkUpdateAllMatchingEntities(
+              new RequestContext(
+                  org.hypertrace.core.grpcutils.context.RequestContext.CURRENT.get()),
+              request);
 
       LOG.debug("Received response: {}", response);
       responseObserver.onNext(response);
@@ -357,11 +368,9 @@ public class GatewayServiceImpl extends GatewayServiceGrpc.GatewayServiceImplBas
     try {
       BaselineEntitiesResponse response =
           baselineService.getBaselineForEntities(
-              tenantId.get(),
-              request,
-              org.hypertrace.core.grpcutils.context.RequestContext.CURRENT
-                  .get()
-                  .getRequestHeaders());
+              new RequestContext(
+                  org.hypertrace.core.grpcutils.context.RequestContext.CURRENT.get()),
+              request);
 
       LOG.debug("Received response: {}", response);
 
@@ -388,11 +397,9 @@ public class GatewayServiceImpl extends GatewayServiceGrpc.GatewayServiceImplBas
     try {
       ExploreResponse response =
           exploreService.explore(
-              tenantId.get(),
-              request,
-              org.hypertrace.core.grpcutils.context.RequestContext.CURRENT
-                  .get()
-                  .getRequestHeaders());
+              new RequestContext(
+                  org.hypertrace.core.grpcutils.context.RequestContext.CURRENT.get()),
+              request);
       responseObserver.onNext(response);
       responseObserver.onCompleted();
       requestStatusSuccessCounter.increment();
@@ -415,12 +422,9 @@ public class GatewayServiceImpl extends GatewayServiceGrpc.GatewayServiceImplBas
     }
 
     try {
+
       RequestContext context =
-          new RequestContext(
-              tenantId.get(),
-              org.hypertrace.core.grpcutils.context.RequestContext.CURRENT
-                  .get()
-                  .getRequestHeaders());
+          new RequestContext(org.hypertrace.core.grpcutils.context.RequestContext.CURRENT.get());
       LogEventsResponse response = logEventsService.getLogEventsByFilter(context, request);
       responseObserver.onNext(response);
       responseObserver.onCompleted();

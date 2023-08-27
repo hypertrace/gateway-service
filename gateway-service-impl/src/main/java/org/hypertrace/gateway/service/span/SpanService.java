@@ -24,12 +24,12 @@ import org.hypertrace.core.query.service.api.Filter;
 import org.hypertrace.core.query.service.api.QueryRequest;
 import org.hypertrace.core.query.service.api.ResultSetChunk;
 import org.hypertrace.core.query.service.api.Row;
-import org.hypertrace.core.query.service.client.QueryServiceClient;
 import org.hypertrace.core.serviceframework.metrics.PlatformMetricsRegistry;
 import org.hypertrace.gateway.service.common.AttributeMetadataProvider;
 import org.hypertrace.gateway.service.common.RequestContext;
 import org.hypertrace.gateway.service.common.converters.QueryAndGatewayDtoConverter;
 import org.hypertrace.gateway.service.common.util.AttributeMetadataUtil;
+import org.hypertrace.gateway.service.common.util.QueryServiceClient;
 import org.hypertrace.gateway.service.v1.common.OrderByExpression;
 import org.hypertrace.gateway.service.v1.span.SpanEvent;
 import org.hypertrace.gateway.service.v1.span.SpansRequest;
@@ -45,7 +45,6 @@ public class SpanService {
 
   private static final Logger LOG = LoggerFactory.getLogger(SpanService.class);
   private final QueryServiceClient queryServiceClient;
-  private final int requestTimeout;
   private final AttributeMetadataProvider attributeMetadataProvider;
   private final ExecutorService queryExecutor;
 
@@ -53,11 +52,9 @@ public class SpanService {
 
   public SpanService(
       QueryServiceClient queryServiceClient,
-      int requestTimeout,
       AttributeMetadataProvider attributeMetadataProvider,
       ExecutorService queryExecutor) {
     this.queryServiceClient = queryServiceClient;
-    this.requestTimeout = requestTimeout;
     this.attributeMetadataProvider = attributeMetadataProvider;
     this.queryExecutor = queryExecutor;
     initMetrics();
@@ -74,12 +71,16 @@ public class SpanService {
       Map<String, AttributeMetadata> attributeMap =
           attributeMetadataProvider.getAttributesMetadata(context, AttributeScope.EVENT.name());
       SpansResponse.Builder spanResponseBuilder = SpansResponse.newBuilder();
-      CompletableFuture<Collection<SpanEvent>> filteredSpanEventsFuture =
-          CompletableFuture.supplyAsync(
-              () -> filterSpans(context, request, attributeMap), queryExecutor);
-
-      spanResponseBuilder.setTotal(getTotalFilteredSpans(context, request));
-      spanResponseBuilder.addAllSpans(filteredSpanEventsFuture.join());
+      if (request.getFetchTotal()) {
+        CompletableFuture<Collection<SpanEvent>> filteredSpanEventsFuture =
+            CompletableFuture.supplyAsync(
+                () -> filterSpans(context, request, attributeMap), queryExecutor);
+        spanResponseBuilder.setTotal(getTotalFilteredSpans(context, request));
+        spanResponseBuilder.addAllSpans(filteredSpanEventsFuture.join());
+      } else {
+        // As the total value is not requested, fetching the spans within the same thread.
+        spanResponseBuilder.addAllSpans(filterSpans(context, request, attributeMap));
+      }
 
       SpansResponse response = spanResponseBuilder.build();
       LOG.debug("Span Service Response: {}", response);
@@ -126,7 +127,7 @@ public class SpanService {
     QueryRequest queryRequest = queryBuilder.build();
 
     Iterator<ResultSetChunk> resultSetChunkIterator =
-        queryServiceClient.executeQuery(queryRequest, context.getHeaders(), requestTimeout);
+        queryServiceClient.executeQuery(context, queryRequest);
 
     while (resultSetChunkIterator.hasNext()) {
       ResultSetChunk chunk = resultSetChunkIterator.next();
@@ -200,7 +201,7 @@ public class SpanService {
             .build();
 
     Iterator<ResultSetChunk> resultSetChunkIterator =
-        queryServiceClient.executeQuery(queryRequest, context.getHeaders(), requestTimeout);
+        queryServiceClient.executeQuery(context, queryRequest);
     while (resultSetChunkIterator.hasNext()) {
       ResultSetChunk chunk = resultSetChunkIterator.next();
       if (LOG.isDebugEnabled()) {

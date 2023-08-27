@@ -3,9 +3,9 @@ package org.hypertrace.gateway.service.explore;
 import static org.mockito.Mockito.mock;
 
 import java.util.List;
-import org.hypertrace.core.query.service.client.QueryServiceClient;
 import org.hypertrace.gateway.service.common.AttributeMetadataProvider;
 import org.hypertrace.gateway.service.common.util.QueryExpressionUtil;
+import org.hypertrace.gateway.service.common.util.QueryServiceClient;
 import org.hypertrace.gateway.service.v1.common.Expression;
 import org.hypertrace.gateway.service.v1.common.FunctionExpression;
 import org.hypertrace.gateway.service.v1.common.FunctionType;
@@ -64,20 +64,13 @@ public class TimeAggregationsRequestHandlerTest {
 
     TimeAggregationsRequestHandler requestHandler =
         new TimeAggregationsRequestHandler(
-            mock(QueryServiceClient.class), 500, mock(AttributeMetadataProvider.class));
+            mock(QueryServiceClient.class), mock(AttributeMetadataProvider.class));
     List<OrderByExpression> orderByExpressions =
         requestHandler.getRequestOrderByExpressions(exploreRequest);
 
-    Assertions.assertEquals(2, orderByExpressions.size());
-    // Should add the interval start time order by as the first in the list
-    Assertions.assertEquals(
-        OrderByExpression.newBuilder()
-            .setOrder(SortOrder.ASC)
-            .setExpression(
-                QueryExpressionUtil.buildAttributeExpression(ColumnName.INTERVAL_START_TIME.name()))
-            .build(),
-        orderByExpressions.get(0));
-    // Should switch out the alias in the OrderBy expression
+    // order by alias remains the same
+    Assertions.assertEquals(1, orderByExpressions.size());
+    // check the OrderBy expression
     Assertions.assertEquals(
         OrderByExpression.newBuilder()
             .setOrder(SortOrder.DESC)
@@ -91,7 +84,7 @@ public class TimeAggregationsRequestHandlerTest {
                                 QueryExpressionUtil.buildAttributeExpression(
                                     "Api.Trace.metrics.duration_millis"))))
             .build(),
-        orderByExpressions.get(1));
+        orderByExpressions.get(0));
   }
 
   @Test
@@ -119,7 +112,7 @@ public class TimeAggregationsRequestHandlerTest {
 
     TimeAggregationsRequestHandler requestHandler =
         new TimeAggregationsRequestHandler(
-            mock(QueryServiceClient.class), 500, mock(AttributeMetadataProvider.class));
+            mock(QueryServiceClient.class), mock(AttributeMetadataProvider.class));
     List<OrderByExpression> orderByExpressions =
         requestHandler.getRequestOrderByExpressions(exploreRequest);
 

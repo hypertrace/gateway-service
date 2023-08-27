@@ -1,13 +1,18 @@
 package org.hypertrace.gateway.service.explore.entity;
 
+import static java.util.Collections.unmodifiableSet;
+import static java.util.stream.Collectors.toUnmodifiableSet;
+
 import com.google.common.annotations.VisibleForTesting;
 import com.google.common.collect.Streams;
+import java.util.HashSet;
 import java.util.Iterator;
+import java.util.List;
 import java.util.Map;
+import java.util.Optional;
 import java.util.Set;
 import java.util.stream.Collectors;
 import org.hypertrace.core.attribute.service.v1.AttributeMetadata;
-import org.hypertrace.core.query.service.client.QueryServiceClient;
 import org.hypertrace.entity.query.service.client.EntityQueryServiceClient;
 import org.hypertrace.entity.query.service.v1.ColumnMetadata;
 import org.hypertrace.entity.query.service.v1.ResultSetChunk;
@@ -19,14 +24,19 @@ import org.hypertrace.gateway.service.common.converters.EntityServiceAndGatewayS
 import org.hypertrace.gateway.service.common.datafetcher.EntityFetcherResponse;
 import org.hypertrace.gateway.service.common.datafetcher.QueryServiceEntityFetcher;
 import org.hypertrace.gateway.service.common.util.AttributeMetadataUtil;
+import org.hypertrace.gateway.service.common.util.DataCollectionUtil;
 import org.hypertrace.gateway.service.common.util.MetricAggregationFunctionUtil;
+import org.hypertrace.gateway.service.common.util.QueryServiceClient;
 import org.hypertrace.gateway.service.entity.EntitiesRequestContext;
 import org.hypertrace.gateway.service.entity.config.EntityIdColumnsConfigs;
 import org.hypertrace.gateway.service.explore.ExploreRequestContext;
 import org.hypertrace.gateway.service.explore.RequestHandler;
+import org.hypertrace.gateway.service.explore.RowComparator;
 import org.hypertrace.gateway.service.v1.common.FunctionExpression;
+import org.hypertrace.gateway.service.v1.common.OrderByExpression;
 import org.hypertrace.gateway.service.v1.entity.EntitiesRequest;
 import org.hypertrace.gateway.service.v1.entity.Entity.Builder;
+import org.hypertrace.gateway.service.v1.explore.EntityOption;
 import org.hypertrace.gateway.service.v1.explore.ExploreRequest;
 import org.hypertrace.gateway.service.v1.explore.ExploreResponse;
 
@@ -56,17 +66,13 @@ public class EntityRequestHandler extends RequestHandler {
       AttributeMetadataProvider attributeMetadataProvider,
       EntityIdColumnsConfigs entityIdColumnsConfigs,
       QueryServiceClient queryServiceClient,
-      int qsRequestTimeout,
       EntityQueryServiceClient entityQueryServiceClient) {
-    super(queryServiceClient, qsRequestTimeout, attributeMetadataProvider);
+    super(queryServiceClient, attributeMetadataProvider);
 
     this.attributeMetadataProvider = attributeMetadataProvider;
     this.queryServiceEntityFetcher =
         new QueryServiceEntityFetcher(
-            queryServiceClient,
-            qsRequestTimeout,
-            attributeMetadataProvider,
-            entityIdColumnsConfigs);
+            queryServiceClient, attributeMetadataProvider, entityIdColumnsConfigs);
     this.entityServiceEntityFetcher =
         new EntityServiceEntityFetcher(
             attributeMetadataProvider, entityIdColumnsConfigs, entityQueryServiceClient);
@@ -76,10 +82,9 @@ public class EntityRequestHandler extends RequestHandler {
   public EntityRequestHandler(
       AttributeMetadataProvider attributeMetadataProvider,
       QueryServiceClient queryServiceClient,
-      int qsRequestTimeout,
       QueryServiceEntityFetcher queryServiceEntityFetcher,
       EntityServiceEntityFetcher entityServiceEntityFetcher) {
-    super(queryServiceClient, qsRequestTimeout, attributeMetadataProvider);
+    super(queryServiceClient, attributeMetadataProvider);
 
     this.attributeMetadataProvider = attributeMetadataProvider;
     this.queryServiceEntityFetcher = queryServiceEntityFetcher;
@@ -89,21 +94,25 @@ public class EntityRequestHandler extends RequestHandler {
   @Override
   public ExploreResponse.Builder handleRequest(
       ExploreRequestContext requestContext, ExploreRequest exploreRequest) {
-    // Track if we have Group By so we can determine if we need to do Order By, Limit and Offset
+    // Track if we have Group By, so we can determine if we need to do Order By, Limit and Offset
     // ourselves.
     if (!exploreRequest.getGroupByList().isEmpty()) {
       requestContext.setHasGroupBy(true);
     }
 
-    Set<String> entityIds = getEntityIds(requestContext, exploreRequest);
     ExploreResponse.Builder builder = ExploreResponse.newBuilder();
-
-    if (entityIds.isEmpty()) {
-      return builder;
+    Set<String> entityIds = new HashSet<>();
+    Optional<EntityOption> maybeEntityOption = getEntityOption(exploreRequest);
+    if (requestOnLiveEntities(maybeEntityOption)) {
+      entityIds.addAll(getEntityIdsFromQueryService(requestContext, exploreRequest));
+      if (entityIds.isEmpty()) {
+        return builder;
+      }
     }
 
     Iterator<ResultSetChunk> resultSetChunkIterator =
-        entityServiceEntityFetcher.getResults(requestContext, exploreRequest, entityIds);
+        entityServiceEntityFetcher.getResults(
+            requestContext, exploreRequest, unmodifiableSet(entityIds));
 
     while (resultSetChunkIterator.hasNext()) {
       org.hypertrace.entity.query.service.v1.ResultSetChunk chunk = resultSetChunkIterator.next();
@@ -147,7 +156,34 @@ public class EntityRequestHandler extends RequestHandler {
     return builder;
   }
 
-  private Set<String> getEntityIds(
+  @Override
+  public void sortAndPaginatePostProcess(
+      ExploreResponse.Builder builder,
+      List<OrderByExpression> orderByExpressions,
+      int limit,
+      int offset) {
+    List<org.hypertrace.gateway.service.v1.common.Row.Builder> rowBuilders =
+        builder.getRowBuilderList();
+
+    List<org.hypertrace.gateway.service.v1.common.Row.Builder> sortedRowBuilders =
+        sortAndPaginateRowBuilders(rowBuilders, orderByExpressions, limit, offset);
+
+    builder.clearRow();
+    sortedRowBuilders.forEach(builder::addRow);
+  }
+
+  protected List<org.hypertrace.gateway.service.v1.common.Row.Builder> sortAndPaginateRowBuilders(
+      List<org.hypertrace.gateway.service.v1.common.Row.Builder> rowBuilders,
+      List<OrderByExpression> orderByExpressions,
+      int limit,
+      int offset) {
+    RowComparator rowComparator = new RowComparator(orderByExpressions);
+
+    return DataCollectionUtil.limitAndSort(
+        rowBuilders.stream(), limit, offset, orderByExpressions.size(), rowComparator);
+  }
+
+  private Set<String> getEntityIdsFromQueryService(
       ExploreRequestContext requestContext, ExploreRequest exploreRequest) {
     EntitiesRequestContext entitiesRequestContext =
         convert(attributeMetadataProvider, requestContext);
@@ -161,7 +197,7 @@ public class EntityRequestHandler extends RequestHandler {
         queryServiceEntityFetcher.getEntities(entitiesRequestContext, entitiesRequest);
     return response.getEntityKeyBuilderMap().values().stream()
         .map(Builder::getId)
-        .collect(Collectors.toUnmodifiableSet());
+        .collect(toUnmodifiableSet());
   }
 
   private EntitiesRequestContext convert(
@@ -172,12 +208,11 @@ public class EntityRequestHandler extends RequestHandler {
         AttributeMetadataUtil.getTimestampAttributeId(
             attributeMetadataProvider, requestContext, entityType);
     return new EntitiesRequestContext(
-        requestContext.getTenantId(),
+        requestContext.getGrpcContext(),
         requestContext.getStartTimeMillis(),
         requestContext.getEndTimeMillis(),
         entityType,
-        timestampAttributeId,
-        requestContext.getHeaders());
+        timestampAttributeId);
   }
 
   private void handleRow(
@@ -253,5 +288,21 @@ public class EntityRequestHandler extends RequestHandler {
                 request.getGroupByList().stream())
             .collect(Collectors.toUnmodifiableList()),
         attributeMetadataByIdMap);
+  }
+
+  private boolean requestOnLiveEntities(Optional<EntityOption> entityOption) {
+    if (entityOption.isEmpty()) {
+      return true;
+    }
+    return !entityOption.get().getIncludeNonLiveEntities();
+  }
+
+  private Optional<EntityOption> getEntityOption(ExploreRequest exploreRequest) {
+    if (!exploreRequest.hasContextOption()) {
+      return Optional.empty();
+    }
+    return exploreRequest.getContextOption().hasEntityOption()
+        ? Optional.of(exploreRequest.getContextOption().getEntityOption())
+        : Optional.empty();
   }
 }

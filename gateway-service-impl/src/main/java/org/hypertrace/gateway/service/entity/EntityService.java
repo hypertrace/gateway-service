@@ -1,7 +1,13 @@
 package org.hypertrace.gateway.service.entity;
 
+import static org.hypertrace.gateway.service.v1.common.Operator.IN;
+
 import com.google.common.base.Preconditions;
 import com.google.common.collect.ImmutableMap;
+import com.google.inject.Guice;
+import com.google.inject.Injector;
+import com.google.inject.Key;
+import com.google.inject.TypeLiteral;
 import io.grpc.Status;
 import io.micrometer.core.instrument.Timer;
 import java.time.Duration;
@@ -9,18 +15,23 @@ import java.time.Instant;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
+import java.util.Optional;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.TimeUnit;
+import java.util.stream.Collectors;
 import org.apache.commons.lang3.StringUtils;
 import org.hypertrace.core.attribute.service.v1.AttributeMetadata;
 import org.hypertrace.core.attribute.service.v1.AttributeSource;
-import org.hypertrace.core.query.service.client.QueryServiceClient;
 import org.hypertrace.core.serviceframework.metrics.PlatformMetricsRegistry;
 import org.hypertrace.entity.query.service.client.EntityQueryServiceClient;
+import org.hypertrace.entity.query.service.v1.BulkUpdateAllMatchingFilterRequest;
+import org.hypertrace.entity.query.service.v1.BulkUpdateAllMatchingFilterResponse;
+import org.hypertrace.entity.query.service.v1.EntityQueryServiceGrpc.EntityQueryServiceBlockingStub;
 import org.hypertrace.gateway.service.common.AttributeMetadataProvider;
 import org.hypertrace.gateway.service.common.OrderByPercentileSizeSetter;
 import org.hypertrace.gateway.service.common.RequestContext;
 import org.hypertrace.gateway.service.common.config.ScopeFilterConfigs;
+import org.hypertrace.gateway.service.common.converters.Converter;
 import org.hypertrace.gateway.service.common.datafetcher.EntityDataServiceEntityFetcher;
 import org.hypertrace.gateway.service.common.datafetcher.EntityFetcherResponse;
 import org.hypertrace.gateway.service.common.datafetcher.EntityInteractionsFetcher;
@@ -29,14 +40,22 @@ import org.hypertrace.gateway.service.common.datafetcher.QueryServiceEntityFetch
 import org.hypertrace.gateway.service.common.transformer.RequestPreProcessor;
 import org.hypertrace.gateway.service.common.transformer.ResponsePostProcessor;
 import org.hypertrace.gateway.service.common.util.AttributeMetadataUtil;
+import org.hypertrace.gateway.service.common.util.QueryExpressionUtil;
+import org.hypertrace.gateway.service.common.util.QueryServiceClient;
 import org.hypertrace.gateway.service.entity.config.EntityIdColumnsConfigs;
 import org.hypertrace.gateway.service.entity.config.LogConfig;
+import org.hypertrace.gateway.service.entity.converter.EntityConverterModule;
 import org.hypertrace.gateway.service.entity.query.EntityExecutionContext;
 import org.hypertrace.gateway.service.entity.query.ExecutionTreeBuilder;
 import org.hypertrace.gateway.service.entity.query.QueryNode;
 import org.hypertrace.gateway.service.entity.query.visitor.ExecutionVisitor;
 import org.hypertrace.gateway.service.entity.update.EdsEntityUpdater;
 import org.hypertrace.gateway.service.entity.update.UpdateExecutionContext;
+import org.hypertrace.gateway.service.entity.validator.BulkUpdateAllMatchingEntitiesUpdateRequestValidator;
+import org.hypertrace.gateway.service.v1.common.Filter;
+import org.hypertrace.gateway.service.v1.common.Operator;
+import org.hypertrace.gateway.service.v1.entity.BulkUpdateAllMatchingEntitiesRequest;
+import org.hypertrace.gateway.service.v1.entity.BulkUpdateAllMatchingEntitiesResponse;
 import org.hypertrace.gateway.service.v1.entity.BulkUpdateEntitiesRequest;
 import org.hypertrace.gateway.service.v1.entity.BulkUpdateEntitiesResponse;
 import org.hypertrace.gateway.service.v1.entity.EntitiesRequest;
@@ -64,10 +83,12 @@ public class EntityService {
       new BulkUpdateEntitiesRequestValidator();
   private final AttributeMetadataProvider metadataProvider;
   private final EntityIdColumnsConfigs entityIdColumnsConfigs;
+  private final ExecutorService queryExecutor;
   private final EntityInteractionsFetcher interactionsFetcher;
   private final RequestPreProcessor requestPreProcessor;
   private final ResponsePostProcessor responsePostProcessor;
   private final EdsEntityUpdater edsEntityUpdater;
+  private final EntityQueryServiceBlockingStub eqsStub;
   private final LogConfig logConfig;
   // Metrics
   private Timer queryBuildTimer;
@@ -75,8 +96,8 @@ public class EntityService {
 
   public EntityService(
       QueryServiceClient qsClient,
-      int qsRequestTimeout,
       EntityQueryServiceClient edsQueryServiceClient,
+      final EntityQueryServiceBlockingStub eqsStub,
       AttributeMetadataProvider metadataProvider,
       EntityIdColumnsConfigs entityIdColumnsConfigs,
       ScopeFilterConfigs scopeFilterConfigs,
@@ -84,26 +105,26 @@ public class EntityService {
       ExecutorService queryExecutor) {
     this.metadataProvider = metadataProvider;
     this.entityIdColumnsConfigs = entityIdColumnsConfigs;
+    this.queryExecutor = queryExecutor;
     this.interactionsFetcher =
-        new EntityInteractionsFetcher(qsClient, qsRequestTimeout, metadataProvider, queryExecutor);
+        new EntityInteractionsFetcher(qsClient, metadataProvider, queryExecutor);
     this.requestPreProcessor = new RequestPreProcessor(metadataProvider, scopeFilterConfigs);
     this.responsePostProcessor = new ResponsePostProcessor();
     this.edsEntityUpdater = new EdsEntityUpdater(edsQueryServiceClient);
+    this.eqsStub = eqsStub;
     this.logConfig = logConfig;
 
-    registerEntityFetchers(qsClient, qsRequestTimeout, edsQueryServiceClient);
+    registerEntityFetchers(qsClient, edsQueryServiceClient);
     initMetrics();
   }
 
   private void registerEntityFetchers(
-      QueryServiceClient queryServiceClient,
-      int qsRequestTimeout,
-      EntityQueryServiceClient edsQueryServiceClient) {
+      QueryServiceClient queryServiceClient, EntityQueryServiceClient edsQueryServiceClient) {
     EntityQueryHandlerRegistry registry = EntityQueryHandlerRegistry.get();
     registry.registerEntityFetcher(
         AttributeSource.QS.name(),
         new QueryServiceEntityFetcher(
-            queryServiceClient, qsRequestTimeout, metadataProvider, entityIdColumnsConfigs));
+            queryServiceClient, metadataProvider, entityIdColumnsConfigs));
     registry.registerEntityFetcher(
         AttributeSource.EDS.name(),
         new EntityDataServiceEntityFetcher(
@@ -131,31 +152,34 @@ public class EntityService {
    * </ul>
    */
   public EntitiesResponse getEntities(
-      String tenantId, EntitiesRequest originalRequest, Map<String, String> requestHeaders) {
+      RequestContext requestContext, EntitiesRequest originalRequest) {
     Instant start = Instant.now();
     String timestampAttributeId =
         AttributeMetadataUtil.getTimestampAttributeId(
-            metadataProvider,
-            new RequestContext(tenantId, requestHeaders),
-            originalRequest.getEntityType());
+            metadataProvider, requestContext, originalRequest.getEntityType());
 
     // Set the size for percentiles in order by if it is not set. This is to give UI the time to fix
     // the bug which does not set the size when they have order by in the request.
     originalRequest = OrderByPercentileSizeSetter.setPercentileSize(originalRequest);
     EntitiesRequestContext entitiesRequestContext =
         new EntitiesRequestContext(
-            tenantId,
+            requestContext.getGrpcContext(),
             originalRequest.getStartTimeMillis(),
             originalRequest.getEndTimeMillis(),
             originalRequest.getEntityType(),
-            timestampAttributeId,
-            requestHeaders);
-    EntitiesRequest preProcessedRequest =
-        requestPreProcessor.process(originalRequest, entitiesRequestContext);
+            timestampAttributeId);
+    Optional<EntitiesRequest> preProcessedRequest =
+        processEntitiesRequest(requestContext, originalRequest, entitiesRequestContext);
+    if (preProcessedRequest.isEmpty()) {
+      return EntitiesResponse.getDefaultInstance();
+    }
 
     EntityExecutionContext executionContext =
         new EntityExecutionContext(
-            metadataProvider, entityIdColumnsConfigs, entitiesRequestContext, preProcessedRequest);
+            metadataProvider,
+            entityIdColumnsConfigs,
+            entitiesRequestContext,
+            preProcessedRequest.get());
     ExecutionTreeBuilder executionTreeBuilder = new ExecutionTreeBuilder(executionContext);
     QueryNode executionTree = executionTreeBuilder.build();
     queryBuildTimer.record(
@@ -167,7 +191,8 @@ public class EntityService {
      */
     EntityResponse response =
         executionTree.acceptVisitor(
-            new ExecutionVisitor(executionContext, EntityQueryHandlerRegistry.get()));
+            new ExecutionVisitor(
+                executionContext, EntityQueryHandlerRegistry.get(), this.queryExecutor));
 
     EntityFetcherResponse entityFetcherResponse = response.getEntityFetcherResponse();
 
@@ -179,10 +204,9 @@ public class EntityService {
     // Add interactions.
     if (!results.isEmpty()) {
       addEntityInteractions(
-          tenantId,
-          preProcessedRequest,
-          entityFetcherResponse.getEntityKeyBuilderMap(),
-          requestHeaders);
+          requestContext,
+          preProcessedRequest.get(),
+          entityFetcherResponse.getEntityKeyBuilderMap());
     }
 
     EntitiesResponse.Builder responseBuilder =
@@ -202,13 +226,50 @@ public class EntityService {
     return responseBuilder.build();
   }
 
+  private Optional<EntitiesRequest> processEntitiesRequest(
+      RequestContext requestContext,
+      EntitiesRequest originalRequest,
+      EntitiesRequestContext entitiesRequestContext) {
+    EntitiesRequest preProcessedRequest =
+        requestPreProcessor.process(originalRequest, entitiesRequestContext);
+
+    if (!this.interactionsFetcher.hasInteractionFilters(
+            preProcessedRequest.getIncomingInteractions().getFilter())
+        && !this.interactionsFetcher.hasInteractionFilters(
+            preProcessedRequest.getOutgoingInteractions().getFilter())) {
+      return Optional.of(preProcessedRequest);
+    }
+
+    List<EntityKey> entityKeys =
+        this.interactionsFetcher.fetchInteractionsIds(requestContext, preProcessedRequest);
+    if (entityKeys.isEmpty()) {
+      return Optional.empty();
+    }
+
+    Filter entityIdsInFilter =
+        createEntityKeysInFilter(requestContext, preProcessedRequest.getEntityType(), entityKeys);
+    EntitiesRequest.Builder preProcessRequestBuilder = preProcessedRequest.toBuilder();
+    // This check is required and we cannot convert this to hasFilter check.
+    // Because during the pre-process step, in some cases
+    // filter is set to default filter if no filters are provided.
+    if (Filter.getDefaultInstance().equals(preProcessRequestBuilder.getFilter())) {
+      preProcessRequestBuilder.setFilter(entityIdsInFilter);
+    } else {
+      preProcessRequestBuilder.setFilter(
+          Filter.newBuilder()
+              .setOperator(Operator.AND)
+              .addChildFilter(preProcessRequestBuilder.getFilter())
+              .addChildFilter(entityIdsInFilter)
+              .build());
+    }
+    return Optional.of(preProcessRequestBuilder.build());
+  }
+
   public UpdateEntityResponse updateEntity(
-      String tenantId, UpdateEntityRequest request, Map<String, String> requestHeaders) {
+      RequestContext requestContext, UpdateEntityRequest request) {
     Preconditions.checkArgument(
         StringUtils.isNotBlank(request.getEntityType()),
         "entity_type is mandatory in the request.");
-
-    RequestContext requestContext = new RequestContext(tenantId, requestHeaders);
 
     Map<String, AttributeMetadata> attributeMetadataMap =
         metadataProvider.getAttributesMetadata(requestContext, request.getEntityType());
@@ -216,7 +277,7 @@ public class EntityService {
     updateEntityRequestValidator.validate(request, attributeMetadataMap);
 
     UpdateExecutionContext updateExecutionContext =
-        new UpdateExecutionContext(requestHeaders, attributeMetadataMap);
+        new UpdateExecutionContext(requestContext.getHeaders(), attributeMetadataMap);
 
     // Validations have ensured that only EDS update operation is supported.
     // If in the future we need more sophisticated update across data sources, we'll need
@@ -227,9 +288,7 @@ public class EntityService {
   }
 
   public BulkUpdateEntitiesResponse bulkUpdateEntities(
-      String tenantId, BulkUpdateEntitiesRequest request, Map<String, String> requestHeaders) {
-    RequestContext requestContext = new RequestContext(tenantId, requestHeaders);
-
+      RequestContext requestContext, BulkUpdateEntitiesRequest request) {
     Map<String, AttributeMetadata> attributeMetadataMap =
         metadataProvider.getAttributesMetadata(requestContext, request.getEntityType());
 
@@ -240,22 +299,80 @@ public class EntityService {
     }
 
     UpdateExecutionContext updateExecutionContext =
-        new UpdateExecutionContext(requestHeaders, attributeMetadataMap);
+        new UpdateExecutionContext(requestContext.getHeaders(), attributeMetadataMap);
 
     return edsEntityUpdater.bulkUpdateEntities(request, updateExecutionContext);
   }
 
+  public BulkUpdateAllMatchingEntitiesResponse bulkUpdateAllMatchingEntities(
+      final RequestContext requestContext, final BulkUpdateAllMatchingEntitiesRequest request) {
+    final BulkUpdateAllMatchingEntitiesUpdateRequestValidator validator =
+        new BulkUpdateAllMatchingEntitiesUpdateRequestValidator(
+            metadataProvider, request, requestContext);
+
+    final Status status = validator.validate();
+    if (!status.isOk()) {
+      LOG.error("Bulk update entities request is not valid: {}", status.getDescription());
+      throw status.asRuntimeException();
+    }
+
+    final Injector injector = Guice.createInjector(new EntityConverterModule());
+    final Converter<BulkUpdateAllMatchingEntitiesRequest, BulkUpdateAllMatchingFilterRequest>
+        requestConverter =
+            injector.getInstance(
+                Key.get(
+                    new TypeLiteral<
+                        Converter<
+                            BulkUpdateAllMatchingEntitiesRequest,
+                            BulkUpdateAllMatchingFilterRequest>>() {}));
+    final Converter<BulkUpdateAllMatchingFilterResponse, BulkUpdateAllMatchingEntitiesResponse>
+        responseConverter =
+            injector.getInstance(
+                Key.get(
+                    new TypeLiteral<
+                        Converter<
+                            BulkUpdateAllMatchingFilterResponse,
+                            BulkUpdateAllMatchingEntitiesResponse>>() {}));
+
+    final BulkUpdateAllMatchingFilterResponse response =
+        requestContext
+            .getGrpcContext()
+            .call(() -> eqsStub.bulkUpdateAllMatchingFilter(requestConverter.convert(request)));
+    return responseConverter.convert(response);
+  }
+
+  private Filter createEntityKeysInFilter(
+      RequestContext requestContext, String entityType, List<EntityKey> entityKeys) {
+    List<String> entityIds =
+        entityKeys.stream()
+            .filter(key -> key.getAttributes().size() == 1) // filter out all keys with single id
+            .map(EntityKey::toString)
+            .collect(Collectors.toUnmodifiableList());
+
+    List<String> idAttributeIds =
+        AttributeMetadataUtil.getIdAttributeIds(
+            metadataProvider, entityIdColumnsConfigs, requestContext, entityType);
+
+    if (idAttributeIds.size() != 1) {
+      LOG.error("Entity Type {} should have single ID Attribute", entityType);
+      throw Status.UNIMPLEMENTED
+          .withDescription("Entity Type " + entityType + " should have single ID Attribute")
+          .asRuntimeException();
+    }
+
+    return Filter.newBuilder()
+        .setLhs(QueryExpressionUtil.buildAttributeExpression(idAttributeIds.get(0)))
+        .setOperator(IN)
+        .setRhs(QueryExpressionUtil.getLiteralExpression(entityIds).build())
+        .build();
+  }
+
   private void addEntityInteractions(
-      String tenantId,
-      EntitiesRequest request,
-      Map<EntityKey, Builder> result,
-      Map<String, String> requestHeaders) {
+      RequestContext requestContext, EntitiesRequest request, Map<EntityKey, Builder> result) {
     if (InteractionsRequest.getDefaultInstance().equals(request.getIncomingInteractions())
         && InteractionsRequest.getDefaultInstance().equals(request.getOutgoingInteractions())) {
       return;
     }
-
-    RequestContext requestContext = new RequestContext(tenantId, requestHeaders);
 
     interactionsFetcher.populateEntityInteractions(requestContext, request, result);
   }

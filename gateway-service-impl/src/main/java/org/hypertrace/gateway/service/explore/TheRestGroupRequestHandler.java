@@ -46,7 +46,7 @@ public class TheRestGroupRequestHandler {
 
     ExploreRequest theRestRequest = createRequest(originalRequest, originalResponse);
     ExploreRequestContext theRestRequestContext =
-        new ExploreRequestContext(context.getTenantId(), theRestRequest, context.getHeaders());
+        new ExploreRequestContext(context.getGrpcContext(), theRestRequest);
 
     ExploreResponse.Builder theRestGroupResponse =
         requestHandler.handleRequest(theRestRequestContext, theRestRequest);

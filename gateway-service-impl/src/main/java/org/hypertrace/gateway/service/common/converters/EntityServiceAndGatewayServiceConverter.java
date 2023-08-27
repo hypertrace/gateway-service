@@ -163,11 +163,12 @@ public class EntityServiceAndGatewayServiceConverter {
     return builder;
   }
 
-  public static ColumnIdentifier.Builder convertToQueryColumnIdentifier(
+  public static ColumnIdentifier convertToQueryColumnIdentifier(
       org.hypertrace.gateway.service.v1.common.ColumnIdentifier columnIdentifier) {
     return ColumnIdentifier.newBuilder()
         .setColumnName(columnIdentifier.getColumnName())
-        .setAlias(columnIdentifier.getAlias());
+        .setAlias(columnIdentifier.getAlias())
+        .build();
   }
 
   public static ColumnIdentifier convertToQueryColumnIdentifier(

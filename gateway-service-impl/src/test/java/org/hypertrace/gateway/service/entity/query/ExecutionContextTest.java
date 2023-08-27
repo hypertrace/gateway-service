@@ -1,5 +1,6 @@
 package org.hypertrace.gateway.service.entity.query;
 
+import static org.hypertrace.core.grpcutils.context.RequestContext.forTenantId;
 import static org.hypertrace.gateway.service.common.EntitiesRequestAndResponseUtils.buildExpression;
 import static org.hypertrace.gateway.service.common.EntitiesRequestAndResponseUtils.generateEQFilter;
 import static org.junit.jupiter.api.Assertions.assertEquals;
@@ -65,7 +66,7 @@ class ExecutionContextTest {
                 .thenReturn(Optional.of(attribute)));
 
     entitiesRequestContext =
-        new EntitiesRequestContext(TENANT_ID, 0, 100, "API", "API.startTime", new HashMap<>());
+        new EntitiesRequestContext(forTenantId(TENANT_ID), 0, 100, "API", "API.startTime");
   }
 
   @Test

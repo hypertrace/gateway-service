@@ -1,7 +1,9 @@
 package org.hypertrace.gateway.service.baseline;
 
+import static org.hypertrace.core.grpcutils.context.RequestContext.forTenantId;
 import static org.hypertrace.gateway.service.baseline.BaselineServiceImpl.DAY_IN_MILLIS;
 import static org.hypertrace.gateway.service.common.QueryServiceRequestAndResponseUtils.getResultSetChunk;
+import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.when;
 
@@ -66,11 +68,11 @@ public class BaselineServiceImplTest {
         AttributeMetadata.newBuilder().setFqn("Service.Latency").setId("Service.StartTime").build();
     Mockito.when(
             attributeMetadataProvider.getAttributeMetadata(
-                Mockito.any(RequestContext.class), Mockito.anyString(), Mockito.anyString()))
+                any(RequestContext.class), Mockito.anyString(), Mockito.anyString()))
         .thenReturn(Optional.of(attributeMetadata));
     Mockito.when(
             baselineServiceQueryExecutor.executeQuery(
-                Mockito.anyMap(), Mockito.any(QueryRequest.class)))
+                any(RequestContext.class), any(QueryRequest.class)))
         .thenReturn(getResultSetForAvg("duration_ts").iterator());
     when(entityIdColumnsConfigs.getIdKey("SERVICE")).thenReturn(Optional.of("id"));
 
@@ -83,7 +85,7 @@ public class BaselineServiceImplTest {
         AttributeMetadata.newBuilder().setFqn("Service.Latency").setId("Service.Id").build());
     Mockito.when(
             attributeMetadataProvider.getAttributesMetadata(
-                Mockito.any(RequestContext.class), Mockito.anyString()))
+                any(RequestContext.class), Mockito.anyString()))
         .thenReturn(attributeMap);
 
     BaselineService baselineService =
@@ -93,7 +95,8 @@ public class BaselineServiceImplTest {
             baselineServiceQueryExecutor,
             entityIdColumnsConfigs);
     BaselineEntitiesResponse baselineResponse =
-        baselineService.getBaselineForEntities(TENANT_ID, baselineEntitiesRequest, Map.of());
+        baselineService.getBaselineForEntities(
+            new RequestContext(forTenantId(TENANT_ID)), baselineEntitiesRequest);
     Assertions.assertTrue(baselineResponse.getBaselineEntityCount() > 0);
     Assertions.assertTrue(
         baselineResponse.getBaselineEntityList().get(0).getBaselineAggregateMetricCount() > 0);
@@ -117,11 +120,11 @@ public class BaselineServiceImplTest {
         AttributeMetadata.newBuilder().setFqn("Service.numCalls").setId("Service.Id").build();
     Mockito.when(
             attributeMetadataProvider.getAttributeMetadata(
-                Mockito.any(RequestContext.class), Mockito.anyString(), Mockito.anyString()))
+                any(RequestContext.class), Mockito.anyString(), Mockito.anyString()))
         .thenReturn(Optional.of(attributeMetadata));
     Mockito.when(
             baselineServiceQueryExecutor.executeQuery(
-                Mockito.anyMap(), Mockito.any(QueryRequest.class)))
+                any(RequestContext.class), any(QueryRequest.class)))
         .thenReturn(getResultSetForAvgRate("numCalls").iterator());
     when(entityIdColumnsConfigs.getIdKey("SERVICE")).thenReturn(Optional.of("id"));
     // Attribute Metadata map contains mapping between Attributes and ID to query data.
@@ -131,7 +134,7 @@ public class BaselineServiceImplTest {
         AttributeMetadata.newBuilder().setFqn("Service.numCalls").setId("Service.Id").build());
     Mockito.when(
             attributeMetadataProvider.getAttributesMetadata(
-                Mockito.any(RequestContext.class), Mockito.anyString()))
+                any(RequestContext.class), Mockito.anyString()))
         .thenReturn(attributeMap);
 
     BaselineService baselineService =
@@ -141,7 +144,8 @@ public class BaselineServiceImplTest {
             baselineServiceQueryExecutor,
             entityIdColumnsConfigs);
     BaselineEntitiesResponse baselineResponse =
-        baselineService.getBaselineForEntities(TENANT_ID, baselineEntitiesRequest, Map.of());
+        baselineService.getBaselineForEntities(
+            new RequestContext(forTenantId(TENANT_ID)), baselineEntitiesRequest);
     Assertions.assertTrue(baselineResponse.getBaselineEntityCount() > 0);
     Assertions.assertTrue(
         baselineResponse.getBaselineEntityList().get(0).getBaselineAggregateMetricCount() > 0);
@@ -166,11 +170,11 @@ public class BaselineServiceImplTest {
         AttributeMetadata.newBuilder().setFqn("Service.Latency").setId("Service.StartTime").build();
     Mockito.when(
             attributeMetadataProvider.getAttributeMetadata(
-                Mockito.any(RequestContext.class), Mockito.anyString(), Mockito.anyString()))
+                any(RequestContext.class), Mockito.anyString(), Mockito.anyString()))
         .thenReturn(Optional.of(attributeMetadata));
     Mockito.when(
             baselineServiceQueryExecutor.executeQuery(
-                Mockito.anyMap(), Mockito.any(QueryRequest.class)))
+                any(RequestContext.class), any(QueryRequest.class)))
         .thenReturn(getResultSetForAvg("duration_ts").iterator());
     Map<String, AttributeMetadata> attributeMap = new HashMap<>();
     AttributeMetadata attribute =
@@ -179,11 +183,11 @@ public class BaselineServiceImplTest {
     attributeMap.put("SERVICE.duration", attribute);
     Mockito.when(
             attributeMetadataProvider.getAttributesMetadata(
-                Mockito.any(RequestContext.class), Mockito.anyString()))
+                any(RequestContext.class), Mockito.anyString()))
         .thenReturn(attributeMap);
     Mockito.when(
             attributeMetadataProvider.getAttributeMetadata(
-                Mockito.any(RequestContext.class), Mockito.anyString(), Mockito.anyString()))
+                any(RequestContext.class), Mockito.anyString(), Mockito.anyString()))
         .thenReturn(Optional.of(attribute));
     when(entityIdColumnsConfigs.getIdKey("SERVICE")).thenReturn(Optional.of("id"));
 
@@ -194,7 +198,8 @@ public class BaselineServiceImplTest {
             baselineServiceQueryExecutor,
             entityIdColumnsConfigs);
     BaselineEntitiesResponse baselineResponse =
-        baselineService.getBaselineForEntities(TENANT_ID, baselineEntitiesRequest, Map.of());
+        baselineService.getBaselineForEntities(
+            new RequestContext(forTenantId(TENANT_ID)), baselineEntitiesRequest);
     Assertions.assertTrue(baselineResponse.getBaselineEntityCount() > 0);
     Assertions.assertTrue(
         baselineResponse.getBaselineEntityList().get(0).getBaselineMetricSeriesCount() > 0);

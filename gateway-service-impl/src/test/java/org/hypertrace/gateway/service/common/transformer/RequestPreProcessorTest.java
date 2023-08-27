@@ -1,12 +1,12 @@
 package org.hypertrace.gateway.service.common.transformer;
 
+import static org.hypertrace.core.grpcutils.context.RequestContext.forTenantId;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.when;
 
 import com.typesafe.config.Config;
 import com.typesafe.config.ConfigFactory;
 import java.io.File;
-import java.util.Map;
 import java.util.Optional;
 import org.hypertrace.core.attribute.service.v1.AttributeMetadata;
 import org.hypertrace.core.attribute.service.v1.AttributeScope;
@@ -48,7 +48,7 @@ public class RequestPreProcessorTest {
     long startTime = endTime - 1000L;
     EntitiesRequestContext entitiesRequestContext =
         new EntitiesRequestContext(
-            TEST_TENANT_ID, startTime, endTime, "SERVICE", "SERVICE.startTime", Map.of());
+            forTenantId(TEST_TENANT_ID), startTime, endTime, "SERVICE", "SERVICE.startTime");
     mockAttributeMetadata(entitiesRequestContext, AttributeScope.SERVICE.name(), "id");
     mockAttributeMetadata(entitiesRequestContext, AttributeScope.SERVICE.name(), "name");
     mockAttributeMetadata(entitiesRequestContext, AttributeScope.SERVICE.name(), "startTime");
@@ -118,7 +118,7 @@ public class RequestPreProcessorTest {
   public void testApiTracesRequestScopeFilterConfigsAdded() {
     long endTime = System.currentTimeMillis();
     long startTime = endTime - 1000L;
-    RequestContext requestContext = new RequestContext(TEST_TENANT_ID, Map.of());
+    RequestContext requestContext = new RequestContext(forTenantId(TEST_TENANT_ID));
     mockAttributeMetadata(requestContext, AttributeScope.API_TRACE.name(), "apiBoundaryType");
     mockAttributeMetadata(requestContext, AttributeScope.API_TRACE.name(), "apiId");
 

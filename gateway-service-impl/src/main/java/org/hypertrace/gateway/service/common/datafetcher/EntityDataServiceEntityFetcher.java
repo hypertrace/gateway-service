@@ -199,13 +199,15 @@ public class EntityDataServiceEntityFetcher implements IEntityFetcher {
                     entitiesRequest.getFilter()));
 
     // add time filter for supported scope
-    EntityServiceAndGatewayServiceConverter.addBetweenTimeFilter(
-        entitiesRequest.getStartTimeMillis(),
-        entitiesRequest.getEndTimeMillis(),
-        attributeMetadataProvider,
-        entitiesRequest,
-        builder,
-        requestContext);
+    if (!entitiesRequest.getIncludeNonLiveEntities()) {
+      EntityServiceAndGatewayServiceConverter.addBetweenTimeFilter(
+          entitiesRequest.getStartTimeMillis(),
+          entitiesRequest.getEndTimeMillis(),
+          attributeMetadataProvider,
+          entitiesRequest,
+          builder,
+          requestContext);
+    }
 
     EntityQueryRequest entityQueryRequest = builder.build();
 

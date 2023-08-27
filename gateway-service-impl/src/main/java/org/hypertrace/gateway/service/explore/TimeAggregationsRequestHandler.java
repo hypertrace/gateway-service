@@ -4,20 +4,21 @@ import static org.hypertrace.gateway.service.common.converters.QueryRequestUtil.
 
 import java.time.Duration;
 import java.time.temporal.ChronoUnit;
-import java.util.ArrayList;
 import java.util.List;
 import java.util.Optional;
+import java.util.stream.Collectors;
 import org.hypertrace.core.query.service.api.ColumnMetadata;
+import org.hypertrace.core.query.service.api.Expression;
 import org.hypertrace.core.query.service.api.QueryRequest;
 import org.hypertrace.core.query.service.api.ResultSetMetadata;
 import org.hypertrace.core.query.service.api.Row;
 import org.hypertrace.core.query.service.api.Value;
-import org.hypertrace.core.query.service.client.QueryServiceClient;
 import org.hypertrace.gateway.service.common.AttributeMetadataProvider;
 import org.hypertrace.gateway.service.common.converters.QueryAndGatewayDtoConverter;
 import org.hypertrace.gateway.service.common.util.AttributeMetadataUtil;
 import org.hypertrace.gateway.service.common.util.ExpressionReader;
 import org.hypertrace.gateway.service.common.util.QueryExpressionUtil;
+import org.hypertrace.gateway.service.common.util.QueryServiceClient;
 import org.hypertrace.gateway.service.v1.common.OrderByExpression;
 import org.hypertrace.gateway.service.v1.common.Period;
 import org.hypertrace.gateway.service.v1.common.SortOrder;
@@ -33,10 +34,8 @@ public class TimeAggregationsRequestHandler extends RequestHandler {
   private static final Logger LOG = LoggerFactory.getLogger(TimeAggregationsRequestHandler.class);
 
   TimeAggregationsRequestHandler(
-      QueryServiceClient queryServiceClient,
-      int qsRequestTimeout,
-      AttributeMetadataProvider attributeMetadataProvider) {
-    super(queryServiceClient, qsRequestTimeout, attributeMetadataProvider);
+      QueryServiceClient queryServiceClient, AttributeMetadataProvider attributeMetadataProvider) {
+    super(queryServiceClient, attributeMetadataProvider);
   }
 
   @Override
@@ -56,76 +55,29 @@ public class TimeAggregationsRequestHandler extends RequestHandler {
     builder.setFilter(
         constructQueryServiceFilter(request, requestContext, attributeMetadataProvider));
 
-    // 3.  Add TimeAggregations
-    addTimeAggregationsToRequest(request, builder, requestContext, attributeMetadataProvider);
+    // 3.  Add TimeAggregations as selections
+    addTimeAggregationsAsSelectionsToRequest(request, builder, requestContext);
 
     // 4. Add GroupBy
-    addGroupByExpressions(builder, request);
+    addGroupByExpressions(request, builder, requestContext, attributeMetadataProvider);
 
-    // 5. Set Limit.
+    // 5. Add OrderBy
+    addOrderByExpressions(request, builder, requestContext, attributeMetadataProvider);
+
+    // 6. Set Limit.
     builder.setLimit(request.getLimit());
-    requestContext.setOrderByExpressions(getRequestOrderByExpressions(request));
 
     return builder.build();
   }
 
-  /**
-   * Need to add the interval start timer Order By expression so that after we get the results from
-   * Query Service, we can sort by this column.
-   *
-   * @param request
-   * @return
-   */
-  @Override
-  public List<OrderByExpression> getRequestOrderByExpressions(ExploreRequest request) {
-    List<OrderByExpression> existingOrderBys = super.getRequestOrderByExpressions(request);
-    List<OrderByExpression> resolvedOrderBys = new ArrayList<>();
-
-    if (!this.containsIntervalOrdering(existingOrderBys)) {
-      // Create an OrderBy Expression based on the interval start time column name. We will need to
-      // sort based on this as the first column.
-      OrderByExpression defaultIntervalOrdering =
-          OrderByExpression.newBuilder()
-              .setOrder(SortOrder.ASC)
-              .setExpression(
-                  QueryExpressionUtil.buildAttributeExpression(
-                      ColumnName.INTERVAL_START_TIME.name()))
-              .build();
-
-      resolvedOrderBys.add(defaultIntervalOrdering);
-    }
-
-    resolvedOrderBys.addAll(existingOrderBys);
-
-    return resolvedOrderBys;
-  }
-
-  private boolean containsIntervalOrdering(List<OrderByExpression> orderByExpressions) {
-    return orderByExpressions.stream()
-        .map(OrderByExpression::getExpression)
-        .map(ExpressionReader::getAttributeIdFromAttributeSelection)
-        .flatMap(Optional::stream)
-        .anyMatch(name -> name.equals(ColumnName.INTERVAL_START_TIME.name()));
-  }
-
-  private void addTimeAggregationsToRequest(
-      ExploreRequest request,
-      QueryRequest.Builder builder,
-      ExploreRequestContext requestContext,
-      AttributeMetadataProvider attributeMetadataProvider) {
+  private void addTimeAggregationsAsSelectionsToRequest(
+      ExploreRequest request, QueryRequest.Builder builder, ExploreRequestContext requestContext) {
     // Convert Time aggregations to selections.
     request
         .getTimeAggregationList()
         .forEach(
             timeAggregation ->
                 addTimeAggregationToRequest(timeAggregation, builder, requestContext));
-
-    // Get the time column name and add a time column Group By
-    String timeColumn =
-        AttributeMetadataUtil.getTimestampAttributeId(
-            attributeMetadataProvider, requestContext, request.getContext());
-    long periodSecs = getPeriodSecsFromTimeAggregations(request.getTimeAggregationList());
-    builder.addGroupBy(createTimeColumnGroupByExpression(timeColumn, periodSecs));
   }
 
   private void addTimeAggregationToRequest(
@@ -140,6 +92,70 @@ public class TimeAggregationsRequestHandler extends RequestHandler {
             .getFunction()
             .getAlias(), // Required to be set by the validators
         timeAggregation);
+  }
+
+  private void addGroupByExpressions(
+      ExploreRequest request,
+      QueryRequest.Builder builder,
+      ExploreRequestContext requestContext,
+      AttributeMetadataProvider attributeMetadataProvider) {
+    // add time interval based group by expression as the first group by expression
+    builder.addGroupBy(
+        getTimeColumnGroupingExpression(request, requestContext, attributeMetadataProvider));
+    addGroupByExpressions(builder, request);
+  }
+
+  private void addOrderByExpressions(
+      ExploreRequest request,
+      QueryRequest.Builder builder,
+      ExploreRequestContext requestContext,
+      AttributeMetadataProvider attributeMetadataProvider) {
+    List<OrderByExpression> orderByExpressions = getRequestOrderByExpressions(request);
+
+    // get time interval order by expression from the list of order by expressions
+    Optional<OrderByExpression> timeIntervalOrderByExpression =
+        orderByExpressions.stream().filter(this::containsIntervalOrdering).findFirst();
+
+    // Add time interval based order by as the first order by expression
+    // use sort order if provided in the request, else use ASC by default
+    builder.addOrderBy(
+        org.hypertrace.core.query.service.api.OrderByExpression.newBuilder()
+            .setExpression(
+                getTimeColumnGroupingExpression(request, requestContext, attributeMetadataProvider))
+            .setOrder(
+                org.hypertrace.core.query.service.api.SortOrder.valueOf(
+                    timeIntervalOrderByExpression
+                        .map(OrderByExpression::getOrder)
+                        .orElse(SortOrder.ASC)
+                        .name()))
+            .build());
+
+    // get remaining order by expression from the list of order by expressions
+    List<OrderByExpression> remainingOrderByExpressions =
+        orderByExpressions.stream()
+            .filter(orderByExpression -> !containsIntervalOrdering(orderByExpression))
+            .collect(Collectors.toUnmodifiableList());
+
+    builder.addAllOrderBy(
+        QueryAndGatewayDtoConverter.convertToQueryOrderByExpressions(remainingOrderByExpressions));
+  }
+
+  private Expression getTimeColumnGroupingExpression(
+      ExploreRequest request,
+      ExploreRequestContext requestContext,
+      AttributeMetadataProvider attributeMetadataProvider) {
+    // Get the time column name and add a time column Group By
+    String timeColumn =
+        AttributeMetadataUtil.getTimestampAttributeId(
+            attributeMetadataProvider, requestContext, request.getContext());
+    long periodSecs = getPeriodSecsFromTimeAggregations(request.getTimeAggregationList());
+    return createTimeColumnGroupByExpression(timeColumn, periodSecs);
+  }
+
+  private boolean containsIntervalOrdering(OrderByExpression orderByExpression) {
+    return ExpressionReader.getAttributeIdFromAttributeSelection(orderByExpression.getExpression())
+        .map(name -> name.equals(ColumnName.INTERVAL_START_TIME.name()))
+        .orElse(false);
   }
 
   /**

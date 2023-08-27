@@ -1,5 +1,6 @@
 package org.hypertrace.gateway.service.trace;
 
+import static java.util.concurrent.TimeUnit.MILLISECONDS;
 import static org.hypertrace.gateway.service.common.converters.QueryRequestUtil.createCountByColumnSelection;
 import static org.hypertrace.gateway.service.common.util.AttributeMetadataUtil.getSpaceAttributeId;
 import static org.hypertrace.gateway.service.common.util.AttributeMetadataUtil.getTimestampAttributeId;
@@ -15,7 +16,6 @@ import java.util.List;
 import java.util.Map;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.ExecutorService;
-import java.util.concurrent.TimeUnit;
 import org.hypertrace.core.attribute.service.v1.AttributeMetadata;
 import org.hypertrace.core.query.service.api.ColumnMetadata;
 import org.hypertrace.core.query.service.api.Filter;
@@ -23,7 +23,6 @@ import org.hypertrace.core.query.service.api.QueryRequest;
 import org.hypertrace.core.query.service.api.QueryRequest.Builder;
 import org.hypertrace.core.query.service.api.ResultSetChunk;
 import org.hypertrace.core.query.service.api.Row;
-import org.hypertrace.core.query.service.client.QueryServiceClient;
 import org.hypertrace.core.serviceframework.metrics.PlatformMetricsRegistry;
 import org.hypertrace.gateway.service.common.AttributeMetadataProvider;
 import org.hypertrace.gateway.service.common.RequestContext;
@@ -32,6 +31,7 @@ import org.hypertrace.gateway.service.common.converters.QueryAndGatewayDtoConver
 import org.hypertrace.gateway.service.common.transformer.RequestPreProcessor;
 import org.hypertrace.gateway.service.common.util.AttributeMetadataUtil;
 import org.hypertrace.gateway.service.common.util.ExpressionReader;
+import org.hypertrace.gateway.service.common.util.QueryServiceClient;
 import org.hypertrace.gateway.service.v1.common.OrderByExpression;
 import org.hypertrace.gateway.service.v1.trace.Trace;
 import org.hypertrace.gateway.service.v1.trace.TracesRequest;
@@ -55,7 +55,6 @@ public class TracesService {
   private static final Logger LOG = LoggerFactory.getLogger(TracesService.class);
 
   private final QueryServiceClient queryServiceClient;
-  private final int queryServiceReqTimeout;
   private final AttributeMetadataProvider attributeMetadataProvider;
   private final ExecutorService queryExecutor;
   private final TracesRequestValidator requestValidator;
@@ -65,12 +64,10 @@ public class TracesService {
 
   public TracesService(
       QueryServiceClient queryServiceClient,
-      int qsRequestTimeout,
       AttributeMetadataProvider attributeMetadataProvider,
       ScopeFilterConfigs scopeFilterConfigs,
       ExecutorService queryExecutor) {
     this.queryServiceClient = queryServiceClient;
-    this.queryServiceReqTimeout = qsRequestTimeout;
     this.attributeMetadataProvider = attributeMetadataProvider;
     this.queryExecutor = queryExecutor;
     this.requestValidator = new TracesRequestValidator();
@@ -99,22 +96,28 @@ public class TracesService {
       requestValidator.validate(preProcessedRequest, attributeMap);
 
       TracesResponse.Builder tracesResponseBuilder = TracesResponse.newBuilder();
-      // filter traces
-      CompletableFuture<List<Trace>> filteredTraceFuture =
-          CompletableFuture.supplyAsync(
-              () -> filterTraces(context, preProcessedRequest, attributeMap, scope), queryExecutor);
+      if (preProcessedRequest.getFetchTotal()) {
+        // filter traces
+        CompletableFuture<List<Trace>> filteredTraceFuture =
+            CompletableFuture.supplyAsync(
+                () -> filterTraces(context, preProcessedRequest, attributeMap, scope),
+                queryExecutor);
 
-      // Get the total API Traces in a separate query because this will scale better
-      // for large data-set
-      tracesResponseBuilder.setTotal(getTotalFilteredTraces(context, preProcessedRequest, scope));
-      tracesResponseBuilder.addAllTraces(filteredTraceFuture.join());
+        // Get the total API Traces in a separate query because this will scale better
+        // for large data-set
+        tracesResponseBuilder.setTotal(getTotalFilteredTraces(context, preProcessedRequest, scope));
+        tracesResponseBuilder.addAllTraces(filteredTraceFuture.join());
+      } else {
+        // As the total value is not requested, fetching the traces within the same thread.
+        tracesResponseBuilder.addAllTraces(
+            filterTraces(context, preProcessedRequest, attributeMap, scope));
+      }
       TracesResponse response = tracesResponseBuilder.build();
       LOG.debug("Traces Service Response: {}", response);
 
       return response;
     } finally {
-      queryExecutionTimer.record(
-          Duration.between(start, Instant.now()).toMillis(), TimeUnit.MILLISECONDS);
+      queryExecutionTimer.record(Duration.between(start, Instant.now()).toMillis(), MILLISECONDS);
     }
   }
 
@@ -145,7 +148,7 @@ public class TracesService {
     List<Trace> tracesResult = new ArrayList<>();
     QueryRequest queryRequest = builder.build();
     Iterator<ResultSetChunk> resultSetChunkIterator =
-        queryServiceClient.executeQuery(queryRequest, context.getHeaders(), queryServiceReqTimeout);
+        queryServiceClient.executeQuery(context, queryRequest);
 
     // form the result
     while (resultSetChunkIterator.hasNext()) {
@@ -191,8 +194,9 @@ public class TracesService {
             .addSelection(createCountByColumnSelection(firstSelectionAttributeId))
             .setLimit(1)
             .build();
+
     Iterator<ResultSetChunk> resultSetChunkIterator =
-        queryServiceClient.executeQuery(queryRequest, context.getHeaders(), queryServiceReqTimeout);
+        queryServiceClient.executeQuery(context, queryRequest);
     while (resultSetChunkIterator.hasNext()) {
       ResultSetChunk chunk = resultSetChunkIterator.next();
       if (LOG.isDebugEnabled()) {

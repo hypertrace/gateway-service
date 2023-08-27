@@ -1,5 +1,7 @@
 package org.hypertrace.gateway.service.explore;
 
+import static org.hypertrace.core.query.service.client.QueryServiceClient.DEFAULT_QUERY_SERVICE_GROUP_BY_LIMIT;
+
 import com.google.common.collect.Streams;
 import com.google.protobuf.InvalidProtocolBufferException;
 import com.google.protobuf.util.JsonFormat;
@@ -15,14 +17,13 @@ import org.hypertrace.core.query.service.api.ResultSetChunk;
 import org.hypertrace.core.query.service.api.ResultSetMetadata;
 import org.hypertrace.core.query.service.api.Row;
 import org.hypertrace.core.query.service.api.Value;
-import org.hypertrace.core.query.service.client.QueryServiceClient;
 import org.hypertrace.gateway.service.common.AttributeMetadataProvider;
 import org.hypertrace.gateway.service.common.converters.QueryAndGatewayDtoConverter;
 import org.hypertrace.gateway.service.common.util.AttributeMetadataUtil;
-import org.hypertrace.gateway.service.common.util.DataCollectionUtil;
 import org.hypertrace.gateway.service.common.util.ExpressionReader;
 import org.hypertrace.gateway.service.common.util.MetricAggregationFunctionUtil;
 import org.hypertrace.gateway.service.common.util.OrderByUtil;
+import org.hypertrace.gateway.service.common.util.QueryServiceClient;
 import org.hypertrace.gateway.service.v1.common.Expression;
 import org.hypertrace.gateway.service.v1.common.FunctionExpression;
 import org.hypertrace.gateway.service.v1.common.OrderByExpression;
@@ -34,17 +35,14 @@ import org.slf4j.LoggerFactory;
 
 public class RequestHandler implements RequestHandlerWithSorting {
   private static final Logger LOG = LoggerFactory.getLogger(RequestHandler.class);
+
   private final QueryServiceClient queryServiceClient;
-  private final int requestTimeout;
   private final AttributeMetadataProvider attributeMetadataProvider;
   private final TheRestGroupRequestHandler theRestGroupRequestHandler;
 
   public RequestHandler(
-      QueryServiceClient queryServiceClient,
-      int qsRequestTimeout,
-      AttributeMetadataProvider attributeMetadataProvider) {
+      QueryServiceClient queryServiceClient, AttributeMetadataProvider attributeMetadataProvider) {
     this.queryServiceClient = queryServiceClient;
-    this.requestTimeout = qsRequestTimeout;
     this.attributeMetadataProvider = attributeMetadataProvider;
     this.theRestGroupRequestHandler = new TheRestGroupRequestHandler(this);
   }
@@ -58,7 +56,7 @@ public class RequestHandler implements RequestHandlerWithSorting {
     Iterator<ResultSetChunk> resultSetChunkIterator = executeQuery(requestContext, queryRequest);
 
     return handleQueryServiceResponse(
-        requestContext, resultSetChunkIterator, requestContext, attributeMetadataProvider);
+        request, requestContext, resultSetChunkIterator, requestContext, attributeMetadataProvider);
   }
 
   QueryRequest buildQueryRequest(
@@ -96,22 +94,22 @@ public class RequestHandler implements RequestHandlerWithSorting {
     builder.setFilter(
         constructQueryServiceFilter(request, requestContext, attributeMetadataProvider));
 
+    if (requestContext.hasGroupBy() && request.getIncludeRestGroup() && request.getOffset() > 0) {
+      // including rest group with offset is an invalid combination
+      // throwing unsupported operation exception for this case
+      LOG.error(
+          "Query having group by with both offset and include rest is an invalid combination : {}",
+          request);
+      throw new UnsupportedOperationException(
+          "Query having group by with both offset and include rest is an invalid combination "
+              + request);
+    }
+
     // 3. Add GroupBy
     addGroupByExpressions(builder, request);
 
-    // TODO: Push group by down to QS
-    // 4. If there's no Group By, Set Limit, Offset and Order By.
-    // Otherwise, specify a large limit and track actual limit, offset and order by expression list
-    // so we can compute
-    // these once the we get the results.
-    if (requestContext
-        .hasGroupBy()) { // Will need to do the Ordering, Limit and Offset ourselves after we get
-      // the Group By Results
-      builder.setLimit(QueryServiceClient.DEFAULT_QUERY_SERVICE_GROUP_BY_LIMIT);
-      requestContext.setOrderByExpressions(getRequestOrderByExpressions(request));
-    } else { // No Group By: Use Pinot's Order By, Limit and Offset
-      addSortLimitAndOffset(request, builder);
-    }
+    // 4. Add order by along with setting limit, offset
+    addSortLimitAndOffset(request, requestContext, builder);
 
     return builder.build();
   }
@@ -132,7 +130,7 @@ public class RequestHandler implements RequestHandlerWithSorting {
       }
     }
 
-    return queryServiceClient.executeQuery(queryRequest, context.getHeaders(), requestTimeout);
+    return queryServiceClient.executeQuery(context, queryRequest);
   }
 
   Filter constructQueryServiceFilter(
@@ -156,15 +154,40 @@ public class RequestHandler implements RequestHandlerWithSorting {
         .forEach(expression -> addGroupByExpressionToBuilder(builder, expression));
   }
 
-  private void addSortLimitAndOffset(ExploreRequest request, QueryRequest.Builder queryBuilder) {
+  private void addSortLimitAndOffset(
+      ExploreRequest request,
+      ExploreRequestContext requestContext,
+      QueryRequest.Builder queryBuilder) {
     if (request.getOrderByCount() > 0) {
       List<OrderByExpression> orderByExpressions = request.getOrderByList();
       queryBuilder.addAllOrderBy(
           QueryAndGatewayDtoConverter.convertToQueryOrderByExpressions(orderByExpressions));
     }
 
-    queryBuilder.setLimit(request.getLimit());
-    queryBuilder.setOffset(request.getOffset());
+    // handle group by scenario with group limit set
+    if (requestContext.hasGroupBy()) {
+      int limit = request.getLimit();
+      if (request.getGroupLimit() > 0) {
+        // in group by scenario, set limit to minimum of limit or group-limit
+        limit = Math.min(request.getLimit(), request.getGroupLimit());
+      }
+      // pinot doesn't handle offset with group by correctly
+      // we will add offset to limit itself and then ignore results till offset in response
+      limit += request.getOffset();
+      // don't exceed default group by limit
+      if (limit > DEFAULT_QUERY_SERVICE_GROUP_BY_LIMIT) {
+        LOG.error(
+            "Trying to query for rows more than the default limit {} : {}",
+            DEFAULT_QUERY_SERVICE_GROUP_BY_LIMIT,
+            request);
+        throw new UnsupportedOperationException(
+            "Trying to query for rows more than the default limit " + request);
+      }
+      queryBuilder.setLimit(limit);
+    } else {
+      queryBuilder.setLimit(request.getLimit());
+      queryBuilder.setOffset(request.getOffset());
+    }
   }
 
   @Override
@@ -183,6 +206,7 @@ public class RequestHandler implements RequestHandlerWithSorting {
   }
 
   private ExploreResponse.Builder handleQueryServiceResponse(
+      ExploreRequest request,
       ExploreRequestContext context,
       Iterator<ResultSetChunk> resultSetChunkIterator,
       ExploreRequestContext requestContext,
@@ -222,7 +246,11 @@ public class RequestHandler implements RequestHandlerWithSorting {
           requestContext.getOffset());
     }
 
-    if (requestContext.hasGroupBy() && requestContext.getIncludeRestGroup()) {
+    // If request has group by, and includeRestGroup is set, and we have not reached limit
+    // then invoke TheRestGroupRequestHandler
+    if (requestContext.hasGroupBy()
+        && requestContext.getIncludeRestGroup()
+        && builder.getRowCount() < request.getLimit()) {
       theRestGroupRequestHandler.getRowsForTheRestGroup(
           context, requestContext.getExploreRequest(), builder);
     }
@@ -310,25 +338,14 @@ public class RequestHandler implements RequestHandlerWithSorting {
       List<OrderByExpression> orderByExpressions,
       int limit,
       int offset) {
-    List<org.hypertrace.gateway.service.v1.common.Row.Builder> rowBuilders =
-        builder.getRowBuilderList();
-
-    List<org.hypertrace.gateway.service.v1.common.Row.Builder> sortedRowBuilders =
-        sortAndPaginateRowBuilders(rowBuilders, orderByExpressions, limit, offset);
-
-    builder.clearRow();
-    sortedRowBuilders.forEach(builder::addRow);
-  }
-
-  protected List<org.hypertrace.gateway.service.v1.common.Row.Builder> sortAndPaginateRowBuilders(
-      List<org.hypertrace.gateway.service.v1.common.Row.Builder> rowBuilders,
-      List<OrderByExpression> orderByExpressions,
-      int limit,
-      int offset) {
-    RowComparator rowComparator = new RowComparator(orderByExpressions);
-
-    return DataCollectionUtil.limitAndSort(
-        rowBuilders.stream(), limit, offset, orderByExpressions.size(), rowComparator);
+    if (offset > 0) {
+      List<org.hypertrace.gateway.service.v1.common.Row.Builder> rowBuilders =
+          builder.getRowBuilderList();
+      List<org.hypertrace.gateway.service.v1.common.Row.Builder> rowBuildersPostSkip =
+          rowBuilders.stream().skip(offset).collect(Collectors.toUnmodifiableList());
+      builder.clearRow();
+      rowBuildersPostSkip.forEach(builder::addRow);
+    }
   }
 
   protected Logger getLogger() {

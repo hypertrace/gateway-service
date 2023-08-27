@@ -8,6 +8,7 @@ import org.hypertrace.entity.query.service.client.EntityQueryServiceClient;
 import org.hypertrace.entity.query.service.v1.EntityQueryRequest;
 import org.hypertrace.entity.query.service.v1.Expression;
 import org.hypertrace.entity.query.service.v1.Filter;
+import org.hypertrace.entity.query.service.v1.Filter.Builder;
 import org.hypertrace.entity.query.service.v1.LiteralConstant;
 import org.hypertrace.entity.query.service.v1.Operator;
 import org.hypertrace.entity.query.service.v1.ResultSetChunk;
@@ -24,7 +25,7 @@ import org.hypertrace.gateway.service.v1.common.OrderByExpression;
 import org.hypertrace.gateway.service.v1.explore.ExploreRequest;
 
 public class EntityServiceEntityFetcher {
-  private static final int DEFAULT_ENTITY_SERVICE_GROUP_BY_LIMIT = 10000;
+  private static final int DEFAULT_ENTITY_REQUEST_LIMIT = 10_000;
 
   private final AttributeMetadataProvider attributeMetadataProvider;
   private final EntityIdColumnsConfigs entityIdColumnsConfigs;
@@ -60,16 +61,15 @@ public class EntityServiceEntityFetcher {
     addGroupBys(exploreRequest, builder);
     addSelections(requestContext, exploreRequest, builder);
 
+    builder.setLimit(DEFAULT_ENTITY_REQUEST_LIMIT);
+
     // TODO: Push group by down to EQS
     // If there is a group by, specify a large limit and track actual limit, offset and order by
     // expression list, so we can compute these once the we get the results.
     if (requestContext.hasGroupBy()) {
       // Will need to do the ordering, limit and offset ourselves after we get the group by results
-      builder.setLimit(DEFAULT_ENTITY_SERVICE_GROUP_BY_LIMIT);
+      builder.setLimit(DEFAULT_ENTITY_REQUEST_LIMIT);
       requestContext.setOrderByExpressions(getRequestOrderByExpressions(exploreRequest));
-    } else {
-      // No Group By
-      throw new RuntimeException("Entity request handler only supports group by requests");
     }
 
     return builder.build();
@@ -107,6 +107,16 @@ public class EntityServiceEntityFetcher {
 
   private Filter.Builder buildFilter(
       ExploreRequest exploreRequest, List<String> entityIdAttributeIds, Set<String> entityIds) {
+    Builder filterBuilder =
+        Filter.newBuilder()
+            .setOperator(Operator.AND)
+            .addChildFilter(
+                EntityServiceAndGatewayServiceConverter.convertToEntityServiceFilter(
+                    exploreRequest.getFilter()));
+    if (entityIds.isEmpty()) {
+      return filterBuilder;
+    }
+
     List<Filter> entityIdsInFilter =
         entityIdAttributeIds.stream()
             .map(
@@ -128,12 +138,7 @@ public class EntityServiceEntityFetcher {
                         .build())
             .collect(Collectors.toUnmodifiableList());
 
-    return Filter.newBuilder()
-        .setOperator(Operator.AND)
-        .addChildFilter(
-            EntityServiceAndGatewayServiceConverter.convertToEntityServiceFilter(
-                exploreRequest.getFilter()))
-        .addAllChildFilter(entityIdsInFilter);
+    return filterBuilder.addAllChildFilter(entityIdsInFilter);
   }
 
   private List<OrderByExpression> getRequestOrderByExpressions(ExploreRequest request) {

@@ -1,8 +1,11 @@
 package org.hypertrace.gateway.service.entity;
 
+import static org.hypertrace.core.grpcutils.context.RequestContext.forTenantId;
+import static org.hypertrace.core.query.service.client.QueryServiceClient.DEFAULT_QUERY_SERVICE_GROUP_BY_LIMIT;
 import static org.hypertrace.gateway.service.common.QueryServiceRequestAndResponseUtils.createQsAggregationExpression;
 import static org.hypertrace.gateway.service.common.QueryServiceRequestAndResponseUtils.createQsDefaultRequestFilter;
 import static org.hypertrace.gateway.service.common.converters.QueryRequestUtil.createAttributeExpression;
+import static org.hypertrace.gateway.service.common.converters.QueryRequestUtil.createBetweenTimesFilter;
 import static org.hypertrace.gateway.service.common.converters.QueryRequestUtil.createCompositeFilter;
 import static org.hypertrace.gateway.service.common.converters.QueryRequestUtil.createFilter;
 import static org.hypertrace.gateway.service.common.converters.QueryRequestUtil.createStringArrayLiteralExpression;
@@ -35,13 +38,13 @@ import org.hypertrace.core.query.service.api.QueryRequest;
 import org.hypertrace.core.query.service.api.ResultSetChunk;
 import org.hypertrace.core.query.service.api.ResultSetMetadata;
 import org.hypertrace.core.query.service.api.Row;
-import org.hypertrace.core.query.service.client.QueryServiceClient;
 import org.hypertrace.entity.query.service.client.EntityQueryServiceClient;
 import org.hypertrace.gateway.service.AbstractGatewayServiceTest;
 import org.hypertrace.gateway.service.common.AttributeMetadataProvider;
 import org.hypertrace.gateway.service.common.RequestContext;
 import org.hypertrace.gateway.service.common.config.ScopeFilterConfigs;
 import org.hypertrace.gateway.service.common.converters.QueryRequestUtil;
+import org.hypertrace.gateway.service.common.util.QueryServiceClient;
 import org.hypertrace.gateway.service.entity.config.EntityIdColumnsConfigs;
 import org.hypertrace.gateway.service.entity.config.LogConfig;
 import org.hypertrace.gateway.service.executor.QueryExecutorConfig;
@@ -348,10 +351,55 @@ public class EntityServiceInteractionRequestTest extends AbstractGatewayServiceT
             .addSelection(createQsAggregationExpression("COUNT", "SERVICE.id"))
             .setFilter(queryServiceFilter)
             .addGroupBy(createAttributeExpression("SERVICE.id"))
-            .setLimit(QueryServiceClient.DEFAULT_QUERY_SERVICE_GROUP_BY_LIMIT)
+            .setLimit(DEFAULT_QUERY_SERVICE_GROUP_BY_LIMIT)
             .build();
 
-    when(queryServiceClient.executeQuery(eq(expectedQueryRequest), any(), Mockito.anyInt()))
+    when(queryServiceClient.executeQuery(any(RequestContext.class), eq(expectedQueryRequest)))
+        .thenReturn(
+            List.of(
+                    ResultSetChunk.newBuilder()
+                        .setResultSetMetadata(
+                            generateResultSetMetadataFor("SERVICE.id", "COUNT_service"))
+                        .addRow(generateRowFor("test_service_1", "10.0"))
+                        .build())
+                .iterator());
+  }
+
+  private void mockQueryServiceRequestForServiceCountWithInteractionFilters(
+      long startTime, long endTime) {
+
+    org.hypertrace.core.query.service.api.Filter serviceIdFilter =
+        createFilter(
+            "SERVICE.id",
+            org.hypertrace.core.query.service.api.Operator.IN,
+            createStringArrayLiteralExpression(
+                List.of("test_service_1", "test_service_2", "test_service_3")));
+
+    org.hypertrace.core.query.service.api.Filter filter =
+        org.hypertrace.core.query.service.api.Filter.newBuilder()
+            .setOperator(org.hypertrace.core.query.service.api.Operator.AND)
+            .addChildFilter(
+                createFilter(
+                    createAttributeExpression("SERVICE.id"),
+                    org.hypertrace.core.query.service.api.Operator.NEQ,
+                    createStringNullLiteralExpression()))
+            .addChildFilter(createBetweenTimesFilter("SERVICE.startTime", startTime, endTime))
+            .addChildFilter(
+                createCompositeFilter(
+                    org.hypertrace.core.query.service.api.Operator.AND,
+                    List.of(serviceIdFilter, serviceIdFilter, serviceIdFilter)))
+            .build();
+
+    QueryRequest expectedQueryRequest =
+        QueryRequest.newBuilder()
+            .addSelection(createAttributeExpression("SERVICE.id"))
+            .addSelection(createQsAggregationExpression("COUNT", "SERVICE.id"))
+            .setFilter(filter)
+            .addGroupBy(createAttributeExpression("SERVICE.id"))
+            .setLimit(DEFAULT_QUERY_SERVICE_GROUP_BY_LIMIT)
+            .build();
+
+    when(queryServiceClient.executeQuery(any(RequestContext.class), eq(expectedQueryRequest)))
         .thenReturn(
             List.of(
                     ResultSetChunk.newBuilder()
@@ -396,10 +444,10 @@ public class EntityServiceInteractionRequestTest extends AbstractGatewayServiceT
             .setFilter(interactionQueryFilter)
             .addGroupBy(createAttributeExpression("INTERACTION.toServiceId"))
             .addGroupBy(createAttributeExpression("INTERACTION.fromServiceId"))
-            .setLimit(QueryServiceClient.DEFAULT_QUERY_SERVICE_GROUP_BY_LIMIT)
+            .setLimit(DEFAULT_QUERY_SERVICE_GROUP_BY_LIMIT)
             .build();
 
-    when(queryServiceClient.executeQuery(eq(expectedQueryRequest), any(), Mockito.anyInt()))
+    when(queryServiceClient.executeQuery(any(RequestContext.class), eq(expectedQueryRequest)))
         .thenReturn(
             List.of(
                     ResultSetChunk.newBuilder()
@@ -409,6 +457,112 @@ public class EntityServiceInteractionRequestTest extends AbstractGatewayServiceT
                                 "INTERACTION.fromServiceId",
                                 "SUM_num_calls"))
                         .addRow(generateRowFor("test_service_1", "from_test_service_1", "40.0"))
+                        .build())
+                .iterator());
+  }
+
+  private void mockQueryServiceRequestForIncomingServiceWithInteractionFilters(
+      long startTime, long endTime) {
+
+    org.hypertrace.core.query.service.api.Filter timesFilter =
+        QueryRequestUtil.createBetweenTimesFilter("INTERACTION.startTime", startTime, endTime);
+
+    org.hypertrace.core.query.service.api.Filter toServiceIdFilter =
+        QueryRequestUtil.createFilter(
+            "INTERACTION.toServiceId",
+            org.hypertrace.core.query.service.api.Operator.IN,
+            createStringArrayLiteralExpression(List.of("test_service_1")));
+
+    org.hypertrace.core.query.service.api.Filter fromServiceIdFilter =
+        QueryRequestUtil.createCompositeFilter(
+            org.hypertrace.core.query.service.api.Operator.AND,
+            List.of(
+                QueryRequestUtil.createCompositeFilter(
+                    org.hypertrace.core.query.service.api.Operator.AND,
+                    List.of(
+                        createFilter(
+                            "INTERACTION.fromServiceId",
+                            org.hypertrace.core.query.service.api.Operator.NEQ,
+                            createStringNullLiteralExpression()))),
+                createFilter(
+                    "INTERACTION.otherAttribute",
+                    org.hypertrace.core.query.service.api.Operator.IN,
+                    createStringArrayLiteralExpression(List.of("attributeId")))));
+
+    org.hypertrace.core.query.service.api.Filter interactionQueryFilter =
+        createCompositeFilter(
+            org.hypertrace.core.query.service.api.Operator.AND,
+            List.of(timesFilter, toServiceIdFilter, fromServiceIdFilter));
+
+    QueryRequest expectedQueryRequest =
+        QueryRequest.newBuilder()
+            .addSelection(createAttributeExpression("INTERACTION.toServiceId"))
+            .addSelection(createAttributeExpression("INTERACTION.fromServiceId"))
+            .addSelection(
+                createQsAggregationExpression("SUM", "INTERACTION.numCalls", "SUM_num_calls"))
+            .setFilter(interactionQueryFilter)
+            .addGroupBy(createAttributeExpression("INTERACTION.toServiceId"))
+            .addGroupBy(createAttributeExpression("INTERACTION.fromServiceId"))
+            .setLimit(DEFAULT_QUERY_SERVICE_GROUP_BY_LIMIT)
+            .build();
+
+    when(queryServiceClient.executeQuery(any(RequestContext.class), eq(expectedQueryRequest)))
+        .thenReturn(
+            List.of(
+                    ResultSetChunk.newBuilder()
+                        .setResultSetMetadata(
+                            generateResultSetMetadataFor(
+                                "INTERACTION.toServiceId",
+                                "INTERACTION.fromServiceId",
+                                "SUM_num_calls"))
+                        .addRow(generateRowFor("test_service_1", "from_test_service_1", "40.0"))
+                        .build())
+                .iterator());
+  }
+
+  private void mockQueryServiceIdsRequestForInteractionFilterRequest(long startTime, long endTime) {
+
+    org.hypertrace.core.query.service.api.Filter timesFilter =
+        QueryRequestUtil.createBetweenTimesFilter("INTERACTION.startTime", startTime, endTime);
+
+    org.hypertrace.core.query.service.api.Filter fromServiceIdFilter =
+        QueryRequestUtil.createCompositeFilter(
+            org.hypertrace.core.query.service.api.Operator.AND,
+            List.of(
+                QueryRequestUtil.createCompositeFilter(
+                    org.hypertrace.core.query.service.api.Operator.AND,
+                    List.of(
+                        createFilter(
+                            "INTERACTION.fromServiceId",
+                            org.hypertrace.core.query.service.api.Operator.NEQ,
+                            createStringNullLiteralExpression()))),
+                createFilter(
+                    "INTERACTION.otherAttribute",
+                    org.hypertrace.core.query.service.api.Operator.IN,
+                    createStringArrayLiteralExpression(List.of("attributeId")))));
+
+    org.hypertrace.core.query.service.api.Filter interactionQueryFilter =
+        createCompositeFilter(
+            org.hypertrace.core.query.service.api.Operator.AND,
+            List.of(timesFilter, fromServiceIdFilter));
+
+    QueryRequest expectedQueryRequest =
+        QueryRequest.newBuilder()
+            .addSelection(createAttributeExpression("INTERACTION.toServiceId"))
+            .setFilter(interactionQueryFilter)
+            .addGroupBy(createAttributeExpression("INTERACTION.toServiceId"))
+            .setLimit(DEFAULT_QUERY_SERVICE_GROUP_BY_LIMIT)
+            .build();
+
+    when(queryServiceClient.executeQuery(any(RequestContext.class), eq(expectedQueryRequest)))
+        .thenReturn(
+            List.of(
+                    ResultSetChunk.newBuilder()
+                        .setResultSetMetadata(
+                            generateResultSetMetadataFor("INTERACTION.toServiceId"))
+                        .addRow(generateRowFor("test_service_1"))
+                        .addRow(generateRowFor("test_service_2"))
+                        .addRow(generateRowFor("test_service_3"))
                         .build())
                 .iterator());
   }
@@ -447,10 +601,10 @@ public class EntityServiceInteractionRequestTest extends AbstractGatewayServiceT
             .setFilter(interactionQueryFilter)
             .addGroupBy(createAttributeExpression("INTERACTION.fromServiceId"))
             .addGroupBy(createAttributeExpression("INTERACTION.toServiceId"))
-            .setLimit(QueryServiceClient.DEFAULT_QUERY_SERVICE_GROUP_BY_LIMIT)
+            .setLimit(DEFAULT_QUERY_SERVICE_GROUP_BY_LIMIT)
             .build();
 
-    when(queryServiceClient.executeQuery(eq(expectedQueryRequest), any(), Mockito.anyInt()))
+    when(queryServiceClient.executeQuery(any(RequestContext.class), eq(expectedQueryRequest)))
         .thenReturn(
             List.of(
                     ResultSetChunk.newBuilder()
@@ -498,10 +652,10 @@ public class EntityServiceInteractionRequestTest extends AbstractGatewayServiceT
             .setFilter(interactionQueryFilter)
             .addGroupBy(createAttributeExpression("INTERACTION.fromServiceId"))
             .addGroupBy(createAttributeExpression("INTERACTION.toBackendId"))
-            .setLimit(QueryServiceClient.DEFAULT_QUERY_SERVICE_GROUP_BY_LIMIT)
+            .setLimit(DEFAULT_QUERY_SERVICE_GROUP_BY_LIMIT)
             .build();
 
-    when(queryServiceClient.executeQuery(eq(expectedQueryRequest), any(), Mockito.anyInt()))
+    when(queryServiceClient.executeQuery(any(RequestContext.class), eq(expectedQueryRequest)))
         .thenReturn(
             List.of(
                     ResultSetChunk.newBuilder()
@@ -539,6 +693,54 @@ public class EntityServiceInteractionRequestTest extends AbstractGatewayServiceT
                         .setValueType(org.hypertrace.core.query.service.api.ValueType.STRING)
                         .setString(columnValue)));
     return rowBuilder.build();
+  }
+
+  private InteractionsRequest buildIncomingInteractionWithFilterRequest() {
+    Set<String> entityTypes = ImmutableSet.of("SERVICE");
+
+    Filter entityTypeFilter =
+        Filter.newBuilder()
+            .setOperator(Operator.AND)
+            .addChildFilter(
+                Filter.newBuilder()
+                    .setLhs(buildAttributeExpression("INTERACTION.fromEntityType"))
+                    .setOperator(Operator.IN)
+                    .setRhs(
+                        Expression.newBuilder()
+                            .setLiteral(
+                                LiteralConstant.newBuilder()
+                                    .setValue(
+                                        Value.newBuilder()
+                                            .setValueType(ValueType.STRING_ARRAY)
+                                            .addAllStringArray(entityTypes))
+                                    .build())
+                            .build()))
+            .addChildFilter(
+                Filter.newBuilder()
+                    .setLhs(buildAttributeExpression("INTERACTION.otherAttribute"))
+                    .setOperator(Operator.IN)
+                    .setRhs(
+                        Expression.newBuilder()
+                            .setLiteral(
+                                LiteralConstant.newBuilder()
+                                    .setValue(
+                                        Value.newBuilder()
+                                            .setValueType(ValueType.STRING_ARRAY)
+                                            .addAllStringArray(List.of("attributeId")))
+                                    .build())
+                            .build()))
+            .build();
+    InteractionsRequest fromInteraction =
+        InteractionsRequest.newBuilder()
+            .setFilter(entityTypeFilter)
+            .addSelection(buildAttributeExpression("INTERACTION.fromEntityType", "fromEntityType"))
+            .addSelection(buildAttributeExpression("INTERACTION.fromEntityId", "fromEntityId"))
+            .addSelection(
+                getAggregateFunctionExpression(
+                    "INTERACTION.numCalls", FunctionType.SUM, "SUM_num_calls"))
+            .build();
+
+    return fromInteraction;
   }
 
   private InteractionsRequest buildIncomingInteractionRequest() {
@@ -620,14 +822,15 @@ public class EntityServiceInteractionRequestTest extends AbstractGatewayServiceT
     EntityService entityService =
         new EntityService(
             queryServiceClient,
-            500,
             entityQueryServiceClient,
+            null,
             attributeMetadataProvider,
             entityIdColumnsConfigs,
             scopeFilterConfigs,
             logConfig,
             queryExecutor);
-    EntitiesResponse response = entityService.getEntities(TENANT_ID, request, Map.of());
+    EntitiesResponse response =
+        entityService.getEntities(new RequestContext(forTenantId(TENANT_ID)), request);
 
     // validate we have one incoming edge, and two outgoing edge
     assertNotNull(response);
@@ -675,5 +878,51 @@ public class EntityServiceInteractionRequestTest extends AbstractGatewayServiceT
         outGoingBackendInteraction.getAttributeMap().get("toEntityId").getString());
     assertEquals(
         30, outGoingBackendInteraction.getMetricsMap().get("SUM_num_calls").getValue().getLong());
+  }
+
+  @Test
+  public void testGetEntitiesWithInteractionFilters() {
+    long endTime = System.currentTimeMillis();
+    long startTime = endTime - TimeUnit.DAYS.toMillis(30);
+
+    EntitiesRequest request =
+        EntitiesRequest.newBuilder()
+            .setEntityType(DomainEntityType.SERVICE.name())
+            .setStartTimeMillis(startTime)
+            .setEndTimeMillis(endTime)
+            .addSelection(buildAttributeExpression("SERVICE.id"))
+            .setIncomingInteractions(buildIncomingInteractionWithFilterRequest())
+            .build();
+
+    mockQueryServiceRequestForServiceCountWithInteractionFilters(startTime, endTime);
+    mockQueryServiceRequestForIncomingServiceWithInteractionFilters(startTime, endTime);
+    mockQueryServiceIdsRequestForInteractionFilterRequest(startTime, endTime);
+
+    EntityService entityService =
+        new EntityService(
+            queryServiceClient,
+            entityQueryServiceClient,
+            null,
+            attributeMetadataProvider,
+            entityIdColumnsConfigs,
+            scopeFilterConfigs,
+            logConfig,
+            queryExecutor);
+    EntitiesResponse response =
+        entityService.getEntities(new RequestContext(forTenantId(TENANT_ID)), request);
+
+    // validate we have one incoming edge, and two outgoing edge
+    assertNotNull(response);
+    assertEquals(1, response.getTotal());
+    assertEquals(1, response.getEntity(0).getIncomingInteractionCount());
+
+    // validate incoming edge
+    EntityInteraction incomingInteraction = response.getEntity(0).getIncomingInteraction(0);
+    assertEquals(
+        "from_test_service_1",
+        incomingInteraction.getAttributeMap().get("fromEntityId").getString());
+    assertEquals(
+        "SERVICE", incomingInteraction.getAttributeMap().get("fromEntityType").getString());
+    assertEquals(40, incomingInteraction.getMetricsMap().get("SUM_num_calls").getValue().getLong());
   }
 }

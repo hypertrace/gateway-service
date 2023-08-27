@@ -1,6 +1,7 @@
 package org.hypertrace.gateway.service.common;
 
 import java.util.Map;
+import org.hypertrace.core.grpcutils.context.RequestContextConstants;
 import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.Test;
 
@@ -8,14 +9,12 @@ public class AttributeCacheKeyTest {
 
   @Test
   public void testAttributeCacheKey() {
-    RequestContext requestContext1 =
-        new RequestContext("test-tenant-1", Map.of("a1", "v1", "a2", "v2"));
-    RequestContext requestContext2 =
-        new RequestContext("test-tenant-2", Map.of("a1", "v1", "a2", "v2"));
+    RequestContext requestContext1 = buildContext("test-tenant-1", Map.of("a1", "v1", "a2", "v2"));
+    RequestContext requestContext2 = buildContext("test-tenant-2", Map.of("a1", "v1", "a2", "v2"));
     RequestContext requestContext3 =
-        new RequestContext("test-tenant-1", Map.of("a10", "v10", "a20", "v20"));
+        buildContext("test-tenant-1", Map.of("a10", "v10", "a20", "v20"));
     RequestContext requestContext4 =
-        new RequestContext("test-tenant-2", Map.of("a11", "v11", "a21", "v21"));
+        buildContext("test-tenant-2", Map.of("a11", "v11", "a21", "v21"));
 
     AttributeCacheKey<String> testCacheKey1 =
         new AttributeCacheKey<>(requestContext1, "testDataKey");
@@ -29,7 +28,8 @@ public class AttributeCacheKeyTest {
         new AttributeCacheKey<>(requestContext1, "testDataKey2");
 
     Assertions.assertEquals(testCacheKey1.getDataKey(), "testDataKey");
-    Assertions.assertEquals(testCacheKey1.getHeaders(), Map.of("a1", "v1", "a2", "v2"));
+    Assertions.assertEquals(
+        Map.of("x-tenant-id", "test-tenant-1", "a1", "v1", "a2", "v2"), testCacheKey1.getHeaders());
 
     Assertions.assertEquals(testCacheKey1, testCacheKey1);
     Assertions.assertEquals(testCacheKey1, testCacheKey3);
@@ -44,5 +44,13 @@ public class AttributeCacheKeyTest {
     Assertions.assertNotEquals(testCacheKey1.hashCode(), testCacheKey2.hashCode());
     Assertions.assertNotEquals(testCacheKey1.hashCode(), testCacheKey4.hashCode());
     Assertions.assertNotEquals(testCacheKey1.hashCode(), testCacheKey5.hashCode());
+  }
+
+  private RequestContext buildContext(String tenantId, Map<String, String> headers) {
+    org.hypertrace.core.grpcutils.context.RequestContext grpcContext =
+        org.hypertrace.core.grpcutils.context.RequestContext.forTenantId(tenantId);
+    grpcContext.removeHeader(RequestContextConstants.REQUEST_ID_HEADER_KEY);
+    headers.forEach(grpcContext::put);
+    return new RequestContext(grpcContext);
   }
 }

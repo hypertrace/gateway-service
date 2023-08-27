@@ -14,6 +14,7 @@ enum DomainEntityType {
   SESSION = 6;
   BACKEND = 7;
   DOMAIN = 8;
+  BACKEND_API = 9;
 }
 
 enum Operator {
@@ -35,6 +36,8 @@ enum Operator {
   LIKE = 15;
   CONTAINS_KEY = 16;
   CONTAINS_KEYVALUE = 17;
+  CONTAINS_KEY_LIKE = 18;
+  NOT_CONTAINS_KEY = 19;
 }
 
 enum FunctionType {
@@ -58,6 +61,7 @@ enum FunctionType {
   // Have thought of introducing a parameter for estimate later.
   PERCENTILE = 8;
   DISTINCTCOUNT = 9;
+  DISTINCT_ARRAY = 10; //This is currently supported only for EDS
 }
 
 enum ValueType {

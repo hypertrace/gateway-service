@@ -6,14 +6,14 @@ plugins {
 }
 
 dependencies {
-  implementation(project(":gateway-service-impl"))
+  implementation(project(":gateway-service-factory"))
 
-  implementation("org.hypertrace.core.grpcutils:grpc-server-utils:0.7.1")
-  implementation("org.hypertrace.core.serviceframework:platform-service-framework:0.1.33")
+  implementation("org.hypertrace.core.grpcutils:grpc-server-utils:0.12.0")
+  implementation("org.hypertrace.core.serviceframework:platform-grpc-service-framework:0.1.52")
   implementation("org.slf4j:slf4j-api:1.7.30")
   implementation("com.typesafe:config:1.4.1")
 
-  runtimeOnly("io.grpc:grpc-netty:1.44.0")
+  runtimeOnly("io.grpc:grpc-netty:1.56.0")
   runtimeOnly("org.apache.logging.log4j:log4j-slf4j-impl:2.17.1")
 }
 

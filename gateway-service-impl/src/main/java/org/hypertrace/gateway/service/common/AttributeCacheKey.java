@@ -3,6 +3,9 @@ package org.hypertrace.gateway.service.common;
 import java.util.Map;
 import java.util.Objects;
 
+// TODO replace with org.hypertrace.core.grpcutils.context.ContextualKey
+
+@Deprecated
 public class AttributeCacheKey<K> {
   private final RequestContext requestContext;
   private final K dataKey;

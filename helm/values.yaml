@@ -4,6 +4,8 @@
 replicaCount: 1
 maxUnavailable: 0
 
+chartType: application
+
 image:
   repository: hypertrace/gateway-service
   pullPolicy: IfNotPresent
@@ -18,6 +20,7 @@ containerPortName: grpc
 env: []
 
 service:
+  name: gateway-service
   type: ClusterIP
   port: 50071
   adminPort: 50072
@@ -30,14 +33,18 @@ affinity: {}
 
 topologySpreadConstraints: []
 
+securityContext: {}
+
 javaOpts: "-XX:InitialRAMPercentage=50.0 -XX:MaxRAMPercentage=75.0 -XX:MaxDirectMemorySize=128M -XX:+ExitOnOutOfMemoryError"
 
 livenessProbe:
-  initialDelaySeconds: 10
-  periodSeconds: 10
-readinessProbe:
-  initialDelaySeconds: 2
   periodSeconds: 5
+  failureThreshold: 3
+  timeoutSeconds: 3
+startupProbe:
+  periodSeconds: 5
+  failureThreshold: 24
+  timeoutSeconds: 3
 
 resources:
    limits:

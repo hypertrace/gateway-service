@@ -7,6 +7,7 @@ import java.util.Map.Entry;
 import java.util.Optional;
 import java.util.Set;
 import java.util.stream.Collectors;
+import org.hypertrace.core.attribute.service.v1.AttributeKind;
 import org.hypertrace.core.attribute.service.v1.AttributeMetadata;
 import org.hypertrace.core.attribute.service.v1.AttributeScope;
 import org.hypertrace.gateway.service.common.AttributeMetadataProvider;
@@ -106,16 +107,6 @@ public class AttributeMetadataUtil {
         .getId();
   }
 
-  private static AttributeMetadata getAttributeMetadata(
-      AttributeMetadataProvider attributeMetadataProvider,
-      RequestContext requestContext,
-      String scope,
-      String key) {
-    return attributeMetadataProvider
-        .getAttributeMetadata(requestContext, scope, key)
-        .orElseThrow(() -> new UnknownScopeAndKeyForAttributeException(scope, key));
-  }
-
   public static Map<String, AttributeMetadata> remapAttributeMetadataByResultKey(
       Collection<Expression> selections, Map<String, AttributeMetadata> attributeMetadataByIdMap) {
     return selections.stream()
@@ -128,9 +119,32 @@ public class AttributeMetadataUtil {
             expression ->
                 Map.entry(
                     ExpressionReader.getSelectionResultName(expression).orElseThrow(),
-                    attributeMetadataByIdMap.get(
-                        ExpressionReader.getAttributeIdFromAttributeSelection(expression)
-                            .orElseThrow())))
+                    getAttributeMetadata(expression, attributeMetadataByIdMap).orElseThrow()))
         .collect(Collectors.toUnmodifiableMap(Entry::getKey, Entry::getValue, (x, y) -> x));
+  }
+
+  private static Optional<AttributeMetadata> getAttributeMetadata(
+      Expression expression, Map<String, AttributeMetadata> attributeMetadataByIdMap) {
+    Optional<AttributeMetadata> maybeAttributeMetadata =
+        ExpressionReader.getAttributeIdFromAttributeSelection(expression)
+            .filter(attributeMetadataByIdMap::containsKey)
+            .map(attributeMetadataByIdMap::get);
+
+    if (maybeAttributeMetadata.isEmpty()) {
+      return Optional.empty();
+    }
+
+    AttributeMetadata attributeMetadata = maybeAttributeMetadata.get();
+    if (!ExpressionReader.isSimpleAttributeSelection(expression)) {
+      switch (attributeMetadata.getValueKind()) {
+        case TYPE_STRING_MAP:
+          return Optional.of(
+              AttributeMetadata.newBuilder(attributeMetadata)
+                  .setValueKind(AttributeKind.TYPE_STRING)
+                  .build());
+      }
+    }
+
+    return Optional.of(attributeMetadata);
   }
 }

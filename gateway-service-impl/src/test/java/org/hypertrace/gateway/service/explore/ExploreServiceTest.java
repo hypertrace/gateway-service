@@ -1,12 +1,12 @@
 package org.hypertrace.gateway.service.explore;
 
 import com.google.protobuf.GeneratedMessageV3;
-import java.util.HashMap;
 import java.util.stream.Stream;
-import org.hypertrace.core.query.service.client.QueryServiceClient;
 import org.hypertrace.gateway.service.common.AbstractServiceTest;
 import org.hypertrace.gateway.service.common.AttributeMetadataProvider;
+import org.hypertrace.gateway.service.common.RequestContext;
 import org.hypertrace.gateway.service.common.config.ScopeFilterConfigs;
+import org.hypertrace.gateway.service.common.util.QueryServiceClient;
 import org.hypertrace.gateway.service.v1.explore.ExploreRequest;
 import org.hypertrace.gateway.service.v1.explore.ExploreResponse;
 
@@ -40,7 +40,10 @@ public class ExploreServiceTest extends AbstractServiceTest<ExploreRequest, Expl
       ScopeFilterConfigs scopeFilterConfigs) {
     ExploreService exploreService =
         new ExploreService(
-            queryServiceClient, 500, null, attributeMetadataProvider, scopeFilterConfigs, null);
-    return exploreService.explore(TENANT_ID, request, new HashMap<>());
+            queryServiceClient, null, attributeMetadataProvider, scopeFilterConfigs, null);
+    return exploreService.explore(
+        new RequestContext(
+            org.hypertrace.core.grpcutils.context.RequestContext.forTenantId(TENANT_ID)),
+        request);
   }
 }

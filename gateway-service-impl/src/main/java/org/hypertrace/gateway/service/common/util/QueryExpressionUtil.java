@@ -37,6 +37,16 @@ public class QueryExpressionUtil {
                 .setValue(Value.newBuilder().setString(value).setValueType(ValueType.STRING)));
   }
 
+  public static Expression.Builder getLiteralExpression(List<String> values) {
+    return Expression.newBuilder()
+        .setLiteral(
+            LiteralConstant.newBuilder()
+                .setValue(
+                    Value.newBuilder()
+                        .addAllStringArray(values)
+                        .setValueType(ValueType.STRING_ARRAY)));
+  }
+
   public static Expression.Builder getLiteralExpression(Long value) {
     return Expression.newBuilder()
         .setLiteral(
