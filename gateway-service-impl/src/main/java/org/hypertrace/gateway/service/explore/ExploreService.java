@@ -110,8 +110,7 @@ public class ExploreService {
 
   private IRequestHandler getRequestHandler(
       ExploreRequest request, Map<String, AttributeMetadata> attributeMetadataMap) {
-    if (isContextAnEntityType(request)
-        && !hasTimeAggregations(request)) {
+    if (isContextAnEntityType(request) && !hasTimeAggregations(request)) {
       ExpressionContext expressionContext =
           new ExpressionContext(
               attributeMetadataMap,
