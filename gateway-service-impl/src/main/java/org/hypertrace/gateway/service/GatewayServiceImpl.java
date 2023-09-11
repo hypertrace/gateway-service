@@ -22,6 +22,7 @@ import org.hypertrace.entity.query.service.client.EntityQueryServiceClient;
 import org.hypertrace.entity.query.service.v1.EntityQueryServiceGrpc;
 import org.hypertrace.entity.query.service.v1.EntityQueryServiceGrpc.EntityQueryServiceBlockingStub;
 import org.hypertrace.entity.service.client.config.EntityServiceClientConfig;
+import org.hypertrace.entity.type.service.client.EntityTypeServiceClient;
 import org.hypertrace.gateway.service.baseline.BaselineService;
 import org.hypertrace.gateway.service.baseline.BaselineServiceImpl;
 import org.hypertrace.gateway.service.baseline.BaselineServiceQueryExecutor;
@@ -111,6 +112,11 @@ public class GatewayServiceImpl extends GatewayServiceGrpc.GatewayServiceImplBas
         new EntityQueryServiceClient(
             grpcChannelRegistry.forPlaintextAddress(esConfig.getHost(), esConfig.getPort()));
 
+    EntityTypeServiceClient entityTypeServiceClient =
+        new EntityTypeServiceClient(
+            grpcChannelRegistry.forPlaintextAddress(esConfig.getHost(), esConfig.getPort()));
+    EntityTypesProvider entityTypesProvider = new EntityTypesProvider(entityTypeServiceClient);
+
     ScopeFilterConfigs scopeFilterConfigs = new ScopeFilterConfigs(appConfig);
     LogConfig logConfig = new LogConfig(appConfig);
     this.traceService =
@@ -134,7 +140,8 @@ public class GatewayServiceImpl extends GatewayServiceGrpc.GatewayServiceImplBas
             eqsClient,
             attributeMetadataProvider,
             scopeFilterConfigs,
-            entityIdColumnsConfigs);
+            entityIdColumnsConfigs,
+            entityTypesProvider);
     BaselineServiceQueryParser baselineServiceQueryParser =
         new BaselineServiceQueryParser(attributeMetadataProvider);
     BaselineServiceQueryExecutor baselineServiceQueryExecutor =

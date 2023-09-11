@@ -10,10 +10,12 @@ import java.util.Arrays;
 import java.util.Map;
 import java.util.Optional;
 import java.util.concurrent.TimeUnit;
+import java.util.stream.Stream;
 import org.hypertrace.core.attribute.service.v1.AttributeMetadata;
 import org.hypertrace.core.serviceframework.metrics.PlatformMetricsRegistry;
 import org.hypertrace.entity.query.service.client.EntityQueryServiceClient;
 import org.hypertrace.entity.v1.entitytype.EntityType;
+import org.hypertrace.gateway.service.EntityTypesProvider;
 import org.hypertrace.gateway.service.common.AttributeMetadataProvider;
 import org.hypertrace.gateway.service.common.ExpressionContext;
 import org.hypertrace.gateway.service.common.RequestContext;
@@ -34,6 +36,7 @@ public class ExploreService {
   private final TimeAggregationsWithGroupByRequestHandler timeAggregationsWithGroupByRequestHandler;
   private final EntityRequestHandler entityRequestHandler;
   private final ScopeFilterConfigs scopeFilterConfigs;
+  private final EntityTypesProvider entityTypesProvider;
 
   private Timer queryExecutionTimer;
 
@@ -42,7 +45,8 @@ public class ExploreService {
       EntityQueryServiceClient entityQueryServiceClient,
       AttributeMetadataProvider attributeMetadataProvider,
       ScopeFilterConfigs scopeFiltersConfig,
-      EntityIdColumnsConfigs entityIdColumnsConfigs) {
+      EntityIdColumnsConfigs entityIdColumnsConfigs,
+      EntityTypesProvider entityTypesProvider) {
     this.attributeMetadataProvider = attributeMetadataProvider;
     this.normalRequestHandler = new RequestHandler(queryServiceClient, attributeMetadataProvider);
     this.timeAggregationsRequestHandler =
@@ -57,6 +61,7 @@ public class ExploreService {
             queryServiceClient,
             entityQueryServiceClient);
     this.scopeFilterConfigs = scopeFiltersConfig;
+    this.entityTypesProvider = entityTypesProvider;
     initMetrics();
   }
 
@@ -91,7 +96,8 @@ public class ExploreService {
               newExploreRequestContext, request.getContext());
       exploreRequestValidator.validate(request, attributeMetadataMap);
 
-      IRequestHandler requestHandler = getRequestHandler(request, attributeMetadataMap);
+      IRequestHandler requestHandler =
+          getRequestHandler(request, attributeMetadataMap, requestContext.getTenantId());
 
       ExploreResponse.Builder responseBuilder =
           requestHandler.handleRequest(newExploreRequestContext, request);
@@ -103,14 +109,18 @@ public class ExploreService {
     }
   }
 
-  private boolean isContextAnEntityType(ExploreRequest request) {
-    return Arrays.stream(EntityType.values())
-        .anyMatch(entityType -> entityType.name().equalsIgnoreCase(request.getContext()));
+  private boolean isContextAnEntityType(ExploreRequest request, String tenantId) {
+    return Stream.concat(
+            entityTypesProvider.getEntityTypes(tenantId).stream(),
+            Arrays.stream(EntityType.values()).map(EntityType::name))
+        .anyMatch(entityType -> entityType.equalsIgnoreCase(request.getContext()));
   }
 
   private IRequestHandler getRequestHandler(
-      ExploreRequest request, Map<String, AttributeMetadata> attributeMetadataMap) {
-    if (isContextAnEntityType(request)
+      ExploreRequest request,
+      Map<String, AttributeMetadata> attributeMetadataMap,
+      String tenantId) {
+    if (isContextAnEntityType(request, tenantId)
         && !hasTimeAggregations(request)
         && !request.getGroupByList().isEmpty()) {
       ExpressionContext expressionContext =
