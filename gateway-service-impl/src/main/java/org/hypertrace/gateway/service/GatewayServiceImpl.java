@@ -30,6 +30,7 @@ import org.hypertrace.gateway.service.common.AttributeMetadataProvider;
 import org.hypertrace.gateway.service.common.RequestContext;
 import org.hypertrace.gateway.service.common.config.ScopeFilterConfigs;
 import org.hypertrace.gateway.service.common.util.EntityTypeServiceClient;
+import org.hypertrace.gateway.service.common.util.EntityTypeServiceV2Client;
 import org.hypertrace.gateway.service.common.util.QueryServiceClient;
 import org.hypertrace.gateway.service.entity.EntityService;
 import org.hypertrace.gateway.service.entity.config.EntityIdColumnsConfigs;
@@ -115,7 +116,12 @@ public class GatewayServiceImpl extends GatewayServiceGrpc.GatewayServiceImplBas
     EntityTypeServiceClient entityTypeServiceClient =
         new EntityTypeServiceClient(
             grpcChannelRegistry.forPlaintextAddress(esConfig.getHost(), esConfig.getPort()));
-    EntityTypesProvider entityTypesProvider = new EntityTypesProvider(entityTypeServiceClient);
+
+    EntityTypeServiceV2Client entityTypeServiceV2Client =
+        new EntityTypeServiceV2Client(
+            grpcChannelRegistry.forPlaintextAddress(esConfig.getHost(), esConfig.getPort()));
+    EntityTypesProvider entityTypesProvider =
+        new EntityTypesProvider(entityTypeServiceClient, entityTypeServiceV2Client);
 
     ScopeFilterConfigs scopeFilterConfigs = new ScopeFilterConfigs(appConfig);
     LogConfig logConfig = new LogConfig(appConfig);

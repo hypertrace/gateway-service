@@ -10,6 +10,7 @@ import java.util.concurrent.TimeUnit;
 import lombok.NonNull;
 import org.hypertrace.core.grpcutils.context.ContextualKey;
 import org.hypertrace.gateway.service.common.util.EntityTypeServiceClient;
+import org.hypertrace.gateway.service.common.util.EntityTypeServiceV2Client;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -21,13 +22,18 @@ public class EntityTypesProvider {
   // TenantId to Entity types cache
   private final LoadingCache<ContextualKey<Void>, Set<String>> tenantIdToEntityTypesCache;
 
-  public EntityTypesProvider(EntityTypeServiceClient entityTypeServiceClient) {
+  public EntityTypesProvider(
+      EntityTypeServiceClient entityTypeServiceClient,
+      EntityTypeServiceV2Client entityTypeServiceV2Client) {
     CacheLoader<ContextualKey<Void>, Set<String>> cacheLoader =
         new CacheLoader<>() {
           @Override
           public Set<String> load(@NonNull ContextualKey<Void> contextualKey) {
             Set<String> entityTypesSet = new TreeSet<>(String.CASE_INSENSITIVE_ORDER);
             entityTypeServiceClient
+                .getAllEntityTypes(contextualKey.getContext())
+                .forEach(entityType -> entityTypesSet.add(entityType.getName()));
+            entityTypeServiceV2Client
                 .getAllEntityTypes(contextualKey.getContext())
                 .forEach(entityType -> entityTypesSet.add(entityType.getName()));
             return entityTypesSet;
