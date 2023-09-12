@@ -10,7 +10,6 @@ import java.util.Arrays;
 import java.util.Map;
 import java.util.Optional;
 import java.util.concurrent.TimeUnit;
-import java.util.stream.Stream;
 import org.hypertrace.core.attribute.service.v1.AttributeMetadata;
 import org.hypertrace.core.serviceframework.metrics.PlatformMetricsRegistry;
 import org.hypertrace.entity.query.service.client.EntityQueryServiceClient;
@@ -97,7 +96,7 @@ public class ExploreService {
       exploreRequestValidator.validate(request, attributeMetadataMap);
 
       IRequestHandler requestHandler =
-          getRequestHandler(request, attributeMetadataMap, requestContext.getTenantId());
+          getRequestHandler(request, attributeMetadataMap, requestContext);
 
       ExploreResponse.Builder responseBuilder =
           requestHandler.handleRequest(newExploreRequestContext, request);
@@ -109,18 +108,21 @@ public class ExploreService {
     }
   }
 
-  private boolean isContextAnEntityType(ExploreRequest request, String tenantId) {
-    return Stream.concat(
-            entityTypesProvider.getEntityTypes(tenantId).stream(),
-            Arrays.stream(EntityType.values()).map(EntityType::name))
-        .anyMatch(entityType -> entityType.equalsIgnoreCase(request.getContext()));
+  private boolean isContextAnEntityType(ExploreRequest request, RequestContext requestContext) {
+    if (entityTypesProvider
+        .getEntityTypes(requestContext.getGrpcContext().buildInternalContextualKey())
+        .contains(request.getContext())) {
+      return true;
+    }
+    return Arrays.stream(EntityType.values())
+        .anyMatch(entityType -> entityType.name().equalsIgnoreCase(request.getContext()));
   }
 
   private IRequestHandler getRequestHandler(
       ExploreRequest request,
       Map<String, AttributeMetadata> attributeMetadataMap,
-      String tenantId) {
-    if (isContextAnEntityType(request, tenantId)
+      RequestContext requestContext) {
+    if (isContextAnEntityType(request, requestContext)
         && !hasTimeAggregations(request)
         && !request.getGroupByList().isEmpty()) {
       ExpressionContext expressionContext =

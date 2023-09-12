@@ -3,15 +3,13 @@ package org.hypertrace.gateway.service;
 import com.google.common.cache.CacheBuilder;
 import com.google.common.cache.CacheLoader;
 import com.google.common.cache.LoadingCache;
-import java.util.Collections;
-import java.util.List;
+import java.util.Set;
+import java.util.TreeSet;
 import java.util.concurrent.ExecutionException;
 import java.util.concurrent.TimeUnit;
-import java.util.stream.Collectors;
 import lombok.NonNull;
-import org.apache.commons.lang3.StringUtils;
-import org.hypertrace.entity.type.service.client.EntityTypeServiceClient;
-import org.hypertrace.entity.type.service.v1.EntityType;
+import org.hypertrace.core.grpcutils.context.ContextualKey;
+import org.hypertrace.gateway.service.common.util.EntityTypeServiceClient;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -21,16 +19,18 @@ public class EntityTypesProvider {
   private static final int DEFAULT_EXPIRE_DURATION_MIN = 30; // 30 minutes
 
   // TenantId to Entity types cache
-  private final LoadingCache<String, List<String>> tenantIdToEntityTypesCache;
+  private final LoadingCache<ContextualKey<Void>, Set<String>> tenantIdToEntityTypesCache;
 
   public EntityTypesProvider(EntityTypeServiceClient entityTypeServiceClient) {
-    CacheLoader<String, List<String>> cacheLoader =
+    CacheLoader<ContextualKey<Void>, Set<String>> cacheLoader =
         new CacheLoader<>() {
           @Override
-          public List<String> load(@NonNull String tenantId) {
-            return entityTypeServiceClient.getAllEntityTypes(tenantId).stream()
-                .map(EntityType::getName)
-                .collect(Collectors.toList());
+          public Set<String> load(@NonNull ContextualKey<Void> contextualKey) {
+            Set<String> entityTypesSet = new TreeSet<>(String.CASE_INSENSITIVE_ORDER);
+            entityTypeServiceClient
+                .getAllEntityTypes(contextualKey.getContext())
+                .forEach(entityType -> entityTypesSet.add(entityType.getName()));
+            return entityTypesSet;
           }
         };
 
@@ -41,15 +41,18 @@ public class EntityTypesProvider {
             .build(cacheLoader);
   }
 
-  public List<String> getEntityTypes(String tenantId) {
-    if (StringUtils.isBlank(tenantId)) {
-      LOG.error("Tenant id not found while trying to fetch entity types");
-    }
+  public Set<String> getEntityTypes(ContextualKey<Void> contextualKey) {
     try {
-      return tenantIdToEntityTypesCache.get(tenantId);
+      return tenantIdToEntityTypesCache.get(contextualKey);
     } catch (ExecutionException e) {
-      LOG.error(String.format("Error retrieving entity types for tenant %s", tenantId));
-      return Collections.emptyList();
+      LOG.error(
+          String.format(
+              "Error retrieving entity types for tenant %s",
+              contextualKey.getContext().getTenantId()));
+      throw new RuntimeException(
+          String.format(
+              "Error retrieving Entity types for tenant:%s",
+              contextualKey.getContext().getTenantId()));
     }
   }
 }
