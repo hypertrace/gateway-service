@@ -37,9 +37,9 @@ dependencies {
   implementation("com.fasterxml.jackson.core:jackson-databind:2.15.2")
 
   testImplementation("org.junit.jupiter:junit-jupiter:5.8.2")
-  testImplementation("org.mockito:mockito-junit-jupiter:4.10.0")
-  testImplementation("org.mockito:mockito-core:4.10.0")
-  testImplementation("org.mockito:mockito-inline:4.10.0")
+  testImplementation("org.mockito:mockito-junit-jupiter:5.4.0")
+  testImplementation("org.mockito:mockito-core:5.5.0")
+  testImplementation("org.mockito:mockito-inline:5.2.0")
   testImplementation("org.apache.logging.log4j:log4j-slf4j-impl:2.17.1")
   testImplementation("io.grpc:grpc-netty:1.56.0")
 }

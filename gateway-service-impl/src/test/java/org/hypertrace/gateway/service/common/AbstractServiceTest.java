@@ -34,8 +34,6 @@ import org.hypertrace.core.query.service.api.QueryRequest;
 import org.hypertrace.core.query.service.api.ResultSetChunk;
 import org.hypertrace.gateway.service.EntityTypesProvider;
 import org.hypertrace.gateway.service.common.config.ScopeFilterConfigs;
-import org.hypertrace.gateway.service.common.util.EntityTypeServiceClient;
-import org.hypertrace.gateway.service.common.util.EntityTypeServiceV2Client;
 import org.hypertrace.gateway.service.common.util.QueryServiceClient;
 import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.BeforeAll;
@@ -80,7 +78,7 @@ public abstract class AbstractServiceTest<
             + "]";
     Config config = ConfigFactory.parseString(scopeFiltersConfig);
     scopeFilterConfigs = new ScopeFilterConfigs(config);
-    createMockEntityTypesProvider();
+    entityTypesProvider = mock(EntityTypesProvider.class);
   }
 
   private static Reader readResourceFile(String fileName) {
@@ -107,14 +105,6 @@ public abstract class AbstractServiceTest<
                 });
 
     attributeMetadataProvider = new AttributeMetadataProvider(attributesServiceClient);
-  }
-
-  private static void createMockEntityTypesProvider() throws IOException {
-    EntityTypeServiceClient entityTypeServiceClient = mock(EntityTypeServiceClient.class);
-    EntityTypeServiceV2Client entityTypeServiceV2Client = mock(EntityTypeServiceV2Client.class);
-    when(entityTypesProvider.getEntityTypes(any())).thenReturn(Set.of("SERVICE", "DOMAIN"));
-    entityTypesProvider =
-        new EntityTypesProvider(entityTypeServiceClient, entityTypeServiceV2Client);
   }
 
   private static List<AttributeMetadata> getAttributes() throws IOException {
