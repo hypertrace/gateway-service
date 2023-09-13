@@ -32,6 +32,7 @@ import org.hypertrace.core.attribute.service.v1.AttributeMetadata;
 import org.hypertrace.core.attribute.service.v1.AttributeMetadataFilter;
 import org.hypertrace.core.query.service.api.QueryRequest;
 import org.hypertrace.core.query.service.api.ResultSetChunk;
+import org.hypertrace.gateway.service.EntityTypesProvider;
 import org.hypertrace.gateway.service.common.config.ScopeFilterConfigs;
 import org.hypertrace.gateway.service.common.util.QueryServiceClient;
 import org.junit.jupiter.api.Assertions;
@@ -56,6 +57,7 @@ public abstract class AbstractServiceTest<
   private static AttributeMetadataProvider attributeMetadataProvider;
   private static List<AttributeMetadata> attributeMetadataList;
   private static ScopeFilterConfigs scopeFilterConfigs;
+  private static EntityTypesProvider entityTypesProvider;
 
   @BeforeAll
   public static void setUp() throws IOException {
@@ -76,6 +78,7 @@ public abstract class AbstractServiceTest<
             + "]";
     Config config = ConfigFactory.parseString(scopeFiltersConfig);
     scopeFilterConfigs = new ScopeFilterConfigs(config);
+    entityTypesProvider = mock(EntityTypesProvider.class);
   }
 
   private static Reader readResourceFile(String fileName) {
@@ -151,7 +154,12 @@ public abstract class AbstractServiceTest<
     QueryServiceClient queryServiceClient = createMockQueryServiceClient(fileName);
     TGatewayServiceRequestType testRequest = readGatewayServiceRequest(fileName);
     TGatewayServiceResponseType actualResponse =
-        executeApi(testRequest, queryServiceClient, attributeMetadataProvider, scopeFilterConfigs);
+        executeApi(
+            testRequest,
+            queryServiceClient,
+            attributeMetadataProvider,
+            scopeFilterConfigs,
+            entityTypesProvider);
     TGatewayServiceResponseType expectedResponse = readGatewayServiceResponse(fileName);
 
     Assertions.assertEquals(expectedResponse, actualResponse);
@@ -271,5 +279,6 @@ public abstract class AbstractServiceTest<
       TGatewayServiceRequestType request,
       QueryServiceClient queryServiceClient,
       AttributeMetadataProvider attributeMetadataProvider,
-      ScopeFilterConfigs scopeFilterConfigs);
+      ScopeFilterConfigs scopeFilterConfigs,
+      EntityTypesProvider entityTypesProvider);
 }
