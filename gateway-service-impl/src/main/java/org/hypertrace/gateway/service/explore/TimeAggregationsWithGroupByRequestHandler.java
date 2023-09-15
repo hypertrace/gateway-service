@@ -1,6 +1,7 @@
 package org.hypertrace.gateway.service.explore;
 
 import com.google.common.collect.Streams;
+import java.util.List;
 import java.util.Map;
 import java.util.Optional;
 import java.util.stream.Collectors;
@@ -13,10 +14,12 @@ import org.hypertrace.gateway.service.v1.common.Expression;
 import org.hypertrace.gateway.service.v1.common.Filter;
 import org.hypertrace.gateway.service.v1.common.LiteralConstant;
 import org.hypertrace.gateway.service.v1.common.Operator;
+import org.hypertrace.gateway.service.v1.common.OrderByExpression;
 import org.hypertrace.gateway.service.v1.common.Row;
 import org.hypertrace.gateway.service.v1.common.TimeAggregation;
 import org.hypertrace.gateway.service.v1.common.Value;
 import org.hypertrace.gateway.service.v1.common.ValueType;
+import org.hypertrace.gateway.service.v1.explore.ColumnName;
 import org.hypertrace.gateway.service.v1.explore.ExploreRequest;
 import org.hypertrace.gateway.service.v1.explore.ExploreResponse;
 import org.slf4j.Logger;
@@ -98,6 +101,7 @@ public class TimeAggregationsWithGroupByRequestHandler implements IRequestHandle
             .clearTimeAggregation() // Clear the time aggregations. We will move the time
             // aggregations expressions into selections
             .clearOffset() // Overall request offset doesn't apply to getting the actual groups
+            .clearOrderBy() // Clear order by. It will be filled later
             .setIncludeRestGroup(
                 false); // Set includeRestGroup to false. We will handle the Rest group results
     // separately
@@ -107,7 +111,22 @@ public class TimeAggregationsWithGroupByRequestHandler implements IRequestHandle
         .getTimeAggregationList()
         .forEach(timeAggregation -> requestBuilder.addSelection(timeAggregation.getAggregation()));
 
+    // remove interval based order by expression(if present) from order by expressions in the
+    // groupBy
+    // request being generated
+    List<OrderByExpression> orderByExpressionList =
+        originalRequest.getOrderByList().stream()
+            .filter(orderByExpression -> !containsIntervalOrdering(orderByExpression))
+            .collect(Collectors.toList());
+    requestBuilder.addAllOrderBy(orderByExpressionList);
+
     return requestBuilder.build();
+  }
+
+  private boolean containsIntervalOrdering(OrderByExpression orderByExpression) {
+    return ExpressionReader.getAttributeIdFromAttributeSelection(orderByExpression.getExpression())
+        .map(name -> name.equals(ColumnName.INTERVAL_START_TIME.name()))
+        .orElse(false);
   }
 
   private ExploreRequest buildTimeAggregationsRequest(
