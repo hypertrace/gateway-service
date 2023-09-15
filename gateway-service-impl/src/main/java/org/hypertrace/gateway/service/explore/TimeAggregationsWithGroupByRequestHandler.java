@@ -111,9 +111,9 @@ public class TimeAggregationsWithGroupByRequestHandler implements IRequestHandle
         .getTimeAggregationList()
         .forEach(timeAggregation -> requestBuilder.addSelection(timeAggregation.getAggregation()));
 
-    // remove interval based order by expression(if present) from order by expressions in the
-    // groupBy
-    // request being generated
+    // Here we are generating the query to retrieve groups. In this query, we don't need to do
+    // perform any interval based ordering. Therefore remove interval based order by expression(if
+    // present) from the request being generated in this method
     List<OrderByExpression> orderByExpressionList =
         originalRequest.getOrderByList().stream()
             .filter(orderByExpression -> !containsIntervalOrdering(orderByExpression))
