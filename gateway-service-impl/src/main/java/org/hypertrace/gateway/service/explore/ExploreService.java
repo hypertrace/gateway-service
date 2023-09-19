@@ -3,9 +3,6 @@ package org.hypertrace.gateway.service.explore;
 import static org.hypertrace.core.attribute.service.v1.AttributeSource.EDS;
 
 import com.google.common.collect.ImmutableMap;
-import com.google.common.util.concurrent.RateLimiter;
-import com.google.protobuf.InvalidProtocolBufferException;
-import com.google.protobuf.util.JsonFormat;
 import io.micrometer.core.instrument.Timer;
 import java.time.Duration;
 import java.time.Instant;
@@ -13,7 +10,6 @@ import java.util.Arrays;
 import java.util.Map;
 import java.util.Optional;
 import java.util.concurrent.TimeUnit;
-import lombok.extern.slf4j.Slf4j;
 import org.hypertrace.core.attribute.service.v1.AttributeMetadata;
 import org.hypertrace.core.serviceframework.metrics.PlatformMetricsRegistry;
 import org.hypertrace.entity.query.service.client.EntityQueryServiceClient;
@@ -29,7 +25,6 @@ import org.hypertrace.gateway.service.explore.entity.EntityRequestHandler;
 import org.hypertrace.gateway.service.v1.explore.ExploreRequest;
 import org.hypertrace.gateway.service.v1.explore.ExploreResponse;
 
-@Slf4j
 public class ExploreService {
 
   private final AttributeMetadataProvider attributeMetadataProvider;
@@ -41,7 +36,6 @@ public class ExploreService {
   private final EntityRequestHandler entityRequestHandler;
   private final ScopeFilterConfigs scopeFilterConfigs;
   private final EntityTypesProvider entityTypesProvider;
-  private final RateLimiter rateLimiter;
 
   private Timer queryExecutionTimer;
 
@@ -67,7 +61,6 @@ public class ExploreService {
             entityQueryServiceClient);
     this.scopeFilterConfigs = scopeFiltersConfig;
     this.entityTypesProvider = entityTypesProvider;
-    this.rateLimiter = RateLimiter.create(1 / 60d);
     initMetrics();
   }
 
@@ -109,21 +102,6 @@ public class ExploreService {
           requestHandler.handleRequest(newExploreRequestContext, request);
 
       return responseBuilder.build();
-    } catch (Exception ex) {
-      boolean acquireSucceeded = rateLimiter.tryAcquire();
-      if (acquireSucceeded || log.isDebugEnabled()) {
-        try {
-          String requestStr = JsonFormat.printer().print(request);
-          if (acquireSucceeded) {
-            log.info("Error while handling the request {}", requestStr, ex);
-          } else {
-            log.debug("Error while handling the request {}", requestStr, ex);
-          }
-        } catch (InvalidProtocolBufferException e) {
-          // ignore
-        }
-      }
-      throw ex;
     } finally {
       queryExecutionTimer.record(
           Duration.between(start, Instant.now()).toMillis(), TimeUnit.MILLISECONDS);
