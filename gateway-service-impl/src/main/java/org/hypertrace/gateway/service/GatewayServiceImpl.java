@@ -5,6 +5,7 @@ import static org.hypertrace.core.grpcutils.client.RequestContextClientCallCreds
 import com.google.common.base.Preconditions;
 import com.google.common.collect.ImmutableMap;
 import com.google.protobuf.ServiceException;
+import com.google.protobuf.util.JsonFormat;
 import com.typesafe.config.Config;
 import io.grpc.stub.StreamObserver;
 import io.micrometer.core.instrument.Counter;
@@ -417,7 +418,12 @@ public class GatewayServiceImpl extends GatewayServiceGrpc.GatewayServiceImplBas
       responseObserver.onCompleted();
       requestStatusSuccessCounter.increment();
     } catch (Exception e) {
-      LOG.error("Error while handling explore request: {}", request, e);
+      try {
+        LOG.error(
+            "Error while handling explore request: {}", JsonFormat.printer().print(request), e);
+      } catch (Exception ex) {
+        LOG.error("Error while handling explore request: {}", request, e);
+      }
       requestStatusErrorCounter.increment();
       responseObserver.onError(e);
     }
