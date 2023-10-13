@@ -5,6 +5,7 @@ import static org.hypertrace.core.grpcutils.client.RequestContextClientCallCreds
 import com.google.common.base.Preconditions;
 import com.google.common.collect.ImmutableMap;
 import com.google.protobuf.ServiceException;
+import com.google.protobuf.util.JsonFormat;
 import com.typesafe.config.Config;
 import io.grpc.stub.StreamObserver;
 import io.micrometer.core.instrument.Counter;
@@ -29,6 +30,8 @@ import org.hypertrace.gateway.service.baseline.BaselineServiceQueryParser;
 import org.hypertrace.gateway.service.common.AttributeMetadataProvider;
 import org.hypertrace.gateway.service.common.RequestContext;
 import org.hypertrace.gateway.service.common.config.ScopeFilterConfigs;
+import org.hypertrace.gateway.service.common.util.EntityTypeServiceClient;
+import org.hypertrace.gateway.service.common.util.EntityTypeServiceV2Client;
 import org.hypertrace.gateway.service.common.util.QueryServiceClient;
 import org.hypertrace.gateway.service.entity.EntityService;
 import org.hypertrace.gateway.service.entity.config.EntityIdColumnsConfigs;
@@ -111,6 +114,16 @@ public class GatewayServiceImpl extends GatewayServiceGrpc.GatewayServiceImplBas
         new EntityQueryServiceClient(
             grpcChannelRegistry.forPlaintextAddress(esConfig.getHost(), esConfig.getPort()));
 
+    EntityTypeServiceClient entityTypeServiceClient =
+        new EntityTypeServiceClient(
+            grpcChannelRegistry.forPlaintextAddress(esConfig.getHost(), esConfig.getPort()));
+
+    EntityTypeServiceV2Client entityTypeServiceV2Client =
+        new EntityTypeServiceV2Client(
+            grpcChannelRegistry.forPlaintextAddress(esConfig.getHost(), esConfig.getPort()));
+    EntityTypesProvider entityTypesProvider =
+        new EntityTypesProvider(entityTypeServiceClient, entityTypeServiceV2Client);
+
     ScopeFilterConfigs scopeFilterConfigs = new ScopeFilterConfigs(appConfig);
     LogConfig logConfig = new LogConfig(appConfig);
     this.traceService =
@@ -134,7 +147,8 @@ public class GatewayServiceImpl extends GatewayServiceGrpc.GatewayServiceImplBas
             eqsClient,
             attributeMetadataProvider,
             scopeFilterConfigs,
-            entityIdColumnsConfigs);
+            entityIdColumnsConfigs,
+            entityTypesProvider);
     BaselineServiceQueryParser baselineServiceQueryParser =
         new BaselineServiceQueryParser(attributeMetadataProvider);
     BaselineServiceQueryExecutor baselineServiceQueryExecutor =
@@ -404,7 +418,12 @@ public class GatewayServiceImpl extends GatewayServiceGrpc.GatewayServiceImplBas
       responseObserver.onCompleted();
       requestStatusSuccessCounter.increment();
     } catch (Exception e) {
-      LOG.error("Error while handling explore request: {}", request, e);
+      try {
+        LOG.error(
+            "Error while handling explore request: {}", JsonFormat.printer().print(request), e);
+      } catch (Exception ex) {
+        LOG.error("Error while handling explore request: {}", request, e);
+      }
       requestStatusErrorCounter.increment();
       responseObserver.onError(e);
     }

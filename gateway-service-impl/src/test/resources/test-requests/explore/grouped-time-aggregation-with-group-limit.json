@@ -21,6 +21,14 @@
       }
     }
   }],
+  "orderBy": [{
+    "expression": {
+      "columnIdentifier": {
+        "columnName": "INTERVAL_START_TIME"
+      }
+    },
+    "order": "DESC"
+  }],
   "groupBy": [{
     "columnIdentifier": {
       "columnName": "SERVICE.name",

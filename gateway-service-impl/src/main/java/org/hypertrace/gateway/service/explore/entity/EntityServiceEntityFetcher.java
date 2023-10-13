@@ -61,6 +61,9 @@ public class EntityServiceEntityFetcher {
     addGroupBys(exploreRequest, builder);
     addSelections(requestContext, exploreRequest, builder);
 
+    // Ideally, needs the limit and offset for group by, since the fetcher is only triggered when
+    // there is a group by, or a single aggregation selection. A single aggregated selection would
+    // always return a single result (i.e. limit 1)
     builder.setLimit(DEFAULT_ENTITY_REQUEST_LIMIT);
 
     // TODO: Push group by down to EQS
@@ -68,7 +71,6 @@ public class EntityServiceEntityFetcher {
     // expression list, so we can compute these once the we get the results.
     if (requestContext.hasGroupBy()) {
       // Will need to do the ordering, limit and offset ourselves after we get the group by results
-      builder.setLimit(DEFAULT_ENTITY_REQUEST_LIMIT);
       requestContext.setOrderByExpressions(getRequestOrderByExpressions(exploreRequest));
     }
 
