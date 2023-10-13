@@ -46,7 +46,7 @@ import org.hypertrace.gateway.service.v1.explore.ExploreResponse;
  * <ul>
  *   <li>when the selections, group bys and order bys are on EDS. A group by would need an attribute
  *       selection, aggregation on the same attribute, and order by on any attribute
- *   <li>when selections, and order bys are on EDS. No group by would mean an aggregated selection
+ *   <li>when aggregated selection is on EDS. No group by would mean a single aggregated selection
  *       on attribute
  * </ul>
  *
@@ -60,8 +60,8 @@ import org.hypertrace.gateway.service.v1.explore.ExploreResponse;
  *   <li>Query to {@link
  *       org.hypertrace.gateway.service.common.datafetcher.QueryServiceEntityFetcher} with the time
  *       filter to get set of entity ids after applying QS filters
- *   <li>Query to {@link EntityServiceEntityFetcher} with selections, group bys(if present), and
- *       filters with an IN clause on entity ids
+ *   <li>Query to {@link EntityServiceEntityFetcher} with selections(attribute + aggregated), group
+ *       bys(if present), and filters with an IN clause on entity ids
  * </ul>
  */
 public class EntityRequestHandler extends RequestHandler {
