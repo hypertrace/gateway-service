@@ -122,9 +122,7 @@ public class ExploreService {
       ExploreRequest request,
       Map<String, AttributeMetadata> attributeMetadataMap,
       RequestContext requestContext) {
-    if (isContextAnEntityType(request, requestContext)
-        && !hasTimeAggregations(request)
-        && !request.getGroupByList().isEmpty()) {
+    if (isContextAnEntityType(request, requestContext) && !hasTimeAggregations(request)) {
       ExpressionContext expressionContext =
           new ExpressionContext(
               attributeMetadataMap,

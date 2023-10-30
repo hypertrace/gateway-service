@@ -41,19 +41,27 @@ import org.hypertrace.gateway.service.v1.explore.ExploreRequest;
 import org.hypertrace.gateway.service.v1.explore.ExploreResponse;
 
 /**
- * {@link EntityRequestHandler} is currently used only when the selections, group bys and filters
- * are on EDS. Can be extended later to support multiple sources. Only needed, when there is a group
- * by on the request, else can directly use {@link
- * org.hypertrace.gateway.service.v1.entity.EntitiesRequest}
+ * {@link EntityRequestHandler} is currently used either
+ *
+ * <ul>
+ *   <li>when the selections, group bys and order bys are on EDS. A group by would need an attribute
+ *       selection, aggregation on the same attribute, and order by on any attribute
+ *   <li>when aggregated selection is on EDS. No group by would mean a single aggregated selection
+ *       on attribute
+ * </ul>
+ *
+ * Can be extended later to support multiple sources. Filters can be present both on QS and EDS.
+ * Only needed, when there is a group by on the request, or an aggregated selection on an attribute,
+ * else can directly use {@link org.hypertrace.gateway.service.v1.entity.EntitiesRequest}
  *
  * <p>Currently,
  *
  * <ul>
  *   <li>Query to {@link
  *       org.hypertrace.gateway.service.common.datafetcher.QueryServiceEntityFetcher} with the time
- *       filter to get set of entity ids. Can be extended to support QS filters
- *   <li>Query to {@link EntityServiceEntityFetcher} with selections, group bys, and filters with an
- *       IN clause on entity ids
+ *       filter to get set of entity ids after applying QS filters
+ *   <li>Query to {@link EntityServiceEntityFetcher} with selections(attribute + aggregated), group
+ *       bys(if present), and filters with an IN clause on entity ids
  * </ul>
  */
 public class EntityRequestHandler extends RequestHandler {
@@ -94,7 +102,7 @@ public class EntityRequestHandler extends RequestHandler {
   @Override
   public ExploreResponse.Builder handleRequest(
       ExploreRequestContext requestContext, ExploreRequest exploreRequest) {
-    // Track if we have Group By so we can determine if we need to do Order By, Limit and Offset
+    // Track if we have Group By, so we can determine if we need to do Order By, Limit and Offset
     // ourselves.
     if (!exploreRequest.getGroupByList().isEmpty()) {
       requestContext.setHasGroupBy(true);
