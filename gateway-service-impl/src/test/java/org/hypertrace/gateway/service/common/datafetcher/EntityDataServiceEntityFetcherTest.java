@@ -3,6 +3,7 @@ package org.hypertrace.gateway.service.common.datafetcher;
 import static org.hypertrace.core.grpcutils.context.RequestContext.*;
 import static org.hypertrace.gateway.service.common.EntitiesRequestAndResponseUtils.buildOrderByExpression;
 import static org.hypertrace.gateway.service.common.EntitiesRequestAndResponseUtils.generateEQFilter;
+import static org.hypertrace.gateway.service.common.converters.EntityServiceAndGatewayServiceConverter.addStartTimeFilter;
 import static org.hypertrace.gateway.service.common.converters.EntityServiceAndGatewayServiceConverter.convertToEntityServiceExpression;
 import static org.hypertrace.gateway.service.common.converters.EntityServiceAndGatewayServiceConverter.convertToEntityServiceFilter;
 import static org.hypertrace.gateway.service.common.converters.EntityServiceAndGatewayServiceConverter.createColumnExpression;
@@ -105,7 +106,7 @@ public class EntityDataServiceEntityFetcherTest {
         new EntitiesRequestContext(
             forTenantId(tenantId), startTime, endTime, entityType.name(), "API.startTime");
 
-    EntityQueryRequest expectedQueryRequest =
+    EntityQueryRequest.Builder expectedQueryRequestBuilder =
         EntityQueryRequest.newBuilder()
             .setEntityType("API")
             .addSelection(
@@ -119,8 +120,9 @@ public class EntityDataServiceEntityFetcherTest {
             .setLimit(limit)
             .addAllOrderBy(
                 EntityServiceAndGatewayServiceConverter.convertToOrderByExpressions(
-                    orderByExpressions))
-            .build();
+                    orderByExpressions));
+    addStartTimeFilter(startTime, expectedQueryRequestBuilder);
+    EntityQueryRequest expectedQueryRequest = expectedQueryRequestBuilder.build();
 
     List<ResultSetChunk> resultSetChunks =
         List.of(getResultSetChunk(List.of("API.apiId"), new String[][] {{"apiId1"}, {"apiId2"}}));
@@ -161,7 +163,7 @@ public class EntityDataServiceEntityFetcherTest {
         new EntitiesRequestContext(
             forTenantId(tenantId), startTime, endTime, entityType.name(), "API.startTime");
 
-    EntityQueryRequest expectedQueryRequest =
+    EntityQueryRequest.Builder expectedQueryRequestBuilder =
         EntityQueryRequest.newBuilder()
             .setEntityType("API")
             .addSelection(
@@ -173,8 +175,9 @@ public class EntityDataServiceEntityFetcherTest {
             .setFilter(convertToEntityServiceFilter(entitiesRequest.getFilter()))
             .addAllOrderBy(
                 EntityServiceAndGatewayServiceConverter.convertToOrderByExpressions(
-                    orderByExpressions))
-            .build();
+                    orderByExpressions));
+    addStartTimeFilter(startTime, expectedQueryRequestBuilder);
+    EntityQueryRequest expectedQueryRequest = expectedQueryRequestBuilder.build();
 
     List<ResultSetChunk> resultSetChunks =
         List.of(getResultSetChunk(List.of("API.apiId"), new String[][] {{"apiId1"}, {"apiId2"}}));
@@ -228,10 +231,16 @@ public class EntityDataServiceEntityFetcherTest {
           new EntitiesRequestContext(
               forTenantId(tenantId), startTime, endTime, entityType.name(), "API.startTime");
 
+      EntityQueryRequest.Builder entityQueryRequestBuilder =
+          EntityQueryRequest.newBuilder()
+              .setEntityType("API")
+              .setFilter(convertToEntityServiceFilter(entitiesRequest.getFilter()));
+      addStartTimeFilter(startTime, entityQueryRequestBuilder);
+
       TotalEntitiesRequest expectedQueryRequest =
           TotalEntitiesRequest.newBuilder()
               .setEntityType("API")
-              .setFilter(convertToEntityServiceFilter(entitiesRequest.getFilter()))
+              .setFilter(entityQueryRequestBuilder.getFilter())
               .build();
 
       when(entityQueryServiceClient.total(

@@ -81,11 +81,19 @@ public class EntityServiceAndGatewayServiceConverterTest extends AbstractGateway
         builder,
         mock(EntitiesRequestContext.class));
 
-    // no filter added for unsupported entity types
-    assertEquals(Filter.getDefaultInstance(), builder.getFilter());
+    // only start time based filter added for unsupported entity types
+    Filter.Builder expectedLastUpdatedTimeFilterBuilder = Filter.newBuilder();
+    expectedLastUpdatedTimeFilterBuilder.setOperator(Operator.GE);
+    expectedLastUpdatedTimeFilterBuilder.setLhs(
+        EntityServiceAndGatewayServiceConverter.createColumnExpression("lastUpdatedTime"));
+    expectedLastUpdatedTimeFilterBuilder.setRhs(expectedStartTimeConstant);
+    assertEquals(
+        Filter.newBuilder().addChildFilter(expectedLastUpdatedTimeFilterBuilder).build(),
+        builder.getFilter());
 
     // if it's an backend, filters will be added
     request = EntitiesRequest.newBuilder().setEntityType(BACKEND.name()).build();
+    builder = EntityQueryRequest.newBuilder();
     EntityServiceAndGatewayServiceConverter.addBetweenTimeFilter(
         startTimeMillis,
         endTimeMillis,

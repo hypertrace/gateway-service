@@ -34,6 +34,10 @@ public class EntityServiceAndGatewayServiceConverter {
   private static final Logger LOG =
       LoggerFactory.getLogger(EntityServiceAndGatewayServiceConverter.class);
 
+  private static final String LAST_UPDATED_TIME_FIELD_NAME = "lastUpdatedTime";
+  private static final Expression LAST_UPDATED_TIME_COLUMN_EXPR =
+      createColumnExpression(LAST_UPDATED_TIME_FIELD_NAME).build();
+
   /**
    * Add between time filter for queries on EDS where a time notion (based on the latest entity
    * state) is supported.
@@ -54,6 +58,8 @@ public class EntityServiceAndGatewayServiceConverter {
       EntitiesRequestContext entitiesRequestContext) {
     // only scope has timestamp is supported
     if (TimestampConfigs.getTimestampColumn(entitiesRequest.getEntityType()) == null) {
+      // add a start time based filter to limit the number of entities queried
+      addStartTimeFilter(startTimeMillis, builder);
       return;
     }
 
@@ -89,6 +95,34 @@ public class EntityServiceAndGatewayServiceConverter {
     Filter.Builder newFilterBuilder = Filter.newBuilder();
     newFilterBuilder.setOperator(Operator.AND);
     newFilterBuilder.addChildFilter(startTimeFilterBuilder).addChildFilter(endTimeFilterBuilder);
+    if (existingFilter != null && !existingFilter.equals(Filter.getDefaultInstance())) {
+      newFilterBuilder.addChildFilter(existingFilter);
+    }
+
+    builder.setFilter(newFilterBuilder);
+  }
+
+  public static void addStartTimeFilter(long startTimeMillis, EntityQueryRequest.Builder builder) {
+    Expression.Builder startTimeConstant =
+        Expression.newBuilder()
+            .setLiteral(
+                LiteralConstant.newBuilder()
+                    .setValue(
+                        Value.newBuilder().setValueType(ValueType.LONG).setLong(startTimeMillis)));
+
+    // add a filter with greater than and equals using provided start time
+    // on lastUpdatedTime field
+    // this check will work on any time range query including custom time range
+    Filter.Builder startTimeFilterBuilder = Filter.newBuilder();
+    startTimeFilterBuilder.setOperator(Operator.GE);
+    startTimeFilterBuilder.setLhs(LAST_UPDATED_TIME_COLUMN_EXPR);
+    startTimeFilterBuilder.setRhs(startTimeConstant);
+
+    Filter existingFilter = builder.getFilter();
+
+    Filter.Builder newFilterBuilder = Filter.newBuilder();
+    newFilterBuilder.setOperator(Operator.AND);
+    newFilterBuilder.addChildFilter(startTimeFilterBuilder);
     if (existingFilter != null && !existingFilter.equals(Filter.getDefaultInstance())) {
       newFilterBuilder.addChildFilter(existingFilter);
     }
