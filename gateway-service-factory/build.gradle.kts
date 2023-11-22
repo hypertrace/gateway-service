@@ -3,7 +3,7 @@ plugins {
 }
 
 dependencies {
-  api("org.hypertrace.core.serviceframework:platform-grpc-service-framework:0.1.58")
+  api("org.hypertrace.core.serviceframework:platform-grpc-service-framework:0.1.62")
 
   implementation(project(":gateway-service-impl"))
 }
