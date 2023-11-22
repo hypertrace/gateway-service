@@ -38,8 +38,10 @@ message EntitiesRequest {
   repeated org.hypertrace.gateway.service.v1.common.Expression selection = 5;
   repeated org.hypertrace.gateway.service.v1.common.TimeAggregation time_aggregation = 6;
   // Interaction requests
-  InteractionsRequest incoming_interactions = 7;
-  InteractionsRequest outgoing_interactions = 8;
+  InteractionsRequest incoming_interactions = 7 [deprecated = true];
+  InteractionsRequest outgoing_interactions = 8 [deprecated = true];
+  repeated InteractionsRequest incoming_interaction_requests = 9;
+  repeated InteractionsRequest outgoing_interaction_requests = 10;
 
   repeated org.hypertrace.gateway.service.v1.common.OrderByExpression order_by = 15;
 

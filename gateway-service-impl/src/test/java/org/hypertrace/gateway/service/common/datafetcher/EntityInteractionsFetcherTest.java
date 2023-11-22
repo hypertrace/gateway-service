@@ -58,7 +58,7 @@ import org.mockito.ArgumentMatchers;
 import org.mockito.Mockito;
 
 /** Unit tests for {@link EntityInteractionsFetcher} */
-public class EntityInteractionsFetcherTest extends AbstractGatewayServiceTest {
+class EntityInteractionsFetcherTest extends AbstractGatewayServiceTest {
   private final InteractionsRequest fromServiceInteractions =
       InteractionsRequest.newBuilder()
           .setFilter(buildStringFilter("INTERACTION.fromEntityType", Operator.EQ, "SERVICE"))
@@ -107,6 +107,70 @@ public class EntityInteractionsFetcherTest extends AbstractGatewayServiceTest {
                   false))
           .build();
 
+  private final InteractionsRequest toServiceInteractionsWithFilters =
+      InteractionsRequest.newBuilder()
+          .setFilter(
+              Filter.newBuilder()
+                  .setOperator(Operator.AND)
+                  .addChildFilter(
+                      buildStringFilter("INTERACTION.toEntityType", Operator.EQ, "SERVICE"))
+                  .addChildFilter(
+                      buildStringFilter("INTERACTION.otherAttribute", Operator.EQ, "attributeId"))
+                  .build())
+          .addSelection(
+              getAggregateFunctionExpression(
+                  "INTERACTION.bytesSent", FunctionType.SUM, "SUM_bytes_sent"))
+          .addSelection(
+              getAggregateFunctionExpression(
+                  "INTERACTION.bytesSent",
+                  FunctionType.AVGRATE,
+                  "AVGRATE_bytes_sent_60",
+                  ImmutableList.of(
+                      QueryExpressionUtil.getLiteralExpression(TimeUnit.MINUTES.toSeconds(1))
+                          .build()),
+                  false))
+          .addSelection(
+              getAggregateFunctionExpression(
+                  "INTERACTION.bytesSent",
+                  FunctionType.PERCENTILE,
+                  "p99_bytes_sent",
+                  ImmutableList.of(
+                      QueryExpressionUtil.getLiteralExpression(Long.valueOf(99)).build()),
+                  false))
+          .build();
+
+  private final InteractionsRequest toBackendInteractionsWithFilters =
+      InteractionsRequest.newBuilder()
+          .setFilter(
+              Filter.newBuilder()
+                  .setOperator(Operator.AND)
+                  .addChildFilter(
+                      buildStringFilter("INTERACTION.toEntityType", Operator.EQ, "BACKEND"))
+                  .addChildFilter(
+                      buildStringFilter("INTERACTION.otherAttribute", Operator.EQ, "attributeId"))
+                  .build())
+          .addSelection(
+              getAggregateFunctionExpression(
+                  "INTERACTION.bytesSent", FunctionType.SUM, "SUM_bytes_sent"))
+          .addSelection(
+              getAggregateFunctionExpression(
+                  "INTERACTION.bytesSent",
+                  FunctionType.AVGRATE,
+                  "AVGRATE_bytes_sent_60",
+                  ImmutableList.of(
+                      QueryExpressionUtil.getLiteralExpression(TimeUnit.MINUTES.toSeconds(1))
+                          .build()),
+                  false))
+          .addSelection(
+              getAggregateFunctionExpression(
+                  "INTERACTION.bytesSent",
+                  FunctionType.PERCENTILE,
+                  "p99_bytes_sent",
+                  ImmutableList.of(
+                      QueryExpressionUtil.getLiteralExpression(Long.valueOf(99)).build()),
+                  false))
+          .build();
+
   private final InteractionsRequest toApiInteractions =
       InteractionsRequest.newBuilder()
           .setFilter(buildStringFilter("Interaction.attributes.to_entity_type", Operator.EQ, "API"))
@@ -119,7 +183,7 @@ public class EntityInteractionsFetcherTest extends AbstractGatewayServiceTest {
   private ExecutorService queryExecutor;
 
   @Test
-  public void testhasInteractionFilters_withoutInteractionFilter() {
+  void testhasInteractionFilters_withoutInteractionFilter() {
     EntitiesRequest request =
         EntitiesRequest.newBuilder()
             .setEntityType(DomainEntityType.SERVICE.name())
@@ -145,7 +209,7 @@ public class EntityInteractionsFetcherTest extends AbstractGatewayServiceTest {
   }
 
   @Test
-  public void testFetchInteractionsIds_withInteractionFilter() {
+  void testFetchInteractionsIds_withInteractionFilter() {
     EntitiesRequest request =
         EntitiesRequest.newBuilder()
             .setEntityType(DomainEntityType.SERVICE.name())
@@ -186,7 +250,49 @@ public class EntityInteractionsFetcherTest extends AbstractGatewayServiceTest {
   }
 
   @Test
-  public void testServiceToServiceEdgeQueryRequests() {
+  void testFetchInteractionsIds_withMultiInteractionFilter() {
+    EntitiesRequest request =
+        EntitiesRequest.newBuilder()
+            .setEntityType(DomainEntityType.SERVICE.name())
+            .setStartTimeMillis(System.currentTimeMillis() - TimeUnit.DAYS.toMillis(30))
+            .setEndTimeMillis(System.currentTimeMillis())
+            .addSelection(buildAttributeExpression("SERVICE.name"))
+            .addIncomingInteractionRequests(fromServiceInteractionsWithFilters)
+            .addOutgoingInteractionRequests(toServiceInteractionsWithFilters)
+            .addOutgoingInteractionRequests(toBackendInteractionsWithFilters)
+            .build();
+
+    RequestContext entitiesRequestContext = new RequestContext(forTenantId(TENANT_ID));
+    attributeMetadataProvider = mock(AttributeMetadataProvider.class);
+    Mockito.when(
+            attributeMetadataProvider.getAttributeMetadata(
+                any(), Mockito.eq(AttributeScope.INTERACTION.name()), Mockito.eq("startTime")))
+        .thenReturn(Optional.of(AttributeMetadata.newBuilder().setId("dummy").build()));
+
+    List<ResultSetChunk> resultSetChunks =
+        List.of(
+            getResultSetChunk(
+                List.of("INTERACTION.toServiceId"),
+                new String[][] {{"serviceId1"}, {"serviceId12"}}));
+
+    QueryServiceClient queryServiceClient = mock(QueryServiceClient.class);
+    Mockito.when(
+            queryServiceClient.executeQuery(eq(entitiesRequestContext), ArgumentMatchers.any()))
+        .thenReturn(resultSetChunks.iterator());
+
+    ExecutorService queryExecutor =
+        QueryExecutorServiceFactory.buildExecutorService(
+            QueryExecutorConfig.from(this.getConfig()));
+    EntityInteractionsFetcher interactionsFetcher =
+        new EntityInteractionsFetcher(queryServiceClient, attributeMetadataProvider, queryExecutor);
+    List<EntityKey> entityKeys =
+        interactionsFetcher.fetchInteractionsIds(entitiesRequestContext, request);
+    assertEquals(entityKeys.size(), 2);
+    queryExecutor.shutdown();
+  }
+
+  @Test
+  void testServiceToServiceEdgeQueryRequests() {
     EntitiesRequest request =
         EntitiesRequest.newBuilder()
             .setEntityType(DomainEntityType.SERVICE.name())
@@ -241,7 +347,7 @@ public class EntityInteractionsFetcherTest extends AbstractGatewayServiceTest {
   }
 
   @Test
-  public void testFromMultipleEntitiesQuery() {
+  void testFromMultipleEntitiesQuery() {
     Set<String> entityTypes = ImmutableSet.of("SERVICE", "API");
     Set<String> entityIds = ImmutableSet.of("service_id_1", "api_id_1");
 
@@ -335,7 +441,7 @@ public class EntityInteractionsFetcherTest extends AbstractGatewayServiceTest {
   }
 
   @Test
-  public void testToMultipleEntityTypesQuery() {
+  void testToMultipleEntityTypesQuery() {
     Set<String> entityTypes = ImmutableSet.of("SERVICE", "BACKEND");
     Set<String> entityIds = ImmutableSet.of("service_id_1");
 
@@ -453,7 +559,7 @@ public class EntityInteractionsFetcherTest extends AbstractGatewayServiceTest {
   }
 
   @Test
-  public void testEntityWithInteractionMappingToMultipleAttributes() {
+  void testEntityWithInteractionMappingToMultipleAttributes() {
     Set<String> entityTypes = ImmutableSet.of("SERVICE");
     List<String> entityIdInteractionMappings =
         List.of("INTERACTION.fromNamespaceName", "INTERACTION.fromNamespaceType");
@@ -580,7 +686,7 @@ public class EntityInteractionsFetcherTest extends AbstractGatewayServiceTest {
   }
 
   @Test
-  public void testCornerCases() {
+  void testCornerCases() {
     // No selections
     InteractionsRequest interactionsRequest =
         InteractionsRequest.newBuilder()
@@ -643,7 +749,7 @@ public class EntityInteractionsFetcherTest extends AbstractGatewayServiceTest {
   }
 
   @Test
-  public void testInvalidRequests() {
+  void testInvalidRequests() {
     attributeMetadataProvider = mock(AttributeMetadataProvider.class);
     Mockito.when(
             attributeMetadataProvider.getAttributeMetadata(

@@ -135,18 +135,10 @@ public class EntityInteractionsFetcher {
   public List<EntityKey> fetchInteractionsIds(
       RequestContext context, EntitiesRequest entitiesRequest) {
     List<EntityInteractionQueryRequest> allQueryRequests = new ArrayList<>();
-    if (entitiesRequest.hasIncomingInteractions()) {
-      allQueryRequests.addAll(
-          prepareInteractionIdsQueryRequest(
-              context, entitiesRequest, entitiesRequest.getIncomingInteractions(), INCOMING));
-    }
+    allQueryRequests.addAll(buildIncomingInteractionIdsRequest(context, entitiesRequest));
 
     // Process the outgoing interactions, and prepare the QS queries
-    if (entitiesRequest.hasOutgoingInteractions()) {
-      allQueryRequests.addAll(
-          prepareInteractionIdsQueryRequest(
-              context, entitiesRequest, entitiesRequest.getOutgoingInteractions(), OUTGOING));
-    }
+    allQueryRequests.addAll(buildOutgoingInteractionIdsRequest(context, entitiesRequest));
 
     // execute all the requests in parallel, and wait for results
     List<CompletableFuture<EntityInteractionQueryResponse>> queryRequestCompletableFutures =
@@ -199,30 +191,11 @@ public class EntityInteractionsFetcher {
       Map<EntityKey, Builder> entityBuilders) {
     List<EntityInteractionQueryRequest> allQueryRequests = new ArrayList<>();
     // Process the incoming interactions, and prepare QS queries
-    if (!InteractionsRequest.getDefaultInstance()
-        .equals(entitiesRequest.getIncomingInteractions())) {
-      allQueryRequests.addAll(
-          prepareQueryRequests(
-              context,
-              entitiesRequest,
-              entityBuilders,
-              entitiesRequest.getIncomingInteractions(),
-              INCOMING,
-              "fromEntityType filter is mandatory for incoming interactions."));
-    }
-
+    allQueryRequests.addAll(
+        buildIncomingInteractionQueryRequest(context, entitiesRequest, entityBuilders));
     // Process the outgoing interactions, and prepare the QS queries
-    if (!InteractionsRequest.getDefaultInstance()
-        .equals(entitiesRequest.getOutgoingInteractions())) {
-      allQueryRequests.addAll(
-          prepareQueryRequests(
-              context,
-              entitiesRequest,
-              entityBuilders,
-              entitiesRequest.getOutgoingInteractions(),
-              OUTGOING,
-              "toEntityType filter is mandatory for outgoing interactions."));
-    }
+    allQueryRequests.addAll(
+        buildOutgoingInteractionQueryRequest(context, entitiesRequest, entityBuilders));
 
     // execute all the requests in parallel, and wait for results
     List<CompletableFuture<EntityInteractionQueryResponse>> queryRequestCompletableFutures =
@@ -254,6 +227,106 @@ public class EntityInteractionsFetcher {
               entityBuilders,
               context);
         });
+  }
+
+  private List<EntityInteractionQueryRequest> buildOutgoingInteractionQueryRequest(
+      RequestContext context,
+      EntitiesRequest entitiesRequest,
+      Map<EntityKey, Builder> entityBuilders) {
+    List<EntityInteractionQueryRequest> allQueryRequests = new ArrayList<>();
+    if (entitiesRequest.hasOutgoingInteractions()) {
+      allQueryRequests.addAll(
+          prepareQueryRequests(
+              context,
+              entitiesRequest,
+              entityBuilders,
+              entitiesRequest.getOutgoingInteractions(),
+              OUTGOING,
+              "toEntityType filter is mandatory for outgoing interactions."));
+    } else if (!entitiesRequest.getOutgoingInteractionRequestsList().isEmpty()) {
+      entitiesRequest
+          .getOutgoingInteractionRequestsList()
+          .forEach(
+              request ->
+                  allQueryRequests.addAll(
+                      prepareQueryRequests(
+                          context,
+                          entitiesRequest,
+                          entityBuilders,
+                          request,
+                          OUTGOING,
+                          "toEntityType filter is mandatory for outgoing interactions.")));
+    }
+    return Collections.unmodifiableList(allQueryRequests);
+  }
+
+  private List<EntityInteractionQueryRequest> buildIncomingInteractionQueryRequest(
+      RequestContext context,
+      EntitiesRequest entitiesRequest,
+      Map<EntityKey, Builder> entityBuilders) {
+    List<EntityInteractionQueryRequest> allQueryRequests = new ArrayList<>();
+    if (entitiesRequest.hasIncomingInteractions()) {
+      allQueryRequests.addAll(
+          prepareQueryRequests(
+              context,
+              entitiesRequest,
+              entityBuilders,
+              entitiesRequest.getIncomingInteractions(),
+              INCOMING,
+              "fromEntityType filter is mandatory for incoming interactions."));
+    } else if (!entitiesRequest.getIncomingInteractionRequestsList().isEmpty()) {
+      entitiesRequest
+          .getIncomingInteractionRequestsList()
+          .forEach(
+              request ->
+                  allQueryRequests.addAll(
+                      prepareQueryRequests(
+                          context,
+                          entitiesRequest,
+                          entityBuilders,
+                          request,
+                          INCOMING,
+                          "fromEntityType filter is mandatory for incoming interactions.")));
+    }
+    return Collections.unmodifiableList(allQueryRequests);
+  }
+
+  private List<EntityInteractionQueryRequest> buildOutgoingInteractionIdsRequest(
+      RequestContext context, EntitiesRequest entitiesRequest) {
+    List<EntityInteractionQueryRequest> allQueryRequests = new ArrayList<>();
+    if (entitiesRequest.hasOutgoingInteractions()) {
+      allQueryRequests.addAll(
+          prepareInteractionIdsQueryRequest(
+              context, entitiesRequest, entitiesRequest.getOutgoingInteractions(), OUTGOING));
+    } else if (!entitiesRequest.getOutgoingInteractionRequestsList().isEmpty()) {
+      entitiesRequest
+          .getOutgoingInteractionRequestsList()
+          .forEach(
+              request ->
+                  allQueryRequests.addAll(
+                      prepareInteractionIdsQueryRequest(
+                          context, entitiesRequest, request, OUTGOING)));
+    }
+    return Collections.unmodifiableList(allQueryRequests);
+  }
+
+  private List<EntityInteractionQueryRequest> buildIncomingInteractionIdsRequest(
+      RequestContext context, EntitiesRequest entitiesRequest) {
+    List<EntityInteractionQueryRequest> allQueryRequests = new ArrayList<>();
+    if (entitiesRequest.hasIncomingInteractions()) {
+      allQueryRequests.addAll(
+          prepareInteractionIdsQueryRequest(
+              context, entitiesRequest, entitiesRequest.getIncomingInteractions(), INCOMING));
+    } else if (!entitiesRequest.getIncomingInteractionRequestsList().isEmpty()) {
+      entitiesRequest
+          .getIncomingInteractionRequestsList()
+          .forEach(
+              request ->
+                  allQueryRequests.addAll(
+                      prepareInteractionIdsQueryRequest(
+                          context, entitiesRequest, request, INCOMING)));
+    }
+    return Collections.unmodifiableList(allQueryRequests);
   }
 
   private EntityInteractionQueryResponse executeQueryRequest(

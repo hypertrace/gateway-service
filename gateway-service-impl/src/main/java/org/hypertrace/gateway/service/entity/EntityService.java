@@ -233,10 +233,8 @@ public class EntityService {
     EntitiesRequest preProcessedRequest =
         requestPreProcessor.process(originalRequest, entitiesRequestContext);
 
-    if (!this.interactionsFetcher.hasInteractionFilters(
-            preProcessedRequest.getIncomingInteractions().getFilter())
-        && !this.interactionsFetcher.hasInteractionFilters(
-            preProcessedRequest.getOutgoingInteractions().getFilter())) {
+    if (!hasFiltersInIncomingInteractionRequest(preProcessedRequest)
+        && !hasFiltersInOutgoingInteractionRequest(preProcessedRequest)) {
       return Optional.of(preProcessedRequest);
     }
 
@@ -263,6 +261,30 @@ public class EntityService {
               .build());
     }
     return Optional.of(preProcessRequestBuilder.build());
+  }
+
+  private boolean hasFiltersInIncomingInteractionRequest(EntitiesRequest entitiesRequest) {
+    if (entitiesRequest.hasIncomingInteractions()) {
+      return this.interactionsFetcher.hasInteractionFilters(
+          entitiesRequest.getIncomingInteractions().getFilter());
+    }
+
+    return !entitiesRequest.getIncomingInteractionRequestsList().isEmpty()
+        && entitiesRequest.getIncomingInteractionRequestsList().stream()
+            .anyMatch(
+                request -> this.interactionsFetcher.hasInteractionFilters(request.getFilter()));
+  }
+
+  private boolean hasFiltersInOutgoingInteractionRequest(EntitiesRequest entitiesRequest) {
+    if (entitiesRequest.hasOutgoingInteractions()) {
+      return this.interactionsFetcher.hasInteractionFilters(
+          entitiesRequest.getOutgoingInteractions().getFilter());
+    }
+
+    return !entitiesRequest.getOutgoingInteractionRequestsList().isEmpty()
+        && entitiesRequest.getOutgoingInteractionRequestsList().stream()
+            .anyMatch(
+                request -> this.interactionsFetcher.hasInteractionFilters(request.getFilter()));
   }
 
   public UpdateEntityResponse updateEntity(
@@ -370,7 +392,9 @@ public class EntityService {
   private void addEntityInteractions(
       RequestContext requestContext, EntitiesRequest request, Map<EntityKey, Builder> result) {
     if (InteractionsRequest.getDefaultInstance().equals(request.getIncomingInteractions())
-        && InteractionsRequest.getDefaultInstance().equals(request.getOutgoingInteractions())) {
+        && InteractionsRequest.getDefaultInstance().equals(request.getOutgoingInteractions())
+        && request.getOutgoingInteractionRequestsList().isEmpty()
+        && request.getIncomingInteractionRequestsList().isEmpty()) {
       return;
     }
 
