@@ -695,9 +695,7 @@ public class EntityServiceInteractionRequestTest extends AbstractGatewayServiceT
     return rowBuilder.build();
   }
 
-  private InteractionsRequest buildIncomingInteractionWithFilterRequest() {
-    Set<String> entityTypes = ImmutableSet.of("SERVICE");
-
+  private InteractionsRequest buildIncomingInteractionWithFilterRequest(Set<String> entityTypes) {
     Filter entityTypeFilter =
         Filter.newBuilder()
             .setOperator(Operator.AND)
@@ -891,7 +889,55 @@ public class EntityServiceInteractionRequestTest extends AbstractGatewayServiceT
             .setStartTimeMillis(startTime)
             .setEndTimeMillis(endTime)
             .addSelection(buildAttributeExpression("SERVICE.id"))
-            .setIncomingInteractions(buildIncomingInteractionWithFilterRequest())
+            .setIncomingInteractions(
+                buildIncomingInteractionWithFilterRequest(ImmutableSet.of("SERVICE")))
+            .build();
+
+    mockQueryServiceRequestForServiceCountWithInteractionFilters(startTime, endTime);
+    mockQueryServiceRequestForIncomingServiceWithInteractionFilters(startTime, endTime);
+    mockQueryServiceIdsRequestForInteractionFilterRequest(startTime, endTime);
+
+    EntityService entityService =
+        new EntityService(
+            queryServiceClient,
+            entityQueryServiceClient,
+            null,
+            attributeMetadataProvider,
+            entityIdColumnsConfigs,
+            scopeFilterConfigs,
+            logConfig,
+            queryExecutor);
+    EntitiesResponse response =
+        entityService.getEntities(new RequestContext(forTenantId(TENANT_ID)), request);
+
+    // validate we have one incoming edge, and two outgoing edge
+    assertNotNull(response);
+    assertEquals(1, response.getTotal());
+    assertEquals(1, response.getEntity(0).getIncomingInteractionCount());
+
+    // validate incoming edge
+    EntityInteraction incomingInteraction = response.getEntity(0).getIncomingInteraction(0);
+    assertEquals(
+        "from_test_service_1",
+        incomingInteraction.getAttributeMap().get("fromEntityId").getString());
+    assertEquals(
+        "SERVICE", incomingInteraction.getAttributeMap().get("fromEntityType").getString());
+    assertEquals(40, incomingInteraction.getMetricsMap().get("SUM_num_calls").getValue().getLong());
+  }
+
+  @Test
+  public void testGetEntitiesWithMultiInteractionFilters() {
+    long endTime = System.currentTimeMillis();
+    long startTime = endTime - TimeUnit.DAYS.toMillis(30);
+
+    EntitiesRequest request =
+        EntitiesRequest.newBuilder()
+            .setEntityType(DomainEntityType.SERVICE.name())
+            .setStartTimeMillis(startTime)
+            .setEndTimeMillis(endTime)
+            .addSelection(buildAttributeExpression("SERVICE.id"))
+            .addIncomingInteractionRequests(
+                buildIncomingInteractionWithFilterRequest(ImmutableSet.of("SERVICE")))
             .build();
 
     mockQueryServiceRequestForServiceCountWithInteractionFilters(startTime, endTime);
