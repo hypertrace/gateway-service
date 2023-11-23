@@ -364,13 +364,12 @@ public class EntityInteractionsFetcher {
         .collect(Collectors.toList());
   }
 
-  private Set<String> getOtherEntityTypes(org.hypertrace.gateway.service.v1.common.Filter filter) {
+  protected Set<String> getOtherEntityTypes(
+      org.hypertrace.gateway.service.v1.common.Filter filter) {
+    Set<String> result = new HashSet<>();
     if (filter.getChildFilterCount() > 0) {
       for (org.hypertrace.gateway.service.v1.common.Filter child : filter.getChildFilterList()) {
-        Set<String> result = getOtherEntityTypes(child);
-        if (!result.isEmpty()) {
-          return result;
-        }
+        result.addAll(getOtherEntityTypes(child));
       }
     } else if (ExpressionReader.isSimpleAttributeSelection(filter.getLhs())) {
       String attributeId =
@@ -382,7 +381,7 @@ public class EntityInteractionsFetcher {
       }
     }
 
-    return Collections.emptySet();
+    return Collections.unmodifiableSet(result);
   }
 
   private Filter convertToQueryFilter(
