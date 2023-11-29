@@ -1,5 +1,6 @@
 package org.hypertrace.gateway.service.explore;
 
+import static org.hypertrace.core.attribute.service.v1.AttributeSource.EDS;
 import static org.hypertrace.core.query.service.client.QueryServiceClient.DEFAULT_QUERY_SERVICE_GROUP_BY_LIMIT;
 
 import com.google.common.collect.Streams;
@@ -22,6 +23,7 @@ import org.hypertrace.core.query.service.api.ResultSetMetadata;
 import org.hypertrace.core.query.service.api.Row;
 import org.hypertrace.core.query.service.api.Value;
 import org.hypertrace.gateway.service.common.AttributeMetadataProvider;
+import org.hypertrace.gateway.service.common.ExpressionContext;
 import org.hypertrace.gateway.service.common.converters.QueryAndGatewayDtoConverter;
 import org.hypertrace.gateway.service.common.datafetcher.EntityFetcherResponse;
 import org.hypertrace.gateway.service.common.datafetcher.QueryServiceEntityFetcher;
@@ -91,7 +93,7 @@ public class RequestHandler implements RequestHandlerWithSorting {
       requestContext.setHasGroupBy(true);
     }
 
-    Optional<List<String>> maybeEntityIds = getEntityIdsIfNecessary(requestContext, request);
+    Optional<List<String>> maybeEntityIds = getEntityIdsToFilter(requestContext, request);
     QueryRequest.Builder builder = QueryRequest.newBuilder();
 
     // 1. Add selections. All selections should either be only column or only function, never both.
@@ -141,9 +143,8 @@ public class RequestHandler implements RequestHandlerWithSorting {
     return builder.build();
   }
 
-  private Optional<List<String>> getEntityIdsIfNecessary(
+  private Optional<List<String>> getEntityIdsToFilter(
       ExploreRequestContext context, ExploreRequest exploreRequest) {
-
     Map<String, AttributeMetadata> attributeMetadataMap =
         attributeMetadataProvider.getAttributesMetadata(context, exploreRequest.getContext());
     // Check if there is any filter present with EDS only source. If not then return,
@@ -154,28 +155,11 @@ public class RequestHandler implements RequestHandlerWithSorting {
       return Optional.empty();
     }
 
-    List<String> entityIdAttributeIds =
-        AttributeMetadataUtil.getIdAttributeIds(
-            attributeMetadataProvider,
-            entityIdColumnsConfigs,
-            context,
-            exploreRequest.getContext());
-
     Set<String> allEntityIds = this.getEntityIdsFromQueryService(context, exploreRequest);
-    List<Expression> groupBySelections =
-        entityIdAttributeIds.stream()
-            .map(attributeId -> QueryExpressionUtil.buildAttributeExpression(attributeId).build())
-            .collect(Collectors.toUnmodifiableList());
-
-    ExploreRequest.Builder exploreRequestBuilder =
-        ExploreRequest.newBuilder()
-            .setContext(exploreRequest.getContext())
-            .addAllGroupBy(groupBySelections);
-    maybeEdsFilter.ifPresent(exploreRequestBuilder::setFilter);
-
+    ExploreRequest edsExploreRequest =
+        buildExploreRequest(context, exploreRequest.getContext(), maybeEdsFilter.orElseThrow());
     List<org.hypertrace.gateway.service.v1.common.Row> resultRows =
-        this.entityServiceEntityFetcher.getResults(
-            context, exploreRequestBuilder.build(), allEntityIds);
+        this.entityServiceEntityFetcher.getResults(context, edsExploreRequest, allEntityIds);
 
     return Optional.of(
         resultRows.stream()
@@ -184,6 +168,24 @@ public class RequestHandler implements RequestHandlerWithSorting {
             .map(Optional::get)
             .map(org.hypertrace.gateway.service.v1.common.Value::getString)
             .collect(Collectors.toUnmodifiableList()));
+  }
+
+  private ExploreRequest buildExploreRequest(
+      ExploreRequestContext exploreRequestContext,
+      String context,
+      org.hypertrace.gateway.service.v1.common.Filter edsFilter) {
+    List<String> entityIdAttributeIds =
+        AttributeMetadataUtil.getIdAttributeIds(
+            attributeMetadataProvider, entityIdColumnsConfigs, exploreRequestContext, context);
+    List<Expression> groupBySelections =
+        entityIdAttributeIds.stream()
+            .map(attributeId -> QueryExpressionUtil.buildAttributeExpression(attributeId).build())
+            .collect(Collectors.toUnmodifiableList());
+
+    return ExploreRequest.newBuilder()
+        .setContext(context)
+        .setFilter(edsFilter)
+        .addAllGroupBy(groupBySelections).build();
   }
 
   protected Set<String> getEntityIdsFromQueryService(
