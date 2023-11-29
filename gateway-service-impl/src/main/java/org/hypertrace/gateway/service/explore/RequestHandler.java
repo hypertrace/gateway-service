@@ -1,6 +1,5 @@
 package org.hypertrace.gateway.service.explore;
 
-import static org.hypertrace.core.attribute.service.v1.AttributeSource.EDS;
 import static org.hypertrace.core.query.service.client.QueryServiceClient.DEFAULT_QUERY_SERVICE_GROUP_BY_LIMIT;
 
 import com.google.common.collect.Streams;
@@ -23,7 +22,6 @@ import org.hypertrace.core.query.service.api.ResultSetMetadata;
 import org.hypertrace.core.query.service.api.Row;
 import org.hypertrace.core.query.service.api.Value;
 import org.hypertrace.gateway.service.common.AttributeMetadataProvider;
-import org.hypertrace.gateway.service.common.ExpressionContext;
 import org.hypertrace.gateway.service.common.converters.QueryAndGatewayDtoConverter;
 import org.hypertrace.gateway.service.common.datafetcher.EntityFetcherResponse;
 import org.hypertrace.gateway.service.common.datafetcher.QueryServiceEntityFetcher;
@@ -185,7 +183,8 @@ public class RequestHandler implements RequestHandlerWithSorting {
     return ExploreRequest.newBuilder()
         .setContext(context)
         .setFilter(edsFilter)
-        .addAllGroupBy(groupBySelections).build();
+        .addAllGroupBy(groupBySelections)
+        .build();
   }
 
   protected Set<String> getEntityIdsFromQueryService(
