@@ -1,11 +1,11 @@
 plugins {
-  id("org.hypertrace.repository-plugin") version "0.4.1"
-  id("org.hypertrace.ci-utils-plugin") version "0.3.0"
-  id("org.hypertrace.publish-plugin") version "1.0.2" apply false
-  id("org.hypertrace.jacoco-report-plugin") version "0.2.0" apply false
-  id("org.hypertrace.docker-java-application-plugin") version "0.9.4" apply false
-  id("org.hypertrace.docker-publish-plugin") version "0.9.4" apply false
-  id("org.hypertrace.code-style-plugin") version "1.1.0" apply false
+  id("org.hypertrace.repository-plugin") version "0.4.2"
+  id("org.hypertrace.ci-utils-plugin") version "0.3.2"
+  id("org.hypertrace.publish-plugin") version "1.0.5" apply false
+  id("org.hypertrace.jacoco-report-plugin") version "0.2.1" apply false
+  id("org.hypertrace.docker-java-application-plugin") version "0.9.9" apply false
+  id("org.hypertrace.docker-publish-plugin") version "0.9.9" apply false
+  id("org.hypertrace.code-style-plugin") version "1.2.0" apply false
   id("org.owasp.dependencycheck") version "8.1.2"
 }
 

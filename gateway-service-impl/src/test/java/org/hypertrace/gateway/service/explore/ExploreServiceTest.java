@@ -3,6 +3,7 @@ package org.hypertrace.gateway.service.explore;
 import com.google.protobuf.GeneratedMessageV3;
 import java.util.stream.Stream;
 import org.hypertrace.entity.query.service.client.EntityQueryServiceClient;
+import org.hypertrace.gateway.service.EntityTypesProvider;
 import org.hypertrace.gateway.service.common.AbstractServiceTest;
 import org.hypertrace.gateway.service.common.AttributeMetadataProvider;
 import org.hypertrace.gateway.service.common.RequestContext;
@@ -41,14 +42,16 @@ public class ExploreServiceTest extends AbstractServiceTest<ExploreRequest, Expl
       EntityQueryServiceClient entityQueryServiceClient,
       AttributeMetadataProvider attributeMetadataProvider,
       ScopeFilterConfigs scopeFilterConfigs,
-      EntityIdColumnsConfigs entityIdColumnsConfigs) {
+      EntityIdColumnsConfigs entityIdColumnsConfigs,
+      EntityTypesProvider entityTypesProvider) {
     ExploreService exploreService =
         new ExploreService(
             queryServiceClient,
             entityQueryServiceClient,
             attributeMetadataProvider,
             scopeFilterConfigs,
-            entityIdColumnsConfigs);
+            entityIdColumnsConfigs,
+            entityTypesProvider);
     return exploreService.explore(
         new RequestContext(
             org.hypertrace.core.grpcutils.context.RequestContext.forTenantId(TENANT_ID)),

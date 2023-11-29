@@ -34,6 +34,7 @@ import org.hypertrace.core.attribute.service.v1.AttributeMetadataFilter;
 import org.hypertrace.core.query.service.api.QueryRequest;
 import org.hypertrace.core.query.service.api.ResultSetChunk;
 import org.hypertrace.entity.query.service.client.EntityQueryServiceClient;
+import org.hypertrace.gateway.service.EntityTypesProvider;
 import org.hypertrace.gateway.service.common.config.ScopeFilterConfigs;
 import org.hypertrace.gateway.service.common.util.QueryServiceClient;
 import org.hypertrace.gateway.service.entity.config.EntityIdColumnsConfigs;
@@ -59,6 +60,7 @@ public abstract class AbstractServiceTest<
   private static AttributeMetadataProvider attributeMetadataProvider;
   private static List<AttributeMetadata> attributeMetadataList;
   private static ScopeFilterConfigs scopeFilterConfigs;
+  private static EntityTypesProvider entityTypesProvider;
   private static EntityIdColumnsConfigs entityIdColumnsConfigs;
 
   @BeforeAll
@@ -81,6 +83,7 @@ public abstract class AbstractServiceTest<
     Config config = ConfigFactory.parseString(scopeFiltersConfig);
     scopeFilterConfigs = new ScopeFilterConfigs(config);
     entityIdColumnsConfigs = new EntityIdColumnsConfigs(Collections.emptyMap());
+    entityTypesProvider = mock(EntityTypesProvider.class);
   }
 
   private static Reader readResourceFile(String fileName) {
@@ -163,7 +166,8 @@ public abstract class AbstractServiceTest<
             entityQueryServiceClient,
             attributeMetadataProvider,
             scopeFilterConfigs,
-            entityIdColumnsConfigs);
+            entityIdColumnsConfigs,
+            entityTypesProvider);
     TGatewayServiceResponseType expectedResponse = readGatewayServiceResponse(fileName);
 
     Assertions.assertEquals(expectedResponse, actualResponse);
@@ -285,5 +289,6 @@ public abstract class AbstractServiceTest<
       EntityQueryServiceClient entityQueryServiceClient,
       AttributeMetadataProvider attributeMetadataProvider,
       ScopeFilterConfigs scopeFilterConfigs,
-      EntityIdColumnsConfigs entityIdColumnsConfigs);
+      EntityIdColumnsConfigs entityIdColumnsConfigs,
+      EntityTypesProvider entityTypesProvider);
 }
