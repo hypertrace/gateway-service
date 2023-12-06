@@ -25,7 +25,7 @@ public class StringToAttributeKindConverter extends ToAttributeKindConverter<Str
   public static final StringToAttributeKindConverter INSTANCE =
       new StringToAttributeKindConverter();
   private static final String STRING_ARRAY_NULL_VALUE = "null";
-  private static final List<String> LIST_WITH_NULL_VALUE = List.of("null");
+  private static final List<String> LIST_WITH_NULL_STRING_VALUE = List.of("null");
   private final ObjectMapper objectMapper = new ObjectMapper();
 
   private StringToAttributeKindConverter() {}
@@ -97,7 +97,7 @@ public class StringToAttributeKindConverter extends ToAttributeKindConverter<Str
     // handle special case when "null" string is returned as string array value(default value
     // scenario). "null" is still a valid value, and should be converted to list with "null" value
     if (STRING_ARRAY_NULL_VALUE.equals(jsonString)) {
-      return LIST_WITH_NULL_VALUE;
+      return LIST_WITH_NULL_STRING_VALUE;
     }
 
     // Check if the string is already in a list format.
