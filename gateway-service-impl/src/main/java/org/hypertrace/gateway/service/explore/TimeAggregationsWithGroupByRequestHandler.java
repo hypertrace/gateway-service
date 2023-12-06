@@ -228,7 +228,11 @@ public class TimeAggregationsWithGroupByRequestHandler implements IRequestHandle
         valueBuilder.addStringArray(value.getString());
         break;
       case STRING_ARRAY:
-        valueBuilder.addAllStringArray(value.getStringArrayList());
+        if (value.getStringArrayList().isEmpty()) {
+          valueBuilder.addAllStringArray(List.of("null"));
+        } else {
+          valueBuilder.addAllStringArray(value.getStringArrayList());
+        }
         break;
       case LONG:
         valueBuilder.addLongArray(value.getLong());
