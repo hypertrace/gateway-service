@@ -30,6 +30,8 @@ public class TimeAggregationsWithGroupByRequestHandler implements IRequestHandle
   private static final Logger LOG =
       LoggerFactory.getLogger(TimeAggregationsWithGroupByRequestHandler.class);
 
+  private static final List<String> LIST_WITH_NULL_STRING = List.of("null");
+
   private final AttributeMetadataProvider attributeMetadataProvider;
   private final RequestHandler normalRequestHandler;
   private final TimeAggregationsRequestHandler timeAggregationsRequestHandler;
@@ -228,7 +230,14 @@ public class TimeAggregationsWithGroupByRequestHandler implements IRequestHandle
         valueBuilder.addStringArray(value.getString());
         break;
       case STRING_ARRAY:
-        valueBuilder.addAllStringArray(value.getStringArrayList());
+        // Handle special case when "null" string is returned as string array value(default value
+        // scenario). This will be converted to empty list in value converter. In such a case use
+        // list with "null" value
+        if (value.getStringArrayList().isEmpty()) {
+          valueBuilder.addAllStringArray(LIST_WITH_NULL_STRING);
+        } else {
+          valueBuilder.addAllStringArray(value.getStringArrayList());
+        }
         break;
       case LONG:
         valueBuilder.addLongArray(value.getLong());
