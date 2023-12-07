@@ -53,16 +53,16 @@
         },
         {
           "attributeExpression": {
-            "attributeId": "SERVICE.userRoles",
-            "alias": "SERVICE.userRoles"
+            "attributeId": "SERVICE.labels",
+            "alias": "SERVICE.labels"
           }
         }
       ],
       "groupBy": [
         {
           "attributeExpression": {
-            "attributeId": "SERVICE.userRoles",
-            "alias": "SERVICE.userRoles"
+            "attributeId": "SERVICE.labels",
+            "alias": "SERVICE.labels"
           }
         }
       ],
@@ -73,7 +73,7 @@
       "resultSetMetadata": {
         "columnMetadata": [
           {
-            "columnName": "SERVICE.userRoles"
+            "columnName": "SERVICE.labels"
           },
           {
             "columnName": "SUM_SERVICE.numCalls_[]"
@@ -94,7 +94,7 @@
         {
           "column": [
             {
-              "string": "nginx-traceshop"
+              "string": "label1"
             },
             {
               "string": "136269.0"
@@ -149,8 +149,8 @@
               {
                 "lhs": {
                   "attributeExpression": {
-                    "attributeId": "SERVICE.userRoles",
-                    "alias": "SERVICE.userRoles"
+                    "attributeId": "SERVICE.labels",
+                    "alias": "SERVICE.labels"
                   }
                 },
                 "operator": "IN",
@@ -160,7 +160,7 @@
                       "valueType": "STRING_ARRAY",
                       "stringArray": [
                         "null",
-                        "nginx-traceshop"
+                        "label1"
                       ]
                     }
                   }
@@ -186,8 +186,8 @@
         },
         {
           "attributeExpression": {
-            "attributeId": "SERVICE.userRoles",
-            "alias": "SERVICE.userRoles"
+            "attributeId": "SERVICE.labels",
+            "alias": "SERVICE.labels"
           }
         }
       ],
@@ -227,8 +227,8 @@
         },
         {
           "attributeExpression": {
-            "attributeId": "SERVICE.userRoles",
-            "alias": "SERVICE.userRoles"
+            "attributeId": "SERVICE.labels",
+            "alias": "SERVICE.labels"
           }
         }
       ],
@@ -279,7 +279,7 @@
             "columnName": "dateTimeConvert"
           },
           {
-            "columnName": "SERVICE.userRoles"
+            "columnName": "SERVICE.labels"
           },
           {
             "columnName": "SUM_SERVICE.numCalls_[]"
@@ -306,7 +306,7 @@
               "string": "1615593600000"
             },
             {
-              "string": "nginx-traceshop"
+              "string": "label1"
             },
             {
               "string": "1989.0"
@@ -332,7 +332,7 @@
               "string": "1615597200000"
             },
             {
-              "string": "nginx-traceshop"
+              "string": "label1"
             },
             {
               "string": "1977.0"
@@ -387,8 +387,8 @@
               {
                 "lhs": {
                   "attributeExpression": {
-                    "attributeId": "SERVICE.userRoles",
-                    "alias": "SERVICE.userRoles"
+                    "attributeId": "SERVICE.labels",
+                    "alias": "SERVICE.labels"
                   }
                 },
                 "operator": "NOT_IN",
@@ -398,7 +398,7 @@
                       "valueType": "STRING_ARRAY",
                       "stringArray": [
                         "null",
-                        "nginx-traceshop"
+                        "label1"
                       ]
                     }
                   }

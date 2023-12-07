@@ -53,16 +53,16 @@
         },
         {
           "attributeExpression": {
-            "attributeId": "SERVICE.userRoles",
-            "alias": "SERVICE.userRoles"
+            "attributeId": "SERVICE.labels",
+            "alias": "SERVICE.labels"
           }
         }
       ],
       "groupBy": [
         {
           "attributeExpression": {
-            "attributeId": "SERVICE.userRoles",
-            "alias": "SERVICE.userRoles"
+            "attributeId": "SERVICE.labels",
+            "alias": "SERVICE.labels"
           }
         }
       ],
@@ -73,7 +73,7 @@
       "resultSetMetadata": {
         "columnMetadata": [
           {
-            "columnName": "SERVICE.userRoles"
+            "columnName": "SERVICE.labels"
           },
           {
             "columnName": "SUM_SERVICE.numCalls_[]"
@@ -139,8 +139,8 @@
               {
                 "lhs": {
                   "attributeExpression": {
-                    "attributeId": "SERVICE.userRoles",
-                    "alias": "SERVICE.userRoles"
+                    "attributeId": "SERVICE.labels",
+                    "alias": "SERVICE.labels"
                   }
                 },
                 "operator": "IN",
@@ -175,8 +175,8 @@
         },
         {
           "attributeExpression": {
-            "attributeId": "SERVICE.userRoles",
-            "alias": "SERVICE.userRoles"
+            "attributeId": "SERVICE.labels",
+            "alias": "SERVICE.labels"
           }
         }
       ],
@@ -216,8 +216,8 @@
         },
         {
           "attributeExpression": {
-            "attributeId": "SERVICE.userRoles",
-            "alias": "SERVICE.userRoles"
+            "attributeId": "SERVICE.labels",
+            "alias": "SERVICE.labels"
           }
         }
       ],
@@ -269,7 +269,7 @@
             "columnName": "dateTimeConvert"
           },
           {
-            "columnName": "SERVICE.userRoles"
+            "columnName": "SERVICE.labels"
           },
           {
             "columnName": "SUM_SERVICE.numCalls_[]"

@@ -5,7 +5,7 @@
         "valueType": "LONG",
         "long": "1615593600000"
       },
-      "SERVICE.userRoles": {
+      "SERVICE.labels": {
         "valueType": "STRING_ARRAY"
       },
       "SUM_SERVICE.numCalls_[]": {
@@ -19,7 +19,7 @@
         "valueType": "LONG",
         "long": "1615597200000"
       },
-      "SERVICE.userRoles": {
+      "SERVICE.labels": {
         "valueType": "STRING_ARRAY"
       },
       "SUM_SERVICE.numCalls_[]": {
@@ -33,7 +33,7 @@
         "valueType": "LONG",
         "long": "1615600800000"
       },
-      "SERVICE.userRoles": {
+      "SERVICE.labels": {
         "valueType": "STRING_ARRAY"
       },
       "SUM_SERVICE.numCalls_[]": {

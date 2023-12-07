@@ -946,9 +946,9 @@
     ]
   },
   {
-    "fqn": "Service.userRoles",
+    "fqn": "Service.labels",
     "valueKind": "TYPE_STRING_ARRAY",
-    "key": "userRoles",
+    "key": "labels",
     "displayName": "Service User Roles",
     "scopeString": "SERVICE",
     "type": "ATTRIBUTE",

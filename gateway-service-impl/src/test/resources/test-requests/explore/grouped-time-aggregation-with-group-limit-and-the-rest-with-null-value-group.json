@@ -28,8 +28,8 @@
   "groupBy": [
     {
       "columnIdentifier": {
-        "columnName": "SERVICE.userRoles",
-        "alias": "SERVICE.userRoles"
+        "columnName": "SERVICE.labels",
+        "alias": "SERVICE.labels"
       }
     }
   ],

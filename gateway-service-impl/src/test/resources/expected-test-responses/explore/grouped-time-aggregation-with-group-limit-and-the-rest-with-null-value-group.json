@@ -6,7 +6,7 @@
           "valueType": "LONG",
           "long": "1615593600000"
         },
-        "SERVICE.userRoles": {
+        "SERVICE.labels": {
           "valueType": "STRING_ARRAY"
         },
         "SUM_SERVICE.numCalls_[]": {
@@ -21,9 +21,9 @@
           "valueType": "LONG",
           "long": "1615593600000"
         },
-        "SERVICE.userRoles": {
+        "SERVICE.labels": {
           "valueType": "STRING_ARRAY",
-          "string_array": ["nginx-traceshop"]
+          "string_array": ["label1"]
         },
         "SUM_SERVICE.numCalls_[]": {
           "valueType": "LONG",
@@ -37,7 +37,7 @@
           "valueType": "LONG",
           "long": "1615597200000"
         },
-        "SERVICE.userRoles": {
+        "SERVICE.labels": {
           "valueType": "STRING_ARRAY"
         },
         "SUM_SERVICE.numCalls_[]": {
@@ -52,9 +52,9 @@
           "valueType": "LONG",
           "long": "1615597200000"
         },
-        "SERVICE.userRoles": {
+        "SERVICE.labels": {
           "valueType": "STRING_ARRAY",
-          "string_array": ["nginx-traceshop"]
+          "string_array": ["label1"]
         },
         "SUM_SERVICE.numCalls_[]": {
           "valueType": "LONG",
@@ -72,7 +72,7 @@
           "valueType": "LONG",
           "long": "27485"
         },
-        "SERVICE.userRoles": {
+        "SERVICE.labels": {
           "valueType": "STRING",
           "string": "__Other"
         }
@@ -88,7 +88,7 @@
           "valueType": "LONG",
           "long": "27192"
         },
-        "SERVICE.userRoles": {
+        "SERVICE.labels": {
           "valueType": "STRING",
           "string": "__Other"
         }
