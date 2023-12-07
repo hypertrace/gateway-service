@@ -1,5 +1,7 @@
 package org.hypertrace.gateway.service.explore;
 
+import static org.hypertrace.gateway.service.common.converters.QueryRequestUtil.convertStringArrayValue;
+
 import com.google.common.collect.ImmutableSet;
 import java.util.List;
 import java.util.Map;
@@ -30,7 +32,6 @@ import org.hypertrace.gateway.service.v1.explore.ExploreResponse;
  */
 public class TheRestGroupRequestHandler {
   private static final String OTHER_COLUMN_VALUE = "__Other";
-  private static final List<String> LIST_WITH_NULL_STRING = List.of("null");
   private final RequestHandlerWithSorting requestHandler;
 
   TheRestGroupRequestHandler(RequestHandlerWithSorting requestHandler) {
@@ -235,14 +236,7 @@ public class TheRestGroupRequestHandler {
       case STRING:
         return Stream.of(value.getString());
       case STRING_ARRAY:
-        // Handle special case when "null" string is returned as string array value(default value
-        // scenario). This will be converted to empty list in value converter. In such a case use
-        // list with "null" value
-        if (value.getStringArrayList().isEmpty()) {
-          return LIST_WITH_NULL_STRING.stream();
-        } else {
-          return value.getStringArrayList().stream();
-        }
+        return convertStringArrayValue(value).stream();
       default:
         return Stream.of();
     }

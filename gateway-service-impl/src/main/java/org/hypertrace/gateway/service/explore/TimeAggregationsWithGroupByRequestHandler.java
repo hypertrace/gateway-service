@@ -1,5 +1,7 @@
 package org.hypertrace.gateway.service.explore;
 
+import static org.hypertrace.gateway.service.common.converters.QueryRequestUtil.convertStringArrayValue;
+
 import com.google.common.collect.Streams;
 import java.util.List;
 import java.util.Map;
@@ -29,8 +31,6 @@ public class TimeAggregationsWithGroupByRequestHandler implements IRequestHandle
 
   private static final Logger LOG =
       LoggerFactory.getLogger(TimeAggregationsWithGroupByRequestHandler.class);
-
-  private static final List<String> LIST_WITH_NULL_STRING = List.of("null");
 
   private final AttributeMetadataProvider attributeMetadataProvider;
   private final RequestHandler normalRequestHandler;
@@ -230,14 +230,7 @@ public class TimeAggregationsWithGroupByRequestHandler implements IRequestHandle
         valueBuilder.addStringArray(value.getString());
         break;
       case STRING_ARRAY:
-        // Handle special case when "null" string is returned as string array value(default value
-        // scenario). This will be converted to empty list in value converter. In such a case use
-        // list with "null" value
-        if (value.getStringArrayList().isEmpty()) {
-          valueBuilder.addAllStringArray(LIST_WITH_NULL_STRING);
-        } else {
-          valueBuilder.addAllStringArray(value.getStringArrayList());
-        }
+        valueBuilder.addAllStringArray(convertStringArrayValue(value));
         break;
       case LONG:
         valueBuilder.addLongArray(value.getLong());

@@ -20,6 +20,7 @@ public class QueryRequestUtil {
 
   private static final String COUNT_FUNCTION_NAME = "COUNT";
   private static final String DISTINCTCOUNT_FUNCTION_NAME = "DISTINCTCOUNT";
+  private static final List<String> LIST_WITH_NULL_STRING = List.of("null");
 
   public static Filter createBetweenTimesFilter(String columnName, long lower, long higher) {
     return Filter.newBuilder()
@@ -126,5 +127,18 @@ public class QueryRequestUtil {
                 .addArguments(createStringLiteralExpression("1:MILLISECONDS:EPOCH"))
                 .addArguments(createStringLiteralExpression(periodSecs + ":SECONDS")))
         .build();
+  }
+
+  public static List<String> convertStringArrayValue(
+      org.hypertrace.gateway.service.v1.common.Value value) {
+    // The downstream QS service returns the default value "null" for a string array when it is
+    // empty. GW returns an empty list as output. This transformation occurs in the value converter.
+    // To handle this scenario when querying downstream with an empty list, set its default value to
+    // "null."
+    if (value.getStringArrayList().isEmpty()) {
+      return LIST_WITH_NULL_STRING;
+    } else {
+      return value.getStringArrayList();
+    }
   }
 }
