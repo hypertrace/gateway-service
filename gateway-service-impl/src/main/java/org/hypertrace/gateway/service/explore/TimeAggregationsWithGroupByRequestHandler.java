@@ -80,8 +80,6 @@ public class TimeAggregationsWithGroupByRequestHandler implements IRequestHandle
         timeAggregationsRequestHandler.handleRequest(
             timeAggregationsRequestContext, timeAggregationsRequest);
 
-    updateExploreResponse(timeAggregationsResponse);
-
     // 3. If includeRestGroup is set, and we have not reached limit
     //    then invoke TheRestGroupRequestHandler
     if (request.getIncludeRestGroup()
@@ -305,34 +303,5 @@ public class TimeAggregationsWithGroupByRequestHandler implements IRequestHandle
                 request.getGroupByList().stream())
             .collect(Collectors.toUnmodifiableList()),
         attributeMetadataByIdMap);
-  }
-
-  private void updateExploreResponse(ExploreResponse.Builder timeAggregationsResponse) {
-    List<Row> updatedRows =
-        timeAggregationsResponse.getRowList().stream()
-            .map(
-                row -> {
-                  Row.Builder builder = row.toBuilder();
-                  builder
-                      .getColumnsMap()
-                      .forEach(
-                          (k, v) -> {
-                            // if value is of tye string array and value list is empty, then need to
-                            // add "null" as value list
-                            if (v.getValueType().equals(ValueType.STRING_ARRAY)
-                                && v.getStringArrayList().isEmpty()) {
-                              builder.putColumns(
-                                  k,
-                                  Value.newBuilder()
-                                      .setValueType(ValueType.STRING_ARRAY)
-                                      .addAllStringArray(LIST_WITH_NULL_STRING)
-                                      .build());
-                            }
-                          });
-                  return builder.build();
-                })
-            .collect(Collectors.toUnmodifiableList());
-    timeAggregationsResponse.clearRow();
-    timeAggregationsResponse.addAllRow(updatedRows);
   }
 }
