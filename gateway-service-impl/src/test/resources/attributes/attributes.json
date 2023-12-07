@@ -946,6 +946,17 @@
     ]
   },
   {
+    "fqn": "Service.userRoles",
+    "valueKind": "TYPE_STRING_ARRAY",
+    "key": "userRoles",
+    "displayName": "Service User Roles",
+    "scopeString": "SERVICE",
+    "type": "ATTRIBUTE",
+    "sources": [
+      "QS"
+    ]
+  },
+  {
     "fqn": "Service.start_time_millis",
     "valueKind": "TYPE_INT64",
     "key": "startTime",

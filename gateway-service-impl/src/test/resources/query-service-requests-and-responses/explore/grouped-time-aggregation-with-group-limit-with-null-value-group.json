@@ -1,0 +1,322 @@
+[
+  {
+    "request": {
+      "filter": {
+        "childFilter": [
+          {
+            "lhs": {
+              "attributeExpression": {
+                "attributeId": "SERVICE.startTime"
+              }
+            },
+            "operator": "GE",
+            "rhs": {
+              "literal": {
+                "value": {
+                  "valueType": "LONG",
+                  "long": "1615593600000"
+                }
+              }
+            }
+          },
+          {
+            "lhs": {
+              "attributeExpression": {
+                "attributeId": "SERVICE.startTime"
+              }
+            },
+            "operator": "LT",
+            "rhs": {
+              "literal": {
+                "value": {
+                  "valueType": "LONG",
+                  "long": "1615844349000"
+                }
+              }
+            }
+          }
+        ]
+      },
+      "selection": [
+        {
+          "function": {
+            "functionName": "SUM",
+            "arguments": [
+              {
+                "attributeExpression": {
+                  "attributeId": "SERVICE.numCalls"
+                }
+              }
+            ],
+            "alias": "SUM_SERVICE.numCalls_[]"
+          }
+        },
+        {
+          "attributeExpression": {
+            "attributeId": "SERVICE.userRoles",
+            "alias": "SERVICE.userRoles"
+          }
+        }
+      ],
+      "groupBy": [
+        {
+          "attributeExpression": {
+            "attributeId": "SERVICE.userRoles",
+            "alias": "SERVICE.userRoles"
+          }
+        }
+      ],
+      "limit": 2
+    },
+    "response": {
+      "isLastChunk": true,
+      "resultSetMetadata": {
+        "columnMetadata": [
+          {
+            "columnName": "SERVICE.userRoles"
+          },
+          {
+            "columnName": "SUM_SERVICE.numCalls_[]"
+          }
+        ]
+      },
+      "row": [
+        {
+          "column": [
+            {
+              "string": "null"
+            },
+            {
+              "string": "136098.0"
+            }
+          ]
+        }
+      ]
+    }
+  },
+  {
+    "request": {
+      "filter": {
+        "childFilter": [
+          {
+            "childFilter": [
+              {
+                "lhs": {
+                  "attributeExpression": {
+                    "attributeId": "SERVICE.startTime"
+                  }
+                },
+                "operator": "GE",
+                "rhs": {
+                  "literal": {
+                    "value": {
+                      "valueType": "LONG",
+                      "long": "1615593600000"
+                    }
+                  }
+                }
+              },
+              {
+                "lhs": {
+                  "attributeExpression": {
+                    "attributeId": "SERVICE.startTime"
+                  }
+                },
+                "operator": "LT",
+                "rhs": {
+                  "literal": {
+                    "value": {
+                      "valueType": "LONG",
+                      "long": "1615842000000"
+                    }
+                  }
+                }
+              }
+            ]
+          },
+          {
+            "childFilter": [
+              {
+                "lhs": {
+                  "attributeExpression": {
+                    "attributeId": "SERVICE.userRoles",
+                    "alias": "SERVICE.userRoles"
+                  }
+                },
+                "operator": "IN",
+                "rhs": {
+                  "literal": {
+                    "value": {
+                      "valueType": "STRING_ARRAY",
+                      "stringArray": [
+                        "null"
+                      ]
+                    }
+                  }
+                }
+              }
+            ]
+          }
+        ]
+      },
+      "selection": [
+        {
+          "function": {
+            "functionName": "SUM",
+            "arguments": [
+              {
+                "attributeExpression": {
+                  "attributeId": "SERVICE.numCalls"
+                }
+              }
+            ],
+            "alias": "SUM_SERVICE.numCalls_[]"
+          }
+        },
+        {
+          "attributeExpression": {
+            "attributeId": "SERVICE.userRoles",
+            "alias": "SERVICE.userRoles"
+          }
+        }
+      ],
+      "groupBy": [
+        {
+          "function": {
+            "functionName": "dateTimeConvert",
+            "arguments": [
+              {
+                "attributeExpression": {
+                  "attributeId": "SERVICE.startTime"
+                }
+              },
+              {
+                "literal": {
+                  "value": {
+                    "string": "1:MILLISECONDS:EPOCH"
+                  }
+                }
+              },
+              {
+                "literal": {
+                  "value": {
+                    "string": "1:MILLISECONDS:EPOCH"
+                  }
+                }
+              },
+              {
+                "literal": {
+                  "value": {
+                    "string": "3600:SECONDS"
+                  }
+                }
+              }
+            ]
+          }
+        },
+        {
+          "attributeExpression": {
+            "attributeId": "SERVICE.userRoles",
+            "alias": "SERVICE.userRoles"
+          }
+        }
+      ],
+      "orderBy": [
+        {
+          "expression": {
+            "function": {
+              "functionName": "dateTimeConvert",
+              "arguments": [
+                {
+                  "attributeExpression": {
+                    "attributeId": "SERVICE.startTime"
+                  }
+                },
+                {
+                  "literal": {
+                    "value": {
+                      "string": "1:MILLISECONDS:EPOCH"
+                    }
+                  }
+                },
+                {
+                  "literal": {
+                    "value": {
+                      "string": "1:MILLISECONDS:EPOCH"
+                    }
+                  }
+                },
+                {
+                  "literal": {
+                    "value": {
+                      "string": "3600:SECONDS"
+                    }
+                  }
+                }
+              ]
+            }
+          },
+          "order": "DESC"
+        }
+      ],
+      "limit": 6
+    },
+    "response": {
+      "isLastChunk": true,
+      "resultSetMetadata": {
+        "columnMetadata": [
+          {
+            "columnName": "dateTimeConvert"
+          },
+          {
+            "columnName": "SERVICE.userRoles"
+          },
+          {
+            "columnName": "SUM_SERVICE.numCalls_[]"
+          }
+        ]
+      },
+      "row": [
+        {
+          "column": [
+            {
+              "string": "1615593600000"
+            },
+            {
+              "string": "null"
+            },
+            {
+              "string": "1616.0"
+            }
+          ]
+        },
+        {
+          "column": [
+            {
+              "string": "1615597200000"
+            },
+            {
+              "string": "null"
+            },
+            {
+              "string": "2525.0"
+            }
+          ]
+        },
+        {
+          "column": [
+            {
+              "string": "1615600800000"
+            },
+            {
+              "string": "null"
+            },
+            {
+              "string": "2323.0"
+            }
+          ]
+        }
+      ]
+    }
+  }
+]

@@ -1,0 +1,40 @@
+{
+  "context": "SERVICE",
+  "startTimeMillis": "1615593600000",
+  "endTimeMillis": "1615844349000",
+  "filter": {
+  },
+  "timeAggregation": [{
+    "period": {
+      "value": 3600,
+      "unit": "SECONDS"
+    },
+    "aggregation": {
+      "function": {
+        "function": "SUM",
+        "arguments": [{
+          "columnIdentifier": {
+            "columnName": "SERVICE.numCalls"
+          }
+        }],
+        "alias": "SUM_SERVICE.numCalls_[]"
+      }
+    }
+  }],
+  "orderBy": [{
+    "expression": {
+      "columnIdentifier": {
+        "columnName": "INTERVAL_START_TIME"
+      }
+    },
+    "order": "DESC"
+  }],
+  "groupBy": [{
+    "columnIdentifier": {
+      "columnName": "SERVICE.userRoles",
+      "alias": "SERVICE.userRoles"
+    }
+  }],
+  "groupLimit": 2,
+  "limit": 6
+}
