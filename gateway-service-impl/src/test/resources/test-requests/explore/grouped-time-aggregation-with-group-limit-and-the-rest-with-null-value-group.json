@@ -1,0 +1,39 @@
+{
+  "context": "SERVICE",
+  "startTimeMillis": "1615593600000",
+  "endTimeMillis": "1615844349000",
+  "filter": {
+  },
+  "timeAggregation": [
+    {
+      "period": {
+        "value": 3600,
+        "unit": "SECONDS"
+      },
+      "aggregation": {
+        "function": {
+          "function": "SUM",
+          "arguments": [
+            {
+              "columnIdentifier": {
+                "columnName": "SERVICE.numCalls"
+              }
+            }
+          ],
+          "alias": "SUM_SERVICE.numCalls_[]"
+        }
+      }
+    }
+  ],
+  "groupBy": [
+    {
+      "columnIdentifier": {
+        "columnName": "SERVICE.labels",
+        "alias": "SERVICE.labels"
+      }
+    }
+  ],
+  "includeRestGroup": true,
+  "groupLimit": 2,
+  "limit": 6
+}
