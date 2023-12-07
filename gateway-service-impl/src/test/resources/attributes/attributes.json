@@ -949,7 +949,7 @@
     "fqn": "Service.labels",
     "valueKind": "TYPE_STRING_ARRAY",
     "key": "labels",
-    "displayName": "Service User Roles",
+    "displayName": "Service Labels",
     "scopeString": "SERVICE",
     "type": "ATTRIBUTE",
     "sources": [

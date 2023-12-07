@@ -135,6 +135,8 @@ public class QueryRequestUtil {
     // empty. GW returns an empty list as output. This transformation occurs in the value converter.
     // To handle this scenario when querying downstream with an empty list, set its default value to
     // "null."
+    // Refer to {@linkplain StringToAttributeKindConverter#convertToArray} to check how QS response
+    // for string array column is converted
     if (value.getStringArrayList().isEmpty()) {
       return LIST_WITH_NULL_STRING;
     } else {
