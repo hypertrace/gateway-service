@@ -111,7 +111,7 @@ public class RequestHandler implements RequestHandlerWithSorting {
     org.hypertrace.gateway.service.v1.common.Filter qsSourceFilter = request.getFilter();
     Map<String, AttributeMetadata> attributeMetadataMap =
         attributeMetadataProvider.getAttributesMetadata(requestContext, request.getContext());
-    if (hasSingleSource(request.getFilter(), AttributeSource.EDS, attributeMetadataMap)) {
+    if (hasOnlyAttributeSource(request.getFilter(), AttributeSource.EDS, attributeMetadataMap)) {
       entityIds = getEntityIdsToFilter(requestContext, request, attributeMetadataMap);
       qsSourceFilter =
           buildFilter(request.getFilter(), AttributeSource.QS, attributeMetadataMap)
@@ -528,7 +528,7 @@ public class RequestHandler implements RequestHandlerWithSorting {
         attributeMetadataByIdMap);
   }
 
-  private boolean hasSingleSource(
+  private boolean hasOnlyAttributeSource(
       org.hypertrace.gateway.service.v1.common.Filter filter,
       AttributeSource source,
       Map<String, AttributeMetadata> attributeMetadataMap) {
@@ -544,7 +544,7 @@ public class RequestHandler implements RequestHandlerWithSorting {
       case OR:
         for (org.hypertrace.gateway.service.v1.common.Filter childFilter :
             filter.getChildFilterList()) {
-          if (hasSingleSource(childFilter, source, attributeMetadataMap)) {
+          if (hasOnlyAttributeSource(childFilter, source, attributeMetadataMap)) {
             return true;
           }
         }
@@ -587,14 +587,6 @@ public class RequestHandler implements RequestHandlerWithSorting {
                 org.hypertrace.gateway.service.v1.common.Filter.newBuilder(filter).build())
             : Optional.empty();
     }
-  }
-
-  private boolean isValidSource(List<AttributeSource> availableSources, AttributeSource source) {
-    if (AttributeSource.EDS.equals(source)) {
-      return availableSources.size() == 1 && availableSources.contains(source);
-    }
-
-    return availableSources.contains(source);
   }
 
   private Optional<org.hypertrace.gateway.service.v1.common.Filter> buildCompositeFilter(
