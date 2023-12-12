@@ -1,0 +1,98 @@
+{
+  "row": [
+    {
+      "columns": {
+        "INTERVAL_START_TIME": {
+          "valueType": "LONG",
+          "long": "1615593600000"
+        },
+        "SERVICE.labels": {
+          "valueType": "STRING_ARRAY"
+        },
+        "SUM_SERVICE.numCalls_[]": {
+          "valueType": "LONG",
+          "long": "1616"
+        }
+      }
+    },
+    {
+      "columns": {
+        "INTERVAL_START_TIME": {
+          "valueType": "LONG",
+          "long": "1615593600000"
+        },
+        "SERVICE.labels": {
+          "valueType": "STRING_ARRAY",
+          "string_array": ["label1"]
+        },
+        "SUM_SERVICE.numCalls_[]": {
+          "valueType": "LONG",
+          "long": "1989"
+        }
+      }
+    },
+    {
+      "columns": {
+        "INTERVAL_START_TIME": {
+          "valueType": "LONG",
+          "long": "1615597200000"
+        },
+        "SERVICE.labels": {
+          "valueType": "STRING_ARRAY"
+        },
+        "SUM_SERVICE.numCalls_[]": {
+          "valueType": "LONG",
+          "long": "2525"
+        }
+      }
+    },
+    {
+      "columns": {
+        "INTERVAL_START_TIME": {
+          "valueType": "LONG",
+          "long": "1615597200000"
+        },
+        "SERVICE.labels": {
+          "valueType": "STRING_ARRAY",
+          "string_array": ["label1"]
+        },
+        "SUM_SERVICE.numCalls_[]": {
+          "valueType": "LONG",
+          "long": "1977"
+        }
+      }
+    },
+    {
+      "columns": {
+        "INTERVAL_START_TIME": {
+          "valueType": "LONG",
+          "long": "1615593600000"
+        },
+        "SUM_SERVICE.numCalls_[]": {
+          "valueType": "LONG",
+          "long": "27485"
+        },
+        "SERVICE.labels": {
+          "valueType": "STRING",
+          "string": "__Other"
+        }
+      }
+    },
+    {
+      "columns": {
+        "INTERVAL_START_TIME": {
+          "valueType": "LONG",
+          "long": "1615597200000"
+        },
+        "SUM_SERVICE.numCalls_[]": {
+          "valueType": "LONG",
+          "long": "27192"
+        },
+        "SERVICE.labels": {
+          "valueType": "STRING",
+          "string": "__Other"
+        }
+      }
+    }
+  ]
+}

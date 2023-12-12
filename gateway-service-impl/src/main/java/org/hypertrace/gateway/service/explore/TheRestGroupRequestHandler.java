@@ -1,11 +1,14 @@
 package org.hypertrace.gateway.service.explore;
 
+import static org.hypertrace.gateway.service.common.converters.QueryRequestUtil.convertStringArrayValue;
+
 import com.google.common.collect.ImmutableSet;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
 import java.util.function.Function;
 import java.util.stream.Collectors;
+import java.util.stream.Stream;
 import org.hypertrace.gateway.service.common.util.ExpressionReader;
 import org.hypertrace.gateway.service.v1.common.Expression;
 import org.hypertrace.gateway.service.v1.common.Filter;
@@ -224,8 +227,19 @@ public class TheRestGroupRequestHandler {
       String resultName, ExploreResponse.Builder originalResponse) {
     return originalResponse.getRowBuilderList().stream()
         .map(rowBuilder -> rowBuilder.getColumnsMap().get(resultName))
-        .map(Value::getString)
+        .flatMap(this::getStringValues)
         .collect(ImmutableSet.toImmutableSet());
+  }
+
+  private Stream<String> getStringValues(Value value) {
+    switch (value.getValueType()) {
+      case STRING:
+        return Stream.of(value.getString());
+      case STRING_ARRAY:
+        return convertStringArrayValue(value).stream();
+      default:
+        return Stream.of();
+    }
   }
 
   private Filter.Builder createExcludedChildFilter(
