@@ -68,7 +68,7 @@ public class EntityRequestHandler extends RequestHandler {
     Set<String> entityIds = new HashSet<>();
     Optional<EntityOption> maybeEntityOption = getEntityOption(exploreRequest);
     if (requestOnLiveEntities(maybeEntityOption)) {
-      entityIds.addAll(getEntityIdsFromQueryService(requestContext, exploreRequest));
+      entityIds.addAll(getEntityIdsInTimeRangeFromQueryService(requestContext, exploreRequest));
       if (entityIds.isEmpty()) {
         return builder;
       }

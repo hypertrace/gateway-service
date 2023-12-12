@@ -1,7 +1,6 @@
 package org.hypertrace.gateway.service.common.converters;
 
 import static java.lang.String.format;
-import static org.hypertrace.gateway.service.v1.common.FunctionType.DISTINCT_ARRAY;
 
 import com.google.common.base.Strings;
 import java.time.Duration;
@@ -491,7 +490,7 @@ public class QueryAndGatewayDtoConverter {
       List<String> entityIds,
       String timestampAttributeId,
       String spacesAttributeId,
-      List<String> idAttributeId,
+      List<String> entityIdAttributes,
       org.hypertrace.gateway.service.v1.common.Filter providedFilter) {
 
     Filter.Builder compositeFilter = Filter.newBuilder().setOperator(Operator.AND);
@@ -517,8 +516,8 @@ public class QueryAndGatewayDtoConverter {
 
     if (!entityIds.isEmpty()) {
       compositeFilter.addChildFilter(
-          createIdAttributeFilter(
-              idAttributeId,
+          createEntityIdAttributeFilter(
+              entityIdAttributes,
               Operator.IN,
               QueryRequestUtil.createStringArrayLiteralExpression(entityIds)));
     }
@@ -561,12 +560,12 @@ public class QueryAndGatewayDtoConverter {
     return filter != null && !Filter.getDefaultInstance().equals(filter);
   }
 
-  private static Filter createIdAttributeFilter(
-      List<String> idAttribute, Operator operator, Expression expression) {
-    if (idAttribute.size() != 1) {
+  private static Filter createEntityIdAttributeFilter(
+      List<String> entityIdAttributes, Operator operator, Expression expression) {
+    if (entityIdAttributes.size() != 1) {
       throw new RuntimeException("Cannot have more than one id attribute for an entity");
     }
-    return QueryRequestUtil.createFilter(idAttribute.get(0), operator, expression);
+    return QueryRequestUtil.createFilter(entityIdAttributes.get(0), operator, expression);
   }
 
   public static List<OrderByExpression> convertToQueryOrderByExpressions(
