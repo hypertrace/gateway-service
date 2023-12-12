@@ -170,6 +170,7 @@ public class RequestHandler implements RequestHandlerWithSorting {
       ExploreRequestContext context,
       ExploreRequest exploreRequest,
       Map<String, AttributeMetadata> attributeMetadataMap) {
+    LOG.debug("Querying entity ids from EDS source {}", exploreRequest);
     // Check if there is any filter present with EDS only source. If not then return,
     // else query the respective entityIds from the EDS source.
     Optional<org.hypertrace.gateway.service.v1.common.Filter> maybeEdsFilter =
