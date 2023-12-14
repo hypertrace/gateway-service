@@ -8,6 +8,7 @@ import com.google.inject.Guice;
 import com.google.inject.Injector;
 import com.google.inject.Key;
 import com.google.inject.TypeLiteral;
+import com.google.protobuf.TextFormat;
 import io.grpc.Status;
 import io.micrometer.core.instrument.Timer;
 import java.time.Duration;
@@ -219,7 +220,7 @@ public class EntityService {
       LOG.info(
           "Total query execution took: {}(ms) for request: {}",
           queryExecutionTime,
-          originalRequest);
+          TextFormat.printer().shortDebugString(originalRequest));
     }
 
     queryExecutionTimer.record(queryExecutionTime, TimeUnit.MILLISECONDS);

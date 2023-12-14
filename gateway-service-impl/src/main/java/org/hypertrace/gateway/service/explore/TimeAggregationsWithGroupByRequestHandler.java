@@ -1,5 +1,7 @@
 package org.hypertrace.gateway.service.explore;
 
+import static org.hypertrace.gateway.service.common.converters.QueryRequestUtil.convertStringArrayValue;
+
 import com.google.common.collect.Streams;
 import java.util.List;
 import java.util.Map;
@@ -219,7 +221,7 @@ public class TimeAggregationsWithGroupByRequestHandler implements IRequestHandle
         valueBuilder.addStringArray(value.getString());
         break;
       case STRING_ARRAY:
-        valueBuilder.addAllStringArray(value.getStringArrayList());
+        valueBuilder.addAllStringArray(convertStringArrayValue(value));
         break;
       case LONG:
         valueBuilder.addLongArray(value.getLong());

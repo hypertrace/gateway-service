@@ -946,6 +946,17 @@
     ]
   },
   {
+    "fqn": "Service.labels",
+    "valueKind": "TYPE_STRING_ARRAY",
+    "key": "labels",
+    "displayName": "Service Labels",
+    "scopeString": "SERVICE",
+    "type": "ATTRIBUTE",
+    "sources": [
+      "QS"
+    ]
+  },
+  {
     "fqn": "Service.start_time_millis",
     "valueKind": "TYPE_INT64",
     "key": "startTime",
