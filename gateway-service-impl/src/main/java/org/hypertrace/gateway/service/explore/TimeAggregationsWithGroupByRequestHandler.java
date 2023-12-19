@@ -11,7 +11,6 @@ import org.hypertrace.core.attribute.service.v1.AttributeMetadata;
 import org.hypertrace.gateway.service.common.AttributeMetadataProvider;
 import org.hypertrace.gateway.service.common.util.AttributeMetadataUtil;
 import org.hypertrace.gateway.service.common.util.ExpressionReader;
-import org.hypertrace.gateway.service.common.util.QueryServiceClient;
 import org.hypertrace.gateway.service.v1.common.Expression;
 import org.hypertrace.gateway.service.v1.common.Filter;
 import org.hypertrace.gateway.service.v1.common.LiteralConstant;
@@ -35,14 +34,6 @@ public class TimeAggregationsWithGroupByRequestHandler implements IRequestHandle
   private final AttributeMetadataProvider attributeMetadataProvider;
   private final RequestHandler normalRequestHandler;
   private final TimeAggregationsRequestHandler timeAggregationsRequestHandler;
-
-  TimeAggregationsWithGroupByRequestHandler(
-      QueryServiceClient queryServiceClient, AttributeMetadataProvider attributeMetadataProvider) {
-    this.attributeMetadataProvider = attributeMetadataProvider;
-    this.normalRequestHandler = new RequestHandler(queryServiceClient, attributeMetadataProvider);
-    this.timeAggregationsRequestHandler =
-        new TimeAggregationsRequestHandler(queryServiceClient, attributeMetadataProvider);
-  }
 
   TimeAggregationsWithGroupByRequestHandler(
       AttributeMetadataProvider attributeMetadataProvider,

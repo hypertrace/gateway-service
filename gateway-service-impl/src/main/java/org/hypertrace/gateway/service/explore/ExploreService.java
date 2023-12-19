@@ -19,9 +19,11 @@ import org.hypertrace.gateway.service.common.AttributeMetadataProvider;
 import org.hypertrace.gateway.service.common.ExpressionContext;
 import org.hypertrace.gateway.service.common.RequestContext;
 import org.hypertrace.gateway.service.common.config.ScopeFilterConfigs;
+import org.hypertrace.gateway.service.common.datafetcher.QueryServiceEntityFetcher;
 import org.hypertrace.gateway.service.common.util.QueryServiceClient;
 import org.hypertrace.gateway.service.entity.config.EntityIdColumnsConfigs;
 import org.hypertrace.gateway.service.explore.entity.EntityRequestHandler;
+import org.hypertrace.gateway.service.explore.entity.EntityServiceEntityFetcher;
 import org.hypertrace.gateway.service.v1.explore.ExploreRequest;
 import org.hypertrace.gateway.service.v1.explore.ExploreResponse;
 
@@ -46,10 +48,27 @@ public class ExploreService {
       ScopeFilterConfigs scopeFiltersConfig,
       EntityIdColumnsConfigs entityIdColumnsConfigs,
       EntityTypesProvider entityTypesProvider) {
+    QueryServiceEntityFetcher queryServiceEntityFetcher =
+        new QueryServiceEntityFetcher(
+            queryServiceClient, attributeMetadataProvider, entityIdColumnsConfigs);
+    EntityServiceEntityFetcher entityServiceEntityFetcher =
+        new EntityServiceEntityFetcher(
+            attributeMetadataProvider, entityIdColumnsConfigs, entityQueryServiceClient);
     this.attributeMetadataProvider = attributeMetadataProvider;
-    this.normalRequestHandler = new RequestHandler(queryServiceClient, attributeMetadataProvider);
+    this.normalRequestHandler =
+        new RequestHandler(
+            queryServiceClient,
+            attributeMetadataProvider,
+            entityIdColumnsConfigs,
+            queryServiceEntityFetcher,
+            entityServiceEntityFetcher);
     this.timeAggregationsRequestHandler =
-        new TimeAggregationsRequestHandler(queryServiceClient, attributeMetadataProvider);
+        new TimeAggregationsRequestHandler(
+            queryServiceClient,
+            attributeMetadataProvider,
+            entityIdColumnsConfigs,
+            queryServiceEntityFetcher,
+            entityServiceEntityFetcher);
     this.timeAggregationsWithGroupByRequestHandler =
         new TimeAggregationsWithGroupByRequestHandler(
             attributeMetadataProvider, normalRequestHandler, timeAggregationsRequestHandler);
@@ -58,7 +77,8 @@ public class ExploreService {
             attributeMetadataProvider,
             entityIdColumnsConfigs,
             queryServiceClient,
-            entityQueryServiceClient);
+            queryServiceEntityFetcher,
+            entityServiceEntityFetcher);
     this.scopeFilterConfigs = scopeFiltersConfig;
     this.entityTypesProvider = entityTypesProvider;
     initMetrics();
