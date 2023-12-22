@@ -112,7 +112,7 @@ public class RequestHandler implements RequestHandlerWithSorting {
     Map<String, AttributeMetadata> attributeMetadataMap =
         attributeMetadataProvider.getAttributesMetadata(requestContext, request.getContext());
     if (hasOnlyAttributeSource(request.getFilter(), AttributeSource.EDS, attributeMetadataMap)) {
-      entityIds = getEntityIdsToFilter(requestContext, request, attributeMetadataMap);
+      entityIds = getEntityIdsToFilterFromSourceEDS(requestContext, request, attributeMetadataMap);
       qsSourceFilter =
           buildFilter(request.getFilter(), AttributeSource.QS, attributeMetadataMap)
               .orElse(request.getFilter());
@@ -166,7 +166,7 @@ public class RequestHandler implements RequestHandlerWithSorting {
   // This is to get all the entity Ids for the EDS source filter.
   // 1. First filter out entity ids based on the time range from QS filter
   // 2. Then filter out entity ids return in 1 based on EDS filter.
-  private List<String> getEntityIdsToFilter(
+  private List<String> getEntityIdsToFilterFromSourceEDS(
       ExploreRequestContext context,
       ExploreRequest exploreRequest,
       Map<String, AttributeMetadata> attributeMetadataMap) {
@@ -181,11 +181,14 @@ public class RequestHandler implements RequestHandlerWithSorting {
 
     Set<String> allEntityIds =
         this.getEntityIdsInTimeRangeFromQueryService(context, exploreRequest);
+
     ExploreRequest edsExploreRequest =
         buildExploreRequest(context, exploreRequest.getContext(), maybeEdsFilter.orElseThrow());
+    ExploreRequestContext edsRequestExploreContext =
+        new ExploreRequestContext(context.getGrpcContext(), edsExploreRequest);
     List<org.hypertrace.gateway.service.v1.common.Row> resultRows =
-        this.entityServiceEntityFetcher.getResults(context, edsExploreRequest, allEntityIds);
-
+        this.entityServiceEntityFetcher.getResults(
+            edsRequestExploreContext, edsExploreRequest, allEntityIds);
     return resultRows.stream()
         .map(row -> row.getColumnsMap().values().stream().findFirst())
         .filter(Optional::isPresent)
