@@ -121,7 +121,7 @@ public class EntityServiceAndGatewayServiceConverter {
       String attributeName, Value value, Map<String, AttributeMetadata> attributeMetadataMap) {
     AttributeMetadata attributeMetadata = attributeMetadataMap.get(attributeName);
     if (null == attributeMetadata) {
-      LOG.debug("No attribute metadata found for {}", attributeName);
+      LOG.warn("No attribute metadata found for {}", attributeName);
       return convertQueryValueToGatewayValue(value);
     }
     return convertQueryValueToGatewayValue(value, attributeMetadata);
