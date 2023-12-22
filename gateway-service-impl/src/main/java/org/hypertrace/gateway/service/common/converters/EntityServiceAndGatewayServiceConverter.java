@@ -121,7 +121,7 @@ public class EntityServiceAndGatewayServiceConverter {
       String attributeName, Value value, Map<String, AttributeMetadata> attributeMetadataMap) {
     AttributeMetadata attributeMetadata = attributeMetadataMap.get(attributeName);
     if (null == attributeMetadata) {
-      LOG.warn("No attribute metadata found for {}", attributeName);
+      LOG.debug("No attribute metadata found for {}", attributeName);
       return convertQueryValueToGatewayValue(value);
     }
     return convertQueryValueToGatewayValue(value, attributeMetadata);
@@ -391,7 +391,7 @@ public class EntityServiceAndGatewayServiceConverter {
 
     if (attributeMetadata == null) {
       // no attribute metadata, fail fast
-      LOG.warn("No attribute metadata specified for {}", value);
+      LOG.debug("No attribute metadata specified for {}", value);
       return convertQueryValueToGatewayValue(value);
     }
 
@@ -458,12 +458,12 @@ public class EntityServiceAndGatewayServiceConverter {
 
     if (null == converter) {
       // If we reached here it implies no converter was found
-      LOG.warn("No attributeKind converter found for query valueType {}", value.getValueType());
+      LOG.debug("No attributeKind converter found for query valueType {}", value.getValueType());
       return convertQueryValueToGatewayValue(value);
     }
 
     if (null == retValue) {
-      LOG.warn(
+      LOG.debug(
           "No attributeKind mapping found for query valueType => attributeKind [{} => {}]",
           value.getValueType(),
           attributeMetadata.getValueKind());
