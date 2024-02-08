@@ -12,8 +12,8 @@ dependencies {
   api(project(":gateway-service-api"))
   api(project(":gateway-service-baseline-lib"))
 
-  annotationProcessor("org.projectlombok:lombok:1.18.22")
-  compileOnly("org.projectlombok:lombok:1.18.18")
+  annotationProcessor("org.projectlombok:lombok:1.18.30")
+  compileOnly("org.projectlombok:lombok:1.18.30")
 
   implementation("org.hypertrace.core.query.service:query-service-client:0.8.0")
   implementation("org.hypertrace.core.attribute.service:attribute-service-client:0.14.25")
@@ -37,8 +37,8 @@ dependencies {
   implementation("com.fasterxml.jackson.core:jackson-databind:2.16.0")
 
   testImplementation("org.junit.jupiter:junit-jupiter:5.8.2")
-  testImplementation("org.mockito:mockito-junit-jupiter:5.4.0")
-  testImplementation("org.mockito:mockito-core:5.5.0")
+  testImplementation("org.mockito:mockito-junit-jupiter:5.8.0")
+  testImplementation("org.mockito:mockito-core:5.8.0")
   testImplementation("org.mockito:mockito-inline:5.2.0")
   testImplementation("org.apache.logging.log4j:log4j-slf4j-impl:2.17.1")
   testImplementation("io.grpc:grpc-netty:1.60.0")
