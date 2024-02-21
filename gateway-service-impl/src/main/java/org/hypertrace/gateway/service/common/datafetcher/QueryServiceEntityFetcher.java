@@ -121,9 +121,6 @@ public class QueryServiceEntityFetcher implements IEntityFetcher {
 
     LOG.debug("Sending Query to Query Service ======== \n {}", queryRequest);
 
-    long startTimeMillis = System.currentTimeMillis();
-    System.out.println("QS Query fired at " + startTimeMillis);
-
     Iterator<ResultSetChunk> resultSetChunkIterator =
         queryServiceClient.executeQuery(requestContext, queryRequest);
 
@@ -183,9 +180,6 @@ public class QueryServiceEntityFetcher implements IEntityFetcher {
       }
     }
 
-    long endTimeMillis = System.currentTimeMillis();
-    System.out.println("QS Query finished at " + endTimeMillis);
-    System.out.println("QS Time " + (endTimeMillis - startTimeMillis));
     return new EntityFetcherResponse(entityBuilders);
   }
 
