@@ -84,7 +84,7 @@ public class ExecutionContextBuilderVisitor implements Visitor<Void> {
           executionContext::removePendingSelectionSourceForOrderBy);
     }
 
-    return null;
+    return dataFetcherNode.getChildNode().acceptVisitor(this);
   }
 
   @Override

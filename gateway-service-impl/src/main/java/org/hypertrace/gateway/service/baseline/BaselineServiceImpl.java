@@ -16,9 +16,9 @@ import org.hypertrace.core.query.service.api.ResultSetChunk;
 import org.hypertrace.gateway.service.baseline.lib.BaselineCalculator;
 import org.hypertrace.gateway.service.common.AttributeMetadataProvider;
 import org.hypertrace.gateway.service.common.RequestContext;
+import org.hypertrace.gateway.service.common.config.GatewayServiceConfig;
 import org.hypertrace.gateway.service.common.util.AttributeMetadataUtil;
 import org.hypertrace.gateway.service.common.util.QueryExpressionUtil;
-import org.hypertrace.gateway.service.entity.config.EntityIdColumnsConfigs;
 import org.hypertrace.gateway.service.v1.baseline.Baseline;
 import org.hypertrace.gateway.service.v1.baseline.BaselineEntitiesRequest;
 import org.hypertrace.gateway.service.v1.baseline.BaselineEntitiesResponse;
@@ -40,25 +40,25 @@ import org.hypertrace.gateway.service.v1.common.Value;
  */
 public class BaselineServiceImpl implements BaselineService {
 
-  private static final BaselineEntitiesRequestValidator baselineEntitiesRequestValidator =
+  private static final BaselineEntitiesRequestValidator BASELINE_ENTITIES_REQUEST_VALIDATOR =
       new BaselineEntitiesRequestValidator();
 
   protected static final long DAY_IN_MILLIS = 86400000L;
 
+  private final GatewayServiceConfig gatewayServiceConfig;
   private final AttributeMetadataProvider attributeMetadataProvider;
   private final BaselineServiceQueryParser baselineServiceQueryParser;
   private final BaselineServiceQueryExecutor baselineServiceQueryExecutor;
-  private final EntityIdColumnsConfigs entityIdColumnsConfigs;
 
   public BaselineServiceImpl(
+      GatewayServiceConfig gatewayServiceConfig,
       AttributeMetadataProvider attributeMetadataProvider,
       BaselineServiceQueryParser baselineServiceQueryParser,
-      BaselineServiceQueryExecutor baselineServiceQueryExecutor,
-      EntityIdColumnsConfigs entityIdColumnsConfigs) {
+      BaselineServiceQueryExecutor baselineServiceQueryExecutor) {
+    this.gatewayServiceConfig = gatewayServiceConfig;
     this.attributeMetadataProvider = attributeMetadataProvider;
     this.baselineServiceQueryParser = baselineServiceQueryParser;
     this.baselineServiceQueryExecutor = baselineServiceQueryExecutor;
-    this.entityIdColumnsConfigs = entityIdColumnsConfigs;
   }
 
   public BaselineEntitiesResponse getBaselineForEntities(
@@ -67,7 +67,7 @@ public class BaselineServiceImpl implements BaselineService {
     Map<String, AttributeMetadata> attributeMetadataMap =
         attributeMetadataProvider.getAttributesMetadata(
             requestContext, originalRequest.getEntityType());
-    baselineEntitiesRequestValidator.validate(originalRequest, attributeMetadataMap);
+    BASELINE_ENTITIES_REQUEST_VALIDATOR.validate(originalRequest, attributeMetadataMap);
     String timeColumn =
         AttributeMetadataUtil.getTimestampAttributeId(
             attributeMetadataProvider, requestContext, originalRequest.getEntityType());
@@ -91,7 +91,7 @@ public class BaselineServiceImpl implements BaselineService {
       List<String> entityIdAttributes =
           AttributeMetadataUtil.getIdAttributeIds(
               attributeMetadataProvider,
-              entityIdColumnsConfigs,
+              gatewayServiceConfig.getEntityIdColumnsConfig(),
               requestContext,
               originalRequest.getEntityType());
       QueryRequest aggQueryRequest =
@@ -134,7 +134,7 @@ public class BaselineServiceImpl implements BaselineService {
       List<String> entityIdAttributes =
           AttributeMetadataUtil.getIdAttributeIds(
               attributeMetadataProvider,
-              entityIdColumnsConfigs,
+              gatewayServiceConfig.getEntityIdColumnsConfig(),
               requestContext,
               originalRequest.getEntityType());
       QueryRequest timeSeriesQueryRequest =

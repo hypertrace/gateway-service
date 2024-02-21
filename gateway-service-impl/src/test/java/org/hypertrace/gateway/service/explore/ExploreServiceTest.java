@@ -9,7 +9,7 @@ import org.hypertrace.gateway.service.common.AttributeMetadataProvider;
 import org.hypertrace.gateway.service.common.RequestContext;
 import org.hypertrace.gateway.service.common.config.ScopeFilterConfigs;
 import org.hypertrace.gateway.service.common.util.QueryServiceClient;
-import org.hypertrace.gateway.service.entity.config.EntityIdColumnsConfigs;
+import org.hypertrace.gateway.service.entity.config.EntityIdColumnsConfig;
 import org.hypertrace.gateway.service.v1.explore.ExploreRequest;
 import org.hypertrace.gateway.service.v1.explore.ExploreResponse;
 
@@ -42,7 +42,7 @@ public class ExploreServiceTest extends AbstractServiceTest<ExploreRequest, Expl
       EntityQueryServiceClient entityQueryServiceClient,
       AttributeMetadataProvider attributeMetadataProvider,
       ScopeFilterConfigs scopeFilterConfigs,
-      EntityIdColumnsConfigs entityIdColumnsConfigs,
+      EntityIdColumnsConfig entityIdColumnsConfig,
       EntityTypesProvider entityTypesProvider) {
     ExploreService exploreService =
         new ExploreService(
@@ -50,7 +50,7 @@ public class ExploreServiceTest extends AbstractServiceTest<ExploreRequest, Expl
             entityQueryServiceClient,
             attributeMetadataProvider,
             scopeFilterConfigs,
-            entityIdColumnsConfigs,
+            entityIdColumnsConfig,
             entityTypesProvider);
     return exploreService.explore(
         new RequestContext(

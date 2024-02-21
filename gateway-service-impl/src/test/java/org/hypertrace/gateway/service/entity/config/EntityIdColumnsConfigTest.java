@@ -23,11 +23,11 @@ public class EntityIdColumnsConfigTest {
             + "  }\n"
             + "]";
     Config appConfig = ConfigFactory.parseString(appConfigStr);
-    EntityIdColumnsConfigs entityIdColumnsConfigs = EntityIdColumnsConfigs.fromConfig(appConfig);
+    EntityIdColumnsConfig entityIdColumnsConfig = EntityIdColumnsConfig.fromConfig(appConfig);
 
-    assertEquals(Optional.of("id"), entityIdColumnsConfigs.getIdKey("FOO"));
-    assertEquals(Optional.of("id2"), entityIdColumnsConfigs.getIdKey("BAR"));
-    assertEquals(Optional.empty(), entityIdColumnsConfigs.getIdKey("BAZ"));
+    assertEquals(Optional.of("id"), entityIdColumnsConfig.getIdKey("FOO"));
+    assertEquals(Optional.of("id2"), entityIdColumnsConfig.getIdKey("BAR"));
+    assertEquals(Optional.empty(), entityIdColumnsConfig.getIdKey("BAZ"));
   }
 
   @Test
@@ -58,11 +58,11 @@ public class EntityIdColumnsConfigTest {
             + "  }\n"
             + "]";
     Config appConfig = ConfigFactory.parseString(domainObjectConfig);
-    EntityIdColumnsConfigs entityIdColumnsConfigs = EntityIdColumnsConfigs.fromConfig(appConfig);
+    EntityIdColumnsConfig entityIdColumnsConfig = EntityIdColumnsConfig.fromConfig(appConfig);
 
-    assertEquals(Optional.of("id"), entityIdColumnsConfigs.getIdKey("FOO"));
-    assertEquals(Optional.of("id2"), entityIdColumnsConfigs.getIdKey("BAR"));
-    assertEquals(Optional.empty(), entityIdColumnsConfigs.getIdKey("BAZ"));
+    assertEquals(Optional.of("id"), entityIdColumnsConfig.getIdKey("FOO"));
+    assertEquals(Optional.of("id2"), entityIdColumnsConfig.getIdKey("BAR"));
+    assertEquals(Optional.empty(), entityIdColumnsConfig.getIdKey("BAZ"));
   }
 
   @Test
@@ -103,11 +103,11 @@ public class EntityIdColumnsConfigTest {
             + "  }\n"
             + "]";
     Config appConfig = ConfigFactory.parseString(appConfigStr);
-    EntityIdColumnsConfigs entityIdColumnsConfigs = EntityIdColumnsConfigs.fromConfig(appConfig);
+    EntityIdColumnsConfig entityIdColumnsConfig = EntityIdColumnsConfig.fromConfig(appConfig);
 
-    assertEquals(Optional.of("id"), entityIdColumnsConfigs.getIdKey("FOO"));
-    assertEquals(Optional.of("id2"), entityIdColumnsConfigs.getIdKey("BAR"));
-    assertEquals(Optional.empty(), entityIdColumnsConfigs.getIdKey("BAZ"));
+    assertEquals(Optional.of("id"), entityIdColumnsConfig.getIdKey("FOO"));
+    assertEquals(Optional.of("id2"), entityIdColumnsConfig.getIdKey("BAR"));
+    assertEquals(Optional.empty(), entityIdColumnsConfig.getIdKey("BAZ"));
   }
 
   @Test
@@ -140,21 +140,21 @@ public class EntityIdColumnsConfigTest {
             + "  }\n"
             + "]";
     Config appConfig = ConfigFactory.parseString(appConfigStr);
-    EntityIdColumnsConfigs entityIdColumnsConfigs = EntityIdColumnsConfigs.fromConfig(appConfig);
+    EntityIdColumnsConfig entityIdColumnsConfig = EntityIdColumnsConfig.fromConfig(appConfig);
 
-    assertEquals(Optional.empty(), entityIdColumnsConfigs.getIdKey("FOO"));
-    assertEquals(Optional.empty(), entityIdColumnsConfigs.getIdKey("BAR"));
-    assertEquals(Optional.empty(), entityIdColumnsConfigs.getIdKey("BAZ"));
+    assertEquals(Optional.empty(), entityIdColumnsConfig.getIdKey("FOO"));
+    assertEquals(Optional.empty(), entityIdColumnsConfig.getIdKey("BAR"));
+    assertEquals(Optional.empty(), entityIdColumnsConfig.getIdKey("BAZ"));
   }
 
   @Test
   public void testNoDomainNorEntityIdColumnConfig() {
     String appConfigStr = "";
     Config appConfig = ConfigFactory.parseString(appConfigStr);
-    EntityIdColumnsConfigs entityIdColumnsConfigs = EntityIdColumnsConfigs.fromConfig(appConfig);
+    EntityIdColumnsConfig entityIdColumnsConfig = EntityIdColumnsConfig.fromConfig(appConfig);
 
-    assertEquals(Optional.empty(), entityIdColumnsConfigs.getIdKey("FOO"));
-    assertEquals(Optional.empty(), entityIdColumnsConfigs.getIdKey("BAR"));
-    assertEquals(Optional.empty(), entityIdColumnsConfigs.getIdKey("BAZ"));
+    assertEquals(Optional.empty(), entityIdColumnsConfig.getIdKey("FOO"));
+    assertEquals(Optional.empty(), entityIdColumnsConfig.getIdKey("BAR"));
+    assertEquals(Optional.empty(), entityIdColumnsConfig.getIdKey("BAZ"));
   }
 }

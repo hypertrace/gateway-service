@@ -33,7 +33,7 @@ import org.hypertrace.core.attribute.service.v1.AttributeSource;
 import org.hypertrace.gateway.service.common.AttributeMetadataProvider;
 import org.hypertrace.gateway.service.common.RequestContext;
 import org.hypertrace.gateway.service.entity.EntitiesRequestContext;
-import org.hypertrace.gateway.service.entity.config.EntityIdColumnsConfigs;
+import org.hypertrace.gateway.service.entity.config.EntityIdColumnsConfig;
 import org.hypertrace.gateway.service.entity.query.visitor.FilterOptimizingVisitor;
 import org.hypertrace.gateway.service.v1.common.Filter;
 import org.hypertrace.gateway.service.v1.common.FunctionType;
@@ -132,7 +132,7 @@ public class ExecutionTreeBuilderTest {
       };
 
   @Mock private AttributeMetadataProvider attributeMetadataProvider;
-  @Mock private EntityIdColumnsConfigs entityIdColumnsConfigs;
+  @Mock private EntityIdColumnsConfig entityIdColumnsConfig;
 
   private static AttributeMetadata buildAttributeMetadataForSources(
       String attributeId, String scope, String key, List<AttributeSource> sources) {
@@ -147,7 +147,7 @@ public class ExecutionTreeBuilderTest {
   @BeforeEach
   public void setup() {
     attributeMetadataProvider = mock(AttributeMetadataProvider.class);
-    entityIdColumnsConfigs = mock(EntityIdColumnsConfigs.class);
+    entityIdColumnsConfig = mock(EntityIdColumnsConfig.class);
     when(attributeMetadataProvider.getAttributesMetadata(
             any(RequestContext.class), eq(AttributeScope.API.name())))
         .thenReturn(ATTRIBUTE_SOURCES);
@@ -181,7 +181,7 @@ public class ExecutionTreeBuilderTest {
             "API",
             "API.startTime");
     return new EntityExecutionContext(
-        attributeMetadataProvider, entityIdColumnsConfigs, entitiesRequestContext, entitiesRequest);
+        attributeMetadataProvider, entityIdColumnsConfig, entitiesRequestContext, entitiesRequest);
   }
 
   @Test
@@ -503,7 +503,7 @@ public class ExecutionTreeBuilderTest {
       EntityExecutionContext executionContext =
           new EntityExecutionContext(
               attributeMetadataProvider,
-              entityIdColumnsConfigs,
+              entityIdColumnsConfig,
               entitiesRequestContext,
               entitiesRequest);
       ExecutionTreeBuilder executionTreeBuilder = new ExecutionTreeBuilder(executionContext);
@@ -542,7 +542,7 @@ public class ExecutionTreeBuilderTest {
       EntityExecutionContext executionContext =
           new EntityExecutionContext(
               attributeMetadataProvider,
-              entityIdColumnsConfigs,
+              entityIdColumnsConfig,
               entitiesRequestContext,
               entitiesRequest);
       ExecutionTreeBuilder executionTreeBuilder = new ExecutionTreeBuilder(executionContext);
@@ -579,7 +579,7 @@ public class ExecutionTreeBuilderTest {
     EntityExecutionContext executionContext =
         new EntityExecutionContext(
             attributeMetadataProvider,
-            entityIdColumnsConfigs,
+            entityIdColumnsConfig,
             entitiesRequestContext,
             entitiesRequest);
     ExecutionTreeBuilder executionTreeBuilder = new ExecutionTreeBuilder(executionContext);
@@ -609,7 +609,7 @@ public class ExecutionTreeBuilderTest {
     EntityExecutionContext executionContext =
         new EntityExecutionContext(
             attributeMetadataProvider,
-            entityIdColumnsConfigs,
+            entityIdColumnsConfig,
             entitiesRequestContext,
             entitiesRequest);
     ExecutionTreeBuilder executionTreeBuilder = new ExecutionTreeBuilder(executionContext);
@@ -661,7 +661,7 @@ public class ExecutionTreeBuilderTest {
     EntityExecutionContext executionContext =
         new EntityExecutionContext(
             attributeMetadataProvider,
-            entityIdColumnsConfigs,
+            entityIdColumnsConfig,
             entitiesRequestContext,
             entitiesRequest);
     ExecutionTreeBuilder executionTreeBuilder = new ExecutionTreeBuilder(executionContext);
@@ -714,7 +714,7 @@ public class ExecutionTreeBuilderTest {
     EntityExecutionContext executionContext =
         new EntityExecutionContext(
             attributeMetadataProvider,
-            entityIdColumnsConfigs,
+            entityIdColumnsConfig,
             entitiesRequestContext,
             entitiesRequest);
     ExecutionTreeBuilder executionTreeBuilder = new ExecutionTreeBuilder(executionContext);
@@ -766,7 +766,7 @@ public class ExecutionTreeBuilderTest {
     EntityExecutionContext executionContext =
         new EntityExecutionContext(
             attributeMetadataProvider,
-            entityIdColumnsConfigs,
+            entityIdColumnsConfig,
             entitiesRequestContext,
             entitiesRequest);
     ExecutionTreeBuilder executionTreeBuilder = new ExecutionTreeBuilder(executionContext);
@@ -818,7 +818,7 @@ public class ExecutionTreeBuilderTest {
     EntityExecutionContext executionContext =
         new EntityExecutionContext(
             attributeMetadataProvider,
-            entityIdColumnsConfigs,
+            entityIdColumnsConfig,
             entitiesRequestContext,
             entitiesRequest);
     ExecutionTreeBuilder executionTreeBuilder = new ExecutionTreeBuilder(executionContext);
@@ -861,7 +861,7 @@ public class ExecutionTreeBuilderTest {
     EntityExecutionContext executionContext =
         new EntityExecutionContext(
             attributeMetadataProvider,
-            entityIdColumnsConfigs,
+            entityIdColumnsConfig,
             entitiesRequestContext,
             entitiesRequest);
     ExecutionTreeBuilder executionTreeBuilder = new ExecutionTreeBuilder(executionContext);
@@ -902,7 +902,7 @@ public class ExecutionTreeBuilderTest {
     EntityExecutionContext executionContext =
         new EntityExecutionContext(
             attributeMetadataProvider,
-            entityIdColumnsConfigs,
+            entityIdColumnsConfig,
             entitiesRequestContext,
             entitiesRequest);
     ExecutionTreeBuilder executionTreeBuilder = new ExecutionTreeBuilder(executionContext);
@@ -948,7 +948,7 @@ public class ExecutionTreeBuilderTest {
     EntityExecutionContext executionContext =
         new EntityExecutionContext(
             attributeMetadataProvider,
-            entityIdColumnsConfigs,
+            entityIdColumnsConfig,
             entitiesRequestContext,
             entitiesRequest);
     ExecutionTreeBuilder executionTreeBuilder = new ExecutionTreeBuilder(executionContext);
@@ -1008,7 +1008,7 @@ public class ExecutionTreeBuilderTest {
     EntityExecutionContext executionContext =
         new EntityExecutionContext(
             attributeMetadataProvider,
-            entityIdColumnsConfigs,
+            entityIdColumnsConfig,
             entitiesRequestContext,
             entitiesRequest);
     ExecutionTreeBuilder executionTreeBuilder = new ExecutionTreeBuilder(executionContext);
@@ -1047,7 +1047,7 @@ public class ExecutionTreeBuilderTest {
     EntityExecutionContext executionContext =
         new EntityExecutionContext(
             attributeMetadataProvider,
-            entityIdColumnsConfigs,
+            entityIdColumnsConfig,
             entitiesRequestContext,
             entitiesRequest);
     ExecutionTreeBuilder executionTreeBuilder = new ExecutionTreeBuilder(executionContext);
@@ -1086,7 +1086,7 @@ public class ExecutionTreeBuilderTest {
     EntityExecutionContext executionContext =
         new EntityExecutionContext(
             attributeMetadataProvider,
-            entityIdColumnsConfigs,
+            entityIdColumnsConfig,
             entitiesRequestContext,
             entitiesRequest);
     ExecutionTreeBuilder executionTreeBuilder = new ExecutionTreeBuilder(executionContext);
@@ -1117,7 +1117,7 @@ public class ExecutionTreeBuilderTest {
     EntityExecutionContext executionContext =
         new EntityExecutionContext(
             attributeMetadataProvider,
-            entityIdColumnsConfigs,
+            entityIdColumnsConfig,
             entitiesRequestContext,
             entitiesRequest);
     ExecutionTreeBuilder executionTreeBuilder = new ExecutionTreeBuilder(executionContext);

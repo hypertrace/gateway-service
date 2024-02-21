@@ -18,7 +18,7 @@ import org.hypertrace.core.query.service.api.QueryRequest;
 import org.hypertrace.core.query.service.api.ResultSetChunk;
 import org.hypertrace.gateway.service.common.AttributeMetadataProvider;
 import org.hypertrace.gateway.service.common.RequestContext;
-import org.hypertrace.gateway.service.entity.config.EntityIdColumnsConfigs;
+import org.hypertrace.gateway.service.entity.config.EntityIdColumnsConfig;
 import org.hypertrace.gateway.service.v1.baseline.BaselineEntitiesRequest;
 import org.hypertrace.gateway.service.v1.baseline.BaselineEntitiesResponse;
 import org.hypertrace.gateway.service.v1.baseline.BaselineEntity;
@@ -49,7 +49,7 @@ public class BaselineServiceImplTest {
       Mockito.mock(BaselineServiceQueryExecutor.class);
   private final BaselineServiceQueryParser baselineServiceQueryParser =
       new BaselineServiceQueryParser(attributeMetadataProvider);
-  private final EntityIdColumnsConfigs entityIdColumnsConfigs = mock(EntityIdColumnsConfigs.class);
+  private final EntityIdColumnsConfig entityIdColumnsConfig = mock(EntityIdColumnsConfig.class);
 
   @Test
   public void testBaselineForEntitiesForAggregates() {
@@ -74,7 +74,7 @@ public class BaselineServiceImplTest {
             baselineServiceQueryExecutor.executeQuery(
                 any(RequestContext.class), any(QueryRequest.class)))
         .thenReturn(getResultSetForAvg("duration_ts").iterator());
-    when(entityIdColumnsConfigs.getIdKey("SERVICE")).thenReturn(Optional.of("id"));
+    when(entityIdColumnsConfig.getIdKey("SERVICE")).thenReturn(Optional.of("id"));
 
     Map<String, AttributeMetadata> attributeMap = new HashMap<>();
     attributeMap.put(
@@ -93,7 +93,7 @@ public class BaselineServiceImplTest {
             attributeMetadataProvider,
             baselineServiceQueryParser,
             baselineServiceQueryExecutor,
-            entityIdColumnsConfigs);
+            entityIdColumnsConfig);
     BaselineEntitiesResponse baselineResponse =
         baselineService.getBaselineForEntities(
             new RequestContext(forTenantId(TENANT_ID)), baselineEntitiesRequest);
@@ -126,7 +126,7 @@ public class BaselineServiceImplTest {
             baselineServiceQueryExecutor.executeQuery(
                 any(RequestContext.class), any(QueryRequest.class)))
         .thenReturn(getResultSetForAvgRate("numCalls").iterator());
-    when(entityIdColumnsConfigs.getIdKey("SERVICE")).thenReturn(Optional.of("id"));
+    when(entityIdColumnsConfig.getIdKey("SERVICE")).thenReturn(Optional.of("id"));
     // Attribute Metadata map contains mapping between Attributes and ID to query data.
     Map<String, AttributeMetadata> attributeMap = new HashMap<>();
     attributeMap.put(
@@ -142,7 +142,7 @@ public class BaselineServiceImplTest {
             attributeMetadataProvider,
             baselineServiceQueryParser,
             baselineServiceQueryExecutor,
-            entityIdColumnsConfigs);
+            entityIdColumnsConfig);
     BaselineEntitiesResponse baselineResponse =
         baselineService.getBaselineForEntities(
             new RequestContext(forTenantId(TENANT_ID)), baselineEntitiesRequest);
@@ -189,14 +189,14 @@ public class BaselineServiceImplTest {
             attributeMetadataProvider.getAttributeMetadata(
                 any(RequestContext.class), Mockito.anyString(), Mockito.anyString()))
         .thenReturn(Optional.of(attribute));
-    when(entityIdColumnsConfigs.getIdKey("SERVICE")).thenReturn(Optional.of("id"));
+    when(entityIdColumnsConfig.getIdKey("SERVICE")).thenReturn(Optional.of("id"));
 
     BaselineService baselineService =
         new BaselineServiceImpl(
             attributeMetadataProvider,
             baselineServiceQueryParser,
             baselineServiceQueryExecutor,
-            entityIdColumnsConfigs);
+            entityIdColumnsConfig);
     BaselineEntitiesResponse baselineResponse =
         baselineService.getBaselineForEntities(
             new RequestContext(forTenantId(TENANT_ID)), baselineEntitiesRequest);
@@ -305,7 +305,7 @@ public class BaselineServiceImplTest {
     BaselineServiceImpl baselineService =
         new BaselineServiceImpl(
             attributeMetadataProvider, baselineServiceQueryParser,
-            baselineServiceQueryExecutor, entityIdColumnsConfigs);
+            baselineServiceQueryExecutor, entityIdColumnsConfig);
     long endTimeInMillis = System.currentTimeMillis();
     long startTimeInMillis = endTimeInMillis - ONE_HOUR_MILLIS;
     long actualStartTime = baselineService.getUpdatedStartTime(startTimeInMillis, endTimeInMillis);

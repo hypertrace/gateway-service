@@ -24,6 +24,10 @@ service:
   type: ClusterIP
   port: 50071
   adminPort: 50072
+  config:
+    name: gateway-service-config
+    gatewayServiceConfig:
+      entityAndFilterEnabled: false
 
 nodeLabels: {}
 
@@ -68,19 +72,6 @@ deploymentSelectorMatchLabels:
 serviceSelectorLabels:
   app: gateway-service
 
-configMap:
-  name: gateway-service-config
-  data:
-    application.conf: |-
-      entity.service.config = {
-        host = entity-service
-      }
-      query.service.config = {
-        host = query-service
-      }
-      attributes.service.config = {
-        host = attribute-service
-      }
 logConfig:
   name: gateway-service-log-config
   monitorInterval: 30

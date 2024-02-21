@@ -59,7 +59,7 @@ import org.hypertrace.gateway.service.common.QueryServiceRequestAndResponseUtils
 import org.hypertrace.gateway.service.common.RequestContext;
 import org.hypertrace.gateway.service.common.config.ScopeFilterConfigs;
 import org.hypertrace.gateway.service.common.util.QueryServiceClient;
-import org.hypertrace.gateway.service.entity.config.EntityIdColumnsConfigs;
+import org.hypertrace.gateway.service.entity.config.EntityIdColumnsConfig;
 import org.hypertrace.gateway.service.entity.config.LogConfig;
 import org.hypertrace.gateway.service.executor.QueryExecutorConfig;
 import org.hypertrace.gateway.service.executor.QueryExecutorServiceFactory;
@@ -90,7 +90,7 @@ public class EntityServiceTest extends AbstractGatewayServiceTest {
   private EntityQueryServiceClient entityQueryServiceClient;
   private EntityQueryServiceBlockingStub entityQueryStub;
   private AttributeMetadataProvider attributeMetadataProvider;
-  private EntityIdColumnsConfigs entityIdColumnsConfigs;
+  private EntityIdColumnsConfig entityIdColumnsConfig;
   private LogConfig logConfig;
   private ExecutorService queryExecutor;
 
@@ -124,7 +124,7 @@ public class EntityServiceTest extends AbstractGatewayServiceTest {
             + "  }\n"
             + "]";
     Config config = ConfigFactory.parseString(entityIdColumnConfigStr);
-    entityIdColumnsConfigs = EntityIdColumnsConfigs.fromConfig(config);
+    entityIdColumnsConfig = EntityIdColumnsConfig.fromConfig(config);
   }
 
   private void mock(AttributeMetadataProvider attributeMetadataProvider) {
@@ -309,7 +309,7 @@ public class EntityServiceTest extends AbstractGatewayServiceTest {
             entityQueryServiceClient,
             null,
             attributeMetadataProvider,
-            entityIdColumnsConfigs,
+            entityIdColumnsConfig,
             scopeFilterConfigs,
             logConfig,
             queryExecutor);
@@ -348,7 +348,7 @@ public class EntityServiceTest extends AbstractGatewayServiceTest {
             entityQueryServiceClient,
             null,
             attributeMetadataProvider,
-            entityIdColumnsConfigs,
+            entityIdColumnsConfig,
             scopeFilterConfigs,
             logConfig,
             queryExecutor);
@@ -489,7 +489,7 @@ public class EntityServiceTest extends AbstractGatewayServiceTest {
             entityQueryServiceClient,
             entityQueryStub,
             attributeMetadataProvider,
-            entityIdColumnsConfigs,
+            entityIdColumnsConfig,
             new ScopeFilterConfigs(ConfigFactory.empty()),
             logConfig,
             queryExecutor);

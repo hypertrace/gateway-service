@@ -23,7 +23,7 @@ import org.hypertrace.gateway.service.common.AttributeMetadataProvider;
 import org.hypertrace.gateway.service.common.EntitiesRequestAndResponseUtils;
 import org.hypertrace.gateway.service.common.RequestContext;
 import org.hypertrace.gateway.service.entity.EntitiesRequestContext;
-import org.hypertrace.gateway.service.entity.config.EntityIdColumnsConfigs;
+import org.hypertrace.gateway.service.entity.config.EntityIdColumnsConfig;
 import org.hypertrace.gateway.service.v1.common.Expression;
 import org.hypertrace.gateway.service.v1.common.Filter;
 import org.hypertrace.gateway.service.v1.entity.EntitiesRequest;
@@ -46,13 +46,13 @@ class ExecutionContextTest {
   private static final String API_ID_ATTR = "API.id";
 
   @Mock private AttributeMetadataProvider attributeMetadataProvider;
-  @Mock private EntityIdColumnsConfigs entityIdColumnsConfigs;
+  @Mock private EntityIdColumnsConfig entityIdColumnsConfig;
   private EntitiesRequestContext entitiesRequestContext;
 
   @BeforeEach
   public void setup() {
     attributeMetadataProvider = mock(AttributeMetadataProvider.class);
-    entityIdColumnsConfigs = mock(EntityIdColumnsConfigs.class);
+    entityIdColumnsConfig = mock(EntityIdColumnsConfig.class);
     when(attributeMetadataProvider.getAttributesMetadata(
             any(RequestContext.class), eq(AttributeScope.API.name())))
         .thenReturn(attributeSources);
@@ -83,7 +83,7 @@ class ExecutionContextTest {
     EntityExecutionContext executionContext =
         new EntityExecutionContext(
             attributeMetadataProvider,
-            entityIdColumnsConfigs,
+            entityIdColumnsConfig,
             entitiesRequestContext,
             entitiesRequest);
 
@@ -120,7 +120,7 @@ class ExecutionContextTest {
     EntityExecutionContext executionContext =
         new EntityExecutionContext(
             attributeMetadataProvider,
-            entityIdColumnsConfigs,
+            entityIdColumnsConfig,
             entitiesRequestContext,
             entitiesRequest);
 
@@ -167,7 +167,7 @@ class ExecutionContextTest {
     EntityExecutionContext executionContext =
         new EntityExecutionContext(
             attributeMetadataProvider,
-            entityIdColumnsConfigs,
+            entityIdColumnsConfig,
             entitiesRequestContext,
             entitiesRequest);
 
@@ -218,7 +218,7 @@ class ExecutionContextTest {
     EntityExecutionContext executionContext =
         new EntityExecutionContext(
             attributeMetadataProvider,
-            entityIdColumnsConfigs,
+            entityIdColumnsConfig,
             entitiesRequestContext,
             entitiesRequest);
 

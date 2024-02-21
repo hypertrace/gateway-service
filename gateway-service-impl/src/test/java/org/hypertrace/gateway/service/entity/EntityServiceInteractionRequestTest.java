@@ -45,7 +45,7 @@ import org.hypertrace.gateway.service.common.RequestContext;
 import org.hypertrace.gateway.service.common.config.ScopeFilterConfigs;
 import org.hypertrace.gateway.service.common.converters.QueryRequestUtil;
 import org.hypertrace.gateway.service.common.util.QueryServiceClient;
-import org.hypertrace.gateway.service.entity.config.EntityIdColumnsConfigs;
+import org.hypertrace.gateway.service.entity.config.EntityIdColumnsConfig;
 import org.hypertrace.gateway.service.entity.config.LogConfig;
 import org.hypertrace.gateway.service.executor.QueryExecutorConfig;
 import org.hypertrace.gateway.service.executor.QueryExecutorServiceFactory;
@@ -70,7 +70,7 @@ public class EntityServiceInteractionRequestTest extends AbstractGatewayServiceT
   private QueryServiceClient queryServiceClient;
   private EntityQueryServiceClient entityQueryServiceClient;
   private AttributeMetadataProvider attributeMetadataProvider;
-  private EntityIdColumnsConfigs entityIdColumnsConfigs;
+  private EntityIdColumnsConfig entityIdColumnsConfig;
   private LogConfig logConfig;
   private ScopeFilterConfigs scopeFilterConfigs;
   private ExecutorService queryExecutor;
@@ -109,7 +109,7 @@ public class EntityServiceInteractionRequestTest extends AbstractGatewayServiceT
             + "  }\n"
             + "]";
     Config config = ConfigFactory.parseString(entityIdColumnConfigStr);
-    entityIdColumnsConfigs = EntityIdColumnsConfigs.fromConfig(config);
+    entityIdColumnsConfig = EntityIdColumnsConfig.fromConfig(config);
   }
 
   private void mock(AttributeMetadataProvider attributeMetadataProvider) {
@@ -825,7 +825,7 @@ public class EntityServiceInteractionRequestTest extends AbstractGatewayServiceT
             entityQueryServiceClient,
             null,
             attributeMetadataProvider,
-            entityIdColumnsConfigs,
+            entityIdColumnsConfig,
             scopeFilterConfigs,
             logConfig,
             queryExecutor);
@@ -904,7 +904,7 @@ public class EntityServiceInteractionRequestTest extends AbstractGatewayServiceT
             entityQueryServiceClient,
             null,
             attributeMetadataProvider,
-            entityIdColumnsConfigs,
+            entityIdColumnsConfig,
             scopeFilterConfigs,
             logConfig,
             queryExecutor);

@@ -26,7 +26,7 @@ import org.hypertrace.core.query.service.api.Row;
 import org.hypertrace.core.serviceframework.metrics.PlatformMetricsRegistry;
 import org.hypertrace.gateway.service.common.AttributeMetadataProvider;
 import org.hypertrace.gateway.service.common.RequestContext;
-import org.hypertrace.gateway.service.common.config.ScopeFilterConfigs;
+import org.hypertrace.gateway.service.common.config.GatewayServiceConfig;
 import org.hypertrace.gateway.service.common.converters.QueryAndGatewayDtoConverter;
 import org.hypertrace.gateway.service.common.transformer.RequestPreProcessor;
 import org.hypertrace.gateway.service.common.util.AttributeMetadataUtil;
@@ -63,16 +63,17 @@ public class TracesService {
   private Timer queryExecutionTimer;
 
   public TracesService(
+      GatewayServiceConfig gatewayServiceConfig,
       QueryServiceClient queryServiceClient,
       AttributeMetadataProvider attributeMetadataProvider,
-      ScopeFilterConfigs scopeFilterConfigs,
       ExecutorService queryExecutor) {
     this.queryServiceClient = queryServiceClient;
     this.attributeMetadataProvider = attributeMetadataProvider;
     this.queryExecutor = queryExecutor;
     this.requestValidator = new TracesRequestValidator();
     this.requestPreProcessor =
-        new RequestPreProcessor(attributeMetadataProvider, scopeFilterConfigs);
+        new RequestPreProcessor(
+            attributeMetadataProvider, gatewayServiceConfig.getScopeFilterConfigs());
     initMetrics();
   }
 

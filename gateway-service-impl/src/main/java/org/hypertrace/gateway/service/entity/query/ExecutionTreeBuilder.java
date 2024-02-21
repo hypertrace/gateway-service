@@ -1,12 +1,19 @@
 package org.hypertrace.gateway.service.entity.query;
 
+import static java.util.Collections.emptyList;
+import static java.util.Collections.emptyMap;
+import static java.util.Collections.unmodifiableList;
 import static org.hypertrace.core.attribute.service.v1.AttributeSource.EDS;
 import static org.hypertrace.core.attribute.service.v1.AttributeSource.QS;
 
 import com.google.common.annotations.VisibleForTesting;
+import java.util.ArrayList;
 import java.util.Collection;
+import java.util.Collections;
+import java.util.EnumMap;
 import java.util.List;
 import java.util.Map;
+import java.util.Map.Entry;
 import java.util.Optional;
 import java.util.Set;
 import java.util.stream.Collectors;
@@ -19,6 +26,7 @@ import org.hypertrace.gateway.service.common.util.TimeRangeFilterUtil;
 import org.hypertrace.gateway.service.entity.query.visitor.ExecutionContextBuilderVisitor;
 import org.hypertrace.gateway.service.entity.query.visitor.FilterOptimizingVisitor;
 import org.hypertrace.gateway.service.entity.query.visitor.PrintVisitor;
+import org.hypertrace.gateway.service.v1.common.Expression;
 import org.hypertrace.gateway.service.v1.common.Filter;
 import org.hypertrace.gateway.service.v1.common.Operator;
 import org.hypertrace.gateway.service.v1.common.OrderByExpression;
@@ -147,13 +155,19 @@ public class ExecutionTreeBuilder {
      * {@link FilterOptimizingVisitor} is needed to merge filters corresponding to the same source
      * into one {@link DataFetcherNode}, instead of having multiple {@link DataFetcherNode}s for
      * each filter
+     *
+     * <p>It is not needed for AND filter, since the filter tree is already optimised with a single
+     * data fetcher node for each source
      */
-    QueryNode optimizedFilterTree = filterTree.acceptVisitor(new FilterOptimizingVisitor());
-    if (LOG.isDebugEnabled()) {
-      LOG.debug("Optimized Filter Tree:{}", optimizedFilterTree.acceptVisitor(new PrintVisitor()));
+    boolean isAndFilter = executionContext.getExpressionContext().isAndFilter();
+    if (isAndFilter) {
+      filterTree = filterTree.acceptVisitor(new FilterOptimizingVisitor());
+      if (LOG.isDebugEnabled()) {
+        LOG.debug("Optimized Filter Tree:{}", filterTree.acceptVisitor(new PrintVisitor()));
+      }
     }
 
-    QueryNode executionTree = buildExecutionTree(executionContext, optimizedFilterTree);
+    QueryNode executionTree = buildExecutionTree(executionContext, filterTree);
     if (LOG.isDebugEnabled()) {
       LOG.debug("Execution Tree:{}", executionTree.acceptVisitor(new PrintVisitor()));
     }
@@ -264,7 +278,10 @@ public class ExecutionTreeBuilder {
             entitiesRequest.getStartTimeMillis(),
             entitiesRequest.getEndTimeMillis());
 
-    return buildFilterTree(entitiesRequest, timeRangeFilter);
+    boolean isAndFilter = executionContext.getExpressionContext().isAndFilter();
+    return isAndFilter
+        ? buildAndFilterTree(entitiesRequest)
+        : buildFilterTree(entitiesRequest, timeRangeFilter);
   }
 
   @VisibleForTesting
@@ -284,13 +301,7 @@ public class ExecutionTreeBuilder {
               .map(childFilter -> buildFilterTree(entitiesRequest, childFilter))
               .collect(Collectors.toList()));
     } else {
-      List<AttributeSource> sources =
-          attributeMetadataMap
-              .get(
-                  ExpressionReader.getAttributeIdFromAttributeSelection(filter.getLhs())
-                      .orElseThrow())
-              .getSourcesList();
-
+      List<AttributeSource> sources = getAttributeSources(filter.getLhs());
       // if the filter by and order by are from QS, pagination can be pushed down to QS
 
       // There will always be a DataFetcherNode for QS, because the results are always fetched
@@ -302,6 +313,115 @@ public class ExecutionTreeBuilder {
       }
 
       return new DataFetcherNode(sources.contains(QS) ? QS.name() : sources.get(0).name(), filter);
+    }
+  }
+
+  QueryNode buildAndFilterTree(EntitiesRequest entitiesRequest) {
+    // If the filter by and order by are from QS, pagination can be pushed down to QS
+    // Since the filter and order by are from QS, there won't be any filter on other
+    // sources
+    if (sourceSetsIfFilterAndOrderByAreFromSameSourceSets.contains(QS.name())) {
+      executionContext.setSortAndPaginationNodeAdded(true);
+      return createQsDataFetcherNodeWithLimitAndOffset(entitiesRequest);
+    }
+
+    Map<AttributeSource, Filter> sourceToAndFilterMap =
+        new EnumMap<>(buildSourceToAndFilterMap(entitiesRequest.getFilter()));
+
+    // qs node as the pivot node to fetch time range data
+    QueryNode qsNode =
+        new DataFetcherNode(
+            QS.name(), sourceToAndFilterMap.getOrDefault(QS, Filter.getDefaultInstance()));
+    // removing QS from the map, since we have a data fetcher node for QS
+    sourceToAndFilterMap.remove(QS);
+
+    // If there are no filter sources apart from QS
+    if (sourceToAndFilterMap.isEmpty()) {
+      return qsNode;
+    } else if (sourceToAndFilterMap.size() == 1) {
+      // if there is only one remaining filter source, we can push pagination down to the source
+      Map.Entry<AttributeSource, Filter> entry = sourceToAndFilterMap.entrySet().iterator().next();
+      AttributeSource source = entry.getKey();
+      Filter andFilter = entry.getValue();
+
+      Map<String, List<OrderByExpression>> sourceToOrderByExpressions =
+          executionContext.getExpressionContext().getSourceToOrderByExpressionMap();
+
+      // We should always fetch total when there is only one remaining filter source
+
+      // If the order by is on QS, or any other source (other than the remaining filter source), we
+      // can push pagination and total to the remaining source, but we would need a
+      // SortAndPaginateNode to sort the paginated results.
+      // SortAndPaginateNode would be added by later steps in the execution tree builder phase
+      boolean canPaginateOnSource =
+          !sourceToOrderByExpressions.containsKey(QS.name())
+              || (sourceToOrderByExpressions.containsKey(source.name())
+                  && sourceToOrderByExpressions.size() == 1);
+      if (canPaginateOnSource) {
+        executionContext.setSortAndPaginationNodeAdded(true);
+      }
+
+      return new DataFetcherNode(
+          source.name(),
+          andFilter,
+          entitiesRequest.getLimit(),
+          entitiesRequest.getOffset(),
+          sourceToOrderByExpressions.getOrDefault(source, emptyList()),
+          entitiesRequest.getFetchTotal(),
+          qsNode);
+    } else {
+      // if there are multiple filter sources
+      List<QueryNode> dataFetcherNodes = new ArrayList<>();
+      for (Map.Entry<AttributeSource, Filter> entry : sourceToAndFilterMap.entrySet()) {
+        AttributeSource source = entry.getKey();
+        Filter andFilter = entry.getValue();
+
+        dataFetcherNodes.add(new DataFetcherNode(source.name(), andFilter, qsNode));
+      }
+
+      return new AndNode(unmodifiableList(dataFetcherNodes));
+    }
+  }
+
+  private Map<AttributeSource, Filter> buildSourceToAndFilterMap(Filter filter) {
+    Operator operator = filter.getOperator();
+    if (operator == Operator.AND) {
+      return filter.getChildFilterList().stream()
+          .map(this::buildSourceToAndFilterMap)
+          .flatMap(map -> map.entrySet().stream())
+          .collect(
+              Collectors.toUnmodifiableMap(
+                  Entry::getKey,
+                  Entry::getValue,
+                  (value1, value2) ->
+                      Filter.newBuilder()
+                          .setOperator(Operator.AND)
+                          .addChildFilter(value1)
+                          .addChildFilter(value2)
+                          .build()));
+
+    } else if (operator == Operator.OR) {
+      return Collections.emptyMap();
+    } else {
+      List<AttributeSource> attributeSources = getAttributeSources(filter.getLhs());
+      if (attributeSources.isEmpty()) {
+        return emptyMap();
+      }
+
+      return attributeSources.contains(QS)
+          ? Map.of(QS, filter)
+          : Map.of(attributeSources.get(0), filter);
+    }
+  }
+
+  private boolean isAndFilter(Filter filter) {
+    Operator operator = filter.getOperator();
+    if (operator == Operator.AND) {
+      return filter.getChildFilterList().stream().allMatch(this::isAndFilter);
+    } else if (operator == Operator.OR) {
+      return false;
+    } else {
+      return true;
     }
   }
 
@@ -365,5 +485,13 @@ public class ExecutionTreeBuilder {
 
   private QueryNode createPaginateOnlyNode(QueryNode queryNode, EntitiesRequest entitiesRequest) {
     return new PaginateOnlyNode(queryNode, entitiesRequest.getLimit(), entitiesRequest.getOffset());
+  }
+
+  public List<AttributeSource> getAttributeSources(Expression expression) {
+    Set<String> attributeIds = ExpressionReader.extractAttributeIds(expression);
+    return attributeIds.stream()
+        .map(attributeId -> attributeMetadataMap.get(attributeId).getSourcesList())
+        .flatMap(Collection::stream)
+        .collect(Collectors.toUnmodifiableList());
   }
 }

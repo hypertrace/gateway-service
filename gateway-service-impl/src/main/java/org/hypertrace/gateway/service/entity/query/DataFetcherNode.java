@@ -19,13 +19,26 @@ public class DataFetcherNode implements QueryNode {
   private Integer limit;
   private Integer offset;
   private List<OrderByExpression> orderByExpressionList = Collections.emptyList();
-
   private final boolean canFetchTotal;
+
+  private final QueryNode childNode;
 
   public DataFetcherNode(String source, Filter filter) {
     this.source = source;
     this.filter = filter;
-    this.canFetchTotal = false; // total would be computed in memory
+    this.childNode = new NoOpNode();
+
+    // total would be computed in memory
+    this.canFetchTotal = false;
+  }
+
+  public DataFetcherNode(String source, Filter filter, QueryNode childNode) {
+    this.source = source;
+    this.filter = filter;
+    this.childNode = childNode;
+
+    // total would be computed in memory
+    this.canFetchTotal = false;
   }
 
   public DataFetcherNode(
@@ -40,6 +53,28 @@ public class DataFetcherNode implements QueryNode {
     this.limit = limit;
     this.offset = offset;
     this.orderByExpressionList = orderByExpressionList;
+    this.childNode = new NoOpNode();
+
+    boolean isPaginated = limit != null && offset != null;
+    // should only fetch total, if the pagination is pushed down to the data store
+    // and total has been requested by the client
+    this.canFetchTotal = isPaginated && canFetchTotal;
+  }
+
+  public DataFetcherNode(
+      String source,
+      Filter filter,
+      Integer limit,
+      Integer offset,
+      List<OrderByExpression> orderByExpressionList,
+      boolean canFetchTotal,
+      QueryNode childNode) {
+    this.source = source;
+    this.filter = filter;
+    this.limit = limit;
+    this.offset = offset;
+    this.orderByExpressionList = orderByExpressionList;
+    this.childNode = childNode;
 
     boolean isPaginated = limit != null && offset != null;
     // should only fetch total, if the pagination is pushed down to the data store
@@ -71,6 +106,10 @@ public class DataFetcherNode implements QueryNode {
     return canFetchTotal;
   }
 
+  public QueryNode getChildNode() {
+    return childNode;
+  }
+
   @Override
   public <R> R acceptVisitor(Visitor<R> v) {
     return v.visit(this);
@@ -90,8 +129,10 @@ public class DataFetcherNode implements QueryNode {
         + offset
         + ", orderByExpressionList="
         + orderByExpressionList
-        + ", fetchTotal="
+        + ", canFetchTotal="
         + canFetchTotal
+        + ", childNode="
+        + childNode
         + '}';
   }
 }

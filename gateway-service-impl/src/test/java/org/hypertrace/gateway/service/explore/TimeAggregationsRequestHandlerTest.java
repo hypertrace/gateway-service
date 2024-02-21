@@ -7,7 +7,7 @@ import org.hypertrace.gateway.service.common.AttributeMetadataProvider;
 import org.hypertrace.gateway.service.common.datafetcher.QueryServiceEntityFetcher;
 import org.hypertrace.gateway.service.common.util.QueryExpressionUtil;
 import org.hypertrace.gateway.service.common.util.QueryServiceClient;
-import org.hypertrace.gateway.service.entity.config.EntityIdColumnsConfigs;
+import org.hypertrace.gateway.service.entity.config.EntityIdColumnsConfig;
 import org.hypertrace.gateway.service.explore.entity.EntityServiceEntityFetcher;
 import org.hypertrace.gateway.service.v1.common.Expression;
 import org.hypertrace.gateway.service.v1.common.FunctionExpression;
@@ -69,7 +69,7 @@ public class TimeAggregationsRequestHandlerTest {
         new TimeAggregationsRequestHandler(
             mock(QueryServiceClient.class),
             mock(AttributeMetadataProvider.class),
-            mock(EntityIdColumnsConfigs.class),
+            mock(EntityIdColumnsConfig.class),
             mock(QueryServiceEntityFetcher.class),
             mock(EntityServiceEntityFetcher.class));
     List<OrderByExpression> orderByExpressions =
@@ -121,7 +121,7 @@ public class TimeAggregationsRequestHandlerTest {
         new TimeAggregationsRequestHandler(
             mock(QueryServiceClient.class),
             mock(AttributeMetadataProvider.class),
-            mock(EntityIdColumnsConfigs.class),
+            mock(EntityIdColumnsConfig.class),
             mock(QueryServiceEntityFetcher.class),
             mock(EntityServiceEntityFetcher.class));
     List<OrderByExpression> orderByExpressions =
