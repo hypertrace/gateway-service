@@ -160,7 +160,7 @@ public class ExecutionTreeBuilder {
      * data fetcher node for each source
      */
     boolean isAndFilter = executionContext.getExpressionContext().isAndFilter();
-    if (isAndFilter) {
+    if (!isAndFilter) {
       filterTree = filterTree.acceptVisitor(new FilterOptimizingVisitor());
       if (LOG.isDebugEnabled()) {
         LOG.debug("Optimized Filter Tree:{}", filterTree.acceptVisitor(new PrintVisitor()));
@@ -411,17 +411,6 @@ public class ExecutionTreeBuilder {
       return attributeSources.contains(QS)
           ? Map.of(QS, filter)
           : Map.of(attributeSources.get(0), filter);
-    }
-  }
-
-  private boolean isAndFilter(Filter filter) {
-    Operator operator = filter.getOperator();
-    if (operator == Operator.AND) {
-      return filter.getChildFilterList().stream().allMatch(this::isAndFilter);
-    } else if (operator == Operator.OR) {
-      return false;
-    } else {
-      return true;
     }
   }
 
