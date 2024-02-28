@@ -1,21 +1,10 @@
 apiVersion: v1
 kind: ConfigMap
 metadata:
-  name: {{ .Values.service.config.name }}
+  name: {{ .Values.configMap.name }}
   labels:
     release: {{ .Release.Name }}
 data:
-  application.conf: |-
-    entity.service.config = {
-      host = entity-service
-    }
-    query.service.config = {
-      host = query-service
-    }
-    attributes.service.config = {
-      host = attribute-service
-    }
-    
-    filter.entity.and.enabled = {{ .Values.service.config.gatewayServiceConfig.entityAndFilterEnabled }}
+  {{- toYaml .Values.configMap.data | nindent 2 }}
   
     
