@@ -31,7 +31,7 @@ import org.hypertrace.entity.query.service.v1.EntityQueryServiceGrpc.EntityQuery
 import org.hypertrace.gateway.service.common.AttributeMetadataProvider;
 import org.hypertrace.gateway.service.common.OrderByPercentileSizeSetter;
 import org.hypertrace.gateway.service.common.RequestContext;
-import org.hypertrace.gateway.service.common.config.ScopeFilterConfigs;
+import org.hypertrace.gateway.service.common.config.GatewayServiceConfig;
 import org.hypertrace.gateway.service.common.converters.Converter;
 import org.hypertrace.gateway.service.common.datafetcher.EntityDataServiceEntityFetcher;
 import org.hypertrace.gateway.service.common.datafetcher.EntityFetcherResponse;
@@ -43,8 +43,6 @@ import org.hypertrace.gateway.service.common.transformer.ResponsePostProcessor;
 import org.hypertrace.gateway.service.common.util.AttributeMetadataUtil;
 import org.hypertrace.gateway.service.common.util.QueryExpressionUtil;
 import org.hypertrace.gateway.service.common.util.QueryServiceClient;
-import org.hypertrace.gateway.service.entity.config.EntityIdColumnsConfigs;
-import org.hypertrace.gateway.service.entity.config.LogConfig;
 import org.hypertrace.gateway.service.entity.converter.EntityConverterModule;
 import org.hypertrace.gateway.service.entity.query.EntityExecutionContext;
 import org.hypertrace.gateway.service.entity.query.ExecutionTreeBuilder;
@@ -78,42 +76,40 @@ public class EntityService {
 
   private static final Logger LOG = LoggerFactory.getLogger(EntityService.class);
 
-  private static final UpdateEntityRequestValidator updateEntityRequestValidator =
+  private static final UpdateEntityRequestValidator UPDATE_ENTITY_REQUEST_VALIDATOR =
       new UpdateEntityRequestValidator();
   private static final BulkUpdateEntitiesRequestValidator BULK_UPDATE_ENTITIES_REQUEST_VALIDATOR =
       new BulkUpdateEntitiesRequestValidator();
+
+  private final GatewayServiceConfig gatewayServiceConfig;
   private final AttributeMetadataProvider metadataProvider;
-  private final EntityIdColumnsConfigs entityIdColumnsConfigs;
   private final ExecutorService queryExecutor;
   private final EntityInteractionsFetcher interactionsFetcher;
   private final RequestPreProcessor requestPreProcessor;
   private final ResponsePostProcessor responsePostProcessor;
   private final EdsEntityUpdater edsEntityUpdater;
   private final EntityQueryServiceBlockingStub eqsStub;
-  private final LogConfig logConfig;
   // Metrics
   private Timer queryBuildTimer;
   private Timer queryExecutionTimer;
 
   public EntityService(
+      GatewayServiceConfig gatewayServiceConfig,
       QueryServiceClient qsClient,
       EntityQueryServiceClient edsQueryServiceClient,
       final EntityQueryServiceBlockingStub eqsStub,
       AttributeMetadataProvider metadataProvider,
-      EntityIdColumnsConfigs entityIdColumnsConfigs,
-      ScopeFilterConfigs scopeFilterConfigs,
-      LogConfig logConfig,
       ExecutorService queryExecutor) {
+    this.gatewayServiceConfig = gatewayServiceConfig;
     this.metadataProvider = metadataProvider;
-    this.entityIdColumnsConfigs = entityIdColumnsConfigs;
     this.queryExecutor = queryExecutor;
     this.interactionsFetcher =
         new EntityInteractionsFetcher(qsClient, metadataProvider, queryExecutor);
-    this.requestPreProcessor = new RequestPreProcessor(metadataProvider, scopeFilterConfigs);
+    this.requestPreProcessor =
+        new RequestPreProcessor(metadataProvider, gatewayServiceConfig.getScopeFilterConfigs());
     this.responsePostProcessor = new ResponsePostProcessor();
     this.edsEntityUpdater = new EdsEntityUpdater(edsQueryServiceClient);
     this.eqsStub = eqsStub;
-    this.logConfig = logConfig;
 
     registerEntityFetchers(qsClient, edsQueryServiceClient);
     initMetrics();
@@ -125,11 +121,13 @@ public class EntityService {
     registry.registerEntityFetcher(
         AttributeSource.QS.name(),
         new QueryServiceEntityFetcher(
-            queryServiceClient, metadataProvider, entityIdColumnsConfigs));
+            queryServiceClient, metadataProvider, gatewayServiceConfig.getEntityIdColumnsConfig()));
     registry.registerEntityFetcher(
         AttributeSource.EDS.name(),
         new EntityDataServiceEntityFetcher(
-            edsQueryServiceClient, metadataProvider, entityIdColumnsConfigs));
+            edsQueryServiceClient,
+            metadataProvider,
+            gatewayServiceConfig.getEntityIdColumnsConfig()));
   }
 
   private void initMetrics() {
@@ -177,8 +175,8 @@ public class EntityService {
 
     EntityExecutionContext executionContext =
         new EntityExecutionContext(
+            gatewayServiceConfig,
             metadataProvider,
-            entityIdColumnsConfigs,
             entitiesRequestContext,
             preProcessedRequest.get());
     ExecutionTreeBuilder executionTreeBuilder = new ExecutionTreeBuilder(executionContext);
@@ -216,7 +214,7 @@ public class EntityService {
     results.forEach(e -> responseBuilder.addEntity(e.build()));
 
     long queryExecutionTime = Duration.between(start, Instant.now()).toMillis();
-    if (queryExecutionTime > logConfig.getQueryThresholdInMillis()) {
+    if (queryExecutionTime > gatewayServiceConfig.getLogConfig().getQueryThresholdInMillis()) {
       LOG.info(
           "Total query execution took: {}(ms) for request: {}",
           queryExecutionTime,
@@ -275,7 +273,7 @@ public class EntityService {
     Map<String, AttributeMetadata> attributeMetadataMap =
         metadataProvider.getAttributesMetadata(requestContext, request.getEntityType());
 
-    updateEntityRequestValidator.validate(request, attributeMetadataMap);
+    UPDATE_ENTITY_REQUEST_VALIDATOR.validate(request, attributeMetadataMap);
 
     UpdateExecutionContext updateExecutionContext =
         new UpdateExecutionContext(requestContext.getHeaders(), attributeMetadataMap);
@@ -352,7 +350,10 @@ public class EntityService {
 
     List<String> idAttributeIds =
         AttributeMetadataUtil.getIdAttributeIds(
-            metadataProvider, entityIdColumnsConfigs, requestContext, entityType);
+            metadataProvider,
+            gatewayServiceConfig.getEntityIdColumnsConfig(),
+            requestContext,
+            entityType);
 
     if (idAttributeIds.size() != 1) {
       LOG.error("Entity Type {} should have single ID Attribute", entityType);

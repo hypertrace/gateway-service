@@ -44,7 +44,7 @@ import org.hypertrace.gateway.service.common.util.QueryServiceClient;
 import org.hypertrace.gateway.service.entity.EntitiesRequestContext;
 import org.hypertrace.gateway.service.entity.EntitiesRequestValidator;
 import org.hypertrace.gateway.service.entity.EntityKey;
-import org.hypertrace.gateway.service.entity.config.EntityIdColumnsConfigs;
+import org.hypertrace.gateway.service.entity.config.EntityIdColumnsConfig;
 import org.hypertrace.gateway.service.v1.common.AggregatedMetricValue;
 import org.hypertrace.gateway.service.v1.common.FunctionExpression;
 import org.hypertrace.gateway.service.v1.common.FunctionType;
@@ -70,15 +70,15 @@ public class QueryServiceEntityFetcher implements IEntityFetcher {
   private final EntitiesRequestValidator entitiesRequestValidator = new EntitiesRequestValidator();
   private final QueryServiceClient queryServiceClient;
   private final AttributeMetadataProvider attributeMetadataProvider;
-  private final EntityIdColumnsConfigs entityIdColumnsConfigs;
+  private final EntityIdColumnsConfig entityIdColumnsConfig;
 
   public QueryServiceEntityFetcher(
       QueryServiceClient queryServiceClient,
       AttributeMetadataProvider attributeMetadataProvider,
-      EntityIdColumnsConfigs entityIdColumnsConfigs) {
+      EntityIdColumnsConfig entityIdColumnsConfig) {
     this.queryServiceClient = queryServiceClient;
     this.attributeMetadataProvider = attributeMetadataProvider;
-    this.entityIdColumnsConfigs = entityIdColumnsConfigs;
+    this.entityIdColumnsConfig = entityIdColumnsConfig;
   }
 
   @Override
@@ -95,7 +95,7 @@ public class QueryServiceEntityFetcher implements IEntityFetcher {
     List<String> entityIdAttributeIds =
         AttributeMetadataUtil.getIdAttributeIds(
             attributeMetadataProvider,
-            entityIdColumnsConfigs,
+            entityIdColumnsConfig,
             requestContext,
             entitiesRequest.getEntityType());
     List<org.hypertrace.gateway.service.v1.common.Expression> aggregates =
@@ -179,6 +179,7 @@ public class QueryServiceEntityFetcher implements IEntityFetcher {
         }
       }
     }
+
     return new EntityFetcherResponse(entityBuilders);
   }
 
@@ -352,7 +353,7 @@ public class QueryServiceEntityFetcher implements IEntityFetcher {
     List<String> idColumns =
         AttributeMetadataUtil.getIdAttributeIds(
             attributeMetadataProvider,
-            entityIdColumnsConfigs,
+            entityIdColumnsConfig,
             requestContext,
             entitiesRequest.getEntityType());
     String timeColumn =
@@ -525,7 +526,7 @@ public class QueryServiceEntityFetcher implements IEntityFetcher {
     List<String> entityIdAttributeIds =
         AttributeMetadataUtil.getIdAttributeIds(
             attributeMetadataProvider,
-            entityIdColumnsConfigs,
+            entityIdColumnsConfig,
             requestContext,
             entitiesRequest.getEntityType());
 

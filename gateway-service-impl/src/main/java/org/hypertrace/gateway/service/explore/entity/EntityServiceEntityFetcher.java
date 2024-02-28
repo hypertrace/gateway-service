@@ -25,7 +25,7 @@ import org.hypertrace.gateway.service.common.converters.EntityServiceAndGatewayS
 import org.hypertrace.gateway.service.common.util.AttributeMetadataUtil;
 import org.hypertrace.gateway.service.common.util.ExpressionReader;
 import org.hypertrace.gateway.service.common.util.MetricAggregationFunctionUtil;
-import org.hypertrace.gateway.service.entity.config.EntityIdColumnsConfigs;
+import org.hypertrace.gateway.service.entity.config.EntityIdColumnsConfig;
 import org.hypertrace.gateway.service.explore.ExploreRequestContext;
 import org.hypertrace.gateway.service.v1.common.FunctionExpression;
 import org.hypertrace.gateway.service.v1.common.Row;
@@ -37,15 +37,15 @@ public class EntityServiceEntityFetcher {
   private static final Logger LOGGER = LoggerFactory.getLogger(EntityServiceEntityFetcher.class);
   private static final int DEFAULT_ENTITY_REQUEST_LIMIT = 10_000;
   private final AttributeMetadataProvider attributeMetadataProvider;
-  private final EntityIdColumnsConfigs entityIdColumnsConfigs;
+  private final EntityIdColumnsConfig entityIdColumnsConfig;
   private final EntityQueryServiceClient entityQueryServiceClient;
 
   public EntityServiceEntityFetcher(
       AttributeMetadataProvider attributeMetadataProvider,
-      EntityIdColumnsConfigs entityIdColumnsConfigs,
+      EntityIdColumnsConfig entityIdColumnsConfig,
       EntityQueryServiceClient entityQueryServiceClient) {
     this.attributeMetadataProvider = attributeMetadataProvider;
-    this.entityIdColumnsConfigs = entityIdColumnsConfigs;
+    this.entityIdColumnsConfig = entityIdColumnsConfig;
     this.entityQueryServiceClient = entityQueryServiceClient;
   }
 
@@ -161,7 +161,7 @@ public class EntityServiceEntityFetcher {
 
     List<String> entityIdAttributeIds =
         AttributeMetadataUtil.getIdAttributeIds(
-            attributeMetadataProvider, entityIdColumnsConfigs, requestContext, entityType);
+            attributeMetadataProvider, entityIdColumnsConfig, requestContext, entityType);
     EntityQueryRequest.Builder builder =
         EntityQueryRequest.newBuilder()
             .setEntityType(entityType)

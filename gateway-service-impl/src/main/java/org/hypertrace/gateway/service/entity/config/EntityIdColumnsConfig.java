@@ -6,7 +6,7 @@ import java.util.List;
 import java.util.Map;
 import java.util.Optional;
 
-public class EntityIdColumnsConfigs {
+public class EntityIdColumnsConfig {
   private static final String ENTITY_ID_COLUMN_CONFIG = "entity.idcolumn.config";
   // Backwards compatibility.
   private static final String DOMAIN_OBJECT_CONFIG = "domainobject.config";
@@ -15,17 +15,17 @@ public class EntityIdColumnsConfigs {
 
   private final Map<String, String> scopeToKeyMap;
 
-  public static EntityIdColumnsConfigs fromConfig(Config config) {
+  public static EntityIdColumnsConfig fromConfig(Config config) {
     if (config.hasPath(ENTITY_ID_COLUMN_CONFIG)) {
       return fromConfigList(config.getConfigList(ENTITY_ID_COLUMN_CONFIG));
     } else if (config.hasPath(DOMAIN_OBJECT_CONFIG)) {
       return fromConfigList(config.getConfigList(DOMAIN_OBJECT_CONFIG));
     } else {
-      return new EntityIdColumnsConfigs(Map.of());
+      return new EntityIdColumnsConfig(Map.of());
     }
   }
 
-  private static EntityIdColumnsConfigs fromConfigList(List<? extends Config> configs) {
+  private static EntityIdColumnsConfig fromConfigList(List<? extends Config> configs) {
     ImmutableMap.Builder<String, String> scopeToKeyMapBuilder = ImmutableMap.builder();
     for (Config scopeConfig : configs) {
       String scope = scopeConfig.getString(SCOPE);
@@ -33,10 +33,10 @@ public class EntityIdColumnsConfigs {
       scopeToKeyMapBuilder.put(scope, key);
     }
 
-    return new EntityIdColumnsConfigs(scopeToKeyMapBuilder.build());
+    return new EntityIdColumnsConfig(scopeToKeyMapBuilder.build());
   }
 
-  public EntityIdColumnsConfigs(Map<String, String> scopeToKeyMap) {
+  public EntityIdColumnsConfig(Map<String, String> scopeToKeyMap) {
     this.scopeToKeyMap = scopeToKeyMap;
   }
 

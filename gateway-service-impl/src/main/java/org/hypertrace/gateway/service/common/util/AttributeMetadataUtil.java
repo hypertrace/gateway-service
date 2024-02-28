@@ -13,7 +13,7 @@ import org.hypertrace.core.attribute.service.v1.AttributeScope;
 import org.hypertrace.gateway.service.common.AttributeMetadataProvider;
 import org.hypertrace.gateway.service.common.RequestContext;
 import org.hypertrace.gateway.service.common.exp.UnknownScopeAndKeyForAttributeException;
-import org.hypertrace.gateway.service.entity.config.EntityIdColumnsConfigs;
+import org.hypertrace.gateway.service.entity.config.EntityIdColumnsConfig;
 import org.hypertrace.gateway.service.entity.config.TimestampConfigs;
 import org.hypertrace.gateway.service.v1.common.Expression;
 
@@ -41,17 +41,17 @@ public class AttributeMetadataUtil {
    * </pre>
    *
    * @param attributeMetadataProvider
-   * @param entityIdColumnsConfigs
+   * @param entityIdColumnsConfig
    * @param requestContext
    * @param entityType
    * @return List of columns(AttributeMetadata ids) used to identify the id of the entity.
    */
   public static List<String> getIdAttributeIds(
       AttributeMetadataProvider attributeMetadataProvider,
-      EntityIdColumnsConfigs entityIdColumnsConfigs,
+      EntityIdColumnsConfig entityIdColumnsConfig,
       RequestContext requestContext,
       String entityType) {
-    return entityIdColumnsConfigs.getIdKey(entityType).stream()
+    return entityIdColumnsConfig.getIdKey(entityType).stream()
         .map(
             idKey ->
                 attributeMetadataProvider.getAttributeMetadata(requestContext, entityType, idKey))

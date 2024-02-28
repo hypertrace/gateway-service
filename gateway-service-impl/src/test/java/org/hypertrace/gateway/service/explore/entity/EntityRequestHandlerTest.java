@@ -20,7 +20,7 @@ import org.hypertrace.gateway.service.common.datafetcher.QueryServiceEntityFetch
 import org.hypertrace.gateway.service.common.util.QueryServiceClient;
 import org.hypertrace.gateway.service.entity.EntitiesRequestContext;
 import org.hypertrace.gateway.service.entity.EntityKey;
-import org.hypertrace.gateway.service.entity.config.EntityIdColumnsConfigs;
+import org.hypertrace.gateway.service.entity.config.EntityIdColumnsConfig;
 import org.hypertrace.gateway.service.explore.ExploreRequestContext;
 import org.hypertrace.gateway.service.v1.common.ColumnIdentifier;
 import org.hypertrace.gateway.service.v1.common.Expression;
@@ -55,7 +55,7 @@ public class EntityRequestHandlerTest {
     this.entityRequestHandler =
         new EntityRequestHandler(
             attributeMetadataProvider,
-            mock(EntityIdColumnsConfigs.class),
+            mock(EntityIdColumnsConfig.class),
             mock(QueryServiceClient.class),
             queryServiceEntityFetcher,
             entityServiceEntityFetcher);

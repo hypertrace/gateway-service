@@ -40,7 +40,7 @@ import org.hypertrace.entity.query.service.v1.ValueType;
 import org.hypertrace.gateway.service.common.AttributeMetadataProvider;
 import org.hypertrace.gateway.service.common.converters.EntityServiceAndGatewayServiceConverter;
 import org.hypertrace.gateway.service.entity.EntitiesRequestContext;
-import org.hypertrace.gateway.service.entity.config.EntityIdColumnsConfigs;
+import org.hypertrace.gateway.service.entity.config.EntityIdColumnsConfig;
 import org.hypertrace.gateway.service.entity.config.TimestampConfigs;
 import org.hypertrace.gateway.service.v1.common.ColumnIdentifier;
 import org.hypertrace.gateway.service.v1.common.Expression;
@@ -62,7 +62,7 @@ public class EntityDataServiceEntityFetcherTest {
   private EntityQueryServiceClient entityQueryServiceClient;
   private AttributeMetadataProvider attributeMetadataProvider;
   private EntityDataServiceEntityFetcher entityDataServiceEntityFetcher;
-  private EntityIdColumnsConfigs entityIdColumnsConfigs;
+  private EntityIdColumnsConfig entityIdColumnsConfig;
 
   @BeforeEach
   public void setup() {
@@ -70,12 +70,12 @@ public class EntityDataServiceEntityFetcherTest {
     attributeMetadataProvider = mock(AttributeMetadataProvider.class);
     mockAttributeMetadataProvider(AttributeScope.API.name());
 
-    entityIdColumnsConfigs = mock(EntityIdColumnsConfigs.class);
-    when(entityIdColumnsConfigs.getIdKey("API")).thenReturn(Optional.of("id"));
+    entityIdColumnsConfig = mock(EntityIdColumnsConfig.class);
+    when(entityIdColumnsConfig.getIdKey("API")).thenReturn(Optional.of("id"));
 
     entityDataServiceEntityFetcher =
         new EntityDataServiceEntityFetcher(
-            entityQueryServiceClient, attributeMetadataProvider, entityIdColumnsConfigs);
+            entityQueryServiceClient, attributeMetadataProvider, entityIdColumnsConfig);
   }
 
   @Test

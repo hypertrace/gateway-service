@@ -18,10 +18,10 @@ import org.hypertrace.gateway.service.EntityTypesProvider;
 import org.hypertrace.gateway.service.common.AttributeMetadataProvider;
 import org.hypertrace.gateway.service.common.ExpressionContext;
 import org.hypertrace.gateway.service.common.RequestContext;
-import org.hypertrace.gateway.service.common.config.ScopeFilterConfigs;
+import org.hypertrace.gateway.service.common.config.GatewayServiceConfig;
 import org.hypertrace.gateway.service.common.datafetcher.QueryServiceEntityFetcher;
 import org.hypertrace.gateway.service.common.util.QueryServiceClient;
-import org.hypertrace.gateway.service.entity.config.EntityIdColumnsConfigs;
+import org.hypertrace.gateway.service.entity.config.EntityIdColumnsConfig;
 import org.hypertrace.gateway.service.explore.entity.EntityRequestHandler;
 import org.hypertrace.gateway.service.explore.entity.EntityServiceEntityFetcher;
 import org.hypertrace.gateway.service.v1.explore.ExploreRequest;
@@ -29,6 +29,7 @@ import org.hypertrace.gateway.service.v1.explore.ExploreResponse;
 
 public class ExploreService {
 
+  private final GatewayServiceConfig gatewayServiceConfig;
   private final AttributeMetadataProvider attributeMetadataProvider;
   private final ExploreRequestValidator exploreRequestValidator = new ExploreRequestValidator();
 
@@ -36,37 +37,39 @@ public class ExploreService {
   private final TimeAggregationsRequestHandler timeAggregationsRequestHandler;
   private final TimeAggregationsWithGroupByRequestHandler timeAggregationsWithGroupByRequestHandler;
   private final EntityRequestHandler entityRequestHandler;
-  private final ScopeFilterConfigs scopeFilterConfigs;
   private final EntityTypesProvider entityTypesProvider;
 
   private Timer queryExecutionTimer;
 
   public ExploreService(
+      GatewayServiceConfig gatewayServiceConfig,
       QueryServiceClient queryServiceClient,
       EntityQueryServiceClient entityQueryServiceClient,
       AttributeMetadataProvider attributeMetadataProvider,
-      ScopeFilterConfigs scopeFiltersConfig,
-      EntityIdColumnsConfigs entityIdColumnsConfigs,
       EntityTypesProvider entityTypesProvider) {
+    this.gatewayServiceConfig = gatewayServiceConfig;
+    EntityIdColumnsConfig entityIdColumnsConfig = gatewayServiceConfig.getEntityIdColumnsConfig();
     QueryServiceEntityFetcher queryServiceEntityFetcher =
         new QueryServiceEntityFetcher(
-            queryServiceClient, attributeMetadataProvider, entityIdColumnsConfigs);
+            queryServiceClient, attributeMetadataProvider, entityIdColumnsConfig);
     EntityServiceEntityFetcher entityServiceEntityFetcher =
         new EntityServiceEntityFetcher(
-            attributeMetadataProvider, entityIdColumnsConfigs, entityQueryServiceClient);
+            attributeMetadataProvider,
+            gatewayServiceConfig.getEntityIdColumnsConfig(),
+            entityQueryServiceClient);
     this.attributeMetadataProvider = attributeMetadataProvider;
     this.normalRequestHandler =
         new RequestHandler(
             queryServiceClient,
             attributeMetadataProvider,
-            entityIdColumnsConfigs,
+            entityIdColumnsConfig,
             queryServiceEntityFetcher,
             entityServiceEntityFetcher);
     this.timeAggregationsRequestHandler =
         new TimeAggregationsRequestHandler(
             queryServiceClient,
             attributeMetadataProvider,
-            entityIdColumnsConfigs,
+            entityIdColumnsConfig,
             queryServiceEntityFetcher,
             entityServiceEntityFetcher);
     this.timeAggregationsWithGroupByRequestHandler =
@@ -75,11 +78,10 @@ public class ExploreService {
     this.entityRequestHandler =
         new EntityRequestHandler(
             attributeMetadataProvider,
-            entityIdColumnsConfigs,
+            entityIdColumnsConfig,
             queryServiceClient,
             queryServiceEntityFetcher,
             entityServiceEntityFetcher);
-    this.scopeFilterConfigs = scopeFiltersConfig;
     this.entityTypesProvider = entityTypesProvider;
     initMetrics();
   }
@@ -101,11 +103,13 @@ public class ExploreService {
       request =
           ExploreRequest.newBuilder(request)
               .setFilter(
-                  scopeFilterConfigs.createScopeFilter(
-                      request.getContext(),
-                      request.getFilter(),
-                      attributeMetadataProvider,
-                      exploreRequestContext))
+                  gatewayServiceConfig
+                      .getScopeFilterConfigs()
+                      .createScopeFilter(
+                          request.getContext(),
+                          request.getFilter(),
+                          attributeMetadataProvider,
+                          exploreRequestContext))
               .build();
       ExploreRequestContext newExploreRequestContext =
           new ExploreRequestContext(requestContext.getGrpcContext(), request);
@@ -147,6 +151,7 @@ public class ExploreService {
         && !request.getGroupByList().isEmpty()) {
       ExpressionContext expressionContext =
           new ExpressionContext(
+              gatewayServiceConfig,
               attributeMetadataMap,
               request.getFilter(),
               request.getSelectionList(),

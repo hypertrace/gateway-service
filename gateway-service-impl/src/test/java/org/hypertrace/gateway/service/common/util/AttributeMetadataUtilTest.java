@@ -11,7 +11,7 @@ import org.hypertrace.core.attribute.service.v1.AttributeMetadata;
 import org.hypertrace.core.attribute.service.v1.AttributeScope;
 import org.hypertrace.gateway.service.common.AttributeMetadataProvider;
 import org.hypertrace.gateway.service.common.RequestContext;
-import org.hypertrace.gateway.service.entity.config.EntityIdColumnsConfigs;
+import org.hypertrace.gateway.service.entity.config.EntityIdColumnsConfig;
 import org.hypertrace.gateway.service.v1.common.DomainEntityType;
 import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.BeforeEach;
@@ -19,16 +19,16 @@ import org.junit.jupiter.api.Test;
 import org.mockito.Mock;
 
 public class AttributeMetadataUtilTest {
-  @Mock private EntityIdColumnsConfigs entityIdColumnsConfigs;
+  @Mock private EntityIdColumnsConfig entityIdColumnsConfig;
 
   @BeforeEach
   public void setup() {
-    entityIdColumnsConfigs = mock(EntityIdColumnsConfigs.class);
+    entityIdColumnsConfig = mock(EntityIdColumnsConfig.class);
   }
 
   @Test
   public void testIdAttributesNotInEntityIdColumnsConfig() {
-    when(entityIdColumnsConfigs.getIdKey("API")).thenReturn(Optional.of("apiId"));
+    when(entityIdColumnsConfig.getIdKey("API")).thenReturn(Optional.of("apiId"));
 
     AttributeMetadataProvider provider = mock(AttributeMetadataProvider.class);
     String entityType = DomainEntityType.SERVICE.name();
@@ -36,12 +36,12 @@ public class AttributeMetadataUtilTest {
     Assertions.assertEquals(
         List.of(),
         AttributeMetadataUtil.getIdAttributeIds(
-            provider, entityIdColumnsConfigs, mock(RequestContext.class), entityType));
+            provider, entityIdColumnsConfig, mock(RequestContext.class), entityType));
   }
 
   @Test
   public void testApiIdAttributeInEntityIdColumnsConfig() {
-    when(entityIdColumnsConfigs.getIdKey("API")).thenReturn(Optional.of("apiId"));
+    when(entityIdColumnsConfig.getIdKey("API")).thenReturn(Optional.of("apiId"));
     AttributeMetadataProvider provider = mock(AttributeMetadataProvider.class);
     String entityType = DomainEntityType.API.name();
     when(provider.getAttributeMetadata(
@@ -51,14 +51,14 @@ public class AttributeMetadataUtilTest {
     Assertions.assertEquals(
         List.of("API.apiId"),
         AttributeMetadataUtil.getIdAttributeIds(
-            provider, entityIdColumnsConfigs, mock(RequestContext.class), entityType));
+            provider, entityIdColumnsConfig, mock(RequestContext.class), entityType));
   }
 
   @Test
   public void testKnownEntitiesIdAttributesInEntityIdColumnsConfig() {
-    when(entityIdColumnsConfigs.getIdKey("API")).thenReturn(Optional.of("apiId"));
-    when(entityIdColumnsConfigs.getIdKey("SERVICE")).thenReturn(Optional.of("id"));
-    when(entityIdColumnsConfigs.getIdKey("BACKEND")).thenReturn(Optional.of("id"));
+    when(entityIdColumnsConfig.getIdKey("API")).thenReturn(Optional.of("apiId"));
+    when(entityIdColumnsConfig.getIdKey("SERVICE")).thenReturn(Optional.of("id"));
+    when(entityIdColumnsConfig.getIdKey("BACKEND")).thenReturn(Optional.of("id"));
 
     AttributeMetadataProvider provider = mock(AttributeMetadataProvider.class);
     when(provider.getAttributeMetadata(
@@ -75,21 +75,21 @@ public class AttributeMetadataUtilTest {
         List.of("API.apiId"),
         AttributeMetadataUtil.getIdAttributeIds(
             provider,
-            entityIdColumnsConfigs,
+            entityIdColumnsConfig,
             mock(RequestContext.class),
             DomainEntityType.API.name()));
     Assertions.assertEquals(
         List.of("SERVICE.id"),
         AttributeMetadataUtil.getIdAttributeIds(
             provider,
-            entityIdColumnsConfigs,
+            entityIdColumnsConfig,
             mock(RequestContext.class),
             DomainEntityType.SERVICE.name()));
     Assertions.assertEquals(
         List.of("BACKEND.id"),
         AttributeMetadataUtil.getIdAttributeIds(
             provider,
-            entityIdColumnsConfigs,
+            entityIdColumnsConfig,
             mock(RequestContext.class),
             DomainEntityType.BACKEND.name()));
 
@@ -98,7 +98,7 @@ public class AttributeMetadataUtilTest {
         List.of(),
         AttributeMetadataUtil.getIdAttributeIds(
             provider,
-            entityIdColumnsConfigs,
+            entityIdColumnsConfig,
             mock(RequestContext.class),
             DomainEntityType.NAMESPACE.name()));
   }

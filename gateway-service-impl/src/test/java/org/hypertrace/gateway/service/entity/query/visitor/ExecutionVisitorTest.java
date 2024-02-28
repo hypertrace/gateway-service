@@ -725,7 +725,8 @@ public class ExecutionVisitorTest {
     when(queryServiceEntityFetcher.getEntities(
             entitiesRequestContext, entitiesRequestForAttributes))
         .thenReturn(attributesResponse);
-    when(queryServiceEntityFetcher.getTotal(eq(entitiesRequestContext), eq(entitiesRequest)))
+    when(queryServiceEntityFetcher.getTotal(
+            eq(entitiesRequestContext), eq(entitiesRequestForAttributes)))
         .thenReturn(100L);
     when(queryServiceEntityFetcher.getEntities(
             entitiesRequestContext, entitiesRequestForMetricAggregation))
