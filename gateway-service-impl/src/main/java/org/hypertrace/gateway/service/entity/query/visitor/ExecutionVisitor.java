@@ -123,10 +123,8 @@ public class ExecutionVisitor implements Visitor<EntityResponse> {
 
     EntityResponse childNodeResponse = dataFetcherNode.getChildNode().acceptVisitor(this);
     EntityFetcherResponse childEntityFetcherResponse = null;
-    Filter childFilter;
-    if (childNode instanceof NoOpNode) {
-      childFilter = Filter.getDefaultInstance();
-    } else {
+    Filter childFilter = null;
+    if (!(childNode instanceof NoOpNode)) {
       // Construct the filter from the child nodes result
       childEntityFetcherResponse = childNodeResponse.getEntityFetcherResponse();
       childFilter = constructFilterFromChildNodesResult(childEntityFetcherResponse);
@@ -142,6 +140,15 @@ public class ExecutionVisitor implements Visitor<EntityResponse> {
             entitiesRequest.getEntityType(),
             executionContext.getTimestampAttributeId());
 
+    Filter entitiesRequestFilter =
+        childFilter != null
+            ? Filter.newBuilder()
+                .setOperator(Operator.AND)
+                .addChildFilter(dataFetcherNode.getFilter())
+                .addChildFilter(childFilter)
+                .build()
+            : dataFetcherNode.getFilter();
+
     EntitiesRequest.Builder requestBuilder =
         EntitiesRequest.newBuilder(entitiesRequest)
             .clearSelection()
@@ -155,12 +162,7 @@ public class ExecutionVisitor implements Visitor<EntityResponse> {
                     .getExpressionContext()
                     .getSourceToSelectionExpressionMap()
                     .getOrDefault(source, executionContext.getEntityIdExpressions()))
-            .setFilter(
-                Filter.newBuilder()
-                    .setOperator(Operator.AND)
-                    .addChildFilter(dataFetcherNode.getFilter())
-                    .addChildFilter(childFilter)
-                    .build());
+            .setFilter(entitiesRequestFilter);
 
     if (dataFetcherNode.getLimit() != null) {
       requestBuilder.setLimit(dataFetcherNode.getLimit());

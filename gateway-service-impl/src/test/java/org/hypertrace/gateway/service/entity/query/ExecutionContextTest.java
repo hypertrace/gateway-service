@@ -22,6 +22,7 @@ import org.hypertrace.core.attribute.service.v1.AttributeSource;
 import org.hypertrace.gateway.service.common.AttributeMetadataProvider;
 import org.hypertrace.gateway.service.common.EntitiesRequestAndResponseUtils;
 import org.hypertrace.gateway.service.common.RequestContext;
+import org.hypertrace.gateway.service.common.config.GatewayServiceConfig;
 import org.hypertrace.gateway.service.entity.EntitiesRequestContext;
 import org.hypertrace.gateway.service.entity.config.EntityIdColumnsConfig;
 import org.hypertrace.gateway.service.v1.common.Expression;
@@ -47,12 +48,15 @@ class ExecutionContextTest {
 
   @Mock private AttributeMetadataProvider attributeMetadataProvider;
   @Mock private EntityIdColumnsConfig entityIdColumnsConfig;
+  @Mock private GatewayServiceConfig gatewayServiceConfig;
   private EntitiesRequestContext entitiesRequestContext;
 
   @BeforeEach
   public void setup() {
     attributeMetadataProvider = mock(AttributeMetadataProvider.class);
     entityIdColumnsConfig = mock(EntityIdColumnsConfig.class);
+    gatewayServiceConfig = mock(GatewayServiceConfig.class);
+    when(gatewayServiceConfig.getEntityIdColumnsConfig()).thenReturn(entityIdColumnsConfig);
     when(attributeMetadataProvider.getAttributesMetadata(
             any(RequestContext.class), eq(AttributeScope.API.name())))
         .thenReturn(attributeSources);
@@ -82,8 +86,8 @@ class ExecutionContextTest {
         EntitiesRequest.newBuilder().setEntityType("API").setFilter(filter).build();
     EntityExecutionContext executionContext =
         new EntityExecutionContext(
+            gatewayServiceConfig,
             attributeMetadataProvider,
-            entityIdColumnsConfig,
             entitiesRequestContext,
             entitiesRequest);
 
@@ -119,8 +123,8 @@ class ExecutionContextTest {
         EntitiesRequest.newBuilder().setEntityType("API").addAllSelection(selections).build();
     EntityExecutionContext executionContext =
         new EntityExecutionContext(
+            gatewayServiceConfig,
             attributeMetadataProvider,
-            entityIdColumnsConfig,
             entitiesRequestContext,
             entitiesRequest);
 
@@ -166,8 +170,8 @@ class ExecutionContextTest {
         EntitiesRequest.newBuilder().setEntityType("API").addAllSelection(selections).build();
     EntityExecutionContext executionContext =
         new EntityExecutionContext(
+            gatewayServiceConfig,
             attributeMetadataProvider,
-            entityIdColumnsConfig,
             entitiesRequestContext,
             entitiesRequest);
 
@@ -217,8 +221,8 @@ class ExecutionContextTest {
         EntitiesRequest.newBuilder().setEntityType("API").addAllSelection(selections).build();
     EntityExecutionContext executionContext =
         new EntityExecutionContext(
+            gatewayServiceConfig,
             attributeMetadataProvider,
-            entityIdColumnsConfig,
             entitiesRequestContext,
             entitiesRequest);
 

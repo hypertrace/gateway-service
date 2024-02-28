@@ -57,6 +57,7 @@ import org.hypertrace.gateway.service.AbstractGatewayServiceTest;
 import org.hypertrace.gateway.service.common.AttributeMetadataProvider;
 import org.hypertrace.gateway.service.common.QueryServiceRequestAndResponseUtils;
 import org.hypertrace.gateway.service.common.RequestContext;
+import org.hypertrace.gateway.service.common.config.GatewayServiceConfig;
 import org.hypertrace.gateway.service.common.config.ScopeFilterConfigs;
 import org.hypertrace.gateway.service.common.util.QueryServiceClient;
 import org.hypertrace.gateway.service.entity.config.EntityIdColumnsConfig;
@@ -92,6 +93,8 @@ public class EntityServiceTest extends AbstractGatewayServiceTest {
   private AttributeMetadataProvider attributeMetadataProvider;
   private EntityIdColumnsConfig entityIdColumnsConfig;
   private LogConfig logConfig;
+
+  private GatewayServiceConfig gatewayServiceConfig;
   private ExecutorService queryExecutor;
 
   @BeforeEach
@@ -105,6 +108,10 @@ public class EntityServiceTest extends AbstractGatewayServiceTest {
     mock(attributeMetadataProvider);
     logConfig = Mockito.mock(LogConfig.class);
     when(logConfig.getQueryThresholdInMillis()).thenReturn(1500L);
+    gatewayServiceConfig = Mockito.mock(GatewayServiceConfig.class);
+    when(gatewayServiceConfig.getEntityIdColumnsConfig()).thenReturn(entityIdColumnsConfig);
+    when(gatewayServiceConfig.getLogConfig()).thenReturn(logConfig);
+    when(gatewayServiceConfig.isEntityAndFilterEnabled()).thenReturn(false);
     queryExecutor =
         QueryExecutorServiceFactory.buildExecutorService(
             QueryExecutorConfig.from(this.getConfig()));
@@ -303,15 +310,14 @@ public class EntityServiceTest extends AbstractGatewayServiceTest {
                 .iterator());
 
     ScopeFilterConfigs scopeFilterConfigs = new ScopeFilterConfigs(ConfigFactory.empty());
+    when(gatewayServiceConfig.getScopeFilterConfigs()).thenReturn(scopeFilterConfigs);
     EntityService entityService =
         new EntityService(
+            gatewayServiceConfig,
             queryServiceClient,
             entityQueryServiceClient,
             null,
             attributeMetadataProvider,
-            entityIdColumnsConfig,
-            scopeFilterConfigs,
-            logConfig,
             queryExecutor);
     EntitiesResponse response =
         entityService.getEntities(
@@ -342,15 +348,14 @@ public class EntityServiceTest extends AbstractGatewayServiceTest {
                         .build())
                 .iterator());
     ScopeFilterConfigs scopeFilterConfigs = new ScopeFilterConfigs(ConfigFactory.empty());
+    when(gatewayServiceConfig.getScopeFilterConfigs()).thenReturn(scopeFilterConfigs);
     EntityService entityService =
         new EntityService(
+            gatewayServiceConfig,
             queryServiceClient,
             entityQueryServiceClient,
             null,
             attributeMetadataProvider,
-            entityIdColumnsConfig,
-            scopeFilterConfigs,
-            logConfig,
             queryExecutor);
     EntitiesRequest entitiesRequest =
         EntitiesRequest.newBuilder()
@@ -483,15 +488,16 @@ public class EntityServiceTest extends AbstractGatewayServiceTest {
     final RequestContext requestContext =
         new RequestContext(
             org.hypertrace.core.grpcutils.context.RequestContext.forTenantId(TENANT_ID));
+    ScopeFilterConfigs scopeFilterConfigs = new ScopeFilterConfigs(ConfigFactory.empty());
+    when(gatewayServiceConfig.getScopeFilterConfigs()).thenReturn(scopeFilterConfigs);
+
     final EntityService entityService =
         new EntityService(
+            gatewayServiceConfig,
             queryServiceClient,
             entityQueryServiceClient,
             entityQueryStub,
             attributeMetadataProvider,
-            entityIdColumnsConfig,
-            new ScopeFilterConfigs(ConfigFactory.empty()),
-            logConfig,
             queryExecutor);
 
     final BulkUpdateAllMatchingEntitiesRequest request =

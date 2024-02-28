@@ -159,6 +159,8 @@ public class ExecutionTreeBuilder {
      * <p>It is not needed for AND filter, since the filter tree is already optimised with a single
      * data fetcher node for each source
      */
+
+    // TODO: Can be extended to OR filter in future
     boolean isAndFilter = executionContext.getExpressionContext().isAndFilter();
     if (!isAndFilter) {
       filterTree = filterTree.acceptVisitor(new FilterOptimizingVisitor());
@@ -316,8 +318,10 @@ public class ExecutionTreeBuilder {
     }
   }
 
+  // filters and order by on QS, but you can still have selection on EDS
   QueryNode buildAndFilterTree(EntitiesRequest entitiesRequest) {
-    // If the filter by and order by are from QS, pagination can be pushed down to QS
+    // If the filter by and order by are from QS (and selections are on other sources), pagination
+    // can be pushed down to QS
     // Since the filter and order by are from QS, there won't be any filter on other
     // sources
     if (sourceSetsIfFilterAndOrderByAreFromSameSourceSets.contains(QS.name())) {

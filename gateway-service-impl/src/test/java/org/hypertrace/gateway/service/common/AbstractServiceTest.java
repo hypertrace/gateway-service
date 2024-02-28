@@ -35,6 +35,7 @@ import org.hypertrace.core.query.service.api.QueryRequest;
 import org.hypertrace.core.query.service.api.ResultSetChunk;
 import org.hypertrace.entity.query.service.client.EntityQueryServiceClient;
 import org.hypertrace.gateway.service.EntityTypesProvider;
+import org.hypertrace.gateway.service.common.config.GatewayServiceConfig;
 import org.hypertrace.gateway.service.common.config.ScopeFilterConfigs;
 import org.hypertrace.gateway.service.common.util.QueryServiceClient;
 import org.hypertrace.gateway.service.entity.config.EntityIdColumnsConfig;
@@ -42,6 +43,7 @@ import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.MethodSource;
+import org.mockito.Mock;
 import org.mockito.stubbing.Answer;
 
 public abstract class AbstractServiceTest<
@@ -62,6 +64,7 @@ public abstract class AbstractServiceTest<
   private static ScopeFilterConfigs scopeFilterConfigs;
   private static EntityTypesProvider entityTypesProvider;
   private static EntityIdColumnsConfig entityIdColumnsConfig;
+  @Mock private static GatewayServiceConfig gatewayServiceConfig;
 
   @BeforeAll
   public static void setUp() throws IOException {
@@ -83,6 +86,9 @@ public abstract class AbstractServiceTest<
     Config config = ConfigFactory.parseString(scopeFiltersConfig);
     scopeFilterConfigs = new ScopeFilterConfigs(config);
     entityIdColumnsConfig = new EntityIdColumnsConfig(Collections.emptyMap());
+    gatewayServiceConfig = mock(GatewayServiceConfig.class);
+    when(gatewayServiceConfig.getEntityIdColumnsConfig()).thenReturn(entityIdColumnsConfig);
+    when(gatewayServiceConfig.getScopeFilterConfigs()).thenReturn(scopeFilterConfigs);
     entityTypesProvider = mock(EntityTypesProvider.class);
   }
 
@@ -161,12 +167,11 @@ public abstract class AbstractServiceTest<
     TGatewayServiceRequestType testRequest = readGatewayServiceRequest(fileName);
     TGatewayServiceResponseType actualResponse =
         executeApi(
+            gatewayServiceConfig,
             testRequest,
             queryServiceClient,
             entityQueryServiceClient,
             attributeMetadataProvider,
-            scopeFilterConfigs,
-            entityIdColumnsConfig,
             entityTypesProvider);
     TGatewayServiceResponseType expectedResponse = readGatewayServiceResponse(fileName);
 
@@ -284,11 +289,10 @@ public abstract class AbstractServiceTest<
   protected abstract GeneratedMessageV3.Builder getGatewayServiceResponseBuilder();
 
   protected abstract TGatewayServiceResponseType executeApi(
+      GatewayServiceConfig gatewayServiceConfig,
       TGatewayServiceRequestType request,
       QueryServiceClient queryServiceClient,
       EntityQueryServiceClient entityQueryServiceClient,
       AttributeMetadataProvider attributeMetadataProvider,
-      ScopeFilterConfigs scopeFilterConfigs,
-      EntityIdColumnsConfig entityIdColumnsConfig,
       EntityTypesProvider entityTypesProvider);
 }
