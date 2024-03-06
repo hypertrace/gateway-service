@@ -11,6 +11,7 @@ import java.util.ArrayList;
 import java.util.Collection;
 import java.util.Collections;
 import java.util.EnumMap;
+import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Map.Entry;
@@ -330,7 +331,7 @@ public class ExecutionTreeBuilder {
     }
 
     Map<AttributeSource, Filter> sourceToAndFilterMap =
-        new EnumMap<>(buildSourceToAndFilterMap(entitiesRequest.getFilter()));
+        new HashMap<>(buildSourceToAndFilterMap(entitiesRequest.getFilter()));
 
     // qs node as the pivot node to fetch time range data
     QueryNode qsNode =
