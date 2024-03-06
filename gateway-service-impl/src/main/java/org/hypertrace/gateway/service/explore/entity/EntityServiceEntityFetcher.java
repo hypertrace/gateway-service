@@ -205,12 +205,18 @@ public class EntityServiceEntityFetcher {
 
   private Filter.Builder buildFilter(
       ExploreRequest exploreRequest, List<String> entityIdAttributeIds, Set<String> entityIds) {
+    if (org.hypertrace.gateway.service.v1.common.Filter.getDefaultInstance()
+        .equals(exploreRequest.getFilter())) {
+      return Filter.newBuilder();
+    }
+
     Builder filterBuilder =
         Filter.newBuilder()
             .setOperator(Operator.AND)
             .addChildFilter(
                 EntityServiceAndGatewayServiceConverter.convertToEntityServiceFilter(
                     exploreRequest.getFilter()));
+
     if (entityIds.isEmpty()) {
       return filterBuilder;
     }
