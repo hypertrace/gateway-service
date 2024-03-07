@@ -493,6 +493,10 @@ public class QueryAndGatewayDtoConverter {
       List<String> entityIdAttributes,
       org.hypertrace.gateway.service.v1.common.Filter providedFilter) {
 
+    if (entityIds.isEmpty()) {
+      return Filter.getDefaultInstance();
+    }
+
     Filter.Builder compositeFilter = Filter.newBuilder().setOperator(Operator.AND);
     Filter convertedProvidedFilter =
         isNonDefaultFilter(providedFilter)

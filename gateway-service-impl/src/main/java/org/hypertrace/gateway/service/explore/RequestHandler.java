@@ -88,16 +88,21 @@ public class RequestHandler implements RequestHandlerWithSorting {
   @Override
   public ExploreResponse.Builder handleRequest(
       ExploreRequestContext requestContext, ExploreRequest request) {
-    QueryRequest queryRequest =
+    Optional<QueryRequest> maybeQueryRequest =
         buildQueryRequest(requestContext, request, attributeMetadataProvider);
 
+    if (maybeQueryRequest.isEmpty()) {
+      return ExploreResponse.newBuilder();
+    }
+
+    QueryRequest queryRequest = maybeQueryRequest.get();
     Iterator<ResultSetChunk> resultSetChunkIterator = executeQuery(requestContext, queryRequest);
 
     return handleQueryServiceResponse(
         request, requestContext, resultSetChunkIterator, requestContext, attributeMetadataProvider);
   }
 
-  QueryRequest buildQueryRequest(
+  Optional<QueryRequest> buildQueryRequest(
       ExploreRequestContext requestContext,
       ExploreRequest request,
       AttributeMetadataProvider attributeMetadataProvider) {
@@ -118,7 +123,13 @@ public class RequestHandler implements RequestHandlerWithSorting {
               .orElse(request.getFilter());
     }
 
+    if (entityIds.isEmpty()) {
+      return Optional.empty();
+    }
+
     QueryRequest.Builder builder = QueryRequest.newBuilder();
+
+
     // 1. Add selections. All selections should either be only column or only function, never both.
     // The validator should catch this.
     List<Expression> aggregatedSelections =
@@ -160,7 +171,7 @@ public class RequestHandler implements RequestHandlerWithSorting {
     // 4. Add order by along with setting limit, offset
     addSortLimitAndOffset(request, requestContext, builder);
 
-    return builder.build();
+    return Optional.of(builder.build());
   }
 
   // This is to get all the entity Ids for the EDS source filter.
