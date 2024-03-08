@@ -118,17 +118,17 @@ public class RequestHandler implements RequestHandlerWithSorting {
         attributeMetadataProvider.getAttributesMetadata(requestContext, request.getContext());
     if (hasOnlyAttributeSource(request.getFilter(), AttributeSource.EDS, attributeMetadataMap)) {
       entityIds = getEntityIdsToFilterFromSourceEDS(requestContext, request, attributeMetadataMap);
+
+      if (entityIds.isEmpty()) {
+        return Optional.empty();
+      }
+
       qsSourceFilter =
           buildFilter(request.getFilter(), AttributeSource.QS, attributeMetadataMap)
               .orElse(request.getFilter());
     }
 
-    if (entityIds.isEmpty()) {
-      return Optional.empty();
-    }
-
     QueryRequest.Builder builder = QueryRequest.newBuilder();
-
 
     // 1. Add selections. All selections should either be only column or only function, never both.
     // The validator should catch this.
