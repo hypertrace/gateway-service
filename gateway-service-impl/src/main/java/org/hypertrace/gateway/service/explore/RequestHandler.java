@@ -5,7 +5,6 @@ import static org.hypertrace.core.query.service.client.QueryServiceClient.DEFAUL
 import com.google.common.collect.Streams;
 import com.google.protobuf.InvalidProtocolBufferException;
 import com.google.protobuf.util.JsonFormat;
-import java.util.ArrayList;
 import java.util.Collections;
 import java.util.Iterator;
 import java.util.List;
@@ -37,8 +36,11 @@ import org.hypertrace.gateway.service.entity.config.EntityIdColumnsConfigs;
 import org.hypertrace.gateway.service.explore.entity.EntityServiceEntityFetcher;
 import org.hypertrace.gateway.service.v1.common.Expression;
 import org.hypertrace.gateway.service.v1.common.FunctionExpression;
+import org.hypertrace.gateway.service.v1.common.LiteralConstant;
+import org.hypertrace.gateway.service.v1.common.Operator;
 import org.hypertrace.gateway.service.v1.common.OrderByExpression;
 import org.hypertrace.gateway.service.v1.common.TimeAggregation;
+import org.hypertrace.gateway.service.v1.common.ValueType;
 import org.hypertrace.gateway.service.v1.entity.EntitiesRequest;
 import org.hypertrace.gateway.service.v1.entity.Entity.Builder;
 import org.hypertrace.gateway.service.v1.explore.ExploreRequest;
@@ -107,15 +109,30 @@ public class RequestHandler implements RequestHandlerWithSorting {
       requestContext.setHasGroupBy(true);
     }
 
-    List<String> entityIds = new ArrayList<>();
     org.hypertrace.gateway.service.v1.common.Filter qsSourceFilter = request.getFilter();
     Map<String, AttributeMetadata> attributeMetadataMap =
         attributeMetadataProvider.getAttributesMetadata(requestContext, request.getContext());
     if (hasOnlyAttributeSource(request.getFilter(), AttributeSource.EDS, attributeMetadataMap)) {
-      entityIds = getEntityIdsToFilterFromSourceEDS(requestContext, request, attributeMetadataMap);
+      List<String> entityIds =
+          getEntityIdsToFilterFromSourceEDS(requestContext, request, attributeMetadataMap);
+      List<String> entityIdAttributes =
+          AttributeMetadataUtil.getIdAttributeIds(
+              attributeMetadataProvider,
+              entityIdColumnsConfigs,
+              requestContext,
+              request.getContext());
       qsSourceFilter =
-          buildFilter(request.getFilter(), AttributeSource.QS, attributeMetadataMap)
-              .orElse(request.getFilter());
+          org.hypertrace.gateway.service.v1.common.Filter.newBuilder()
+              .setOperator(Operator.AND)
+              .addChildFilter(
+                  buildFilter(request.getFilter(), AttributeSource.QS, attributeMetadataMap)
+                      .orElse(request.getFilter()))
+              .addChildFilter(
+                  createEntityIdAttributeFilter(
+                      entityIdAttributes,
+                      org.hypertrace.gateway.service.v1.common.Operator.IN,
+                      entityIds))
+              .build();
     }
 
     QueryRequest.Builder builder = QueryRequest.newBuilder();
@@ -141,7 +158,7 @@ public class RequestHandler implements RequestHandlerWithSorting {
     // 2. Add filter
     builder.setFilter(
         constructQueryServiceFilter(
-            request, qsSourceFilter, requestContext, attributeMetadataProvider, entityIds));
+            request, qsSourceFilter, requestContext, attributeMetadataProvider));
 
     if (requestContext.hasGroupBy() && request.getIncludeRestGroup() && request.getOffset() > 0) {
       // including rest group with offset is an invalid combination
@@ -280,33 +297,22 @@ public class RequestHandler implements RequestHandlerWithSorting {
       ExploreRequestContext exploreRequestContext,
       AttributeMetadataProvider attributeMetadataProvider) {
     return this.constructQueryServiceFilter(
-        request,
-        request.getFilter(),
-        exploreRequestContext,
-        attributeMetadataProvider,
-        Collections.emptyList());
+        request, request.getFilter(), exploreRequestContext, attributeMetadataProvider);
   }
 
   Filter constructQueryServiceFilter(
       ExploreRequest request,
       org.hypertrace.gateway.service.v1.common.Filter requestFilter,
       ExploreRequestContext exploreRequestContext,
-      AttributeMetadataProvider attributeMetadataProvider,
-      List<String> entityIds) {
-    return QueryAndGatewayDtoConverter.addTimeSpaceAndIdFiltersAndConvertToQueryFilter(
+      AttributeMetadataProvider attributeMetadataProvider) {
+    return QueryAndGatewayDtoConverter.addTimeAndSpaceFiltersAndConvertToQueryFilter(
         request.getStartTimeMillis(),
         request.getEndTimeMillis(),
         request.getSpaceId(),
-        entityIds,
         AttributeMetadataUtil.getTimestampAttributeId(
             attributeMetadataProvider, exploreRequestContext, request.getContext()),
         AttributeMetadataUtil.getSpaceAttributeId(
             attributeMetadataProvider, exploreRequestContext, request.getContext()),
-        AttributeMetadataUtil.getIdAttributeIds(
-            attributeMetadataProvider,
-            entityIdColumnsConfigs,
-            exploreRequestContext,
-            request.getContext()),
         requestFilter);
   }
 
@@ -530,6 +536,73 @@ public class RequestHandler implements RequestHandlerWithSorting {
                 request.getGroupByList().stream())
             .collect(Collectors.toUnmodifiableList()),
         attributeMetadataByIdMap);
+  }
+
+  private org.hypertrace.gateway.service.v1.common.Filter createEntityIdAttributeFilter(
+      List<String> entityIdAttributes,
+      org.hypertrace.gateway.service.v1.common.Operator operator,
+      List<String> entityIds) {
+    if (entityIdAttributes.size() != 1) {
+      throw new RuntimeException("Cannot have more than one id attribute for an entity");
+    }
+
+    if (entityIds.isEmpty()) {
+      // Having empty entity ids is valid filter because this means that
+      // EDS source has filtered out all the entities and the result should
+      // be empty. But QS doesn't recognize empty IN filter as valid filter
+      // and ignoring this filter will generate wrong results.
+      //
+      // We could have return empty but clients expects response to contain
+      // information as per the selections they have sent. So we are converting
+      // empty entity Id filter into a false filter (id != null && id == null)
+      // so that results are always empty but must contain the valid selections.
+      return org.hypertrace.gateway.service.v1.common.Filter.newBuilder()
+          .setOperator(Operator.AND)
+          .addChildFilter(
+              org.hypertrace.gateway.service.v1.common.Filter.newBuilder()
+                  .setLhs(buildStringExpression(entityIdAttributes.get(0)))
+                  .setOperator(Operator.NEQ)
+                  .setRhs(buildStringExpression(null))
+                  .build())
+          .addChildFilter(
+              org.hypertrace.gateway.service.v1.common.Filter.newBuilder()
+                  .setLhs(buildStringExpression(entityIdAttributes.get(0)))
+                  .setOperator(Operator.EQ)
+                  .setRhs(buildStringExpression(null))
+                  .build())
+          .build();
+    }
+    return org.hypertrace.gateway.service.v1.common.Filter.newBuilder()
+        .setLhs(buildStringExpression(entityIdAttributes.get(0)))
+        .setOperator(operator)
+        .setRhs(buildStringArrayExpression(entityIds))
+        .build();
+  }
+
+  private Expression buildStringArrayExpression(List<String> values) {
+    return Expression.newBuilder()
+        .setLiteral(
+            LiteralConstant.newBuilder()
+                .setValue(
+                    org.hypertrace.gateway.service.v1.common.Value.newBuilder()
+                        .setValueType(ValueType.STRING_ARRAY)
+                        .addAllStringArray(values)
+                        .build())
+                .build())
+        .build();
+  }
+
+  private Expression buildStringExpression(String value) {
+    return Expression.newBuilder()
+        .setLiteral(
+            LiteralConstant.newBuilder()
+                .setValue(
+                    org.hypertrace.gateway.service.v1.common.Value.newBuilder()
+                        .setValueType(ValueType.STRING)
+                        .setString(value)
+                        .build())
+                .build())
+        .build();
   }
 
   private boolean hasOnlyAttributeSource(
