@@ -560,7 +560,7 @@ public class QueryAndGatewayDtoConverter {
     return filter != null && !Filter.getDefaultInstance().equals(filter);
   }
 
-  public static Filter createEntityIdAttributeFilter(
+  private static Filter createEntityIdAttributeFilter(
       List<String> entityIdAttributes, Operator operator, Expression expression) {
     if (entityIdAttributes.size() != 1) {
       throw new RuntimeException("Cannot have more than one id attribute for an entity");
