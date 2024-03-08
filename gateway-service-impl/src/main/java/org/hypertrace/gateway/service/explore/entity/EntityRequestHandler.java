@@ -8,7 +8,7 @@ import org.hypertrace.gateway.service.common.AttributeMetadataProvider;
 import org.hypertrace.gateway.service.common.datafetcher.QueryServiceEntityFetcher;
 import org.hypertrace.gateway.service.common.util.DataCollectionUtil;
 import org.hypertrace.gateway.service.common.util.QueryServiceClient;
-import org.hypertrace.gateway.service.entity.config.EntityIdColumnsConfigs;
+import org.hypertrace.gateway.service.entity.config.EntityIdColumnsConfig;
 import org.hypertrace.gateway.service.explore.ExploreRequestContext;
 import org.hypertrace.gateway.service.explore.RequestHandler;
 import org.hypertrace.gateway.service.explore.RowComparator;
@@ -40,14 +40,14 @@ public class EntityRequestHandler extends RequestHandler {
 
   public EntityRequestHandler(
       AttributeMetadataProvider attributeMetadataProvider,
-      EntityIdColumnsConfigs entityIdColumnsConfigs,
+      EntityIdColumnsConfig entityIdColumnsConfig,
       QueryServiceClient queryServiceClient,
       QueryServiceEntityFetcher queryServiceEntityFetcher,
       EntityServiceEntityFetcher entityServiceEntityFetcher) {
     super(
         queryServiceClient,
         attributeMetadataProvider,
-        entityIdColumnsConfigs,
+        entityIdColumnsConfig,
         queryServiceEntityFetcher,
         entityServiceEntityFetcher);
     this.attributeMetadataProvider = attributeMetadataProvider;

@@ -1,13 +1,8 @@
-import com.google.protobuf.gradle.generateProtoTasks
 import com.google.protobuf.gradle.id
-import com.google.protobuf.gradle.ofSourceSet
-import com.google.protobuf.gradle.plugins
-import com.google.protobuf.gradle.protobuf
-import com.google.protobuf.gradle.protoc
 
 plugins {
   `java-library`
-  id("com.google.protobuf") version "0.8.13"
+  id("com.google.protobuf") version "0.9.4"
   id("org.hypertrace.publish-plugin")
 }
 
@@ -22,7 +17,7 @@ protobuf {
     // the identifier, which can be referred to in the "plugins"
     // container of the "generateProtoTasks" closure.
     id("grpc_java") {
-      artifact = "io.grpc:protoc-gen-grpc-java:1.57.2"
+      artifact = "io.grpc:protoc-gen-grpc-java:1.60.0"
     }
   }
   generateProtoTasks {
@@ -44,7 +39,7 @@ sourceSets {
 }
 
 dependencies {
-  api(platform("io.grpc:grpc-bom:1.57.2"))
+  api(platform("io.grpc:grpc-bom:1.60.0"))
   api("io.grpc:grpc-protobuf")
   api("io.grpc:grpc-stub")
   api("javax.annotation:javax.annotation-api:1.3.2")

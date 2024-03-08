@@ -6,3 +6,5 @@ metadata:
     release: {{ .Release.Name }}
 data:
   {{- toYaml .Values.configMap.data | nindent 2 }}
+  
+    

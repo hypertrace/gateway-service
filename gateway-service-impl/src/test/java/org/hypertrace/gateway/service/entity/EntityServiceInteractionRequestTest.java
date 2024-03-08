@@ -42,10 +42,11 @@ import org.hypertrace.entity.query.service.client.EntityQueryServiceClient;
 import org.hypertrace.gateway.service.AbstractGatewayServiceTest;
 import org.hypertrace.gateway.service.common.AttributeMetadataProvider;
 import org.hypertrace.gateway.service.common.RequestContext;
+import org.hypertrace.gateway.service.common.config.GatewayServiceConfig;
 import org.hypertrace.gateway.service.common.config.ScopeFilterConfigs;
 import org.hypertrace.gateway.service.common.converters.QueryRequestUtil;
 import org.hypertrace.gateway.service.common.util.QueryServiceClient;
-import org.hypertrace.gateway.service.entity.config.EntityIdColumnsConfigs;
+import org.hypertrace.gateway.service.entity.config.EntityIdColumnsConfig;
 import org.hypertrace.gateway.service.entity.config.LogConfig;
 import org.hypertrace.gateway.service.executor.QueryExecutorConfig;
 import org.hypertrace.gateway.service.executor.QueryExecutorServiceFactory;
@@ -70,9 +71,11 @@ public class EntityServiceInteractionRequestTest extends AbstractGatewayServiceT
   private QueryServiceClient queryServiceClient;
   private EntityQueryServiceClient entityQueryServiceClient;
   private AttributeMetadataProvider attributeMetadataProvider;
-  private EntityIdColumnsConfigs entityIdColumnsConfigs;
+  private EntityIdColumnsConfig entityIdColumnsConfig;
   private LogConfig logConfig;
   private ScopeFilterConfigs scopeFilterConfigs;
+
+  private GatewayServiceConfig gatewayServiceConfig;
   private ExecutorService queryExecutor;
 
   @BeforeEach
@@ -86,6 +89,10 @@ public class EntityServiceInteractionRequestTest extends AbstractGatewayServiceT
     logConfig = Mockito.mock(LogConfig.class);
     when(logConfig.getQueryThresholdInMillis()).thenReturn(1500L);
     scopeFilterConfigs = new ScopeFilterConfigs(ConfigFactory.empty());
+    gatewayServiceConfig = Mockito.mock(GatewayServiceConfig.class);
+    when(gatewayServiceConfig.getEntityIdColumnsConfig()).thenReturn(entityIdColumnsConfig);
+    when(gatewayServiceConfig.getScopeFilterConfigs()).thenReturn(scopeFilterConfigs);
+    when(gatewayServiceConfig.getLogConfig()).thenReturn(logConfig);
     queryExecutor =
         QueryExecutorServiceFactory.buildExecutorService(
             QueryExecutorConfig.from(this.getConfig()));
@@ -109,7 +116,7 @@ public class EntityServiceInteractionRequestTest extends AbstractGatewayServiceT
             + "  }\n"
             + "]";
     Config config = ConfigFactory.parseString(entityIdColumnConfigStr);
-    entityIdColumnsConfigs = EntityIdColumnsConfigs.fromConfig(config);
+    entityIdColumnsConfig = EntityIdColumnsConfig.fromConfig(config);
   }
 
   private void mock(AttributeMetadataProvider attributeMetadataProvider) {
@@ -821,13 +828,11 @@ public class EntityServiceInteractionRequestTest extends AbstractGatewayServiceT
 
     EntityService entityService =
         new EntityService(
+            gatewayServiceConfig,
             queryServiceClient,
             entityQueryServiceClient,
             null,
             attributeMetadataProvider,
-            entityIdColumnsConfigs,
-            scopeFilterConfigs,
-            logConfig,
             queryExecutor);
     EntitiesResponse response =
         entityService.getEntities(new RequestContext(forTenantId(TENANT_ID)), request);
@@ -900,13 +905,11 @@ public class EntityServiceInteractionRequestTest extends AbstractGatewayServiceT
 
     EntityService entityService =
         new EntityService(
+            gatewayServiceConfig,
             queryServiceClient,
             entityQueryServiceClient,
             null,
             attributeMetadataProvider,
-            entityIdColumnsConfigs,
-            scopeFilterConfigs,
-            logConfig,
             queryExecutor);
     EntitiesResponse response =
         entityService.getEntities(new RequestContext(forTenantId(TENANT_ID)), request);

@@ -26,6 +26,7 @@ import org.hypertrace.core.query.service.api.QueryRequest;
 import org.hypertrace.gateway.service.AbstractGatewayServiceTest;
 import org.hypertrace.gateway.service.common.AttributeMetadataProvider;
 import org.hypertrace.gateway.service.common.RequestContext;
+import org.hypertrace.gateway.service.common.config.GatewayServiceConfig;
 import org.hypertrace.gateway.service.common.config.ScopeFilterConfigs;
 import org.hypertrace.gateway.service.common.converters.QueryRequestUtil;
 import org.hypertrace.gateway.service.common.util.QueryExpressionUtil;
@@ -49,6 +50,7 @@ public class TracesServiceTest extends AbstractGatewayServiceTest {
   private QueryServiceClient queryServiceClient;
   private TracesService tracesService;
   private ExecutorService queryExecutor;
+  private GatewayServiceConfig gatewayServiceConfig;
 
   @BeforeEach
   public void setup() {
@@ -64,12 +66,14 @@ public class TracesServiceTest extends AbstractGatewayServiceTest {
     queryExecutor =
         QueryExecutorServiceFactory.buildExecutorService(
             QueryExecutorConfig.from(this.getConfig()));
+
+    gatewayServiceConfig = mock(GatewayServiceConfig.class);
+    when(gatewayServiceConfig.getLogConfig()).thenReturn(logConfig);
+    when(gatewayServiceConfig.getScopeFilterConfigs())
+        .thenReturn(new ScopeFilterConfigs(ConfigFactory.empty()));
     tracesService =
         new TracesService(
-            queryServiceClient,
-            attributeMetadataProvider,
-            new ScopeFilterConfigs(ConfigFactory.empty()),
-            queryExecutor);
+            gatewayServiceConfig, queryServiceClient, attributeMetadataProvider, queryExecutor);
   }
 
   @AfterEach

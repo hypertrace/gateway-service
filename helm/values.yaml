@@ -81,6 +81,8 @@ configMap:
       attributes.service.config = {
         host = attribute-service
       }
+      filter.entity.and.enabled = false
+
 logConfig:
   name: gateway-service-log-config
   monitorInterval: 30

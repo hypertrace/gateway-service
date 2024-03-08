@@ -12,11 +12,11 @@ import java.util.stream.IntStream;
 import org.hypertrace.core.attribute.service.v1.AttributeMetadata;
 import org.hypertrace.gateway.service.common.AttributeMetadataProvider;
 import org.hypertrace.gateway.service.common.ExpressionContext;
+import org.hypertrace.gateway.service.common.config.GatewayServiceConfig;
 import org.hypertrace.gateway.service.common.util.AttributeMetadataUtil;
 import org.hypertrace.gateway.service.common.util.ExpressionReader;
 import org.hypertrace.gateway.service.common.util.QueryExpressionUtil;
 import org.hypertrace.gateway.service.entity.EntitiesRequestContext;
-import org.hypertrace.gateway.service.entity.config.EntityIdColumnsConfigs;
 import org.hypertrace.gateway.service.v1.common.Expression;
 import org.hypertrace.gateway.service.v1.common.Expression.Builder;
 import org.hypertrace.gateway.service.v1.entity.EntitiesRequest;
@@ -27,9 +27,9 @@ import org.hypertrace.gateway.service.v1.entity.EntitiesRequest;
  */
 public class EntityExecutionContext {
   /** Following fields are immutable and set in the constructor * */
-  private final AttributeMetadataProvider attributeMetadataProvider;
+  private final GatewayServiceConfig gatewayServiceConfig;
 
-  private final EntityIdColumnsConfigs entityIdColumnsConfigs;
+  private final AttributeMetadataProvider attributeMetadataProvider;
   private final EntitiesRequestContext entitiesRequestContext;
   private final EntitiesRequest entitiesRequest;
 
@@ -45,12 +45,12 @@ public class EntityExecutionContext {
   private boolean sortAndPaginationNodeAdded = false;
 
   public EntityExecutionContext(
+      GatewayServiceConfig gatewayServiceConfig,
       AttributeMetadataProvider attributeMetadataProvider,
-      EntityIdColumnsConfigs entityIdColumnsConfigs,
       EntitiesRequestContext entitiesRequestContext,
       EntitiesRequest entitiesRequest) {
+    this.gatewayServiceConfig = gatewayServiceConfig;
     this.attributeMetadataProvider = attributeMetadataProvider;
-    this.entityIdColumnsConfigs = entityIdColumnsConfigs;
     this.entitiesRequest = entitiesRequest;
     this.entitiesRequestContext = entitiesRequestContext;
 
@@ -59,6 +59,7 @@ public class EntityExecutionContext {
             this.entitiesRequestContext, entitiesRequestContext.getEntityType());
     this.expressionContext =
         new ExpressionContext(
+            gatewayServiceConfig,
             attributeMetadataMap,
             entitiesRequest.getFilter(),
             entitiesRequest.getSelectionList(),
@@ -131,7 +132,7 @@ public class EntityExecutionContext {
     List<String> entityIdAttributeNames =
         AttributeMetadataUtil.getIdAttributeIds(
             attributeMetadataProvider,
-            entityIdColumnsConfigs,
+            gatewayServiceConfig.getEntityIdColumnsConfig(),
             this.entitiesRequestContext,
             entitiesRequestContext.getEntityType());
     return IntStream.range(0, entityIdAttributeNames.size())
@@ -201,14 +202,14 @@ public class EntityExecutionContext {
   @Override
   public String toString() {
     return "EntityExecutionContext{"
-        + "attributeMetadataProvider="
+        + "gatewayServiceConfig="
+        + gatewayServiceConfig
+        + ", attributeMetadataProvider="
         + attributeMetadataProvider
-        + ", entityIdColumnsConfigs="
-        + entityIdColumnsConfigs
-        + ", entitiesRequest="
-        + entitiesRequest
         + ", entitiesRequestContext="
         + entitiesRequestContext
+        + ", entitiesRequest="
+        + entitiesRequest
         + ", expressionContext="
         + expressionContext
         + ", pendingSelectionSources="

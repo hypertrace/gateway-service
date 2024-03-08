@@ -18,10 +18,12 @@ import java.util.stream.Collectors;
 import java.util.stream.Stream;
 import org.hypertrace.core.attribute.service.v1.AttributeMetadata;
 import org.hypertrace.core.attribute.service.v1.AttributeSource;
+import org.hypertrace.gateway.service.common.config.GatewayServiceConfig;
 import org.hypertrace.gateway.service.common.util.ExpressionReader;
 import org.hypertrace.gateway.service.common.util.OrderByUtil;
 import org.hypertrace.gateway.service.v1.common.Expression;
 import org.hypertrace.gateway.service.v1.common.Filter;
+import org.hypertrace.gateway.service.v1.common.Operator;
 import org.hypertrace.gateway.service.v1.common.OrderByExpression;
 import org.hypertrace.gateway.service.v1.common.TimeAggregation;
 import org.slf4j.Logger;
@@ -49,11 +51,16 @@ public class ExpressionContext {
   private ImmutableMap<String, List<OrderByExpression>> sourceToMetricOrderByExpressionMap;
   private ImmutableMap<String, Set<String>> sourceToMetricOrderByAttributeMap;
 
+  private ImmutableMap<String, List<OrderByExpression>> sourceToOrderByExpressionMap;
+
   // filters
   private final Filter filter;
   private ImmutableMap<String, List<Expression>> sourceToFilterExpressionMap;
   private ImmutableMap<String, Set<String>> sourceToFilterAttributeMap;
   private ImmutableMap<String, Set<String>> filterAttributeToSourceMap;
+
+  // and filter
+  private boolean isAndFilter;
 
   // group bys
   private final List<Expression> groupBys;
@@ -64,6 +71,7 @@ public class ExpressionContext {
   private final Map<String, Set<String>> allAttributesToSourcesMap = new HashMap<>();
 
   public ExpressionContext(
+      GatewayServiceConfig gatewayServiceConfig,
       Map<String, AttributeMetadata> attributeMetadataMap,
       Filter filter,
       List<Expression> selections,
@@ -82,6 +90,8 @@ public class ExpressionContext {
     buildSourceToFilterExpressionMaps();
     buildSourceToOrderByExpressionMaps();
     buildSourceToGroupByExpressionMaps();
+
+    this.isAndFilter = gatewayServiceConfig.isEntityAndFilterEnabled() && isAndFilter(filter);
   }
 
   public Map<String, List<Expression>> getSourceToSelectionExpressionMap() {
@@ -133,6 +143,10 @@ public class ExpressionContext {
     return sourceToMetricOrderByAttributeMap;
   }
 
+  public Map<String, List<OrderByExpression>> getSourceToOrderByExpressionMap() {
+    return sourceToOrderByExpressionMap;
+  }
+
   public Map<String, List<Expression>> getSourceToFilterExpressionMap() {
     return sourceToFilterExpressionMap;
   }
@@ -143,6 +157,10 @@ public class ExpressionContext {
 
   public Map<String, Set<String>> getFilterAttributeToSourceMap() {
     return filterAttributeToSourceMap;
+  }
+
+  public boolean isAndFilter() {
+    return isAndFilter;
   }
 
   public Map<String, Set<String>> getAllAttributesToSourcesMap() {
@@ -171,6 +189,17 @@ public class ExpressionContext {
         ImmutableMap.<String, Set<String>>builder()
             .putAll(buildAttributeToSourcesMap(sourceToFilterAttributeMap))
             .build();
+  }
+
+  private boolean isAndFilter(Filter filter) {
+    Operator operator = filter.getOperator();
+    if (operator == Operator.AND) {
+      return filter.getChildFilterList().stream().allMatch(this::isAndFilter);
+    } else if (operator == Operator.OR) {
+      return false;
+    } else {
+      return true;
+    }
   }
 
   private void buildSourceToOrderByExpressionMaps() {
@@ -204,6 +233,8 @@ public class ExpressionContext {
     sourceToMetricOrderByAttributeMap =
         buildSourceToAttributesMap(
             convertOrderByExpressionToExpression(sourceToMetricOrderByExpressionMap));
+
+    sourceToOrderByExpressionMap = getDataSourceToOrderByExpressionMap(orderByExpressions);
   }
 
   private void buildSourceToGroupByExpressionMaps() {

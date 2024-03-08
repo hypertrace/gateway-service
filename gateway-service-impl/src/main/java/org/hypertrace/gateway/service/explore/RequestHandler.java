@@ -32,7 +32,7 @@ import org.hypertrace.gateway.service.common.util.OrderByUtil;
 import org.hypertrace.gateway.service.common.util.QueryExpressionUtil;
 import org.hypertrace.gateway.service.common.util.QueryServiceClient;
 import org.hypertrace.gateway.service.entity.EntitiesRequestContext;
-import org.hypertrace.gateway.service.entity.config.EntityIdColumnsConfigs;
+import org.hypertrace.gateway.service.entity.config.EntityIdColumnsConfig;
 import org.hypertrace.gateway.service.explore.entity.EntityServiceEntityFetcher;
 import org.hypertrace.gateway.service.v1.common.Expression;
 import org.hypertrace.gateway.service.v1.common.FunctionExpression;
@@ -69,20 +69,20 @@ public class RequestHandler implements RequestHandlerWithSorting {
   private final QueryServiceClient queryServiceClient;
   private final AttributeMetadataProvider attributeMetadataProvider;
   private final TheRestGroupRequestHandler theRestGroupRequestHandler;
-  private final EntityIdColumnsConfigs entityIdColumnsConfigs;
+  private final EntityIdColumnsConfig entityIdColumnsConfig;
   private final QueryServiceEntityFetcher queryServiceEntityFetcher;
   private final EntityServiceEntityFetcher entityServiceEntityFetcher;
 
   public RequestHandler(
       QueryServiceClient queryServiceClient,
       AttributeMetadataProvider attributeMetadataProvider,
-      EntityIdColumnsConfigs entityIdColumnsConfigs,
+      EntityIdColumnsConfig entityIdColumnsConfig,
       QueryServiceEntityFetcher queryServiceEntityFetcher,
       EntityServiceEntityFetcher entityServiceEntityFetcher) {
     this.queryServiceClient = queryServiceClient;
     this.attributeMetadataProvider = attributeMetadataProvider;
     this.theRestGroupRequestHandler = new TheRestGroupRequestHandler(this);
-    this.entityIdColumnsConfigs = entityIdColumnsConfigs;
+    this.entityIdColumnsConfig = entityIdColumnsConfig;
     this.queryServiceEntityFetcher = queryServiceEntityFetcher;
     this.entityServiceEntityFetcher = entityServiceEntityFetcher;
   }
@@ -118,7 +118,7 @@ public class RequestHandler implements RequestHandlerWithSorting {
       List<String> entityIdAttributes =
           AttributeMetadataUtil.getIdAttributeIds(
               attributeMetadataProvider,
-              entityIdColumnsConfigs,
+              entityIdColumnsConfig,
               requestContext,
               request.getContext());
       qsSourceFilter =
@@ -220,7 +220,7 @@ public class RequestHandler implements RequestHandlerWithSorting {
       org.hypertrace.gateway.service.v1.common.Filter edsFilter) {
     List<String> entityIdAttributeIds =
         AttributeMetadataUtil.getIdAttributeIds(
-            attributeMetadataProvider, entityIdColumnsConfigs, exploreRequestContext, context);
+            attributeMetadataProvider, entityIdColumnsConfig, exploreRequestContext, context);
     List<Expression> groupBySelections =
         entityIdAttributeIds.stream()
             .map(attributeId -> QueryExpressionUtil.buildAttributeExpression(attributeId).build())

@@ -20,7 +20,7 @@ import org.hypertrace.gateway.service.common.util.AttributeMetadataUtil;
 import org.hypertrace.gateway.service.common.util.ExpressionReader;
 import org.hypertrace.gateway.service.common.util.QueryExpressionUtil;
 import org.hypertrace.gateway.service.common.util.QueryServiceClient;
-import org.hypertrace.gateway.service.entity.config.EntityIdColumnsConfigs;
+import org.hypertrace.gateway.service.entity.config.EntityIdColumnsConfig;
 import org.hypertrace.gateway.service.explore.entity.EntityServiceEntityFetcher;
 import org.hypertrace.gateway.service.v1.common.OrderByExpression;
 import org.hypertrace.gateway.service.v1.common.Period;
@@ -39,13 +39,13 @@ public class TimeAggregationsRequestHandler extends RequestHandler {
   TimeAggregationsRequestHandler(
       QueryServiceClient queryServiceClient,
       AttributeMetadataProvider attributeMetadataProvider,
-      EntityIdColumnsConfigs entityIdColumnsConfigs,
+      EntityIdColumnsConfig entityIdColumnsConfig,
       QueryServiceEntityFetcher queryServiceEntityFetcher,
       EntityServiceEntityFetcher entityServiceEntityFetcher) {
     super(
         queryServiceClient,
         attributeMetadataProvider,
-        entityIdColumnsConfigs,
+        entityIdColumnsConfig,
         queryServiceEntityFetcher,
         entityServiceEntityFetcher);
   }

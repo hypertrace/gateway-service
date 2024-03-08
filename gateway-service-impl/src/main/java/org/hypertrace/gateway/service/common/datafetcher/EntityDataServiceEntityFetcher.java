@@ -22,7 +22,7 @@ import org.hypertrace.gateway.service.common.util.AttributeMetadataUtil;
 import org.hypertrace.gateway.service.common.util.ExpressionReader;
 import org.hypertrace.gateway.service.entity.EntitiesRequestContext;
 import org.hypertrace.gateway.service.entity.EntityKey;
-import org.hypertrace.gateway.service.entity.config.EntityIdColumnsConfigs;
+import org.hypertrace.gateway.service.entity.config.EntityIdColumnsConfig;
 import org.hypertrace.gateway.service.v1.common.Value;
 import org.hypertrace.gateway.service.v1.common.ValueType;
 import org.hypertrace.gateway.service.v1.entity.EntitiesRequest;
@@ -39,15 +39,15 @@ public class EntityDataServiceEntityFetcher implements IEntityFetcher {
 
   private final EntityQueryServiceClient entityQueryServiceClient;
   private final AttributeMetadataProvider attributeMetadataProvider;
-  private final EntityIdColumnsConfigs entityIdColumnsConfigs;
+  private final EntityIdColumnsConfig entityIdColumnsConfig;
 
   public EntityDataServiceEntityFetcher(
       EntityQueryServiceClient entityQueryServiceClient,
       AttributeMetadataProvider attributeMetadataProvider,
-      EntityIdColumnsConfigs entityIdColumnsConfigs) {
+      EntityIdColumnsConfig entityIdColumnsConfig) {
     this.entityQueryServiceClient = entityQueryServiceClient;
     this.attributeMetadataProvider = attributeMetadataProvider;
-    this.entityIdColumnsConfigs = entityIdColumnsConfigs;
+    this.entityIdColumnsConfig = entityIdColumnsConfig;
   }
 
   @Override
@@ -56,7 +56,7 @@ public class EntityDataServiceEntityFetcher implements IEntityFetcher {
     List<String> entityIdAttributeIds =
         AttributeMetadataUtil.getIdAttributeIds(
             attributeMetadataProvider,
-            entityIdColumnsConfigs,
+            entityIdColumnsConfig,
             requestContext,
             entitiesRequest.getEntityType());
     Map<String, List<String>> requestedAliasesByEntityIdAttributeIds =

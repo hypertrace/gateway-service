@@ -29,13 +29,11 @@ import org.hypertrace.gateway.service.baseline.BaselineServiceQueryExecutor;
 import org.hypertrace.gateway.service.baseline.BaselineServiceQueryParser;
 import org.hypertrace.gateway.service.common.AttributeMetadataProvider;
 import org.hypertrace.gateway.service.common.RequestContext;
-import org.hypertrace.gateway.service.common.config.ScopeFilterConfigs;
+import org.hypertrace.gateway.service.common.config.GatewayServiceConfig;
 import org.hypertrace.gateway.service.common.util.EntityTypeServiceClient;
 import org.hypertrace.gateway.service.common.util.EntityTypeServiceV2Client;
 import org.hypertrace.gateway.service.common.util.QueryServiceClient;
 import org.hypertrace.gateway.service.entity.EntityService;
-import org.hypertrace.gateway.service.entity.config.EntityIdColumnsConfigs;
-import org.hypertrace.gateway.service.entity.config.LogConfig;
 import org.hypertrace.gateway.service.executor.QueryExecutorConfig;
 import org.hypertrace.gateway.service.executor.QueryExecutorServiceFactory;
 import org.hypertrace.gateway.service.explore.ExploreService;
@@ -91,7 +89,6 @@ public class GatewayServiceImpl extends GatewayServiceGrpc.GatewayServiceImplBas
         new AttributeServiceClient(
             grpcChannelRegistry.forPlaintextAddress(asConfig.getHost(), asConfig.getPort()));
     AttributeMetadataProvider attributeMetadataProvider = new AttributeMetadataProvider(asClient);
-    EntityIdColumnsConfigs entityIdColumnsConfigs = EntityIdColumnsConfigs.fromConfig(appConfig);
 
     Config untypedQsConfig = appConfig.getConfig(QUERY_SERVICE_CONFIG_KEY);
     QueryServiceConfig qsConfig = new QueryServiceConfig(untypedQsConfig);
@@ -124,30 +121,26 @@ public class GatewayServiceImpl extends GatewayServiceGrpc.GatewayServiceImplBas
     EntityTypesProvider entityTypesProvider =
         new EntityTypesProvider(entityTypeServiceClient, entityTypeServiceV2Client);
 
-    ScopeFilterConfigs scopeFilterConfigs = new ScopeFilterConfigs(appConfig);
-    LogConfig logConfig = new LogConfig(appConfig);
+    GatewayServiceConfig gatewayServiceConfig = new GatewayServiceConfig(appConfig);
     this.traceService =
         new TracesService(
-            queryServiceClient, attributeMetadataProvider, scopeFilterConfigs, queryExecutor);
+            gatewayServiceConfig, queryServiceClient, attributeMetadataProvider, queryExecutor);
     this.spanService =
         new SpanService(queryServiceClient, attributeMetadataProvider, queryExecutor);
     this.entityService =
         new EntityService(
+            gatewayServiceConfig,
             queryServiceClient,
             eqsClient,
             eqsStub,
             attributeMetadataProvider,
-            entityIdColumnsConfigs,
-            scopeFilterConfigs,
-            logConfig,
             queryExecutor);
     this.exploreService =
         new ExploreService(
+            gatewayServiceConfig,
             queryServiceClient,
             eqsClient,
             attributeMetadataProvider,
-            scopeFilterConfigs,
-            entityIdColumnsConfigs,
             entityTypesProvider);
     BaselineServiceQueryParser baselineServiceQueryParser =
         new BaselineServiceQueryParser(attributeMetadataProvider);
@@ -155,10 +148,10 @@ public class GatewayServiceImpl extends GatewayServiceGrpc.GatewayServiceImplBas
         new BaselineServiceQueryExecutor(queryServiceClient);
     this.baselineService =
         new BaselineServiceImpl(
+            gatewayServiceConfig,
             attributeMetadataProvider,
             baselineServiceQueryParser,
-            baselineServiceQueryExecutor,
-            entityIdColumnsConfigs);
+            baselineServiceQueryExecutor);
     this.logEventsService = new LogEventsService(queryServiceClient, attributeMetadataProvider);
     initMetrics();
   }

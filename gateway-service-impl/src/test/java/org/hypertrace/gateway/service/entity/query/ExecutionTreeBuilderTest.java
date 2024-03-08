@@ -32,8 +32,9 @@ import org.hypertrace.core.attribute.service.v1.AttributeScope;
 import org.hypertrace.core.attribute.service.v1.AttributeSource;
 import org.hypertrace.gateway.service.common.AttributeMetadataProvider;
 import org.hypertrace.gateway.service.common.RequestContext;
+import org.hypertrace.gateway.service.common.config.GatewayServiceConfig;
 import org.hypertrace.gateway.service.entity.EntitiesRequestContext;
-import org.hypertrace.gateway.service.entity.config.EntityIdColumnsConfigs;
+import org.hypertrace.gateway.service.entity.config.EntityIdColumnsConfig;
 import org.hypertrace.gateway.service.entity.query.visitor.FilterOptimizingVisitor;
 import org.hypertrace.gateway.service.v1.common.Filter;
 import org.hypertrace.gateway.service.v1.common.FunctionType;
@@ -132,7 +133,8 @@ public class ExecutionTreeBuilderTest {
       };
 
   @Mock private AttributeMetadataProvider attributeMetadataProvider;
-  @Mock private EntityIdColumnsConfigs entityIdColumnsConfigs;
+  @Mock private EntityIdColumnsConfig entityIdColumnsConfig;
+  @Mock private GatewayServiceConfig gatewayServiceConfig;
 
   private static AttributeMetadata buildAttributeMetadataForSources(
       String attributeId, String scope, String key, List<AttributeSource> sources) {
@@ -147,7 +149,9 @@ public class ExecutionTreeBuilderTest {
   @BeforeEach
   public void setup() {
     attributeMetadataProvider = mock(AttributeMetadataProvider.class);
-    entityIdColumnsConfigs = mock(EntityIdColumnsConfigs.class);
+    entityIdColumnsConfig = mock(EntityIdColumnsConfig.class);
+    gatewayServiceConfig = mock(GatewayServiceConfig.class);
+    when(gatewayServiceConfig.getEntityIdColumnsConfig()).thenReturn(entityIdColumnsConfig);
     when(attributeMetadataProvider.getAttributesMetadata(
             any(RequestContext.class), eq(AttributeScope.API.name())))
         .thenReturn(ATTRIBUTE_SOURCES);
@@ -181,7 +185,7 @@ public class ExecutionTreeBuilderTest {
             "API",
             "API.startTime");
     return new EntityExecutionContext(
-        attributeMetadataProvider, entityIdColumnsConfigs, entitiesRequestContext, entitiesRequest);
+        gatewayServiceConfig, attributeMetadataProvider, entitiesRequestContext, entitiesRequest);
   }
 
   @Test
@@ -502,8 +506,8 @@ public class ExecutionTreeBuilderTest {
           new EntitiesRequestContext(forTenantId(TENANT_ID), 0L, 10L, "API", "API.startTime");
       EntityExecutionContext executionContext =
           new EntityExecutionContext(
+              gatewayServiceConfig,
               attributeMetadataProvider,
-              entityIdColumnsConfigs,
               entitiesRequestContext,
               entitiesRequest);
       ExecutionTreeBuilder executionTreeBuilder = new ExecutionTreeBuilder(executionContext);
@@ -541,8 +545,8 @@ public class ExecutionTreeBuilderTest {
               forTenantId(TENANT_ID), startTime, endTime, "API", "API.startTime");
       EntityExecutionContext executionContext =
           new EntityExecutionContext(
+              gatewayServiceConfig,
               attributeMetadataProvider,
-              entityIdColumnsConfigs,
               entitiesRequestContext,
               entitiesRequest);
       ExecutionTreeBuilder executionTreeBuilder = new ExecutionTreeBuilder(executionContext);
@@ -578,8 +582,8 @@ public class ExecutionTreeBuilderTest {
         new EntitiesRequestContext(forTenantId(TENANT_ID), 0L, 10L, "API", "API.startTime");
     EntityExecutionContext executionContext =
         new EntityExecutionContext(
+            gatewayServiceConfig,
             attributeMetadataProvider,
-            entityIdColumnsConfigs,
             entitiesRequestContext,
             entitiesRequest);
     ExecutionTreeBuilder executionTreeBuilder = new ExecutionTreeBuilder(executionContext);
@@ -608,8 +612,8 @@ public class ExecutionTreeBuilderTest {
         new EntitiesRequestContext(forTenantId(TENANT_ID), 0L, 10L, "API", "API.startTime");
     EntityExecutionContext executionContext =
         new EntityExecutionContext(
+            gatewayServiceConfig,
             attributeMetadataProvider,
-            entityIdColumnsConfigs,
             entitiesRequestContext,
             entitiesRequest);
     ExecutionTreeBuilder executionTreeBuilder = new ExecutionTreeBuilder(executionContext);
@@ -660,8 +664,8 @@ public class ExecutionTreeBuilderTest {
         new EntitiesRequestContext(forTenantId(TENANT_ID), 0L, 10L, "API", "API.startTime");
     EntityExecutionContext executionContext =
         new EntityExecutionContext(
+            gatewayServiceConfig,
             attributeMetadataProvider,
-            entityIdColumnsConfigs,
             entitiesRequestContext,
             entitiesRequest);
     ExecutionTreeBuilder executionTreeBuilder = new ExecutionTreeBuilder(executionContext);
@@ -713,8 +717,8 @@ public class ExecutionTreeBuilderTest {
         new EntitiesRequestContext(forTenantId(TENANT_ID), 0L, 10L, "API", "API.startTime");
     EntityExecutionContext executionContext =
         new EntityExecutionContext(
+            gatewayServiceConfig,
             attributeMetadataProvider,
-            entityIdColumnsConfigs,
             entitiesRequestContext,
             entitiesRequest);
     ExecutionTreeBuilder executionTreeBuilder = new ExecutionTreeBuilder(executionContext);
@@ -765,8 +769,8 @@ public class ExecutionTreeBuilderTest {
         new EntitiesRequestContext(forTenantId(TENANT_ID), 0L, 10L, "API", "API.startTime");
     EntityExecutionContext executionContext =
         new EntityExecutionContext(
+            gatewayServiceConfig,
             attributeMetadataProvider,
-            entityIdColumnsConfigs,
             entitiesRequestContext,
             entitiesRequest);
     ExecutionTreeBuilder executionTreeBuilder = new ExecutionTreeBuilder(executionContext);
@@ -817,8 +821,8 @@ public class ExecutionTreeBuilderTest {
             "API.startTime");
     EntityExecutionContext executionContext =
         new EntityExecutionContext(
+            gatewayServiceConfig,
             attributeMetadataProvider,
-            entityIdColumnsConfigs,
             entitiesRequestContext,
             entitiesRequest);
     ExecutionTreeBuilder executionTreeBuilder = new ExecutionTreeBuilder(executionContext);
@@ -860,8 +864,8 @@ public class ExecutionTreeBuilderTest {
         new EntitiesRequestContext(forTenantId(TENANT_ID), 0L, 10L, "API", "API.startTime");
     EntityExecutionContext executionContext =
         new EntityExecutionContext(
+            gatewayServiceConfig,
             attributeMetadataProvider,
-            entityIdColumnsConfigs,
             entitiesRequestContext,
             entitiesRequest);
     ExecutionTreeBuilder executionTreeBuilder = new ExecutionTreeBuilder(executionContext);
@@ -901,8 +905,8 @@ public class ExecutionTreeBuilderTest {
         new EntitiesRequestContext(forTenantId(TENANT_ID), 0L, 10L, "API", "API.startTime");
     EntityExecutionContext executionContext =
         new EntityExecutionContext(
+            gatewayServiceConfig,
             attributeMetadataProvider,
-            entityIdColumnsConfigs,
             entitiesRequestContext,
             entitiesRequest);
     ExecutionTreeBuilder executionTreeBuilder = new ExecutionTreeBuilder(executionContext);
@@ -947,8 +951,8 @@ public class ExecutionTreeBuilderTest {
             "API.startTime");
     EntityExecutionContext executionContext =
         new EntityExecutionContext(
+            gatewayServiceConfig,
             attributeMetadataProvider,
-            entityIdColumnsConfigs,
             entitiesRequestContext,
             entitiesRequest);
     ExecutionTreeBuilder executionTreeBuilder = new ExecutionTreeBuilder(executionContext);
@@ -1007,8 +1011,8 @@ public class ExecutionTreeBuilderTest {
             "API.startTime");
     EntityExecutionContext executionContext =
         new EntityExecutionContext(
+            gatewayServiceConfig,
             attributeMetadataProvider,
-            entityIdColumnsConfigs,
             entitiesRequestContext,
             entitiesRequest);
     ExecutionTreeBuilder executionTreeBuilder = new ExecutionTreeBuilder(executionContext);
@@ -1046,8 +1050,8 @@ public class ExecutionTreeBuilderTest {
             "API.startTime");
     EntityExecutionContext executionContext =
         new EntityExecutionContext(
+            gatewayServiceConfig,
             attributeMetadataProvider,
-            entityIdColumnsConfigs,
             entitiesRequestContext,
             entitiesRequest);
     ExecutionTreeBuilder executionTreeBuilder = new ExecutionTreeBuilder(executionContext);
@@ -1085,8 +1089,8 @@ public class ExecutionTreeBuilderTest {
             "API.startTime");
     EntityExecutionContext executionContext =
         new EntityExecutionContext(
+            gatewayServiceConfig,
             attributeMetadataProvider,
-            entityIdColumnsConfigs,
             entitiesRequestContext,
             entitiesRequest);
     ExecutionTreeBuilder executionTreeBuilder = new ExecutionTreeBuilder(executionContext);
@@ -1116,8 +1120,8 @@ public class ExecutionTreeBuilderTest {
             "API.startTime");
     EntityExecutionContext executionContext =
         new EntityExecutionContext(
+            gatewayServiceConfig,
             attributeMetadataProvider,
-            entityIdColumnsConfigs,
             entitiesRequestContext,
             entitiesRequest);
     ExecutionTreeBuilder executionTreeBuilder = new ExecutionTreeBuilder(executionContext);

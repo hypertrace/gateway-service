@@ -18,7 +18,7 @@ import org.hypertrace.entity.query.service.v1.ResultSetChunk;
 import org.hypertrace.entity.query.service.v1.ResultSetMetadata;
 import org.hypertrace.entity.query.service.v1.Row;
 import org.hypertrace.gateway.service.common.AttributeMetadataProvider;
-import org.hypertrace.gateway.service.entity.config.EntityIdColumnsConfigs;
+import org.hypertrace.gateway.service.entity.config.EntityIdColumnsConfig;
 import org.hypertrace.gateway.service.explore.ExploreRequestContext;
 import org.hypertrace.gateway.service.v1.common.ColumnIdentifier;
 import org.hypertrace.gateway.service.v1.common.Expression;
@@ -35,17 +35,17 @@ import org.junit.jupiter.api.Test;
 
 public class EntityServiceEntityFetcherTest {
   private AttributeMetadataProvider attributeMetadataProvider;
-  private EntityIdColumnsConfigs entityIdColumnsConfigs;
+  private EntityIdColumnsConfig entityIdColumnsConfig;
   private EntityQueryServiceClient entityQueryServiceClient;
 
   @Test
   void testGetEntities() {
     AttributeMetadataProvider attributeMetadataProvider = mock(AttributeMetadataProvider.class);
-    EntityIdColumnsConfigs entityIdColumnsConfigs = mock(EntityIdColumnsConfigs.class);
+    EntityIdColumnsConfig entityIdColumnsConfig = mock(EntityIdColumnsConfig.class);
     EntityQueryServiceClient entityQueryServiceClient = mock(EntityQueryServiceClient.class);
     EntityServiceEntityFetcher entityServiceEntityFetcher =
         new EntityServiceEntityFetcher(
-            attributeMetadataProvider, entityIdColumnsConfigs, entityQueryServiceClient);
+            attributeMetadataProvider, entityIdColumnsConfig, entityQueryServiceClient);
 
     when(entityQueryServiceClient.execute(any(), any())).thenReturn(mockResults());
 

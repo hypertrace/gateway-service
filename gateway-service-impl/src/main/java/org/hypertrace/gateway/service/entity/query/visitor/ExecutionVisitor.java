@@ -30,6 +30,7 @@ import org.hypertrace.gateway.service.entity.query.EntityExecutionContext;
 import org.hypertrace.gateway.service.entity.query.NoOpNode;
 import org.hypertrace.gateway.service.entity.query.OrNode;
 import org.hypertrace.gateway.service.entity.query.PaginateOnlyNode;
+import org.hypertrace.gateway.service.entity.query.QueryNode;
 import org.hypertrace.gateway.service.entity.query.SelectionNode;
 import org.hypertrace.gateway.service.entity.query.SortAndPaginateNode;
 import org.hypertrace.gateway.service.v1.common.Expression;
@@ -118,6 +119,17 @@ public class ExecutionVisitor implements Visitor<EntityResponse> {
 
   @Override
   public EntityResponse visit(DataFetcherNode dataFetcherNode) {
+    QueryNode childNode = dataFetcherNode.getChildNode();
+
+    EntityResponse childNodeResponse = dataFetcherNode.getChildNode().acceptVisitor(this);
+    EntityFetcherResponse childEntityFetcherResponse = null;
+    Filter childFilter = null;
+    if (!(childNode instanceof NoOpNode)) {
+      // Construct the filter from the child nodes result
+      childEntityFetcherResponse = childNodeResponse.getEntityFetcherResponse();
+      childFilter = constructFilterFromChildNodesResult(childEntityFetcherResponse);
+    }
+
     String source = dataFetcherNode.getSource();
     EntitiesRequest entitiesRequest = executionContext.getEntitiesRequest();
     EntitiesRequestContext context =
@@ -127,6 +139,15 @@ public class ExecutionVisitor implements Visitor<EntityResponse> {
             entitiesRequest.getEndTimeMillis(),
             entitiesRequest.getEntityType(),
             executionContext.getTimestampAttributeId());
+
+    Filter entitiesRequestFilter =
+        childFilter != null
+            ? Filter.newBuilder()
+                .setOperator(Operator.AND)
+                .addChildFilter(dataFetcherNode.getFilter())
+                .addChildFilter(childFilter)
+                .build()
+            : dataFetcherNode.getFilter();
 
     EntitiesRequest.Builder requestBuilder =
         EntitiesRequest.newBuilder(entitiesRequest)
@@ -141,7 +162,7 @@ public class ExecutionVisitor implements Visitor<EntityResponse> {
                     .getExpressionContext()
                     .getSourceToSelectionExpressionMap()
                     .getOrDefault(source, executionContext.getEntityIdExpressions()))
-            .setFilter(dataFetcherNode.getFilter());
+            .setFilter(entitiesRequestFilter);
 
     if (dataFetcherNode.getLimit() != null) {
       requestBuilder.setLimit(dataFetcherNode.getLimit());
@@ -160,17 +181,28 @@ public class ExecutionVisitor implements Visitor<EntityResponse> {
 
     // if the data fetcher node is fetching paginated records and the client has requested for
     // total, the total number of entities has to be fetched separately
+
+    EntityFetcherResponse response;
     if (dataFetcherNode.canFetchTotal()) {
       // since, the pagination is pushed down to the data store, total can be requested directly
       // from the data store. Request it async to parallelize with rest of entity fetch
       CompletableFuture<Long> totalFuture =
           CompletableFuture.supplyAsync(
-              () -> entityFetcher.getTotal(context, entitiesRequest), this.executorService);
-      return new EntityResponse(entityFetcher.getEntities(context, request), totalFuture.join());
+              () -> entityFetcher.getTotal(context, request), this.executorService);
+      EntityFetcherResponse entityFetcherResponse = entityFetcher.getEntities(context, request);
+      response =
+          childEntityFetcherResponse != null
+              ? intersectEntities(List.of(childEntityFetcherResponse, entityFetcherResponse))
+              : entityFetcherResponse;
+      return new EntityResponse(response, totalFuture.join());
     } else {
       // if the data fetcher node is not paginating, the total number of entities is equal to number
       // of records fetched
-      EntityFetcherResponse response = entityFetcher.getEntities(context, request);
+      EntityFetcherResponse entityFetcherResponse = entityFetcher.getEntities(context, request);
+      response =
+          childEntityFetcherResponse != null
+              ? intersectEntities(List.of(childEntityFetcherResponse, entityFetcherResponse))
+              : entityFetcherResponse;
       return new EntityResponse(response, response.getEntityKeyBuilderMap().size());
     }
   }
