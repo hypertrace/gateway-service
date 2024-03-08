@@ -51,7 +51,7 @@ public class TimeAggregationsRequestHandler extends RequestHandler {
   }
 
   @Override
-  QueryRequest buildQueryRequest(
+  Optional<QueryRequest> buildQueryRequest(
       ExploreRequestContext requestContext,
       ExploreRequest request,
       AttributeMetadataProvider attributeMetadataProvider) {
@@ -79,7 +79,7 @@ public class TimeAggregationsRequestHandler extends RequestHandler {
     // 6. Set Limit.
     builder.setLimit(request.getLimit());
 
-    return builder.build();
+    return Optional.of(builder.build());
   }
 
   private void addTimeAggregationsAsSelectionsToRequest(
