@@ -5,6 +5,7 @@ import static org.hypertrace.core.query.service.client.QueryServiceClient.DEFAUL
 import com.google.common.collect.Streams;
 import com.google.protobuf.InvalidProtocolBufferException;
 import com.google.protobuf.util.JsonFormat;
+import io.grpc.Status;
 import java.util.Collections;
 import java.util.Iterator;
 import java.util.List;
@@ -34,6 +35,7 @@ import org.hypertrace.gateway.service.common.util.QueryServiceClient;
 import org.hypertrace.gateway.service.entity.EntitiesRequestContext;
 import org.hypertrace.gateway.service.entity.config.EntityIdColumnsConfig;
 import org.hypertrace.gateway.service.explore.entity.EntityServiceEntityFetcher;
+import org.hypertrace.gateway.service.v1.common.AttributeExpression;
 import org.hypertrace.gateway.service.v1.common.Expression;
 import org.hypertrace.gateway.service.v1.common.FunctionExpression;
 import org.hypertrace.gateway.service.v1.common.LiteralConstant;
@@ -65,6 +67,17 @@ import org.slf4j.LoggerFactory;
  */
 public class RequestHandler implements RequestHandlerWithSorting {
   private static final Logger LOG = LoggerFactory.getLogger(RequestHandler.class);
+  private static final Expression NULL_VALUE_EXPRESSION =
+      Expression.newBuilder()
+          .setLiteral(
+              LiteralConstant.newBuilder()
+                  .setValue(
+                      org.hypertrace.gateway.service.v1.common.Value.newBuilder()
+                          .setValueType(ValueType.STRING)
+                          .setString("null")
+                          .build())
+                  .build())
+          .build();
 
   private final QueryServiceClient queryServiceClient;
   private final AttributeMetadataProvider attributeMetadataProvider;
@@ -543,10 +556,15 @@ public class RequestHandler implements RequestHandlerWithSorting {
       org.hypertrace.gateway.service.v1.common.Operator operator,
       List<String> entityIds) {
     if (entityIdAttributes.size() != 1) {
-      throw new RuntimeException("Cannot have more than one id attribute for an entity");
+      throw Status.FAILED_PRECONDITION
+          .withDescription("entity must have one id attribute.")
+          .asRuntimeException();
     }
 
     if (entityIds.isEmpty()) {
+      // TODO: have a better approach here. One possible solution could be to
+      //  form a dummy response based on the selections provided
+
       // Having empty entity ids is valid filter because this means that
       // EDS source has filtered out all the entities and the result should
       // be empty. But QS doesn't recognize empty IN filter as valid filter
@@ -560,20 +578,21 @@ public class RequestHandler implements RequestHandlerWithSorting {
           .setOperator(Operator.AND)
           .addChildFilter(
               org.hypertrace.gateway.service.v1.common.Filter.newBuilder()
-                  .setLhs(buildStringExpression(entityIdAttributes.get(0)))
-                  .setOperator(Operator.NEQ)
-                  .setRhs(buildStringExpression(null))
+                  .setLhs(buildAttributeExpression(entityIdAttributes.get(0)))
+                  .setOperator(Operator.EQ)
+                  .setRhs(NULL_VALUE_EXPRESSION)
                   .build())
           .addChildFilter(
               org.hypertrace.gateway.service.v1.common.Filter.newBuilder()
-                  .setLhs(buildStringExpression(entityIdAttributes.get(0)))
-                  .setOperator(Operator.EQ)
-                  .setRhs(buildStringExpression(null))
+                  .setLhs(buildAttributeExpression(entityIdAttributes.get(0)))
+                  .setOperator(Operator.NEQ)
+                  .setRhs(NULL_VALUE_EXPRESSION)
                   .build())
           .build();
     }
+
     return org.hypertrace.gateway.service.v1.common.Filter.newBuilder()
-        .setLhs(buildStringExpression(entityIdAttributes.get(0)))
+        .setLhs(buildAttributeExpression(entityIdAttributes.get(0)))
         .setOperator(operator)
         .setRhs(buildStringArrayExpression(entityIds))
         .build();
@@ -592,16 +611,9 @@ public class RequestHandler implements RequestHandlerWithSorting {
         .build();
   }
 
-  private Expression buildStringExpression(String value) {
+  private Expression buildAttributeExpression(String value) {
     return Expression.newBuilder()
-        .setLiteral(
-            LiteralConstant.newBuilder()
-                .setValue(
-                    org.hypertrace.gateway.service.v1.common.Value.newBuilder()
-                        .setValueType(ValueType.STRING)
-                        .setString(value)
-                        .build())
-                .build())
+        .setAttributeExpression(AttributeExpression.newBuilder().setAttributeId(value).build())
         .build();
   }
 
