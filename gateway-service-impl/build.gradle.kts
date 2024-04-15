@@ -22,7 +22,7 @@ dependencies {
   implementation("org.hypertrace.entity.service:entity-service-api:0.8.87")
   implementation("org.hypertrace.core.grpcutils:grpc-context-utils:0.13.1")
   implementation("org.hypertrace.core.grpcutils:grpc-client-utils:0.13.1")
-  implementation("org.hypertrace.core.serviceframework:platform-metrics:0.1.58")
+  implementation("org.hypertrace.core.serviceframework:platform-metrics:0.1.71")
 
   // Config
   implementation("com.typesafe:config:1.4.1")
