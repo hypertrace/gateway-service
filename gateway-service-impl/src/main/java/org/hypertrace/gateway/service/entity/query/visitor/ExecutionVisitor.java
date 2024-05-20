@@ -295,7 +295,7 @@ public class ExecutionVisitor implements Visitor<EntityResponse> {
                                   .getExpressionContext()
                                   .getSourceToMetricExpressionMap()
                                   .get(source))
-                          .setFilter(filter)
+                          .setFilter(addSourceFilters(executionContext, source, filter))
                           .build();
                   IEntityFetcher entityFetcher = queryHandlerRegistry.getEntityFetcher(source);
                   EntitiesRequestContext context =
@@ -353,6 +353,14 @@ public class ExecutionVisitor implements Visitor<EntityResponse> {
       // is equal to the response fetched by the current SelectionNode
       return new EntityResponse(response, response.size());
     }
+  }
+
+  private Filter addSourceFilters(EntityExecutionContext executionContext, String source, Filter filter) {
+    Filter andChildFilter = executionContext.getExpressionContext().getSourceToAndFilterMap().get(source);
+    if (andChildFilter == null) {
+      return filter;
+    }
+    return Filter.newBuilder().setOperator(Operator.AND).addChildFilter(filter).addAllChildFilter(andChildFilter.getChildFilterList()).build();
   }
 
   Filter constructFilterFromChildNodesResult(EntityFetcherResponse result) {
