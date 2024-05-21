@@ -1313,6 +1313,39 @@
     ]
   },
   {
+    "fqn": "Backend.type",
+    "valueKind": "TYPE_STRING",
+    "key": "type",
+    "displayName": "Type",
+    "scopeString": "BACKEND",
+    "type": "ATTRIBUTE",
+    "sources": [
+      "QS"
+    ]
+  },
+  {
+    "fqn": "Backend.backendApiId",
+    "valueKind": "TYPE_STRING",
+    "key": "backendApiId",
+    "displayName": "BackendApiId",
+    "scopeString": "BACKEND",
+    "type": "ATTRIBUTE",
+    "sources": [
+      "QS"
+    ]
+  },
+  {
+    "fqn": "Backend.environment",
+    "valueKind": "TYPE_STRING",
+    "key": "environment",
+    "displayName": "Environment",
+    "scopeString": "BACKEND",
+    "type": "ATTRIBUTE",
+    "sources": [
+      "QS"
+    ]
+  },
+  {
     "fqn": "Backend.metrics.bytes_received",
     "valueKind": "TYPE_INT64",
     "key": "bytesReceived",

@@ -1,0 +1,332 @@
+[
+  {
+    "request": {
+      "filter": {
+        "childFilter": [{
+          "lhs": {
+            "attributeExpression": {
+              "attributeId": "BACKEND.id"
+            }
+          },
+          "operator": "NEQ",
+          "rhs": {
+            "literal": {
+              "value": {
+                "valueType": "NULL_STRING"
+              }
+            }
+          }
+        }, {
+          "childFilter": [{
+            "lhs": {
+              "attributeExpression": {
+                "attributeId": "BACKEND.startTime"
+              }
+            },
+            "operator": "GE",
+            "rhs": {
+              "literal": {
+                "value": {
+                  "valueType": "LONG",
+                  "long": "1715779687497"
+                }
+              }
+            }
+          }, {
+            "lhs": {
+              "attributeExpression": {
+                "attributeId": "BACKEND.startTime"
+              }
+            },
+            "operator": "LT",
+            "rhs": {
+              "literal": {
+                "value": {
+                  "valueType": "LONG",
+                  "long": "1715866087497"
+                }
+              }
+            }
+          }]
+        }, {
+          "childFilter": [{
+            "lhs": {
+              "attributeExpression": {
+                "attributeId": "BACKEND.environment",
+                "alias": "environment"
+              }
+            },
+            "operator": "EQ",
+            "rhs": {
+              "literal": {
+                "value": {
+                  "string": "testenv"
+                }
+              }
+            }
+          }, {
+            "lhs": {
+              "attributeExpression": {
+                "attributeId": "BACKEND.backendApiId",
+                "alias": "backendApiId"
+              }
+            },
+            "operator": "NEQ",
+            "rhs": {
+              "literal": {
+                "value": {
+                  "string": "null"
+                }
+              }
+            }
+          }]
+        }]
+      },
+      "selection": [{
+        "attributeExpression": {
+          "attributeId": "BACKEND.id"
+        }
+      }, {
+        "attributeExpression": {
+          "attributeId": "BACKEND.type",
+          "alias": "type"
+        }
+      }, {
+        "attributeExpression": {
+          "attributeId": "BACKEND.name",
+          "alias": "name"
+        }
+      }, {
+        "function": {
+          "functionName": "COUNT",
+          "arguments": [{
+            "attributeExpression": {
+              "attributeId": "BACKEND.id"
+            }
+          }]
+        }
+      }],
+      "groupBy": [{
+        "attributeExpression": {
+          "attributeId": "BACKEND.id"
+        }
+      }, {
+        "attributeExpression": {
+          "attributeId": "BACKEND.type",
+          "alias": "type"
+        }
+      }, {
+        "attributeExpression": {
+          "attributeId": "BACKEND.name",
+          "alias": "name"
+        }
+      }],
+      "orderBy": [{
+        "expression": {
+          "attributeExpression": {
+            "attributeId": "BACKEND.name",
+            "alias": "name"
+          }
+        }
+      }],
+      "limit": 10000
+    },
+    "response": {
+      "isLastChunk": true,
+      "resultSetMetadata": {
+        "columnMetadata": [{
+          "columnName": "BACKEND.id"
+        }, {
+          "columnName": "type"
+        }, {
+          "columnName": "name"
+        }, {
+          "columnName": "COUNT"
+        }]
+      },
+      "row": [{
+        "column": [{
+          "string": "backend-id-1"
+        }, {
+          "string": "HTTPS"
+        }, {
+          "string": "backend-1.abc.com"
+        }, {
+          "string": "15746"
+        }]
+      }, {
+        "column": [{
+          "string": "backend-id-2"
+        }, {
+          "string": "HTTPS"
+        }, {
+          "string": "backend-2.abc.com"
+        }, {
+          "string": "26190"
+        }]
+      }, {
+        "column": [{
+          "string": "backend-id-3"
+        }, {
+          "string": "HTTPS"
+        }, {
+          "string": "backend-3.abc.com"
+        }, {
+          "string": "31634"
+        }]
+      }]
+    }
+  },
+  {
+    "request": {
+      "filter": {
+        "childFilter": [{
+          "lhs": {
+            "attributeExpression": {
+              "attributeId": "BACKEND.id"
+            }
+          },
+          "operator": "NEQ",
+          "rhs": {
+            "literal": {
+              "value": {
+                "valueType": "NULL_STRING"
+              }
+            }
+          }
+        }, {
+          "childFilter": [{
+            "lhs": {
+              "attributeExpression": {
+                "attributeId": "BACKEND.startTime"
+              }
+            },
+            "operator": "GE",
+            "rhs": {
+              "literal": {
+                "value": {
+                  "valueType": "LONG",
+                  "long": "1715779687497"
+                }
+              }
+            }
+          }, {
+            "lhs": {
+              "attributeExpression": {
+                "attributeId": "BACKEND.startTime"
+              }
+            },
+            "operator": "LT",
+            "rhs": {
+              "literal": {
+                "value": {
+                  "valueType": "LONG",
+                  "long": "1715866087497"
+                }
+              }
+            }
+          }]
+        }, {
+          "childFilter": [{
+            "lhs": {
+              "attributeExpression": {
+                "attributeId": "BACKEND.id",
+                "alias": "entityId0"
+              }
+            },
+            "operator": "IN",
+            "rhs": {
+              "literal": {
+                "value": {
+                  "valueType": "STRING_ARRAY",
+                  "stringArray": ["backend-id-3", "backend-id-1", "backend-id-2"]
+                }
+              }
+            }
+          }, {
+            "lhs": {
+              "attributeExpression": {
+                "attributeId": "BACKEND.environment",
+                "alias": "environment"
+              }
+            },
+            "operator": "EQ",
+            "rhs": {
+              "literal": {
+                "value": {
+                  "string": "testenv"
+                }
+              }
+            }
+          }, {
+            "lhs": {
+              "attributeExpression": {
+                "attributeId": "BACKEND.backendApiId",
+                "alias": "backendApiId"
+              }
+            },
+            "operator": "NEQ",
+            "rhs": {
+              "literal": {
+                "value": {
+                  "string": "null"
+                }
+              }
+            }
+          }]
+        }]
+      },
+      "selection": [{
+        "attributeExpression": {
+          "attributeId": "BACKEND.id"
+        }
+      }, {
+        "function": {
+          "functionName": "DISTINCTCOUNT",
+          "arguments": [{
+            "attributeExpression": {
+              "attributeId": "BACKEND.backendApiId",
+              "alias": "backendApiId"
+            }
+          }],
+          "alias": "DISTINCT_COUNT_BACKEND.backendApiId_[]"
+        }
+      }],
+      "groupBy": [{
+        "attributeExpression": {
+          "attributeId": "BACKEND.id"
+        }
+      }],
+      "limit": 10000
+    },
+    "response": {
+      "isLastChunk": true,
+      "resultSetMetadata": {
+        "columnMetadata": [{
+          "columnName": "BACKEND.id"
+        }, {
+          "columnName": "DISTINCT_COUNT_BACKEND.backendApiId_[]"
+        }]
+      },
+      "row": [{
+        "column": [{
+          "string": "backend-id-3"
+        }, {
+          "string": "2"
+        }]
+      }, {
+        "column": [{
+          "string": "backend-id-2"
+        }, {
+          "string": "2"
+        }]
+      }, {
+        "column": [{
+          "string": "backend-id-1"
+        }, {
+          "string": "2"
+        }]
+      }]
+    }
+  }
+]
