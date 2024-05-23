@@ -1,8 +1,6 @@
 package org.hypertrace.gateway.service.common;
 
-import static java.util.Collections.emptyMap;
 import static java.util.function.Predicate.not;
-import static org.hypertrace.core.attribute.service.v1.AttributeSource.QS;
 
 import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.Sets;
@@ -631,45 +629,6 @@ public class ExpressionContext {
     return attributeToSourcesMap.values().stream()
         .reduce(Sets::intersection)
         .orElse(Collections.emptySet());
-  }
-
-  private Map<String, Filter> buildSourceToAndFilterMap(Filter filter) {
-    Operator operator = filter.getOperator();
-    if (operator == Operator.AND) {
-      return filter.getChildFilterList().stream()
-          .map(this::buildSourceToAndFilterMap)
-          .flatMap(map -> map.entrySet().stream())
-          .collect(
-              Collectors.toUnmodifiableMap(
-                  Map.Entry::getKey,
-                  Map.Entry::getValue,
-                  (value1, value2) ->
-                      Filter.newBuilder()
-                          .setOperator(Operator.AND)
-                          .addChildFilter(value1)
-                          .addChildFilter(value2)
-                          .build()));
-
-    } else if (operator == Operator.OR) {
-      return Collections.emptyMap();
-    } else {
-      List<AttributeSource> attributeSources = getAttributeSources(filter.getLhs());
-      if (attributeSources.isEmpty()) {
-        return emptyMap();
-      }
-
-      return attributeSources.contains(QS)
-          ? Map.of(QS.name(), filter)
-          : Map.of(attributeSources.get(0).name(), filter);
-    }
-  }
-
-  private List<AttributeSource> getAttributeSources(Expression expression) {
-    Set<String> attributeIds = ExpressionReader.extractAttributeIds(expression);
-    return attributeIds.stream()
-        .map(attributeId -> attributeMetadataMap.get(attributeId).getSourcesList())
-        .flatMap(Collection::stream)
-        .collect(Collectors.toUnmodifiableList());
   }
 
   @Override

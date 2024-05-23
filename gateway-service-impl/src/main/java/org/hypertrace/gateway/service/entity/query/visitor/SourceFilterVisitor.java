@@ -26,7 +26,7 @@ public class SourceFilterVisitor implements Visitor<QueryNode> {
     Filter timeRangeFilter =
         TimeRangeFilterUtil.addTimeRangeFilter(
             executionContext.getTimestampAttributeId(),
-            Filter.newBuilder().build(),
+            Filter.getDefaultInstance(),
             executionContext.getEntitiesRequest().getStartTimeMillis(),
             executionContext.getEntitiesRequest().getEndTimeMillis());
     // we don't need to store timestamp filter
