@@ -10,6 +10,7 @@ import java.util.LinkedHashMap;
 import java.util.LinkedList;
 import java.util.List;
 import java.util.Map;
+import java.util.Optional;
 import java.util.Set;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.ExecutorService;
@@ -265,7 +266,7 @@ public class ExecutionVisitor implements Visitor<EntityResponse> {
                                   .getExpressionContext()
                                   .getSourceToSelectionExpressionMap()
                                   .get(source))
-                          .setFilter(filter)
+                          .setFilter(addSourceFilters(executionContext, source, filter))
                           .build();
                   IEntityFetcher entityFetcher = queryHandlerRegistry.getEntityFetcher(source);
                   EntitiesRequestContext context =
@@ -325,7 +326,7 @@ public class ExecutionVisitor implements Visitor<EntityResponse> {
                                   .getExpressionContext()
                                   .getSourceToTimeAggregationMap()
                                   .get(source))
-                          .setFilter(filter)
+                          .setFilter(addSourceFilters(executionContext, source, filter))
                           .build();
                   IEntityFetcher entityFetcher = queryHandlerRegistry.getEntityFetcher(source);
                   EntitiesRequestContext requestContext =
@@ -357,16 +358,18 @@ public class ExecutionVisitor implements Visitor<EntityResponse> {
 
   private Filter addSourceFilters(
       EntityExecutionContext executionContext, String source, Filter filter) {
-    Filter andChildFilter =
-        executionContext.getExpressionContext().getSourceToAndFilterMap().get(source);
-    if (andChildFilter == null) {
-      return filter;
-    }
-    return Filter.newBuilder()
-        .setOperator(Operator.AND)
-        .addChildFilter(filter)
-        .addAllChildFilter(andChildFilter.getChildFilterList())
-        .build();
+    Optional<Filter> sourceFilter =
+        Optional.ofNullable(
+            executionContext.getExpressionContext().getSourceToFilterMap().get(source));
+    return sourceFilter
+        .map(
+            value ->
+                Filter.newBuilder()
+                    .setOperator(Operator.AND)
+                    .addChildFilter(filter)
+                    .addChildFilter(value)
+                    .build())
+        .orElse(filter);
   }
 
   Filter constructFilterFromChildNodesResult(EntityFetcherResponse result) {

@@ -26,6 +26,7 @@ import org.hypertrace.gateway.service.common.util.TimeRangeFilterUtil;
 import org.hypertrace.gateway.service.entity.query.visitor.ExecutionContextBuilderVisitor;
 import org.hypertrace.gateway.service.entity.query.visitor.FilterOptimizingVisitor;
 import org.hypertrace.gateway.service.entity.query.visitor.PrintVisitor;
+import org.hypertrace.gateway.service.entity.query.visitor.SourceFilterVisitor;
 import org.hypertrace.gateway.service.v1.common.Expression;
 import org.hypertrace.gateway.service.v1.common.Filter;
 import org.hypertrace.gateway.service.v1.common.Operator;
@@ -215,6 +216,8 @@ public class ExecutionTreeBuilder {
   @VisibleForTesting
   QueryNode buildExecutionTree(EntityExecutionContext executionContext, QueryNode filterTree) {
     QueryNode rootNode = filterTree;
+    // set up source filter to be used during selections
+    filterTree.acceptVisitor(new SourceFilterVisitor(executionContext));
     // Select attributes from sources in order by but not part of the filter tree
     Set<String> attrSourcesForOrderBy = executionContext.getPendingSelectionSourcesForOrderBy();
     if (!attrSourcesForOrderBy.isEmpty()) {

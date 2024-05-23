@@ -55,13 +55,12 @@ public class ExpressionContext {
 
   private ImmutableMap<String, List<OrderByExpression>> sourceToOrderByExpressionMap;
 
-  private Map<String, Filter> sourceToAndFilterMap;
-
   // filters
   private final Filter filter;
   private ImmutableMap<String, List<Expression>> sourceToFilterExpressionMap;
   private ImmutableMap<String, Set<String>> sourceToFilterAttributeMap;
   private ImmutableMap<String, Set<String>> filterAttributeToSourceMap;
+  private Map<String, Filter> sourceToFilterMap;
 
   // and filter
   private boolean isAndFilter;
@@ -95,7 +94,7 @@ public class ExpressionContext {
     buildSourceToOrderByExpressionMaps();
     buildSourceToGroupByExpressionMaps();
 
-    this.sourceToAndFilterMap = buildSourceToAndFilterMap(filter);
+    this.sourceToFilterMap = new HashMap<>();
 
     this.isAndFilter = gatewayServiceConfig.isEntityAndFilterEnabled() && isAndFilter(filter);
   }
@@ -112,8 +111,12 @@ public class ExpressionContext {
             .build();
   }
 
-  public Map<String, Filter> getSourceToAndFilterMap() {
-    return sourceToAndFilterMap;
+  public Map<String, Filter> getSourceToFilterMap() {
+    return sourceToFilterMap;
+  }
+
+  public void putSourceToFilterMap(String source, Filter filter) {
+    sourceToFilterMap.put(source, filter);
   }
 
   public Map<String, Set<String>> getSourceToSelectionAttributeMap() {

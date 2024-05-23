@@ -244,35 +244,37 @@
               }
             }
           }, {
-            "lhs": {
-              "attributeExpression": {
-                "attributeId": "BACKEND.environment",
-                "alias": "environment"
-              }
-            },
-            "operator": "EQ",
-            "rhs": {
-              "literal": {
-                "value": {
-                  "string": "testenv"
+            "childFilter": [{
+              "lhs": {
+                "attributeExpression": {
+                  "attributeId": "BACKEND.environment",
+                  "alias": "environment"
+                }
+              },
+              "operator": "EQ",
+              "rhs": {
+                "literal": {
+                  "value": {
+                    "string": "testenv"
+                  }
                 }
               }
-            }
-          }, {
-            "lhs": {
-              "attributeExpression": {
-                "attributeId": "BACKEND.backendApiId",
-                "alias": "backendApiId"
-              }
-            },
-            "operator": "NEQ",
-            "rhs": {
-              "literal": {
-                "value": {
-                  "string": "null"
+            }, {
+              "lhs": {
+                "attributeExpression": {
+                  "attributeId": "BACKEND.backendApiId",
+                  "alias": "backendApiId"
+                }
+              },
+              "operator": "NEQ",
+              "rhs": {
+                "literal": {
+                  "value": {
+                    "string": "null"
+                  }
                 }
               }
-            }
+            }]
           }]
         }]
       },
