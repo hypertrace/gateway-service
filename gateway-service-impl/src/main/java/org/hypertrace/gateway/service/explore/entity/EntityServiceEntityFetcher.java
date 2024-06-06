@@ -35,7 +35,6 @@ import org.slf4j.LoggerFactory;
 
 public class EntityServiceEntityFetcher {
   private static final Logger LOGGER = LoggerFactory.getLogger(EntityServiceEntityFetcher.class);
-  private static final int DEFAULT_ENTITY_REQUEST_LIMIT = 10_000;
   private final AttributeMetadataProvider attributeMetadataProvider;
   private final EntityIdColumnsConfig entityIdColumnsConfig;
   private final EntityQueryServiceClient entityQueryServiceClient;
@@ -169,7 +168,8 @@ public class EntityServiceEntityFetcher {
 
     addGroupBys(exploreRequest, builder);
     addSelections(requestContext, exploreRequest, builder);
-    builder.setLimit(DEFAULT_ENTITY_REQUEST_LIMIT);
+    builder.setLimit(exploreRequest.getLimit());
+    builder.setOffset(exploreRequest.getOffset());
     return builder.build();
   }
 
