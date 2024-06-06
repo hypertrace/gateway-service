@@ -15,6 +15,7 @@ import java.util.Set;
 import java.util.stream.Collectors;
 import org.hypertrace.core.attribute.service.v1.AttributeMetadata;
 import org.hypertrace.core.attribute.service.v1.AttributeSource;
+import org.hypertrace.core.query.service.api.ColumnIdentifier;
 import org.hypertrace.core.query.service.api.ColumnMetadata;
 import org.hypertrace.core.query.service.api.Filter;
 import org.hypertrace.core.query.service.api.Function;
@@ -119,64 +120,10 @@ public class RequestHandler implements RequestHandlerWithSorting {
             attributeMetadataProvider);
 
     if (request.getFetchTotal()) {
-      QueryRequest totalQueryRequest = buildTotalQueryRequest(request, queryRequest);
-      Iterator<ResultSetChunk> totalIterator = executeQuery(requestContext, totalQueryRequest);
-      while (totalIterator.hasNext()) {
-        ResultSetChunk chunk = totalIterator.next();
-        LOG.info("Total received chunk is: {}", chunk);
-        if (chunk.getRowCount() < 1) {
-          break;
-        }
-
-        if (!chunk.hasResultSetMetadata()
-            || chunk.getResultSetMetadata().getColumnMetadataList().size() != 1
-            || !TOTAL_ALIAS_NAME.equals(
-                chunk.getResultSetMetadata().getColumnMetadata(0).getColumnName())) {
-          LOG.warn("Chunk doesn't have result metadata so couldn't process the response.");
-          break;
-        }
-        responseBuilder.setTotal(chunk.getRow(0).getColumn(0).getInt());
-      }
+      responseBuilder.setTotal(fetchTotal(requestContext, request, queryRequest));
     }
 
     return responseBuilder;
-  }
-
-  QueryRequest buildTotalQueryRequest(ExploreRequest request, QueryRequest queryRequest) {
-    QueryRequest.Builder builder = QueryRequest.newBuilder();
-    List<org.hypertrace.gateway.service.v1.common.Expression> groupBys =
-        ExpressionReader.getAttributeExpressions(request.getGroupByList());
-    // add all group-by columns as distinct count to get total
-    builder.addSelection(
-        org.hypertrace.core.query.service.api.Expression.newBuilder()
-            .setFunction(
-                Function.newBuilder()
-                    .addAllArguments(
-                        groupBys.stream()
-                            .map(
-                                attribute ->
-                                    org.hypertrace.core.query.service.api.Expression.newBuilder()
-                                        .setColumnIdentifier(
-                                            org.hypertrace.core.query.service.api.ColumnIdentifier
-                                                .newBuilder()
-                                                .setColumnName(
-                                                    attribute
-                                                        .getAttributeExpression()
-                                                        .getAttributeId())
-                                                .setAlias(
-                                                    attribute.getAttributeExpression().getAlias())
-                                                .build())
-                                        .build())
-                            .collect(Collectors.toUnmodifiableList()))
-                    .setFunctionName(FunctionType.DISTINCTCOUNT.name())
-                    .setAlias(TOTAL_ALIAS_NAME)
-                    .build())
-            .build());
-
-    // Add filter
-    builder.setFilter(queryRequest.getFilter());
-    builder.setLimit(1);
-    return builder.build();
   }
 
   QueryRequest buildQueryRequest(
@@ -292,6 +239,62 @@ public class RequestHandler implements RequestHandlerWithSorting {
         .map(Optional::get)
         .map(org.hypertrace.gateway.service.v1.common.Value::getString)
         .collect(Collectors.toUnmodifiableList());
+  }
+
+  private int fetchTotal(
+      ExploreRequestContext requestContext, ExploreRequest request, QueryRequest queryRequest) {
+    QueryRequest totalQueryRequest = buildTotalQueryRequest(request, queryRequest);
+    Iterator<ResultSetChunk> totalIterator = executeQuery(requestContext, totalQueryRequest);
+    while (totalIterator.hasNext()) {
+      ResultSetChunk chunk = totalIterator.next();
+      LOG.info("Total received chunk is: {}", chunk);
+      if (chunk.getRowCount() < 1) {
+        break;
+      }
+
+      if (!chunk.hasResultSetMetadata()
+          || chunk.getResultSetMetadata().getColumnMetadataList().size() != 1
+          || !TOTAL_ALIAS_NAME.equals(
+              chunk.getResultSetMetadata().getColumnMetadata(0).getColumnName())) {
+        LOG.warn("Chunk doesn't have result metadata so couldn't process the response.");
+        break;
+      }
+      return chunk.getRow(0).getColumn(0).getInt();
+    }
+    return 0;
+  }
+
+  private QueryRequest buildTotalQueryRequest(ExploreRequest request, QueryRequest queryRequest) {
+    QueryRequest.Builder builder = QueryRequest.newBuilder();
+    List<org.hypertrace.gateway.service.v1.common.Expression> groupBys =
+        ExpressionReader.getAttributeExpressions(request.getGroupByList());
+    // add all group-by columns as distinct count to get total
+    List<org.hypertrace.core.query.service.api.Expression> groupBysExpression =
+        groupBys.stream()
+            .map(
+                attribute ->
+                    org.hypertrace.core.query.service.api.Expression.newBuilder()
+                        .setColumnIdentifier(
+                            ColumnIdentifier.newBuilder()
+                                .setColumnName(attribute.getAttributeExpression().getAttributeId())
+                                .setAlias(attribute.getAttributeExpression().getAlias())
+                                .build())
+                        .build())
+            .collect(Collectors.toUnmodifiableList());
+    builder.addSelection(
+        org.hypertrace.core.query.service.api.Expression.newBuilder()
+            .setFunction(
+                Function.newBuilder()
+                    .addAllArguments(groupBysExpression)
+                    .setFunctionName(FunctionType.DISTINCTCOUNT.name())
+                    .setAlias(TOTAL_ALIAS_NAME)
+                    .build())
+            .build());
+
+    // Add filter
+    builder.setFilter(queryRequest.getFilter());
+    builder.setLimit(1);
+    return builder.build();
   }
 
   private ExploreRequest buildExploreRequest(

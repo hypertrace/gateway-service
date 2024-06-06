@@ -197,27 +197,24 @@ public class EntityServiceEntityFetcher {
             .setFilter(buildFilter(exploreRequest, entityIdAttributeIds, Collections.emptySet()));
     List<org.hypertrace.gateway.service.v1.common.Expression> groupBys =
         ExpressionReader.getAttributeExpressions(exploreRequest.getGroupByList());
+    List<Expression> groupBysExpression =
+        groupBys.stream()
+            .map(
+                attribute ->
+                    Expression.newBuilder()
+                        .setColumnIdentifier(
+                            ColumnIdentifier.newBuilder()
+                                .setColumnName(attribute.getAttributeExpression().getAttributeId())
+                                .setAlias(attribute.getAttributeExpression().getAlias())
+                                .build())
+                        .build())
+            .collect(Collectors.toUnmodifiableList());
     builder.addSelection(
         Expression.newBuilder()
             .setFunction(
                 Function.newBuilder()
                     .setFunctionName(FunctionType.DISTINCTCOUNT.name())
-                    .addAllArguments(
-                        groupBys.stream()
-                            .map(
-                                attribute ->
-                                    Expression.newBuilder()
-                                        .setColumnIdentifier(
-                                            ColumnIdentifier.newBuilder()
-                                                .setColumnName(
-                                                    attribute
-                                                        .getAttributeExpression()
-                                                        .getAttributeId())
-                                                .setAlias(
-                                                    attribute.getAttributeExpression().getAlias())
-                                                .build())
-                                        .build())
-                            .collect(Collectors.toUnmodifiableList()))
+                    .addAllArguments(groupBysExpression)
                     .setAlias(TOTAL_ALIAS_NAME)
                     .build())
             .build());
