@@ -35,8 +35,6 @@ import org.hypertrace.gateway.service.v1.explore.ExploreResponse;
  */
 public class EntityRequestHandler extends RequestHandler {
   private final EntityServiceEntityFetcher entityServiceEntityFetcher;
-  private final AttributeMetadataProvider attributeMetadataProvider;
-  private final QueryServiceEntityFetcher queryServiceEntityFetcher;
 
   public EntityRequestHandler(
       AttributeMetadataProvider attributeMetadataProvider,
@@ -50,9 +48,7 @@ public class EntityRequestHandler extends RequestHandler {
         entityIdColumnsConfig,
         queryServiceEntityFetcher,
         entityServiceEntityFetcher);
-    this.attributeMetadataProvider = attributeMetadataProvider;
     this.entityServiceEntityFetcher = entityServiceEntityFetcher;
-    this.queryServiceEntityFetcher = queryServiceEntityFetcher;
   }
 
   @Override
@@ -67,7 +63,8 @@ public class EntityRequestHandler extends RequestHandler {
     ExploreResponse.Builder builder = ExploreResponse.newBuilder();
     Set<String> entityIds = new HashSet<>();
     Optional<EntityOption> maybeEntityOption = getEntityOption(exploreRequest);
-    if (requestOnLiveEntities(maybeEntityOption)) {
+    boolean requestOnLiveEntities = requestOnLiveEntities(maybeEntityOption);
+    if (requestOnLiveEntities) {
       entityIds.addAll(getEntityIdsInTimeRangeFromQueryService(requestContext, exploreRequest));
       if (entityIds.isEmpty()) {
         return builder;
@@ -76,19 +73,13 @@ public class EntityRequestHandler extends RequestHandler {
 
     builder.addAllRow(
         entityServiceEntityFetcher.getResults(requestContext, exploreRequest, entityIds));
-
-    // If there's a Group By in the request, we need to do the sorting and pagination ourselves.
-    if (requestContext.hasGroupBy()) {
-      sortAndPaginatePostProcess(
-          builder,
-          requestContext.getOrderByExpressions(),
-          requestContext.getRowLimitBeforeRest(),
-          requestContext.getOffset());
-    }
-
     if (requestContext.hasGroupBy() && requestContext.getIncludeRestGroup()) {
       getTheRestGroupRequestHandler()
           .getRowsForTheRestGroup(requestContext, exploreRequest, builder);
+    }
+
+    if (exploreRequest.getFetchTotal()) {
+      builder.setTotal(entityServiceEntityFetcher.getTotal(requestContext, exploreRequest));
     }
 
     return builder;
@@ -122,10 +113,7 @@ public class EntityRequestHandler extends RequestHandler {
   }
 
   private boolean requestOnLiveEntities(Optional<EntityOption> entityOption) {
-    if (entityOption.isEmpty()) {
-      return true;
-    }
-    return !entityOption.get().getIncludeNonLiveEntities();
+    return entityOption.map(option -> !option.getIncludeNonLiveEntities()).orElse(true);
   }
 
   private Optional<EntityOption> getEntityOption(ExploreRequest exploreRequest) {
