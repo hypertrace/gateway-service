@@ -33,7 +33,6 @@ message ExploreRequest {
 
   string space_id = 22;
   optional ContextOption context_option = 23;
-  bool fetch_total = 24;
 }
 
 message ContextOption {
@@ -48,7 +47,6 @@ message EntityOption {
 
 message ExploreResponse {
   repeated org.hypertrace.gateway.service.v1.common.Row row = 2;
-  int32 total = 3;
 }
 
 // Used to set column names that are not there in the ExploreRequest selections eg. interval start time. To maintain

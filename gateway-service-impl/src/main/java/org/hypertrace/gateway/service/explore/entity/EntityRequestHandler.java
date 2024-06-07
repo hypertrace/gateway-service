@@ -78,10 +78,6 @@ public class EntityRequestHandler extends RequestHandler {
           .getRowsForTheRestGroup(requestContext, exploreRequest, builder);
     }
 
-    if (exploreRequest.getFetchTotal()) {
-      builder.setTotal(entityServiceEntityFetcher.getTotal(requestContext, exploreRequest));
-    }
-
     return builder;
   }
 
