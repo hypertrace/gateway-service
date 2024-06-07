@@ -67,7 +67,6 @@ import org.slf4j.LoggerFactory;
  */
 public class RequestHandler implements RequestHandlerWithSorting {
   private static final Logger LOG = LoggerFactory.getLogger(RequestHandler.class);
-  private static final String TOTAL_ALIAS_NAME = "total";
   private static final Expression NULL_VALUE_EXPRESSION =
       Expression.newBuilder()
           .setLiteral(
