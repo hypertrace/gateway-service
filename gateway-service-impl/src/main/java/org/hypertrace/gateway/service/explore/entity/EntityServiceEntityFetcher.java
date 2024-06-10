@@ -167,10 +167,22 @@ public class EntityServiceEntityFetcher {
             .setFilter(buildFilter(exploreRequest, entityIdAttributeIds, entityIds));
 
     addGroupBys(exploreRequest, builder);
+    addSortBy(exploreRequest, builder);
     addSelections(requestContext, exploreRequest, builder);
     builder.setLimit(exploreRequest.getLimit());
     builder.setOffset(exploreRequest.getOffset());
     return builder.build();
+  }
+
+  private void addSortBy(ExploreRequest exploreRequest, EntityQueryRequest.Builder builder) {
+    List<org.hypertrace.gateway.service.v1.common.OrderByExpression> orderBys =
+        exploreRequest.getOrderByList();
+    orderBys.forEach(
+        orderBy ->
+            builder.addOrderBy(
+                EntityServiceAndGatewayServiceConverter.convertToEntityServiceOrderByExpression(
+                        orderBy)
+                    .build()));
   }
 
   private void addGroupBys(ExploreRequest exploreRequest, EntityQueryRequest.Builder builder) {
