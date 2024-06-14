@@ -16,6 +16,7 @@ import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.ExecutorService;
 import java.util.stream.Collectors;
 import java.util.stream.IntStream;
+import org.hypertrace.core.attribute.service.v1.AttributeSource;
 import org.hypertrace.gateway.service.common.datafetcher.EntityFetcherResponse;
 import org.hypertrace.gateway.service.common.datafetcher.EntityResponse;
 import org.hypertrace.gateway.service.common.datafetcher.IEntityFetcher;
@@ -358,16 +359,19 @@ public class ExecutionVisitor implements Visitor<EntityResponse> {
 
   private Filter addSourceFilters(
       EntityExecutionContext executionContext, String source, Filter filter) {
-    Optional<Filter> sourceFilter =
+    Optional<Filter> sourceFilterOptional =
         Optional.ofNullable(
-            executionContext.getExpressionContext().getSourceToFilterMap().get(source));
-    return sourceFilter
+            executionContext
+                .getExpressionContext()
+                .getSourceToFilterMap()
+                .get(AttributeSource.valueOf(source)));
+    return sourceFilterOptional
         .map(
-            value ->
+            sourceFilter ->
                 Filter.newBuilder()
                     .setOperator(Operator.AND)
                     .addChildFilter(filter)
-                    .addChildFilter(value)
+                    .addChildFilter(sourceFilter)
                     .build())
         .orElse(filter);
   }

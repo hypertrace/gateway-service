@@ -194,7 +194,7 @@ public class ExecutionTreeBuilderTest {
     EntitiesRequest entitiesRequest = buildEntitiesRequest(filter);
     EntityExecutionContext executionContext = getExecutionContext(entitiesRequest);
     ExecutionTreeBuilder executionTreeBuilder = new ExecutionTreeBuilder(executionContext);
-    QueryNode queryNode = executionTreeBuilder.buildFilterTree(entitiesRequest, filter);
+    QueryNode queryNode = executionTreeBuilder.buildFilterTree(executionContext, filter);
     QueryNode optimizedQueryNode = queryNode.acceptVisitor(new FilterOptimizingVisitor());
     assertNotNull(optimizedQueryNode);
     assertTrue(optimizedQueryNode instanceof DataFetcherNode);
@@ -213,7 +213,7 @@ public class ExecutionTreeBuilderTest {
       EntitiesRequest entitiesRequest = buildEntitiesRequest(filter);
       EntityExecutionContext executionContext = getExecutionContext(entitiesRequest);
       ExecutionTreeBuilder executionTreeBuilder = new ExecutionTreeBuilder(executionContext);
-      QueryNode queryNode = executionTreeBuilder.buildFilterTree(entitiesRequest, filter);
+      QueryNode queryNode = executionTreeBuilder.buildFilterTree(executionContext, filter);
       assertNotNull(queryNode);
       assertTrue(queryNode instanceof AndNode);
       QueryNode optimizedNode = queryNode.acceptVisitor(new FilterOptimizingVisitor());
@@ -232,7 +232,7 @@ public class ExecutionTreeBuilderTest {
       EntitiesRequest entitiesRequest = buildEntitiesRequest(filter);
       EntityExecutionContext executionContext = getExecutionContext(entitiesRequest);
       ExecutionTreeBuilder executionTreeBuilder = new ExecutionTreeBuilder(executionContext);
-      QueryNode queryNode = executionTreeBuilder.buildFilterTree(entitiesRequest, filter);
+      QueryNode queryNode = executionTreeBuilder.buildFilterTree(executionContext, filter);
       assertNotNull(queryNode);
       assertTrue(queryNode instanceof OrNode);
       QueryNode optimizedNode = queryNode.acceptVisitor(new FilterOptimizingVisitor());
@@ -285,7 +285,7 @@ public class ExecutionTreeBuilderTest {
       EntitiesRequest entitiesRequest = buildEntitiesRequest(filter);
       EntityExecutionContext executionContext = getExecutionContext(entitiesRequest);
       ExecutionTreeBuilder executionTreeBuilder = new ExecutionTreeBuilder(executionContext);
-      QueryNode queryNode = executionTreeBuilder.buildFilterTree(entitiesRequest, filter);
+      QueryNode queryNode = executionTreeBuilder.buildFilterTree(executionContext, filter);
       assertNotNull(queryNode);
       assertTrue(queryNode instanceof AndNode);
       QueryNode optimizedNode = queryNode.acceptVisitor(new FilterOptimizingVisitor());
@@ -311,7 +311,7 @@ public class ExecutionTreeBuilderTest {
       EntitiesRequest entitiesRequest = buildEntitiesRequest(filter);
       EntityExecutionContext executionContext = getExecutionContext(entitiesRequest);
       ExecutionTreeBuilder executionTreeBuilder = new ExecutionTreeBuilder(executionContext);
-      QueryNode queryNode = executionTreeBuilder.buildFilterTree(entitiesRequest, filter);
+      QueryNode queryNode = executionTreeBuilder.buildFilterTree(executionContext, filter);
       assertNotNull(queryNode);
       assertTrue(queryNode instanceof OrNode);
       QueryNode optimizedNode = queryNode.acceptVisitor(new FilterOptimizingVisitor());
@@ -360,7 +360,7 @@ public class ExecutionTreeBuilderTest {
       EntitiesRequest entitiesRequest = buildEntitiesRequest(filter);
       EntityExecutionContext executionContext = getExecutionContext(entitiesRequest);
       ExecutionTreeBuilder executionTreeBuilder = new ExecutionTreeBuilder(executionContext);
-      QueryNode queryNode = executionTreeBuilder.buildFilterTree(entitiesRequest, filter);
+      QueryNode queryNode = executionTreeBuilder.buildFilterTree(executionContext, filter);
       assertNotNull(queryNode);
       QueryNode optimizedNode = queryNode.acceptVisitor(new FilterOptimizingVisitor());
       assertNotNull(optimizedNode);
@@ -385,7 +385,7 @@ public class ExecutionTreeBuilderTest {
       EntitiesRequest entitiesRequest = buildEntitiesRequest(filter);
       EntityExecutionContext executionContext = getExecutionContext(entitiesRequest);
       ExecutionTreeBuilder executionTreeBuilder = new ExecutionTreeBuilder(executionContext);
-      QueryNode queryNode = executionTreeBuilder.buildFilterTree(entitiesRequest, filter);
+      QueryNode queryNode = executionTreeBuilder.buildFilterTree(executionContext, filter);
       assertNotNull(queryNode);
       QueryNode optimizedNode = queryNode.acceptVisitor(new FilterOptimizingVisitor());
       assertNotNull(optimizedNode);
@@ -412,7 +412,7 @@ public class ExecutionTreeBuilderTest {
       EntitiesRequest entitiesRequest = buildEntitiesRequest(filter);
       EntityExecutionContext executionContext = getExecutionContext(entitiesRequest);
       ExecutionTreeBuilder executionTreeBuilder = new ExecutionTreeBuilder(executionContext);
-      QueryNode queryNode = executionTreeBuilder.buildFilterTree(entitiesRequest, filter);
+      QueryNode queryNode = executionTreeBuilder.buildFilterTree(executionContext, filter);
       assertNotNull(queryNode);
       QueryNode optimizedNode = queryNode.acceptVisitor(new FilterOptimizingVisitor());
       assertNotNull(optimizedNode);
@@ -442,7 +442,7 @@ public class ExecutionTreeBuilderTest {
       EntitiesRequest entitiesRequest = buildEntitiesRequest(filter);
       EntityExecutionContext executionContext = getExecutionContext(entitiesRequest);
       ExecutionTreeBuilder executionTreeBuilder = new ExecutionTreeBuilder(executionContext);
-      QueryNode queryNode = executionTreeBuilder.buildFilterTree(entitiesRequest, filter);
+      QueryNode queryNode = executionTreeBuilder.buildFilterTree(executionContext, filter);
       assertNotNull(queryNode);
       QueryNode optimizedNode = queryNode.acceptVisitor(new FilterOptimizingVisitor());
       assertNotNull(optimizedNode);
@@ -467,7 +467,7 @@ public class ExecutionTreeBuilderTest {
       EntitiesRequest entitiesRequest = buildEntitiesRequest(filter);
       EntityExecutionContext executionContext = getExecutionContext(entitiesRequest);
       ExecutionTreeBuilder executionTreeBuilder = new ExecutionTreeBuilder(executionContext);
-      QueryNode queryNode = executionTreeBuilder.buildFilterTree(entitiesRequest, filter);
+      QueryNode queryNode = executionTreeBuilder.buildFilterTree(executionContext, filter);
       assertNotNull(queryNode);
       QueryNode optimizedNode = queryNode.acceptVisitor(new FilterOptimizingVisitor());
       assertNotNull(optimizedNode);

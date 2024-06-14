@@ -1,7 +1,6 @@
 package org.hypertrace.gateway.service.entity.query;
 
 import static java.util.Collections.emptyList;
-import static java.util.Collections.emptyMap;
 import static java.util.Collections.unmodifiableList;
 import static org.hypertrace.core.attribute.service.v1.AttributeSource.EDS;
 import static org.hypertrace.core.attribute.service.v1.AttributeSource.QS;
@@ -9,25 +8,18 @@ import static org.hypertrace.core.attribute.service.v1.AttributeSource.QS;
 import com.google.common.annotations.VisibleForTesting;
 import java.util.ArrayList;
 import java.util.Collection;
-import java.util.Collections;
-import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
-import java.util.Map.Entry;
 import java.util.Optional;
 import java.util.Set;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
-import org.hypertrace.core.attribute.service.v1.AttributeMetadata;
 import org.hypertrace.core.attribute.service.v1.AttributeSource;
 import org.hypertrace.gateway.service.common.ExpressionContext;
-import org.hypertrace.gateway.service.common.util.ExpressionReader;
 import org.hypertrace.gateway.service.common.util.TimeRangeFilterUtil;
 import org.hypertrace.gateway.service.entity.query.visitor.ExecutionContextBuilderVisitor;
 import org.hypertrace.gateway.service.entity.query.visitor.FilterOptimizingVisitor;
 import org.hypertrace.gateway.service.entity.query.visitor.PrintVisitor;
-import org.hypertrace.gateway.service.entity.query.visitor.SourceFilterVisitor;
-import org.hypertrace.gateway.service.v1.common.Expression;
 import org.hypertrace.gateway.service.v1.common.Filter;
 import org.hypertrace.gateway.service.v1.common.Operator;
 import org.hypertrace.gateway.service.v1.common.OrderByExpression;
@@ -40,18 +32,11 @@ public class ExecutionTreeBuilder {
 
   private static final Logger LOG = LoggerFactory.getLogger(ExecutionTreeBuilder.class);
 
-  private final Map<String, AttributeMetadata> attributeMetadataMap;
   private final EntityExecutionContext executionContext;
   private final Set<String> sourceSetsIfFilterAndOrderByAreFromSameSourceSets;
 
   public ExecutionTreeBuilder(EntityExecutionContext executionContext) {
     this.executionContext = executionContext;
-    this.attributeMetadataMap =
-        executionContext
-            .getAttributeMetadataProvider()
-            .getAttributesMetadata(
-                executionContext.getEntitiesRequestContext(),
-                executionContext.getEntitiesRequest().getEntityType());
 
     this.sourceSetsIfFilterAndOrderByAreFromSameSourceSets =
         ExpressionContext.getSourceSetsIfFilterAndOrderByAreFromSameSourceSets(
@@ -133,7 +118,7 @@ public class ExecutionTreeBuilder {
 
     ExecutionTreeUtils.removeDuplicateSelectionAttributes(executionContext, QS.name());
 
-    QueryNode filterTree = buildFilterTree(executionContext, entitiesRequest.getFilter());
+    QueryNode filterTree = buildFilterTreeNode(executionContext, entitiesRequest.getFilter());
     if (LOG.isDebugEnabled()) {
       LOG.debug("Filter Tree:{}", filterTree.acceptVisitor(new PrintVisitor()));
     }
@@ -217,7 +202,7 @@ public class ExecutionTreeBuilder {
   QueryNode buildExecutionTree(EntityExecutionContext executionContext, QueryNode filterTree) {
     QueryNode rootNode = filterTree;
     // set up source filter to be used during selections
-    filterTree.acceptVisitor(new SourceFilterVisitor(executionContext));
+    //    filterTree.acceptVisitor(new SourceFilterVisitor(executionContext));
     // Select attributes from sources in order by but not part of the filter tree
     Set<String> attrSourcesForOrderBy = executionContext.getPendingSelectionSourcesForOrderBy();
     if (!attrSourcesForOrderBy.isEmpty()) {
@@ -271,8 +256,7 @@ public class ExecutionTreeBuilder {
     return rootNode;
   }
 
-  @VisibleForTesting
-  QueryNode buildFilterTree(EntityExecutionContext context, Filter filter) {
+  QueryNode buildFilterTreeNode(EntityExecutionContext context, Filter filter) {
     EntitiesRequest entitiesRequest = executionContext.getEntitiesRequest();
     // Convert the time range into a filter and set it on the request so that all downstream
     // components needn't treat it specially
@@ -284,13 +268,12 @@ public class ExecutionTreeBuilder {
             entitiesRequest.getEndTimeMillis());
 
     boolean isAndFilter = executionContext.getExpressionContext().isAndFilter();
-    return isAndFilter
-        ? buildAndFilterTree(entitiesRequest)
-        : buildFilterTree(entitiesRequest, timeRangeFilter);
+    return isAndFilter ? buildAndFilterTree(context) : buildFilterTree(context, timeRangeFilter);
   }
 
   @VisibleForTesting
-  QueryNode buildFilterTree(EntitiesRequest entitiesRequest, Filter filter) {
+  QueryNode buildFilterTree(EntityExecutionContext context, Filter filter) {
+    EntitiesRequest entitiesRequest = context.getEntitiesRequest();
     if (filter.equals(Filter.getDefaultInstance())) {
       return new NoOpNode();
     }
@@ -298,15 +281,16 @@ public class ExecutionTreeBuilder {
     if (operator == Operator.AND) {
       return new AndNode(
           filter.getChildFilterList().stream()
-              .map(childFilter -> buildFilterTree(entitiesRequest, childFilter))
+              .map(childFilter -> buildFilterTree(context, childFilter))
               .collect(Collectors.toList()));
     } else if (operator == Operator.OR) {
       return new OrNode(
           filter.getChildFilterList().stream()
-              .map(childFilter -> buildFilterTree(entitiesRequest, childFilter))
+              .map(childFilter -> buildFilterTree(context, childFilter))
               .collect(Collectors.toList()));
     } else {
-      List<AttributeSource> sources = getAttributeSources(filter.getLhs());
+      List<AttributeSource> sources =
+          context.getExpressionContext().getAttributeSources(filter.getLhs());
       // if the filter by and order by are from QS, pagination can be pushed down to QS
 
       // There will always be a DataFetcherNode for QS, because the results are always fetched
@@ -322,7 +306,8 @@ public class ExecutionTreeBuilder {
   }
 
   // filters and order by on QS, but you can still have selection on EDS
-  QueryNode buildAndFilterTree(EntitiesRequest entitiesRequest) {
+  QueryNode buildAndFilterTree(EntityExecutionContext context) {
+    EntitiesRequest entitiesRequest = context.getEntitiesRequest();
     // If the filter by and order by are from QS (and selections are on other sources), pagination
     // can be pushed down to QS
     // Since the filter and order by are from QS, there won't be any filter on other
@@ -333,7 +318,7 @@ public class ExecutionTreeBuilder {
     }
 
     Map<AttributeSource, Filter> sourceToAndFilterMap =
-        new HashMap<>(buildSourceToAndFilterMap(entitiesRequest.getFilter()));
+        Map.copyOf(context.getExpressionContext().getSourceToFilterMap());
 
     // qs node as the pivot node to fetch time range data
     QueryNode qsNode =
@@ -387,37 +372,6 @@ public class ExecutionTreeBuilder {
       }
 
       return new AndNode(unmodifiableList(dataFetcherNodes));
-    }
-  }
-
-  private Map<AttributeSource, Filter> buildSourceToAndFilterMap(Filter filter) {
-    Operator operator = filter.getOperator();
-    if (operator == Operator.AND) {
-      return filter.getChildFilterList().stream()
-          .map(this::buildSourceToAndFilterMap)
-          .flatMap(map -> map.entrySet().stream())
-          .collect(
-              Collectors.toUnmodifiableMap(
-                  Entry::getKey,
-                  Entry::getValue,
-                  (value1, value2) ->
-                      Filter.newBuilder()
-                          .setOperator(Operator.AND)
-                          .addChildFilter(value1)
-                          .addChildFilter(value2)
-                          .build()));
-
-    } else if (operator == Operator.OR) {
-      return Collections.emptyMap();
-    } else {
-      List<AttributeSource> attributeSources = getAttributeSources(filter.getLhs());
-      if (attributeSources.isEmpty()) {
-        return emptyMap();
-      }
-
-      return attributeSources.contains(QS)
-          ? Map.of(QS, filter)
-          : Map.of(attributeSources.get(0), filter);
     }
   }
 
@@ -481,13 +435,5 @@ public class ExecutionTreeBuilder {
 
   private QueryNode createPaginateOnlyNode(QueryNode queryNode, EntitiesRequest entitiesRequest) {
     return new PaginateOnlyNode(queryNode, entitiesRequest.getLimit(), entitiesRequest.getOffset());
-  }
-
-  public List<AttributeSource> getAttributeSources(Expression expression) {
-    Set<String> attributeIds = ExpressionReader.extractAttributeIds(expression);
-    return attributeIds.stream()
-        .map(attributeId -> attributeMetadataMap.get(attributeId).getSourcesList())
-        .flatMap(Collection::stream)
-        .collect(Collectors.toUnmodifiableList());
   }
 }
