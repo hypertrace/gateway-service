@@ -8,6 +8,7 @@ import static org.hypertrace.core.attribute.service.v1.AttributeSource.QS;
 import com.google.common.annotations.VisibleForTesting;
 import java.util.ArrayList;
 import java.util.Collection;
+import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
@@ -201,8 +202,6 @@ public class ExecutionTreeBuilder {
   @VisibleForTesting
   QueryNode buildExecutionTree(EntityExecutionContext executionContext, QueryNode filterTree) {
     QueryNode rootNode = filterTree;
-    // set up source filter to be used during selections
-    //    filterTree.acceptVisitor(new SourceFilterVisitor(executionContext));
     // Select attributes from sources in order by but not part of the filter tree
     Set<String> attrSourcesForOrderBy = executionContext.getPendingSelectionSourcesForOrderBy();
     if (!attrSourcesForOrderBy.isEmpty()) {
@@ -318,7 +317,7 @@ public class ExecutionTreeBuilder {
     }
 
     Map<AttributeSource, Filter> sourceToAndFilterMap =
-        Map.copyOf(context.getExpressionContext().getSourceToFilterMap());
+        new HashMap<>(context.getExpressionContext().getSourceToFilterMap());
 
     // qs node as the pivot node to fetch time range data
     QueryNode qsNode =
