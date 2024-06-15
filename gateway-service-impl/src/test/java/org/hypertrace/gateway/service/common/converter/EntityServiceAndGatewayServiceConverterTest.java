@@ -24,13 +24,13 @@ import org.hypertrace.gateway.service.entity.EntitiesRequestContext;
 import org.hypertrace.gateway.service.v1.entity.EntitiesRequest;
 import org.junit.jupiter.api.Test;
 
-public class EntityServiceAndGatewayServiceConverterTest extends AbstractGatewayServiceTest {
+class EntityServiceAndGatewayServiceConverterTest extends AbstractGatewayServiceTest {
 
   @Test
-  public void testAddBetweenFilter() {
+  void testAddBetweenFilter() {
     int startTimeMillis = 1;
     int endTimeMillis = 2;
-    String timestamp = "lastActivity";
+    String timestamp = "startTime";
     String timestampAttributeName = BACKEND.name() + "." + timestamp;
 
     Expression.Builder expectedStartTimeConstant =
