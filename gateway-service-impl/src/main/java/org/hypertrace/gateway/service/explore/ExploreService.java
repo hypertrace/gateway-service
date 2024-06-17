@@ -26,12 +26,9 @@ import org.hypertrace.gateway.service.explore.entity.EntityRequestHandler;
 import org.hypertrace.gateway.service.explore.entity.EntityServiceEntityFetcher;
 import org.hypertrace.gateway.service.v1.explore.ExploreRequest;
 import org.hypertrace.gateway.service.v1.explore.ExploreResponse;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
 
 public class ExploreService {
 
-  private static final Logger log = LoggerFactory.getLogger(ExploreService.class);
   private final GatewayServiceConfig gatewayServiceConfig;
   private final AttributeMetadataProvider attributeMetadataProvider;
   private final ExploreRequestValidator exploreRequestValidator = new ExploreRequestValidator();

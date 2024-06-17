@@ -9,7 +9,6 @@ import org.hypertrace.gateway.service.v1.common.TimeAggregation;
 // Hold some of request fields and mappings needed when parsing the query service response
 public class QueryRequestContext extends RequestContext {
   private final Map<String, FunctionExpression> aliasToFunctionExpressionMap = new HashMap<>();
-  private final Map<FunctionExpression, String> functionExpressionToAliasMap = new HashMap<>();
   private final long startTimeMillis;
   private final long endTimeMillis;
   private final Map<String, TimeAggregation> aliasToTimeAggregation = new HashMap<>();
@@ -25,11 +24,6 @@ public class QueryRequestContext extends RequestContext {
 
   public void mapAliasToFunctionExpression(String alias, FunctionExpression functionExpression) {
     aliasToFunctionExpressionMap.put(alias, functionExpression);
-    functionExpressionToAliasMap.put(functionExpression, alias);
-  }
-
-  public String getAliasForFunctionExpression(FunctionExpression functionExpression) {
-    return functionExpressionToAliasMap.get(functionExpression);
   }
 
   public boolean containsFunctionExpression(String alias) {

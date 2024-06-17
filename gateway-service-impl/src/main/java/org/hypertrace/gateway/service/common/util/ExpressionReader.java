@@ -10,28 +10,11 @@ import java.util.Set;
 import java.util.stream.Collectors;
 import org.hypertrace.gateway.service.v1.common.Expression;
 import org.hypertrace.gateway.service.v1.common.FunctionExpression;
-import org.hypertrace.gateway.service.v1.common.OrderByExpression;
 
 public class ExpressionReader {
-  public static List<OrderByExpression> getFunctionOrderByExpressions(
-      List<OrderByExpression> expressions) {
-    return expressions.stream()
-        .filter(
-            expression ->
-                expression.getExpression().getValueCase() == Expression.ValueCase.FUNCTION)
-        .collect(Collectors.toUnmodifiableList());
-  }
-
   public static List<Expression> getFunctionExpressions(List<Expression> expressions) {
     return expressions.stream()
         .filter(expression -> expression.getValueCase() == Expression.ValueCase.FUNCTION)
-        .collect(Collectors.toUnmodifiableList());
-  }
-
-  public static List<OrderByExpression> getAttributeOrderByExpressions(
-      List<OrderByExpression> expressions) {
-    return expressions.stream()
-        .filter(expression -> isAttributeSelection(expression.getExpression()))
         .collect(Collectors.toUnmodifiableList());
   }
 
