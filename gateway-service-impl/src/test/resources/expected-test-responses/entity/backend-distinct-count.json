@@ -1,0 +1,94 @@
+{
+  "entity": [{
+    "id": "backend-id-1",
+    "entityType": "BACKEND",
+    "attribute": {
+      "BACKEND.id": {
+        "valueType": "STRING",
+        "string": "backend-id-1"
+      },
+      "id": {
+        "valueType": "STRING",
+        "string": "backend-id-1"
+      },
+      "type": {
+        "valueType": "STRING",
+        "string": "HTTPS"
+      },
+      "name": {
+        "valueType": "STRING",
+        "string": "backend-1.abc.com"
+      }
+    },
+    "metric": {
+      "DISTINCT_COUNT_BACKEND.backendApiId_[]": {
+        "function": "DISTINCTCOUNT",
+        "value": {
+          "valueType": "LONG",
+          "long": "2"
+        }
+      }
+    }
+  }, {
+    "id": "backend-id-2",
+    "entityType": "BACKEND",
+    "attribute": {
+      "BACKEND.id": {
+        "valueType": "STRING",
+        "string": "backend-id-2"
+      },
+      "id": {
+        "valueType": "STRING",
+        "string": "backend-id-2"
+      },
+      "type": {
+        "valueType": "STRING",
+        "string": "HTTPS"
+      },
+      "name": {
+        "valueType": "STRING",
+        "string": "backend-2.abc.com"
+      }
+    },
+    "metric": {
+      "DISTINCT_COUNT_BACKEND.backendApiId_[]": {
+        "function": "DISTINCTCOUNT",
+        "value": {
+          "valueType": "LONG",
+          "long": "2"
+        }
+      }
+    }
+  }, {
+    "id": "backend-id-3",
+    "entityType": "BACKEND",
+    "attribute": {
+      "BACKEND.id": {
+        "valueType": "STRING",
+        "string": "backend-id-3"
+      },
+      "id": {
+        "valueType": "STRING",
+        "string": "backend-id-3"
+      },
+      "type": {
+        "valueType": "STRING",
+        "string": "HTTPS"
+      },
+      "name": {
+        "valueType": "STRING",
+        "string": "backend-3.abc.com"
+      }
+    },
+    "metric": {
+      "DISTINCT_COUNT_BACKEND.backendApiId_[]": {
+        "function": "DISTINCTCOUNT",
+        "value": {
+          "valueType": "LONG",
+          "long": "2"
+        }
+      }
+    }
+  }],
+  "total": 3
+}

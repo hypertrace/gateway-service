@@ -1,6 +1,8 @@
 package org.hypertrace.gateway.service.common;
 
+import static java.util.Collections.emptyMap;
 import static java.util.function.Predicate.not;
+import static org.hypertrace.core.attribute.service.v1.AttributeSource.QS;
 
 import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.Sets;
@@ -58,6 +60,7 @@ public class ExpressionContext {
   private ImmutableMap<String, List<Expression>> sourceToFilterExpressionMap;
   private ImmutableMap<String, Set<String>> sourceToFilterAttributeMap;
   private ImmutableMap<String, Set<String>> filterAttributeToSourceMap;
+  private Map<AttributeSource, Filter> sourceToFilterMap;
 
   // and filter
   private boolean isAndFilter;
@@ -92,6 +95,9 @@ public class ExpressionContext {
     buildSourceToGroupByExpressionMaps();
 
     this.isAndFilter = gatewayServiceConfig.isEntityAndFilterEnabled() && isAndFilter(filter);
+    // build source to filter map only if we only have AND filter
+    this.sourceToFilterMap =
+        isAndFilter(filter) ? buildSourceToAndFilterMap(filter) : Collections.emptyMap();
   }
 
   public Map<String, List<Expression>> getSourceToSelectionExpressionMap() {
@@ -104,6 +110,10 @@ public class ExpressionContext {
         ImmutableMap.<String, List<Expression>>builder()
             .putAll(sourceToSelectionExpressionMap)
             .build();
+  }
+
+  public Map<AttributeSource, Filter> getSourceToFilterMap() {
+    return sourceToFilterMap;
   }
 
   public Map<String, Set<String>> getSourceToSelectionAttributeMap() {
@@ -618,6 +628,45 @@ public class ExpressionContext {
     return attributeToSourcesMap.values().stream()
         .reduce(Sets::intersection)
         .orElse(Collections.emptySet());
+  }
+
+  private Map<AttributeSource, Filter> buildSourceToAndFilterMap(Filter filter) {
+    Operator operator = filter.getOperator();
+    if (operator == Operator.AND) {
+      return filter.getChildFilterList().stream()
+          .map(this::buildSourceToAndFilterMap)
+          .flatMap(map -> map.entrySet().stream())
+          .collect(
+              Collectors.toUnmodifiableMap(
+                  Map.Entry::getKey,
+                  Map.Entry::getValue,
+                  (value1, value2) ->
+                      Filter.newBuilder()
+                          .setOperator(Operator.AND)
+                          .addChildFilter(value1)
+                          .addChildFilter(value2)
+                          .build()));
+
+    } else if (operator == Operator.OR) {
+      return Collections.emptyMap();
+    } else {
+      List<AttributeSource> attributeSources = getAttributeSources(filter.getLhs());
+      if (attributeSources.isEmpty()) {
+        return emptyMap();
+      }
+
+      return attributeSources.contains(QS)
+          ? Map.of(QS, filter)
+          : Map.of(attributeSources.get(0), filter);
+    }
+  }
+
+  public List<AttributeSource> getAttributeSources(Expression expression) {
+    Set<String> attributeIds = ExpressionReader.extractAttributeIds(expression);
+    return attributeIds.stream()
+        .map(attributeId -> attributeMetadataMap.get(attributeId).getSourcesList())
+        .flatMap(Collection::stream)
+        .collect(Collectors.toUnmodifiableList());
   }
 
   @Override

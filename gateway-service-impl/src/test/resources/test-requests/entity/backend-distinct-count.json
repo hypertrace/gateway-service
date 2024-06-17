@@ -1,0 +1,81 @@
+{
+  "entityType": "BACKEND",
+  "startTimeMillis": "1715779687497",
+  "endTimeMillis": "1715866087497",
+  "filter": {
+    "operator": "AND",
+    "childFilter": [{
+      "lhs": {
+        "attributeExpression": {
+          "attributeId": "BACKEND.environment",
+          "alias": "environment"
+        }
+      },
+      "operator": "EQ",
+      "rhs": {
+        "literal": {
+          "value": {
+            "valueType": "STRING",
+            "string": "testenv"
+          }
+        }
+      }
+    }, {
+      "lhs": {
+        "attributeExpression": {
+          "attributeId": "BACKEND.backendApiId",
+          "alias": "backendApiId"
+        }
+      },
+      "operator": "NEQ",
+      "rhs": {
+        "literal": {
+          "value": {
+            "valueType": "STRING",
+            "string": "null"
+          }
+        }
+      }
+    }]
+  },
+  "selection": [{
+    "attributeExpression": {
+      "attributeId": "BACKEND.type",
+      "alias": "type"
+    }
+  }, {
+    "attributeExpression": {
+      "attributeId": "BACKEND.id",
+      "alias": "id"
+    }
+  }, {
+    "attributeExpression": {
+      "attributeId": "BACKEND.name",
+      "alias": "name"
+    }
+  }, {
+    "function": {
+      "function": "DISTINCTCOUNT",
+      "arguments": [{
+        "attributeExpression": {
+          "attributeId": "BACKEND.backendApiId",
+          "alias": "backendApiId"
+        }
+      }],
+      "alias": "DISTINCT_COUNT_BACKEND.backendApiId_[]"
+    }
+  }],
+  "incomingInteractions": {
+  },
+  "outgoingInteractions": {
+  },
+  "orderBy": [{
+    "expression": {
+      "attributeExpression": {
+        "attributeId": "BACKEND.name",
+        "alias": "name"
+      }
+    }
+  }],
+  "limit": 50
+}

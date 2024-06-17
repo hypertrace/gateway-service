@@ -10,11 +10,13 @@ import java.util.LinkedHashMap;
 import java.util.LinkedList;
 import java.util.List;
 import java.util.Map;
+import java.util.Optional;
 import java.util.Set;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.ExecutorService;
 import java.util.stream.Collectors;
 import java.util.stream.IntStream;
+import org.hypertrace.core.attribute.service.v1.AttributeSource;
 import org.hypertrace.gateway.service.common.datafetcher.EntityFetcherResponse;
 import org.hypertrace.gateway.service.common.datafetcher.EntityResponse;
 import org.hypertrace.gateway.service.common.datafetcher.IEntityFetcher;
@@ -265,7 +267,7 @@ public class ExecutionVisitor implements Visitor<EntityResponse> {
                                   .getExpressionContext()
                                   .getSourceToSelectionExpressionMap()
                                   .get(source))
-                          .setFilter(filter)
+                          .setFilter(addSourceFilters(executionContext, source, filter))
                           .build();
                   IEntityFetcher entityFetcher = queryHandlerRegistry.getEntityFetcher(source);
                   EntitiesRequestContext context =
@@ -295,7 +297,7 @@ public class ExecutionVisitor implements Visitor<EntityResponse> {
                                   .getExpressionContext()
                                   .getSourceToMetricExpressionMap()
                                   .get(source))
-                          .setFilter(filter)
+                          .setFilter(addSourceFilters(executionContext, source, filter))
                           .build();
                   IEntityFetcher entityFetcher = queryHandlerRegistry.getEntityFetcher(source);
                   EntitiesRequestContext context =
@@ -325,7 +327,7 @@ public class ExecutionVisitor implements Visitor<EntityResponse> {
                                   .getExpressionContext()
                                   .getSourceToTimeAggregationMap()
                                   .get(source))
-                          .setFilter(filter)
+                          .setFilter(addSourceFilters(executionContext, source, filter))
                           .build();
                   IEntityFetcher entityFetcher = queryHandlerRegistry.getEntityFetcher(source);
                   EntitiesRequestContext requestContext =
@@ -353,6 +355,25 @@ public class ExecutionVisitor implements Visitor<EntityResponse> {
       // is equal to the response fetched by the current SelectionNode
       return new EntityResponse(response, response.size());
     }
+  }
+
+  private Filter addSourceFilters(
+      EntityExecutionContext executionContext, String source, Filter filter) {
+    Optional<Filter> sourceFilterOptional =
+        Optional.ofNullable(
+            executionContext
+                .getExpressionContext()
+                .getSourceToFilterMap()
+                .get(AttributeSource.valueOf(source)));
+    return sourceFilterOptional
+        .map(
+            sourceFilter ->
+                Filter.newBuilder()
+                    .setOperator(Operator.AND)
+                    .addChildFilter(filter)
+                    .addChildFilter(sourceFilter)
+                    .build())
+        .orElse(filter);
   }
 
   Filter constructFilterFromChildNodesResult(EntityFetcherResponse result) {

@@ -19,7 +19,6 @@ import java.io.InputStreamReader;
 import java.io.Reader;
 import java.util.ArrayList;
 import java.util.Arrays;
-import java.util.Collections;
 import java.util.HashMap;
 import java.util.HashSet;
 import java.util.Iterator;
@@ -39,6 +38,7 @@ import org.hypertrace.gateway.service.common.config.GatewayServiceConfig;
 import org.hypertrace.gateway.service.common.config.ScopeFilterConfigs;
 import org.hypertrace.gateway.service.common.util.QueryServiceClient;
 import org.hypertrace.gateway.service.entity.config.EntityIdColumnsConfig;
+import org.hypertrace.gateway.service.entity.config.LogConfig;
 import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.params.ParameterizedTest;
@@ -82,14 +82,19 @@ public abstract class AbstractServiceTest<
             + "      }\n"
             + "    ]\n"
             + "  }\n"
-            + "]";
+            + "]\n"
+            + "entity.service.log.config = {\n"
+            + "  query.threshold.millis = 1500\n"
+            + "}\n";
     Config config = ConfigFactory.parseString(scopeFiltersConfig);
     scopeFilterConfigs = new ScopeFilterConfigs(config);
-    entityIdColumnsConfig = new EntityIdColumnsConfig(Collections.emptyMap());
+    entityIdColumnsConfig = new EntityIdColumnsConfig(Map.of("BACKEND", "id"));
     gatewayServiceConfig = mock(GatewayServiceConfig.class);
     when(gatewayServiceConfig.getEntityIdColumnsConfig()).thenReturn(entityIdColumnsConfig);
     when(gatewayServiceConfig.getScopeFilterConfigs()).thenReturn(scopeFilterConfigs);
     entityTypesProvider = mock(EntityTypesProvider.class);
+    LogConfig logConfig = new LogConfig(config);
+    when(gatewayServiceConfig.getLogConfig()).thenReturn(logConfig);
   }
 
   private static Reader readResourceFile(String fileName) {
