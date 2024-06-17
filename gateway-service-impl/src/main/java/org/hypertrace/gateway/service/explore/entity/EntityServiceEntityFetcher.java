@@ -25,9 +25,11 @@ import org.hypertrace.gateway.service.common.converters.EntityServiceAndGatewayS
 import org.hypertrace.gateway.service.common.util.AttributeMetadataUtil;
 import org.hypertrace.gateway.service.common.util.ExpressionReader;
 import org.hypertrace.gateway.service.common.util.MetricAggregationFunctionUtil;
+import org.hypertrace.gateway.service.common.util.OrderByUtil;
 import org.hypertrace.gateway.service.entity.config.EntityIdColumnsConfig;
 import org.hypertrace.gateway.service.explore.ExploreRequestContext;
 import org.hypertrace.gateway.service.v1.common.FunctionExpression;
+import org.hypertrace.gateway.service.v1.common.OrderByExpression;
 import org.hypertrace.gateway.service.v1.common.Row;
 import org.hypertrace.gateway.service.v1.explore.ExploreRequest;
 import org.slf4j.Logger;
@@ -165,19 +167,21 @@ public class EntityServiceEntityFetcher {
         EntityQueryRequest.newBuilder()
             .setEntityType(entityType)
             .setFilter(buildFilter(exploreRequest, entityIdAttributeIds, entityIds));
-
+    addSelections(requestContext, exploreRequest, builder);
     addGroupBys(exploreRequest, builder);
     addSortBy(exploreRequest, builder);
-    addSelections(requestContext, exploreRequest, builder);
     builder.setLimit(exploreRequest.getLimit());
     builder.setOffset(exploreRequest.getOffset());
     return builder.build();
   }
 
   private void addSortBy(ExploreRequest exploreRequest, EntityQueryRequest.Builder builder) {
-    List<org.hypertrace.gateway.service.v1.common.OrderByExpression> orderBys =
-        exploreRequest.getOrderByList();
-    orderBys.forEach(
+    List<OrderByExpression> orderByExpressions =
+        OrderByUtil.matchOrderByExpressionsAliasToSelectionAlias(
+            exploreRequest.getOrderByList(),
+            exploreRequest.getSelectionList(),
+            exploreRequest.getTimeAggregationList());
+    orderByExpressions.forEach(
         orderBy ->
             builder.addOrderBy(
                 EntityServiceAndGatewayServiceConverter.convertToEntityServiceOrderByExpression(
