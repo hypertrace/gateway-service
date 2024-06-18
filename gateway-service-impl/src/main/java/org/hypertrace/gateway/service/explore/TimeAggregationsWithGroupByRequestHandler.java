@@ -11,6 +11,7 @@ import org.hypertrace.core.attribute.service.v1.AttributeMetadata;
 import org.hypertrace.gateway.service.common.AttributeMetadataProvider;
 import org.hypertrace.gateway.service.common.util.AttributeMetadataUtil;
 import org.hypertrace.gateway.service.common.util.ExpressionReader;
+import org.hypertrace.gateway.service.common.util.OrderByUtil;
 import org.hypertrace.gateway.service.v1.common.Expression;
 import org.hypertrace.gateway.service.v1.common.Filter;
 import org.hypertrace.gateway.service.v1.common.LiteralConstant;
@@ -111,7 +112,12 @@ public class TimeAggregationsWithGroupByRequestHandler implements IRequestHandle
         originalRequest.getOrderByList().stream()
             .filter(orderByExpression -> !containsIntervalOrdering(orderByExpression))
             .collect(Collectors.toList());
-    requestBuilder.addAllOrderBy(orderByExpressionList);
+    List<OrderByExpression> orderByExpressions =
+        OrderByUtil.matchOrderByExpressionsAliasToSelectionAlias(
+            orderByExpressionList,
+            originalRequest.getSelectionList(),
+            originalRequest.getTimeAggregationList());
+    requestBuilder.addAllOrderBy(orderByExpressions);
 
     return requestBuilder.build();
   }

@@ -339,7 +339,11 @@ public class RequestHandler implements RequestHandlerWithSorting {
       ExploreRequestContext requestContext,
       QueryRequest.Builder queryBuilder) {
     if (request.getOrderByCount() > 0) {
-      List<OrderByExpression> orderByExpressions = request.getOrderByList();
+      List<OrderByExpression> orderByExpressions =
+          OrderByUtil.matchOrderByExpressionsAliasToSelectionAlias(
+              request.getOrderByList(),
+              request.getSelectionList(),
+              request.getTimeAggregationList());
       queryBuilder.addAllOrderBy(
           QueryAndGatewayDtoConverter.convertToQueryOrderByExpressions(orderByExpressions));
     }
