@@ -1,18 +1,14 @@
 package org.hypertrace.gateway.service.explore.entity;
 
 import java.util.HashSet;
-import java.util.List;
 import java.util.Optional;
 import java.util.Set;
 import org.hypertrace.gateway.service.common.AttributeMetadataProvider;
 import org.hypertrace.gateway.service.common.datafetcher.QueryServiceEntityFetcher;
-import org.hypertrace.gateway.service.common.util.DataCollectionUtil;
 import org.hypertrace.gateway.service.common.util.QueryServiceClient;
 import org.hypertrace.gateway.service.entity.config.EntityIdColumnsConfig;
 import org.hypertrace.gateway.service.explore.ExploreRequestContext;
 import org.hypertrace.gateway.service.explore.RequestHandler;
-import org.hypertrace.gateway.service.explore.RowComparator;
-import org.hypertrace.gateway.service.v1.common.OrderByExpression;
 import org.hypertrace.gateway.service.v1.explore.EntityOption;
 import org.hypertrace.gateway.service.v1.explore.ExploreRequest;
 import org.hypertrace.gateway.service.v1.explore.ExploreResponse;
@@ -35,8 +31,6 @@ import org.hypertrace.gateway.service.v1.explore.ExploreResponse;
  */
 public class EntityRequestHandler extends RequestHandler {
   private final EntityServiceEntityFetcher entityServiceEntityFetcher;
-  private final AttributeMetadataProvider attributeMetadataProvider;
-  private final QueryServiceEntityFetcher queryServiceEntityFetcher;
 
   public EntityRequestHandler(
       AttributeMetadataProvider attributeMetadataProvider,
@@ -50,9 +44,7 @@ public class EntityRequestHandler extends RequestHandler {
         entityIdColumnsConfig,
         queryServiceEntityFetcher,
         entityServiceEntityFetcher);
-    this.attributeMetadataProvider = attributeMetadataProvider;
     this.entityServiceEntityFetcher = entityServiceEntityFetcher;
-    this.queryServiceEntityFetcher = queryServiceEntityFetcher;
   }
 
   @Override
@@ -67,7 +59,8 @@ public class EntityRequestHandler extends RequestHandler {
     ExploreResponse.Builder builder = ExploreResponse.newBuilder();
     Set<String> entityIds = new HashSet<>();
     Optional<EntityOption> maybeEntityOption = getEntityOption(exploreRequest);
-    if (requestOnLiveEntities(maybeEntityOption)) {
+    boolean requestOnLiveEntities = requestOnLiveEntities(maybeEntityOption);
+    if (requestOnLiveEntities) {
       entityIds.addAll(getEntityIdsInTimeRangeFromQueryService(requestContext, exploreRequest));
       if (entityIds.isEmpty()) {
         return builder;
@@ -76,16 +69,6 @@ public class EntityRequestHandler extends RequestHandler {
 
     builder.addAllRow(
         entityServiceEntityFetcher.getResults(requestContext, exploreRequest, entityIds));
-
-    // If there's a Group By in the request, we need to do the sorting and pagination ourselves.
-    if (requestContext.hasGroupBy()) {
-      sortAndPaginatePostProcess(
-          builder,
-          requestContext.getOrderByExpressions(),
-          requestContext.getRowLimitBeforeRest(),
-          requestContext.getOffset());
-    }
-
     if (requestContext.hasGroupBy() && requestContext.getIncludeRestGroup()) {
       getTheRestGroupRequestHandler()
           .getRowsForTheRestGroup(requestContext, exploreRequest, builder);
@@ -94,38 +77,8 @@ public class EntityRequestHandler extends RequestHandler {
     return builder;
   }
 
-  @Override
-  public void sortAndPaginatePostProcess(
-      ExploreResponse.Builder builder,
-      List<OrderByExpression> orderByExpressions,
-      int limit,
-      int offset) {
-    List<org.hypertrace.gateway.service.v1.common.Row.Builder> rowBuilders =
-        builder.getRowBuilderList();
-
-    List<org.hypertrace.gateway.service.v1.common.Row.Builder> sortedRowBuilders =
-        sortAndPaginateRowBuilders(rowBuilders, orderByExpressions, limit, offset);
-
-    builder.clearRow();
-    sortedRowBuilders.forEach(builder::addRow);
-  }
-
-  protected List<org.hypertrace.gateway.service.v1.common.Row.Builder> sortAndPaginateRowBuilders(
-      List<org.hypertrace.gateway.service.v1.common.Row.Builder> rowBuilders,
-      List<OrderByExpression> orderByExpressions,
-      int limit,
-      int offset) {
-    RowComparator rowComparator = new RowComparator(orderByExpressions);
-
-    return DataCollectionUtil.limitAndSort(
-        rowBuilders.stream(), limit, offset, orderByExpressions.size(), rowComparator);
-  }
-
   private boolean requestOnLiveEntities(Optional<EntityOption> entityOption) {
-    if (entityOption.isEmpty()) {
-      return true;
-    }
-    return !entityOption.get().getIncludeNonLiveEntities();
+    return entityOption.map(option -> !option.getIncludeNonLiveEntities()).orElse(true);
   }
 
   private Optional<EntityOption> getEntityOption(ExploreRequest exploreRequest) {

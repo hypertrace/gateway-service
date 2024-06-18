@@ -93,7 +93,6 @@ public class ExploreService {
   }
 
   public ExploreResponse explore(RequestContext requestContext, ExploreRequest request) {
-
     final Instant start = Instant.now();
     try {
       ExploreRequestContext exploreRequestContext =

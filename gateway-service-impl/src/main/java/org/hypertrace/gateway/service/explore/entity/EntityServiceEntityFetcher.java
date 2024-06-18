@@ -25,9 +25,11 @@ import org.hypertrace.gateway.service.common.converters.EntityServiceAndGatewayS
 import org.hypertrace.gateway.service.common.util.AttributeMetadataUtil;
 import org.hypertrace.gateway.service.common.util.ExpressionReader;
 import org.hypertrace.gateway.service.common.util.MetricAggregationFunctionUtil;
+import org.hypertrace.gateway.service.common.util.OrderByUtil;
 import org.hypertrace.gateway.service.entity.config.EntityIdColumnsConfig;
 import org.hypertrace.gateway.service.explore.ExploreRequestContext;
 import org.hypertrace.gateway.service.v1.common.FunctionExpression;
+import org.hypertrace.gateway.service.v1.common.OrderByExpression;
 import org.hypertrace.gateway.service.v1.common.Row;
 import org.hypertrace.gateway.service.v1.explore.ExploreRequest;
 import org.slf4j.Logger;
@@ -35,7 +37,6 @@ import org.slf4j.LoggerFactory;
 
 public class EntityServiceEntityFetcher {
   private static final Logger LOGGER = LoggerFactory.getLogger(EntityServiceEntityFetcher.class);
-  private static final int DEFAULT_ENTITY_REQUEST_LIMIT = 10_000;
   private final AttributeMetadataProvider attributeMetadataProvider;
   private final EntityIdColumnsConfig entityIdColumnsConfig;
   private final EntityQueryServiceClient entityQueryServiceClient;
@@ -166,11 +167,26 @@ public class EntityServiceEntityFetcher {
         EntityQueryRequest.newBuilder()
             .setEntityType(entityType)
             .setFilter(buildFilter(exploreRequest, entityIdAttributeIds, entityIds));
-
-    addGroupBys(exploreRequest, builder);
     addSelections(requestContext, exploreRequest, builder);
-    builder.setLimit(DEFAULT_ENTITY_REQUEST_LIMIT);
+    addGroupBys(exploreRequest, builder);
+    addSortBy(exploreRequest, builder);
+    builder.setLimit(exploreRequest.getLimit());
+    builder.setOffset(exploreRequest.getOffset());
     return builder.build();
+  }
+
+  private void addSortBy(ExploreRequest exploreRequest, EntityQueryRequest.Builder builder) {
+    List<OrderByExpression> orderByExpressions =
+        OrderByUtil.matchOrderByExpressionsAliasToSelectionAlias(
+            exploreRequest.getOrderByList(),
+            exploreRequest.getSelectionList(),
+            exploreRequest.getTimeAggregationList());
+    orderByExpressions.forEach(
+        orderBy ->
+            builder.addOrderBy(
+                EntityServiceAndGatewayServiceConverter.convertToEntityServiceOrderByExpression(
+                        orderBy)
+                    .build()));
   }
 
   private void addGroupBys(ExploreRequest exploreRequest, EntityQueryRequest.Builder builder) {

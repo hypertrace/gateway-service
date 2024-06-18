@@ -11,6 +11,7 @@ import org.hypertrace.entity.query.service.v1.ColumnIdentifier;
 import org.hypertrace.entity.query.service.v1.ColumnMetadata;
 import org.hypertrace.entity.query.service.v1.EntityQueryRequest;
 import org.hypertrace.entity.query.service.v1.Expression;
+import org.hypertrace.entity.query.service.v1.Expression.Builder;
 import org.hypertrace.entity.query.service.v1.Filter;
 import org.hypertrace.entity.query.service.v1.Function;
 import org.hypertrace.entity.query.service.v1.LiteralConstant;
@@ -131,6 +132,19 @@ public class EntityServiceAndGatewayServiceConverter {
       org.hypertrace.gateway.service.v1.common.Operator operator) {
     // Might not handle all cases but this is a starter.
     return Operator.valueOf(operator.name());
+  }
+
+  public static OrderByExpression.Builder convertToEntityServiceOrderByExpression(
+      org.hypertrace.gateway.service.v1.common.OrderByExpression orderByExpression) {
+    Builder expressionBuilder = convertToEntityServiceExpression(orderByExpression.getExpression());
+    return OrderByExpression.newBuilder()
+        .setExpression(expressionBuilder)
+        .setOrder(convertToEntityServiceSortOrder(orderByExpression.getOrder()));
+  }
+
+  public static SortOrder convertToEntityServiceSortOrder(
+      org.hypertrace.gateway.service.v1.common.SortOrder sortOrder) {
+    return SortOrder.valueOf(sortOrder.name());
   }
 
   public static Expression.Builder convertToEntityServiceExpression(

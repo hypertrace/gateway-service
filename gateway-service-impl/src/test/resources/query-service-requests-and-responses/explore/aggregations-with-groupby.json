@@ -112,7 +112,7 @@
                   }
                 }
               ],
-              "alias": "COUNT#COUNT:Api.Trace|apiTraceId"
+              "alias": "COUNT#results/countTraces:Api.Trace|apiTraceId"
             }
           }
         }

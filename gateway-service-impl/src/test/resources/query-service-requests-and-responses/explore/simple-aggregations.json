@@ -130,7 +130,7 @@
                   }
                 }
               ],
-              "alias": "AVG#AVG:Api.Trace|duration"
+              "alias": "AVG#results/avgLatency:Api.Trace|duration"
             }
           },
           "order": "DESC"
