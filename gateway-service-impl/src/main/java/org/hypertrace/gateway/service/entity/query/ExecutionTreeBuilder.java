@@ -70,7 +70,6 @@ public class ExecutionTreeBuilder {
             executionContext.getExpressionContext(), EDS.name());
     if (entitiesRequest.getIncludeNonLiveEntities() && areFiltersOnlyOnEds) {
       ExecutionTreeUtils.removeDuplicateSelectionAttributes(executionContext, EDS.name());
-
       QueryNode rootNode = new DataFetcherNode(EDS.name(), entitiesRequest.getFilter());
       // if the filter by and order by are from the same source, pagination can be pushed down to
       // EDS
@@ -84,12 +83,14 @@ public class ExecutionTreeBuilder {
                 entitiesRequest.getOrderByList(),
                 entitiesRequest.getFetchTotal());
         executionContext.setSortAndPaginationNodeAdded(true);
+        rootNode.acceptVisitor(new ExecutionContextBuilderVisitor(executionContext));
+        QueryNode executionTree = buildExecutionTree(executionContext, rootNode);
+        LOG.info("Execution Tree:{}", executionTree.acceptVisitor(new PrintVisitor()));
+        return executionTree;
       }
 
       rootNode.acceptVisitor(new ExecutionContextBuilderVisitor(executionContext));
-
-      QueryNode executionTree = buildExecutionTree(executionContext, rootNode);
-
+      QueryNode executionTree = buildExecutionTreeWithJoinNode(executionContext, rootNode);
       if (LOG.isDebugEnabled()) {
         LOG.debug("Execution Tree:{}", executionTree.acceptVisitor(new PrintVisitor()));
       }
@@ -223,6 +224,37 @@ public class ExecutionTreeBuilder {
       metricSourcesForOrderBy.forEach(executionContext::removePendingMetricAggregationSources);
     }
 
+    return buildPaginationAndSelectionsNode(executionContext, rootNode);
+  }
+
+  @VisibleForTesting
+  QueryNode buildExecutionTreeWithJoinNode(
+      EntityExecutionContext executionContext, QueryNode filterTree) {
+    QueryNode rootNode = filterTree;
+    // Select attributes from sources in order by but not part of the filter tree
+    Set<String> attrSourcesForOrderBy = executionContext.getPendingSelectionSourcesForOrderBy();
+    if (!attrSourcesForOrderBy.isEmpty()) {
+      rootNode =
+          new JoinNode.Builder(filterTree).setAttrSelectionSources(attrSourcesForOrderBy).build();
+      attrSourcesForOrderBy.forEach(executionContext::removePendingSelectionSource);
+    }
+
+    // Select agg attributes from sources in order by
+    Set<String> metricSourcesForOrderBy =
+        executionContext.getPendingMetricAggregationSourcesForOrderBy();
+    if (!metricSourcesForOrderBy.isEmpty()) {
+      rootNode =
+          new JoinNode.Builder(rootNode)
+              .setAggMetricSelectionSources(metricSourcesForOrderBy)
+              .build();
+      metricSourcesForOrderBy.forEach(executionContext::removePendingMetricAggregationSources);
+    }
+
+    return buildPaginationAndSelectionsNode(executionContext, rootNode);
+  }
+
+  private QueryNode buildPaginationAndSelectionsNode(
+      EntityExecutionContext executionContext, QueryNode rootNode) {
     // Try adding SortAndPaginateNode
     rootNode = checkAndAddSortAndPaginationNode(rootNode, executionContext);
 

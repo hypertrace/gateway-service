@@ -29,6 +29,7 @@ import org.hypertrace.gateway.service.entity.EntityQueryHandlerRegistry;
 import org.hypertrace.gateway.service.entity.query.AndNode;
 import org.hypertrace.gateway.service.entity.query.DataFetcherNode;
 import org.hypertrace.gateway.service.entity.query.EntityExecutionContext;
+import org.hypertrace.gateway.service.entity.query.JoinNode;
 import org.hypertrace.gateway.service.entity.query.NoOpNode;
 import org.hypertrace.gateway.service.entity.query.OrNode;
 import org.hypertrace.gateway.service.entity.query.PaginateOnlyNode;
@@ -91,6 +92,17 @@ public class ExecutionVisitor implements Visitor<EntityResponse> {
                 .collect(Collectors.toList()));
 
     return new EntityResponse(entityFetcherResponse, entityFetcherResponse.size());
+  }
+
+  private static void mergeEntities(
+      EntityFetcherResponse rootEntityResponse, EntityFetcherResponse otherResponse) {
+    otherResponse
+        .getEntityKeyBuilderMap()
+        .forEach(
+            (key, value) ->
+                rootEntityResponse
+                    .getEntityKeyBuilderMap()
+                    .computeIfPresent(key, (k, v) -> v.mergeFrom(value.build())));
   }
 
   private static EntityFetcherResponse unionEntities(List<EntityFetcherResponse> builders) {
@@ -207,6 +219,91 @@ public class ExecutionVisitor implements Visitor<EntityResponse> {
               : entityFetcherResponse;
       return new EntityResponse(response, response.getEntityKeyBuilderMap().size());
     }
+  }
+
+  @Override
+  public EntityResponse visit(JoinNode joinNode) {
+    EntityResponse childNodeResponse = joinNode.getChildNode().acceptVisitor(this);
+    EntityFetcherResponse childEntityFetcherResponse = childNodeResponse.getEntityFetcherResponse();
+    // If the result was empty when the filter is non-empty, it means no entities matched the filter
+    // and hence no need to do any more follow up calls.
+    if (childEntityFetcherResponse.isEmpty()
+        && !Filter.getDefaultInstance().equals(executionContext.getEntitiesRequest().getFilter())) {
+      LOG.debug("No results matched the filter so not fetching aggregate/timeseries metrics.");
+      return childNodeResponse;
+    }
+
+    List<EntityFetcherResponse> resultMapList = new ArrayList<>();
+    resultMapList.addAll(
+        joinNode.getAttrSelectionSources().parallelStream()
+            .map(
+                source -> {
+                  EntitiesRequest request =
+                      EntitiesRequest.newBuilder(executionContext.getEntitiesRequest())
+                          .clearSelection()
+                          .clearTimeAggregation()
+                          .clearFilter()
+                          // TODO: Should we push order by, limit and offet down to the data source?
+                          // If we want to push the order by down, we would also have to divide
+                          // order by into sourceToOrderBySelectionExpressionMap,
+                          // sourceToOrderByMetricExpressionMap, sourceToOrderByTimeAggregationMap
+                          .clearOrderBy()
+                          .clearLimit()
+                          .clearOffset()
+                          .addAllSelection(
+                              executionContext
+                                  .getExpressionContext()
+                                  .getSourceToSelectionExpressionMap()
+                                  .get(source))
+                          .setFilter(addSourceFilters(executionContext, source))
+                          .build();
+                  IEntityFetcher entityFetcher = queryHandlerRegistry.getEntityFetcher(source);
+                  EntitiesRequestContext context =
+                      new EntitiesRequestContext(
+                          executionContext.getEntitiesRequestContext().getGrpcContext(),
+                          request.getStartTimeMillis(),
+                          request.getEndTimeMillis(),
+                          request.getEntityType(),
+                          executionContext.getTimestampAttributeId());
+                  return entityFetcher.getEntities(context, request);
+                })
+            .collect(Collectors.toList()));
+    resultMapList.addAll(
+        joinNode.getAggMetricSelectionSources().parallelStream()
+            .map(
+                source -> {
+                  EntitiesRequest request =
+                      EntitiesRequest.newBuilder(executionContext.getEntitiesRequest())
+                          .clearSelection()
+                          .clearTimeAggregation()
+                          .clearFilter()
+                          .clearOrderBy()
+                          .clearOffset()
+                          .clearLimit()
+                          .addAllSelection(
+                              executionContext
+                                  .getExpressionContext()
+                                  .getSourceToMetricExpressionMap()
+                                  .get(source))
+                          .setFilter(addSourceFilters(executionContext, source))
+                          .build();
+                  IEntityFetcher entityFetcher = queryHandlerRegistry.getEntityFetcher(source);
+                  EntitiesRequestContext context =
+                      new EntitiesRequestContext(
+                          executionContext.getEntitiesRequestContext().getGrpcContext(),
+                          request.getStartTimeMillis(),
+                          request.getEndTimeMillis(),
+                          request.getEntityType(),
+                          executionContext.getTimestampAttributeId());
+                  return entityFetcher.getEntities(context, request);
+                })
+            .collect(Collectors.toList()));
+
+    EntityFetcherResponse response =
+        resultMapList.stream()
+            .reduce(new EntityFetcherResponse(), (r1, r2) -> unionEntities(Arrays.asList(r1, r2)));
+    mergeEntities(childEntityFetcherResponse, response);
+    return new EntityResponse(childEntityFetcherResponse, childNodeResponse.getTotal());
   }
 
   @Override
@@ -357,6 +454,10 @@ public class ExecutionVisitor implements Visitor<EntityResponse> {
     }
   }
 
+  private Filter addSourceFilters(EntityExecutionContext executionContext, String source) {
+    return addSourceFilters(executionContext, source, null);
+  }
+
   private Filter addSourceFilters(
       EntityExecutionContext executionContext, String source, Filter filter) {
     Optional<Filter> sourceFilterOptional =
@@ -365,6 +466,10 @@ public class ExecutionVisitor implements Visitor<EntityResponse> {
                 .getExpressionContext()
                 .getSourceToFilterMap()
                 .get(AttributeSource.valueOf(source)));
+    if (filter == null) {
+      return sourceFilterOptional.orElse(Filter.getDefaultInstance());
+    }
+
     return sourceFilterOptional
         .map(
             sourceFilter ->

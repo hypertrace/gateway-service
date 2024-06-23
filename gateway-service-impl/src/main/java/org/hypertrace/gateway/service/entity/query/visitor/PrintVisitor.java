@@ -3,6 +3,7 @@ package org.hypertrace.gateway.service.entity.query.visitor;
 import java.util.stream.Collectors;
 import org.hypertrace.gateway.service.entity.query.AndNode;
 import org.hypertrace.gateway.service.entity.query.DataFetcherNode;
+import org.hypertrace.gateway.service.entity.query.JoinNode;
 import org.hypertrace.gateway.service.entity.query.NoOpNode;
 import org.hypertrace.gateway.service.entity.query.OrNode;
 import org.hypertrace.gateway.service.entity.query.PaginateOnlyNode;
@@ -65,5 +66,10 @@ public class PrintVisitor implements Visitor<String> {
         + paginateOnlyNode
         + ") --> \n"
         + paginateOnlyNode.getChildNode().acceptVisitor(this);
+  }
+
+  @Override
+  public String visit(JoinNode joinNode) {
+    return "JOIN_NODE(" + joinNode + ") --> \n" + joinNode.getChildNode().acceptVisitor(this);
   }
 }
