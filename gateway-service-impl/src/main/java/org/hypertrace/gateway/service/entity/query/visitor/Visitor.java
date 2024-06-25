@@ -2,6 +2,7 @@ package org.hypertrace.gateway.service.entity.query.visitor;
 
 import org.hypertrace.gateway.service.entity.query.AndNode;
 import org.hypertrace.gateway.service.entity.query.DataFetcherNode;
+import org.hypertrace.gateway.service.entity.query.JoinNode;
 import org.hypertrace.gateway.service.entity.query.NoOpNode;
 import org.hypertrace.gateway.service.entity.query.OrNode;
 import org.hypertrace.gateway.service.entity.query.PaginateOnlyNode;
@@ -28,4 +29,6 @@ public interface Visitor<R> {
   R visit(NoOpNode noOpNode);
 
   R visit(PaginateOnlyNode paginateOnlyNode);
+
+  R visit(JoinNode joinNode);
 }

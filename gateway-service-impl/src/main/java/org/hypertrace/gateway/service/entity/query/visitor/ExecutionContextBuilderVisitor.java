@@ -7,6 +7,7 @@ import java.util.stream.Collectors;
 import org.hypertrace.gateway.service.entity.query.AndNode;
 import org.hypertrace.gateway.service.entity.query.DataFetcherNode;
 import org.hypertrace.gateway.service.entity.query.EntityExecutionContext;
+import org.hypertrace.gateway.service.entity.query.JoinNode;
 import org.hypertrace.gateway.service.entity.query.NoOpNode;
 import org.hypertrace.gateway.service.entity.query.OrNode;
 import org.hypertrace.gateway.service.entity.query.PaginateOnlyNode;
@@ -117,6 +118,11 @@ public class ExecutionContextBuilderVisitor implements Visitor<Void> {
   @Override
   public Void visit(PaginateOnlyNode paginateOnlyNode) {
     return paginateOnlyNode.getChildNode().acceptVisitor(this);
+  }
+
+  @Override
+  public Void visit(JoinNode joinNode) {
+    return joinNode.getChildNode().acceptVisitor(this);
   }
 
   private Set<String> getRedundantPendingSelectionSources(

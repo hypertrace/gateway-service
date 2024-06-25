@@ -105,6 +105,10 @@ public class EntitiesRequestAndResponseUtils {
     return Value.newBuilder().setString(value).setValueType(ValueType.STRING).build();
   }
 
+  public static Value getLongValue(long value) {
+    return Value.newBuilder().setLong(value).setValueType(ValueType.LONG).build();
+  }
+
   public static AggregatedMetricValue getAggregatedMetricValue(
       FunctionType functionType, double value) {
     return AggregatedMetricValue.newBuilder()

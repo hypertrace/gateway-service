@@ -8,6 +8,7 @@ import java.util.stream.Collectors;
 import java.util.stream.Stream;
 import org.hypertrace.gateway.service.entity.query.AndNode;
 import org.hypertrace.gateway.service.entity.query.DataFetcherNode;
+import org.hypertrace.gateway.service.entity.query.JoinNode;
 import org.hypertrace.gateway.service.entity.query.NoOpNode;
 import org.hypertrace.gateway.service.entity.query.OrNode;
 import org.hypertrace.gateway.service.entity.query.PaginateOnlyNode;
@@ -193,5 +194,10 @@ public class FilterOptimizingVisitor implements Visitor<QueryNode> {
     QueryNode childNode = paginateOnlyNode.getChildNode().acceptVisitor(this);
     return new PaginateOnlyNode(
         childNode, paginateOnlyNode.getLimit(), paginateOnlyNode.getOffset());
+  }
+
+  @Override
+  public QueryNode visit(JoinNode joinNode) {
+    return joinNode;
   }
 }
