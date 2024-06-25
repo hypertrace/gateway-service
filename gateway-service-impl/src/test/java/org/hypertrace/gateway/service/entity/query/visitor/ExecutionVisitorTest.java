@@ -8,6 +8,7 @@ import static org.hypertrace.gateway.service.common.EntitiesRequestAndResponseUt
 import static org.hypertrace.gateway.service.common.EntitiesRequestAndResponseUtils.compareEntityResponses;
 import static org.hypertrace.gateway.service.common.EntitiesRequestAndResponseUtils.generateEQFilter;
 import static org.hypertrace.gateway.service.common.EntitiesRequestAndResponseUtils.getAggregatedMetricValue;
+import static org.hypertrace.gateway.service.common.EntitiesRequestAndResponseUtils.getLongValue;
 import static org.hypertrace.gateway.service.common.EntitiesRequestAndResponseUtils.getStringValue;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
@@ -43,6 +44,7 @@ import org.hypertrace.gateway.service.entity.EntityKey;
 import org.hypertrace.gateway.service.entity.EntityQueryHandlerRegistry;
 import org.hypertrace.gateway.service.entity.query.DataFetcherNode;
 import org.hypertrace.gateway.service.entity.query.EntityExecutionContext;
+import org.hypertrace.gateway.service.entity.query.JoinNode;
 import org.hypertrace.gateway.service.entity.query.NoOpNode;
 import org.hypertrace.gateway.service.entity.query.PaginateOnlyNode;
 import org.hypertrace.gateway.service.entity.query.SelectionNode;
@@ -58,6 +60,7 @@ import org.hypertrace.gateway.service.v1.common.MetricSeries;
 import org.hypertrace.gateway.service.v1.common.Operator;
 import org.hypertrace.gateway.service.v1.common.OrderByExpression;
 import org.hypertrace.gateway.service.v1.common.Period;
+import org.hypertrace.gateway.service.v1.common.SortOrder;
 import org.hypertrace.gateway.service.v1.common.TimeAggregation;
 import org.hypertrace.gateway.service.v1.common.Value;
 import org.hypertrace.gateway.service.v1.common.ValueType;
@@ -378,6 +381,99 @@ public class ExecutionVisitorTest {
                                                 .setValueType(ValueType.STRING)))))
                 .build()),
         new HashSet<>(filter.getChildFilterList()));
+  }
+
+  @Test
+  public void test_visit_JoinNode() {
+    List<OrderByExpression> orderByExpressions =
+        List.of(
+            buildOrderByExpression(
+                SortOrder.DESC,
+                buildAggregateExpression(
+                    API_NUM_CALLS_ATTR, FunctionType.COUNT, "numCalls", List.of())));
+    int limit = 10;
+    int offset = 0;
+    long startTime = 0;
+    long endTime = 10;
+    String tenantId = "TENANT_ID";
+    AttributeScope entityType = AttributeScope.API;
+    Expression selectionExpression = buildExpression(API_NAME_ATTR);
+    EntitiesRequest entitiesRequest =
+        EntitiesRequest.newBuilder()
+            .setEntityType(entityType.name())
+            .setStartTimeMillis(startTime)
+            .setEndTimeMillis(endTime)
+            .addSelection(orderByExpressions.get(0).getExpression())
+            .addSelection(selectionExpression)
+            .setFilter(generateEQFilter(API_DISCOVERY_STATE, "DISCOVERED"))
+            .addAllOrderBy(orderByExpressions)
+            .setIncludeNonLiveEntities(true)
+            .setLimit(limit)
+            .setOffset(offset)
+            .build();
+    EntitiesRequestContext entitiesRequestContext =
+        new EntitiesRequestContext(
+            forTenantId(tenantId), startTime, endTime, entityType.name(), "API.startTime");
+    Map<EntityKey, Builder> entityKeyBuilderResponseMap =
+        Map.of(
+            EntityKey.of("entity-id-0"),
+            Entity.newBuilder().putAttribute("API.name", getStringValue("entity-0")),
+            EntityKey.of("entity-id-1"),
+            Entity.newBuilder().putAttribute("API.name", getStringValue("entity-1")),
+            EntityKey.of("entity-id-2"),
+            Entity.newBuilder().putAttribute("API.name", getStringValue("entity-2")));
+
+    EntityFetcherResponse entityFetcherResponse =
+        new EntityFetcherResponse(entityKeyBuilderResponseMap);
+
+    when(expressionContext.getSourceToMetricExpressionMap())
+        .thenReturn(Map.of("QS", List.of(orderByExpressions.get(0).getExpression())));
+    when(expressionContext.getSourceToSelectionExpressionMap())
+        .thenReturn(Map.of("EDS", List.of(selectionExpression)));
+    when(expressionContext.getSourceToSelectionExpressionMap())
+        .thenReturn(Map.of("EDS", List.of(selectionExpression)));
+    when(executionContext.getEntitiesRequest()).thenReturn(entitiesRequest);
+    when(executionContext.getTenantId()).thenReturn(tenantId);
+    when(executionContext.getEntitiesRequestContext()).thenReturn(entitiesRequestContext);
+    when(executionContext.getTimestampAttributeId()).thenReturn("API.startTime");
+
+    Map<EntityKey, Builder> queryServiceEntityKeyBuilderResponseMap =
+        Map.of(
+            EntityKey.of("entity-id-0"),
+            Entity.newBuilder().putAttribute("API.numCalls", getLongValue(10)),
+            EntityKey.of("entity-id-1"),
+            Entity.newBuilder().putAttribute("API.numCalls", getLongValue(50)),
+            EntityKey.of("entity-id-3"),
+            Entity.newBuilder().putAttribute("API.numCalls", getLongValue(100)));
+
+    when(queryServiceEntityFetcher.getEntities(eq(entitiesRequestContext), any()))
+        .thenReturn(new EntityFetcherResponse(queryServiceEntityKeyBuilderResponseMap));
+
+    NoOpNode mockChildNode = mock(NoOpNode.class);
+    when(mockChildNode.acceptVisitor(any()))
+        .thenReturn(new EntityResponse(entityFetcherResponse, 100));
+    JoinNode joinNode =
+        new JoinNode.Builder(mockChildNode)
+            .setAttrSelectionSources(Collections.emptySet())
+            .setAggMetricSelectionSources(Set.of(QS_SOURCE))
+            .build();
+
+    Map<EntityKey, Builder> mergedEntityKeyBuilderResponseMap =
+        Map.of(
+            EntityKey.of("entity-id-0"),
+            Entity.newBuilder()
+                .putAttribute("API.name", getStringValue("entity-0"))
+                .putAttribute("API.numCalls", getLongValue(10)),
+            EntityKey.of("entity-id-1"),
+            Entity.newBuilder()
+                .putAttribute("API.name", getStringValue("entity-1"))
+                .putAttribute("API.numCalls", getLongValue(50)),
+            EntityKey.of("entity-id-2"),
+            Entity.newBuilder().putAttribute("API.name", getStringValue("entity-2")));
+
+    compareEntityResponses(
+        new EntityResponse(new EntityFetcherResponse(mergedEntityKeyBuilderResponseMap), 100L),
+        executionVisitor.visit(joinNode));
   }
 
   @Test

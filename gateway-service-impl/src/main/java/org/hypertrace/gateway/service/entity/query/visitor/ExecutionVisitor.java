@@ -10,6 +10,7 @@ import java.util.LinkedHashMap;
 import java.util.LinkedList;
 import java.util.List;
 import java.util.Map;
+import java.util.Map.Entry;
 import java.util.Optional;
 import java.util.Set;
 import java.util.concurrent.CompletableFuture;
@@ -94,15 +95,23 @@ public class ExecutionVisitor implements Visitor<EntityResponse> {
     return new EntityResponse(entityFetcherResponse, entityFetcherResponse.size());
   }
 
-  private static void mergeEntities(
+  private static EntityFetcherResponse mergeEntities(
       EntityFetcherResponse rootEntityResponse, EntityFetcherResponse otherResponse) {
-    otherResponse
-        .getEntityKeyBuilderMap()
-        .forEach(
-            (key, value) ->
-                rootEntityResponse
-                    .getEntityKeyBuilderMap()
-                    .computeIfPresent(key, (k, v) -> v.mergeFrom(value.build())));
+    return new EntityFetcherResponse(
+        rootEntityResponse.getEntityKeyBuilderMap().entrySet().stream()
+            .collect(
+                Collectors.toUnmodifiableMap(
+                    Entry::getKey,
+                    entry -> {
+                      Map<EntityKey, Builder> entityKeyBuilderMap =
+                          otherResponse.getEntityKeyBuilderMap();
+                      if (entityKeyBuilderMap.containsKey(entry.getKey())) {
+                        return entry
+                            .getValue()
+                            .mergeFrom(entityKeyBuilderMap.get(entry.getKey()).build());
+                      }
+                      return entry.getValue();
+                    })));
   }
 
   private static EntityFetcherResponse unionEntities(List<EntityFetcherResponse> builders) {
@@ -302,8 +311,9 @@ public class ExecutionVisitor implements Visitor<EntityResponse> {
     EntityFetcherResponse response =
         resultMapList.stream()
             .reduce(new EntityFetcherResponse(), (r1, r2) -> unionEntities(Arrays.asList(r1, r2)));
-    mergeEntities(childEntityFetcherResponse, response);
-    return new EntityResponse(childEntityFetcherResponse, childNodeResponse.getTotal());
+
+    return new EntityResponse(
+        mergeEntities(childEntityFetcherResponse, response), childNodeResponse.getTotal());
   }
 
   @Override

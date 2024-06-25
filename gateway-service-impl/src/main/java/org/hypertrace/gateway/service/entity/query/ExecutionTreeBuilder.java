@@ -85,7 +85,9 @@ public class ExecutionTreeBuilder {
         executionContext.setSortAndPaginationNodeAdded(true);
         rootNode.acceptVisitor(new ExecutionContextBuilderVisitor(executionContext));
         QueryNode executionTree = buildExecutionTree(executionContext, rootNode);
-        LOG.info("Execution Tree:{}", executionTree.acceptVisitor(new PrintVisitor()));
+        if (LOG.isDebugEnabled()) {
+          LOG.debug("Execution Tree:{}", executionTree.acceptVisitor(new PrintVisitor()));
+        }
         return executionTree;
       }
 
